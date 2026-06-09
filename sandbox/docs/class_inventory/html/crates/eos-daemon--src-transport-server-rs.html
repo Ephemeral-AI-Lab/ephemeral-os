@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -134,7 +134,7 @@
         <span class="rs-self">self</span>.shutdown.clone()
     }
 </code></pre>
-</details></td></tr><tr id="method-serve-137"><td>method</td><td>serve</td><td><code>pub async fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a> (self) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><p class="docstring">Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install<br>the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.<br>On shutdown: cancel the serve tasks, remove the pid file, and unlink the<br>socket.<br># Errors<br>Returns an error when listener binding, pid-file setup, signal handling,<br>request dispatch, or shutdown cleanup fails.</p><details class="function-source">
+</details></td></tr><tr id="method-serve-137"><td>method</td><td>serve</td><td><code>pub async fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a> (self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><p class="docstring">Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install<br>the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.<br>On shutdown: cancel the serve tasks, remove the pid file, and unlink the<br>socket.<br># Errors<br>Returns an error when listener binding, pid-file setup, signal handling,<br>request dispatch, or shutdown cleanup fails.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install</span>
     <span class="rs-comment">/// the SIGTERM/SIGINT handlers, and serve until the shutdown token fires.</span>
@@ -146,7 +146,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns an error when listener binding, pid-file setup, signal handling,</span>
     <span class="rs-comment">/// request dispatch, or shutdown cleanup fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-kw">let</span> shutdown = <span class="rs-self">self</span>.shutdown.clone();
         <span class="rs-kw">let</span> server = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(<span class="rs-self">self</span>);
         <span class="rs-kw">let</span> _reaper_task = {
@@ -276,12 +276,12 @@
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-handle-connection-277"><td>method</td><td>handle_connection</td><td><code>async fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-handle-connection-277">handle_connection</a> &lt; S &gt; (&amp; self , stream : S , is_tcp : bool) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; where S : AsyncRead + AsyncWrite + Unpin ,</code><p class="docstring">Handle one accepted connection: read one capped, timed request line, pop<br>the TCP-only auth token, decode the envelope, dispatch, write one framed<br>response. Per-connection; never holds a lock across the await points.</p><details class="function-source">
+</details></td></tr><tr id="method-handle-connection-277"><td>method</td><td>handle_connection</td><td><code>async fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-handle-connection-277">handle_connection</a> &lt; S &gt; (&amp; self , stream : S , is_tcp : bool) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; where S : AsyncRead + AsyncWrite + Unpin ,</code><p class="docstring">Handle one accepted connection: read one capped, timed request line, pop<br>the TCP-only auth token, decode the envelope, dispatch, write one framed<br>response. Per-connection; never holds a lock across the await points.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Handle one accepted connection: read one capped, timed request line, pop</span>
     <span class="rs-comment">/// the TCP-only auth token, decode the envelope, dispatch, write one framed</span>
     <span class="rs-comment">/// response. Per-connection; never holds a lock across the await points.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, stream: <span class="rs-type">S</span>, is_tcp: bool) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, stream: <span class="rs-type">S</span>, is_tcp: bool) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
     <span class="rs-kw">where</span>
         <span class="rs-type">S</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">AsyncWrite</span> + <span class="rs-type">Unpin</span>,
     {
@@ -424,12 +424,12 @@
         response
     }
 </code></pre>
-</details></td></tr><tr id="method-strip-tcp-auth-419"><td>method</td><td>strip_tcp_auth</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-strip-tcp-auth-419">strip_tcp_auth</a> (&amp; self , mut value : serde_json :: Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; serde_json :: Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-strip-tcp-auth-419"><td>method</td><td>strip_tcp_auth</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-transport-server-rs.html#method-strip-tcp-auth-419">strip_tcp_auth</a> (&amp; self , mut value : serde_json :: Value ,) -&gt; Result &lt; serde_json :: Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-strip-tcp-auth-419">strip_tcp_auth</a>(
         &amp;<span class="rs-self">self</span>,
         <span class="rs-kw">mut</span> value: serde_json::<span class="rs-type">Value</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(expected) = <span class="rs-self">self</span>
             .config
             .auth_token
@@ -648,7 +648,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns an error when listener binding, pid-file setup, signal handling,</span>
     <span class="rs-comment">/// request dispatch, or shutdown cleanup fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-serve-137">serve</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-kw">let</span> shutdown = <span class="rs-self">self</span>.shutdown.clone();
         <span class="rs-kw">let</span> server = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(<span class="rs-self">self</span>);
         <span class="rs-kw">let</span> _reaper_task = {
@@ -781,7 +781,7 @@
     <span class="rs-comment">/// Handle one accepted connection: read one capped, timed request line, pop</span>
     <span class="rs-comment">/// the TCP-only auth token, decode the envelope, dispatch, write one framed</span>
     <span class="rs-comment">/// response. Per-connection; never holds a lock across the await points.</span>
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, stream: <span class="rs-type">S</span>, is_tcp: bool) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> handle_connection&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, stream: <span class="rs-type">S</span>, is_tcp: bool) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
     <span class="rs-kw">where</span>
         <span class="rs-type">S</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">AsyncWrite</span> + <span class="rs-type">Unpin</span>,
     {
@@ -923,7 +923,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-transport-server-rs.html#method-strip-tcp-auth-419">strip_tcp_auth</a>(
         &amp;<span class="rs-self">self</span>,
         <span class="rs-kw">mut</span> value: serde_json::<span class="rs-type">Value</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(expected) = <span class="rs-self">self</span>
             .config
             .auth_token

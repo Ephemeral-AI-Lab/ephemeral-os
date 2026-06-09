@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,11 +62,11 @@
     <h3>layer_metrics</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
     <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
@@ -102,11 +102,11 @@
     <h3>build_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -138,11 +138,11 @@
     <h3>ensure_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -168,11 +168,11 @@
     <h3>workspace_binding</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
     <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
@@ -191,11 +191,11 @@
     <h3>commit_to_workspace</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -222,11 +222,11 @@
     <h3>commit_to_git</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> layer_stack_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
     <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;message&quot;)?;
@@ -249,7 +249,7 @@
     <h3>raw_commit_paths</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a> (args : &amp; Value) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,<br>binding resolution, `.git` rejection) is the host crate's responsibility;<br>this only enforces the wire shape (string, array-of-strings, or absent).</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -257,7 +257,7 @@
   <pre><code><span class="rs-comment">/// Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,</span>
 <span class="rs-comment">/// binding resolution, `.git` rejection) is the host crate's responsibility;</span>
 <span class="rs-comment">/// this only enforces the wire shape (string, array-of-strings, or absent).</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;paths&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>());
     };
@@ -338,7 +338,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request_args::{binding_to_value, require_string, timings_to_value_map};
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-layer-metrics-24">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
     <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
@@ -365,7 +365,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-build-workspace-base-51">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -388,7 +388,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-ensure-workspace-base-74">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -405,7 +405,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-workspace-binding-91">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
     <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
@@ -415,7 +415,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-workspace-101">commit_to_workspace</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
@@ -433,7 +433,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-commit-to-git-119">commit_to_git</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> layer_stack_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
     <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
     <span class="rs-kw">let</span> message = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;message&quot;)?;
@@ -450,7 +450,7 @@
 <span class="rs-comment">/// Lift the raw `paths` pathspecs from the envelope. Normalization (trimming,</span>
 <span class="rs-comment">/// binding resolution, `.git` rejection) is the host crate's responsibility;</span>
 <span class="rs-comment">/// this only enforces the wire shape (string, array-of-strings, or absent).</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#item-fn-raw-commit-paths-133">raw_commit_paths</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;paths&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>());
     };

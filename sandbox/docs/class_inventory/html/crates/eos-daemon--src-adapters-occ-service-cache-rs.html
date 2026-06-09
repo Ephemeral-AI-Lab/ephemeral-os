@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -235,11 +235,11 @@
     <h3>occ_service_for_root</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a> (root : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a> (root : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> key = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-normalize-root-key-214">normalize_root_key</a>(root);
     <span class="rs-kw">let</span> lock_start = <span class="rs-type">Instant</span>::now();
     {
@@ -378,11 +378,11 @@
     <h3>lock_occ_services</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; MutexGuard &lt; &#x27;static , <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a> () -&gt; Result &lt; MutexGuard &lt; &#x27;static , <a class="symbol-link" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-services-203">occ_services</a>()
         .lock()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;occ service registry&quot;))
@@ -571,7 +571,7 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceLookup-15">OccServiceLookup</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> key = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-normalize-root-key-214">normalize_root_key</a>(root);
     <span class="rs-kw">let</span> lock_start = <span class="rs-type">Instant</span>::now();
     {
@@ -606,7 +606,7 @@
     <span class="rs-type">SERVICES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#method-default-210">default</a>()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-lock-occ-services-208">lock_occ_services</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-struct-OccServiceCache-72">OccServiceCache</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-services-203">occ_services</a>()
         .lock()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;occ service registry&quot;))

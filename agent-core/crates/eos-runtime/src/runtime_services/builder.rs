@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
-use eos_agent_runner::AgentMessageRecords;
+use eos_agent_run::AgentMessageRecords;
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{
     DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,
@@ -23,16 +23,16 @@ use eos_sandbox_port::{
     DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxGateway, SandboxPortError,
     SandboxProvisionError, SandboxTransport,
 };
-use eos_skills::SkillRegistry;
+use eos_tool::SkillRegistry;
+use eos_tool::{build_default_registry, CallerScope, SandboxToolService, ToolConfigSet};
 use eos_tool_ports::{ToolKey, ToolRegistry};
-use eos_tools::{build_default_registry, CallerScope, SandboxToolService, ToolConfigSet};
 use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
     AgentCoreRegistryService, AuditService, DbStoreService, EngineService, EventSourceFactory,
     MessageRecordService, RuntimeServices, SandboxService,
 };
-use crate::plugin_tools::register_plugin_tools;
+use crate::plugins::register_plugin_tools;
 
 /// Placeholder client used when no provider is selected and no
 /// `event_source_factory` is set. Streaming always errors; production wires a

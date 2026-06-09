@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -70,7 +70,7 @@
         <span class="rs-self">Self</span> { root }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspacePublisherPort for <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-28">DaemonPublisherPort</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-publish-upperdir-changes-39"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-39">publish_upperdir_changes</a> (&amp; self , _root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , _path_kinds : &amp; [PathChange] ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspacePublisherPort for <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-struct-DaemonPublisherPort-28">DaemonPublisherPort</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-publish-upperdir-changes-39"><td>method</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-39">publish_upperdir_changes</a> (&amp; self , _root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , _path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-publish-upperdir-changes-39">publish_upperdir_changes</a>(
         &amp;<span class="rs-self">self</span>,
@@ -78,7 +78,7 @@
         snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
         changes: &amp;[<span class="rs-type">LayerChange</span>],
         _path_kinds: &amp;[<span class="rs-type">PathChange</span>],
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
         <span class="rs-kw">let</span> route_start = std::time::<span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> route_metrics = occ_route_metrics(<span class="rs-self">self</span>.root, changes).map_err(|error| {
             <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
@@ -121,41 +121,20 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:28</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-ephemeral-dir-allocator-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ephemeral_dir_allocator pub(crate) pub(crate) fn ephemeral_dir_allocator () -&gt; Result &lt; EphemeralDirAllocator , DaemonError &gt; crates/eos-daemon/src/adapters/overlay/mod.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>ephemeral_dir_allocator</h3>
-    <span class="visibility">pub(crate)</span>
-  </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; EphemeralDirAllocator , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralDirAllocator</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
-    <span class="rs-type">Ok</span>(<span class="rs-type">EphemeralDirAllocator</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(
-        overlay_writable_root()
-            .map_err(|err| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(&quot;overlay writable root&quot;, &amp;err))?
-            .join(&quot;runtime&quot;),
-    ))
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:121</p>
-</article><article id="item-fn-overlay-run-dirs-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_run_dirs pub(crate) pub(crate) fn overlay_run_dirs (kind : &amp; str , invocation_id : &amp; str ,) -&gt; Result &lt; EphemeralRunDirs , DaemonError &gt; crates/eos-daemon/src/adapters/overlay/mod.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-overlay-run-dirs-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_run_dirs pub(crate) pub(crate) fn overlay_run_dirs (kind : &amp; str , invocation_id : &amp; str ,) -&gt; Result &lt; EphemeralRunDirs , DaemonError &gt; crates/eos-daemon/src/adapters/overlay/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>overlay_run_dirs</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a> (kind : &amp; str , invocation_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; EphemeralRunDirs , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a> (kind : &amp; str , invocation_id : &amp; str ,) -&gt; Result &lt; EphemeralRunDirs , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(
     kind: &amp;str,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>()?
         .allocate(kind, &amp;<span class="rs-type">InvocationId</span>(invocation_id.to_owned()))
         .map_err(ephemeral_daemon_error)
@@ -170,14 +149,14 @@
     <h3>run_ns_runner_child</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-run-ns-runner-child-138">run_ns_runner_child</a> (request : &amp; RunRequest , invocation_registry : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; RunResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-run-ns-runner-child-138">run_ns_runner_child</a> (request : &amp; RunRequest , invocation_registry : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> &gt; ,) -&gt; Result &lt; RunResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-run-ns-runner-child-138">run_ns_runner_child</a>(
     request: &amp;<span class="rs-type">RunRequest</span>,
     invocation_registry: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">RunResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> payload =
         serde_json::to_vec(request).map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe()?);
@@ -217,23 +196,6 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:138</p>
-</article><article id="item-fn-overlay-daemon-error-178" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_daemon_error pub(crate) pub(crate) fn overlay_daemon_error (context : &amp; str , err : &amp; eos_overlay :: OverlayError) -&gt; DaemonError crates/eos-daemon/src/adapters/overlay/mod.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>overlay_daemon_error</h3>
-    <span class="visibility">pub(crate)</span>
-  </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a> (context : &amp; str , err : &amp; eos_overlay :: OverlayError) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(context: &amp;str, err: &amp;eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
-    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(&quot;{context}: {err}&quot;))
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:178</p>
 </article><article id="item-fn-ephemeral-daemon-error-182" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ephemeral_daemon_error pub(crate) pub(crate) fn ephemeral_daemon_error (error : EphemeralWorkspaceError) -&gt; DaemonError crates/eos-daemon/src/adapters/overlay/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -276,41 +238,19 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:186</p>
-</article><article id="item-fn-path-change-kind-wire-198" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_kind_wire pub(crate) pub(crate) fn path_change_kind_wire (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -&gt; &amp; 'static str crates/eos-daemon/src/adapters/overlay/mod.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>path_change_kind_wire</h3>
-    <span class="visibility">pub(crate)</span>
-  </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a> (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -&gt; &amp; &#x27;static str</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a>(kind: eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
-    <span class="rs-kw">match</span> kind {
-        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
-        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
-        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
-        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
-    }
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:198</p>
 </article><article id="item-fn-changeset-from-publish-outcome-207" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn changeset_from_publish_outcome pub(crate) pub(crate) fn changeset_from_publish_outcome (outcome : &amp; PublishOutcome ,) -&gt; Result &lt; ChangesetResult , DaemonError &gt; crates/eos-daemon/src/adapters/overlay/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>changeset_from_publish_outcome</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-changeset-from-publish-outcome-207">changeset_from_publish_outcome</a> (outcome : &amp; PublishOutcome ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-changeset-from-publish-outcome-207">changeset_from_publish_outcome</a> (outcome : &amp; PublishOutcome ,) -&gt; Result &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-changeset-from-publish-outcome-207">changeset_from_publish_outcome</a>(
     outcome: &amp;<span class="rs-type">PublishOutcome</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> raw = outcome
         .raw
         .as_object()
@@ -321,7 +261,7 @@
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;publish outcome missing files&quot;.into()))?
         .iter()
         .map(file_result_from_value)
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
     <span class="rs-kw">let</span> timings = raw
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;timings&quot;)
         .and_then(<span class="rs-type">Value</span>::as_object)
@@ -350,14 +290,14 @@
     <h3>manifest_from_snapshot</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-manifest-from-snapshot-86">manifest_from_snapshot</a> (root : &amp; Path , snapshot : &amp; EphemeralSnapshot ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Manifest , EphemeralWorkspaceError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-manifest-from-snapshot-86">manifest_from_snapshot</a> (root : &amp; Path , snapshot : &amp; EphemeralSnapshot ,) -&gt; Result &lt; Manifest , EphemeralWorkspaceError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-manifest-from-snapshot-86">manifest_from_snapshot</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Manifest</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
     <span class="rs-kw">let</span> layers = snapshot
         .layer_paths
         .iter()
@@ -381,7 +321,7 @@
                 path: relative.to_string_lossy().into_owned(),
             })
         })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
     <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(snapshot.manifest_version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(|error| {
         <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
             reason: error.to_string(),
@@ -392,6 +332,66 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:86</p>
+</article><article id="item-fn-ephemeral-dir-allocator-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ephemeral_dir_allocator private fn ephemeral_dir_allocator () -&gt; Result &lt; EphemeralDirAllocator , DaemonError &gt; crates/eos-daemon/src/adapters/overlay/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ephemeral_dir_allocator</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a> () -&gt; Result &lt; EphemeralDirAllocator , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralDirAllocator</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-type">Ok</span>(<span class="rs-type">EphemeralDirAllocator</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(
+        overlay_writable_root()
+            .map_err(|err| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(&quot;overlay writable root&quot;, &amp;err))?
+            .join(&quot;runtime&quot;),
+    ))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:121</p>
+</article><article id="item-fn-overlay-daemon-error-178" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_daemon_error private fn overlay_daemon_error (context : &amp; str , err : &amp; eos_overlay :: OverlayError) -&gt; DaemonError crates/eos-daemon/src/adapters/overlay/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>overlay_daemon_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a> (context : &amp; str , err : &amp; eos_overlay :: OverlayError) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(context: &amp;str, err: &amp;eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
+    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(&quot;{context}: {err}&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:178</p>
+</article><article id="item-fn-path-change-kind-wire-198" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_kind_wire private fn path_change_kind_wire (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -&gt; &amp; 'static str crates/eos-daemon/src/adapters/overlay/mod.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_change_kind_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a> (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -&gt; &amp; &#x27;static str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a>(kind: eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> kind {
+        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
+        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
+        eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/overlay/mod.rs:198</p>
 </article><article id="item-fn-publish-outcome-from-changeset-240" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_outcome_from_changeset private fn publish_outcome_from_changeset (result : &amp; ChangesetResult) -&gt; PublishOutcome crates/eos-daemon/src/adapters/overlay/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -474,11 +474,11 @@
     <h3>file_result_from_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a> (value : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; FileResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a> (value : &amp; Value) -&gt; Result &lt; FileResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">FileResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">FileResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> object = value
         .as_object()
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;publish file result must be object&quot;.into()))?;
@@ -622,7 +622,7 @@
         snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
         changes: &amp;[<span class="rs-type">LayerChange</span>],
         _path_kinds: &amp;[<span class="rs-type">PathChange</span>],
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PublishOutcome</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
         <span class="rs-kw">let</span> route_start = std::time::<span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> route_metrics = occ_route_metrics(<span class="rs-self">self</span>.root, changes).map_err(|error| {
             <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
@@ -666,7 +666,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-manifest-from-snapshot-86">manifest_from_snapshot</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Manifest</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <span class="rs-type">EphemeralWorkspaceError</span>&gt; {
     <span class="rs-kw">let</span> layers = snapshot
         .layer_paths
         .iter()
@@ -690,7 +690,7 @@
                 path: relative.to_string_lossy().into_owned(),
             })
         })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
     <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(snapshot.manifest_version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(|error| {
         <span class="rs-type">EphemeralWorkspaceError</span>::<span class="rs-type">PublishFailed</span> {
             reason: error.to_string(),
@@ -698,7 +698,7 @@
     })
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralDirAllocator</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralDirAllocator</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">EphemeralDirAllocator</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(
         overlay_writable_root()
             .map_err(|err| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(&quot;overlay writable root&quot;, &amp;err))?
@@ -709,7 +709,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(
     kind: &amp;str,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-ephemeral-dir-allocator-121">ephemeral_dir_allocator</a>()?
         .allocate(kind, &amp;<span class="rs-type">InvocationId</span>(invocation_id.to_owned()))
         .map_err(ephemeral_daemon_error)
@@ -718,7 +718,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-run-ns-runner-child-138">run_ns_runner_child</a>(
     request: &amp;<span class="rs-type">RunRequest</span>,
     invocation_registry: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">RunResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> payload =
         serde_json::to_vec(request).map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe()?);
@@ -755,7 +755,7 @@
         .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(&quot;invalid ns-runner output: {err}&quot;)))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(context: &amp;str, err: &amp;eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-daemon-error-178">overlay_daemon_error</a>(context: &amp;str, err: &amp;eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
     <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(&quot;{context}: {err}&quot;))
 }
 
@@ -775,7 +775,7 @@
         .collect()
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a>(kind: eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-path-change-kind-wire-198">path_change_kind_wire</a>(kind: eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> kind {
         eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
         eos_workspace_modes::ephemeral::<span class="rs-type">PathChangeKind</span>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
@@ -786,7 +786,7 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-changeset-from-publish-outcome-207">changeset_from_publish_outcome</a>(
     outcome: &amp;<span class="rs-type">PublishOutcome</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> raw = outcome
         .raw
         .as_object()
@@ -797,7 +797,7 @@
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;publish outcome missing files&quot;.into()))?
         .iter()
         .map(file_result_from_value)
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
     <span class="rs-kw">let</span> timings = raw
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;timings&quot;)
         .and_then(<span class="rs-type">Value</span>::as_object)
@@ -867,7 +867,7 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">FileResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-file-result-from-value-290">file_result_from_value</a>(value: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">FileResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> object = value
         .as_object()
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;publish file result must be object&quot;.into()))?;

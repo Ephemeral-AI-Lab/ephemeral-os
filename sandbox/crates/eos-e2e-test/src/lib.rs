@@ -23,7 +23,6 @@ pub mod config {
     pub use eos_config::configs::e2e_test::*;
 }
 
-pub use config::WorkloadConfig;
 pub use pool::{NodeLease, NodePool};
 
 static INVOCATION_COUNTER: AtomicU64 = AtomicU64::new(1);

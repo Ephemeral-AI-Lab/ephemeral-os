@@ -95,8 +95,8 @@
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! Single-threaded core plus a per-root reentrant write lease (the dual-layer</span>
 <span class="rs-comment">//! `flock` cross-process lease + in-process reentrant mutex). No tokio. The</span>
-<span class="rs-comment">//! reentrant-RLock → non-reentrant-Mutex DEADLOCK TRAP is documented in</span>
-<span class="rs-comment">//! [`storage_lock`] — do NOT 1:1-port it.</span>
+<span class="rs-comment">//! reentrant write-guard requirement (a non-reentrant `Mutex` would self-deadlock)</span>
+<span class="rs-comment">//! is documented in [`storage_lock`].</span>
 #![forbid(unsafe_code)]
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
@@ -119,12 +119,8 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> lease::{<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> metrics::<a class="symbol-link rs-type" href="eos-layerstack--src-metrics-rs.html#item-struct-LayerStackStorageMetrics-7">LayerStackStorageMetrics</a>;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> squash::{
-    manifest_prefix_before_plan, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>,
-    <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>,
-};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> squash::{<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> stack::{<a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-LayerStack-188">LayerStack</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-Lease-43">Lease</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> storage_lock::{<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>, <span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> workspace_base::{build_workspace_base, ensure_workspace_base, <span class="rs-type">WORKSPACE_BASE_LAYER_ID</span>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> workspace_binding::{
     read_workspace_binding, require_workspace_binding, <a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>, <span class="rs-type">WORKSPACE_BINDING_FILE</span>,

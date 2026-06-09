@@ -2,8 +2,7 @@ use std::fs;
 use std::sync::Arc;
 
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry};
-use eos_tool_ports::ToolName;
-use eos_tools::{render_tool_instruction, ToolInstructions};
+use eos_tool::{render_tool_instruction, ToolInstructions, ToolName};
 
 use crate::{Result, WorkflowError};
 

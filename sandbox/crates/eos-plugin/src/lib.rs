@@ -50,6 +50,5 @@ pub use manifest::{
 };
 pub use ppc::{PpcDirection, PpcEnvelope};
 pub use refresh::{RefreshAck, RefreshRequest};
-pub use registry::public_op_name;
 pub use service::{PluginServiceKey, PluginServiceKeyParts, RefreshStrategy, ServiceMode};
 pub use service_registry::{PluginServiceState, PluginServiceStatus};

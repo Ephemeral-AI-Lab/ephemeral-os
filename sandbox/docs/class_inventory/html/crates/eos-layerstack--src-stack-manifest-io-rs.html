@@ -69,7 +69,7 @@
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">let</span> path = path.as_ref();
     <span class="rs-kw">if</span> !path.exists() {
-        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
+        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
     }
     <span class="rs-kw">let</span> payload = std::fs::read_to_string(path)?;
     <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> =
@@ -112,7 +112,7 @@
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(&amp;layer)?;
         layers.push(layer);
     }
-    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
+    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
 }
 </code></pre>
 </details>
@@ -190,7 +190,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">let</span> path = path.as_ref();
     <span class="rs-kw">if</span> !path.exists() {
-        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
+        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
     }
     <span class="rs-kw">let</span> payload = std::fs::read_to_string(path)?;
     <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> =
@@ -233,7 +233,7 @@
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(&amp;layer)?;
         layers.push(layer);
     }
-    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
+    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(

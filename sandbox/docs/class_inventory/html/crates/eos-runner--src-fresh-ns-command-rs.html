@@ -72,12 +72,12 @@
     <h3>plugin_service_argv</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command) = request.tool_call.args.get(&quot;command&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
             &quot;plugin_service requires command argv&quot;.to_owned(),
@@ -94,7 +94,7 @@
     <span class="rs-kw">let</span> argv: <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; = parts
         .iter()
         .map(|part| {
-            part.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>().map_or_else(
+            part.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>().map_or_else(
                 || {
                     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
                         &quot;plugin_service command argv entries must be strings&quot;.to_owned(),
@@ -122,19 +122,19 @@
     <h3>shell_argv</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; Vec &lt; String &gt; , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> shell_args = &amp;request.tool_call.args;
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command) = shell_args.get(&quot;command&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
             &quot;shell args require command&quot;.to_owned(),
         ));
     };
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = command.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>() {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = command.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>() {
         <span class="rs-kw">let</span> command = value.trim();
         <span class="rs-kw">if</span> command.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
@@ -163,12 +163,12 @@
     <h3>shell_cwd</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> raw = request
         .tool_call
         .args
@@ -247,11 +247,11 @@
     );
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(extra) = args.get(&quot;env&quot;).and_then(serde_json::<span class="rs-type">Value</span>::as_object) {
         <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> extra {
-            <span class="rs-kw">if</span> !<span class="rs-type">RESTRICTED</span>.contains(&amp;key.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>()) {
+            <span class="rs-kw">if</span> !<span class="rs-type">RESTRICTED</span>.contains(&amp;key.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>()) {
                 env.insert(
                     key.to_owned(),
                     value
-                        .<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>()
+                        .<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>()
                         .map_or_else(|| value.to_string(), str::to_owned),
                 );
             }
@@ -389,22 +389,22 @@
     <h3>request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a> (verb : &amp; str , args : serde_json :: Value) -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a> (verb : &amp; str , args : serde_json :: Value) -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(verb: &amp;str, args: serde_json::<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span>,
-            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(verb: &amp;str, args: serde_json::<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">FreshNs</span>,
+            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a> {
                 invocation_id: &quot;test&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
-                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(verb),
+                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(verb),
                 intent: <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
                 args,
                 background: <span class="rs-kw">false</span>,
             },
-            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
+            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
             layer_paths: vec![],
             upperdir: <span class="rs-type">None</span>,
             workdir: <span class="rs-type">None</span>,
@@ -439,10 +439,10 @@
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::path::normalize_lexical;
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>;
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command) = request.tool_call.args.get(&quot;command&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
             &quot;plugin_service requires command argv&quot;.to_owned(),
@@ -459,7 +459,7 @@
     <span class="rs-kw">let</span> argv: <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; = parts
         .iter()
         .map(|part| {
-            part.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>().map_or_else(
+            part.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>().map_or_else(
                 || {
                     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
                         &quot;plugin_service command argv entries must be strings&quot;.to_owned(),
@@ -479,14 +479,14 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> shell_args = &amp;request.tool_call.args;
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(command) = shell_args.get(&quot;command&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
             &quot;shell args require command&quot;.to_owned(),
         ));
     };
-    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = command.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>() {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = command.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>() {
         <span class="rs-kw">let</span> command = value.trim();
         <span class="rs-kw">if</span> command.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(
@@ -507,7 +507,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> raw = request
         .tool_call
         .args
@@ -573,11 +573,11 @@
     );
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(extra) = args.get(&quot;env&quot;).and_then(serde_json::<span class="rs-type">Value</span>::as_object) {
         <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> extra {
-            <span class="rs-kw">if</span> !<span class="rs-type">RESTRICTED</span>.contains(&amp;key.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>()) {
+            <span class="rs-kw">if</span> !<span class="rs-type">RESTRICTED</span>.contains(&amp;key.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>()) {
                 env.insert(
                     key.to_owned(),
                     value
-                        .<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>()
+                        .<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-72">as_str</a>()
                         .map_or_else(|| value.to_string(), str::to_owned),
                 );
             }
@@ -591,7 +591,7 @@
 <span class="rs-kw">mod</span> tests {
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{plugin_service_argv, shell_argv};
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::path::normalize_lexical;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>};
     <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
     <span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
 
@@ -664,18 +664,18 @@
         );
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(verb: &amp;str, args: serde_json::<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span>,
-            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(verb: &amp;str, args: serde_json::<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">FreshNs</span>,
+            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a> {
                 invocation_id: &quot;test&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
-                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(verb),
+                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(verb),
                 intent: <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
                 args,
                 background: <span class="rs-kw">false</span>,
             },
-            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
+            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
             layer_paths: vec![],
             upperdir: <span class="rs-type">None</span>,
             workdir: <span class="rs-type">None</span>,

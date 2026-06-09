@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -127,7 +127,7 @@
     <h3>spawn_connected_with_overlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-connected-with-overlay-37">spawn_connected_with_overlay</a> (spec : &amp; PluginProcessSpec , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; (<a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , PpcClient) , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-connected-with-overlay-37">spawn_connected_with_overlay</a> (spec : &amp; PluginProcessSpec , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , timeout : Duration ,) -&gt; Result &lt; (<a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , PpcClient) , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -135,7 +135,7 @@
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <span class="rs-type">PpcClient</span>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <span class="rs-type">PpcClient</span>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> listener = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(&amp;spec.socket_path)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a>(spec, overlay)?;
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-accept-ppc-client-365">accept_ppc_client</a>(&amp;listener, &amp;<span class="rs-kw">mut</span> process, timeout) {
@@ -156,11 +156,11 @@
     <h3>spawn</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a> (spec : &amp; PluginProcessSpec) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a> (spec : &amp; PluginProcessSpec) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> env = spec.environment();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(&amp;spec.command[0]);
     command.args(&amp;spec.command[1..]);
@@ -224,7 +224,7 @@
     <h3>remount_workspace_overlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-remount-workspace-overlay-224">remount_workspace_overlay</a> (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-remount-workspace-overlay-224">remount_workspace_overlay</a> (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -234,7 +234,7 @@
     workspace_root: &amp;str,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
         tool_call: <span class="rs-type">ToolCall</span> {
@@ -305,7 +305,7 @@
     <h3>remount_workspace_overlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) const fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-remount-workspace-overlay-224">remount_workspace_overlay</a> (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> , _timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) const fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-remount-workspace-overlay-224">remount_workspace_overlay</a> (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> , _timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: any</span><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -321,7 +321,7 @@
     _workspace_root: &amp;str,
     _overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
     _timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(())
 }
 </code></pre>
@@ -334,7 +334,7 @@
     <h3>new_spec_for_test</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-for-test-399">new_spec_for_test</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PluginProcessSpec , PluginError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-for-test-399">new_spec_for_test</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; Result &lt; PluginProcessSpec , PluginError &gt;</code>
   <div class="tags"><span>cfg: test</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -343,7 +343,7 @@
     key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
     command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     ppc_protocol_version: u32,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> socket_root = <span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-plugin-runtime-config-69">plugin_runtime_config</a>().ppc_root;
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-with-socket-root-409">new_spec_with_socket_root</a>(key, command, ppc_protocol_version, socket_root)
 }
@@ -357,7 +357,7 @@
     <h3>new_spec_with_socket_root</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-with-socket-root-409">new_spec_with_socket_root</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PluginProcessSpec , PluginError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-with-socket-root-409">new_spec_with_socket_root</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; PluginProcessSpec , PluginError &gt;</code>
   <div class="tags"><span>cfg: test</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -367,7 +367,7 @@
     command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     ppc_protocol_version: u32,
     socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-default-package-root-429">default_package_root</a>(&amp;key);
     <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-default-dependency-root-436">default_dependency_root</a>(&amp;key);
     <span class="rs-type">PluginProcessSpec</span>::new_with_package_paths(
@@ -390,14 +390,14 @@
     <h3>spawn_for_overlay</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a> (spec : &amp; PluginProcessSpec , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a> (spec : &amp; PluginProcessSpec , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = overlay {
         <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(spec, overlay);
     }
@@ -413,7 +413,7 @@
     <h3>spawn_overlay_runner</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a> (spec : &amp; PluginProcessSpec , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a> (spec : &amp; PluginProcessSpec , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -421,7 +421,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-overlay-run-request-134">overlay_run_request</a>(spec, overlay);
     <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
@@ -461,7 +461,7 @@
     <h3>spawn_overlay_runner</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a> (spec : &amp; PluginProcessSpec , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a> (spec : &amp; PluginProcessSpec , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: any</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -469,7 +469,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = (&amp;overlay.layer_paths, &amp;overlay.upperdir, &amp;overlay.workdir);
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec)
 }
@@ -524,7 +524,7 @@
     <h3>wait_for_helper</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-wait-for-helper-308">wait_for_helper</a> (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; std :: process :: Output , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-wait-for-helper-308">wait_for_helper</a> (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; Result &lt; std :: process :: Output , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -533,7 +533,7 @@
     <span class="rs-kw">mut</span> child: <span class="rs-type">Child</span>,
     timeout: <span class="rs-type">Duration</span>,
     label: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
     loop {
@@ -606,11 +606,11 @@
     <h3>bind_ppc_listener</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a> (socket_path : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; UnixListener , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a> (socket_path : &amp; Path) -&gt; Result &lt; UnixListener , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = socket_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -633,7 +633,7 @@
     <h3>accept_ppc_client</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-accept-ppc-client-365">accept_ppc_client</a> (listener : &amp; UnixListener , process : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PpcClient , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-accept-ppc-client-365">accept_ppc_client</a> (listener : &amp; UnixListener , process : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a> , timeout : Duration ,) -&gt; Result &lt; PpcClient , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -641,7 +641,7 @@
     listener: &amp;<span class="rs-type">UnixListener</span>,
     process: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcClient</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcClient</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
     loop {
         <span class="rs-kw">match</span> listener.accept() {
@@ -762,7 +762,7 @@
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <span class="rs-type">PpcClient</span>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <span class="rs-type">PpcClient</span>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> listener = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(&amp;spec.socket_path)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a>(spec, overlay)?;
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-accept-ppc-client-365">accept_ppc_client</a>(&amp;listener, &amp;<span class="rs-kw">mut</span> process, timeout) {
@@ -774,7 +774,7 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec: &amp;<span class="rs-type">PluginProcessSpec</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> env = spec.environment();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(&amp;spec.command[0]);
     command.args(&amp;spec.command[1..]);
@@ -804,7 +804,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-for-overlay-80">spawn_for_overlay</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = overlay {
         <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(spec, overlay);
     }
@@ -815,7 +815,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-overlay-run-request-134">overlay_run_request</a>(spec, overlay);
     <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
@@ -850,7 +850,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-overlay-runner-90">spawn_overlay_runner</a>(
     spec: &amp;<span class="rs-type">PluginProcessSpec</span>,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = (&amp;overlay.layer_paths, &amp;overlay.upperdir, &amp;overlay.workdir);
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-53">spawn</a>(spec)
 }
@@ -951,7 +951,7 @@
     workspace_root: &amp;str,
     overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
         tool_call: <span class="rs-type">ToolCall</span> {
@@ -1025,7 +1025,7 @@
     _workspace_root: &amp;str,
     _overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>,
     _timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(())
 }
 
@@ -1034,7 +1034,7 @@
     <span class="rs-kw">mut</span> child: <span class="rs-type">Child</span>,
     timeout: <span class="rs-type">Duration</span>,
     label: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
     loop {
@@ -1072,7 +1072,7 @@
 #[cfg(not(target_os = &quot;linux&quot;))]
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-terminate-process-group-334">terminate_process_group</a>(_process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {}
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-bind-ppc-listener-351">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = socket_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -1090,7 +1090,7 @@
     listener: &amp;<span class="rs-type">UnixListener</span>,
     process: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceProcess-177">PluginServiceProcess</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcClient</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcClient</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
     loop {
         <span class="rs-kw">match</span> listener.accept() {
@@ -1125,7 +1125,7 @@
     key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
     command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     ppc_protocol_version: u32,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> socket_root = <span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-plugin-runtime-config-69">plugin_runtime_config</a>().ppc_root;
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-new-spec-with-socket-root-409">new_spec_with_socket_root</a>(key, command, ppc_protocol_version, socket_root)
 }
@@ -1136,7 +1136,7 @@
     command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     ppc_protocol_version: u32,
     socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PluginProcessSpec</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-default-package-root-429">default_package_root</a>(&amp;key);
     <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-default-dependency-root-436">default_dependency_root</a>(&amp;key);
     <span class="rs-type">PluginProcessSpec</span>::new_with_package_paths(

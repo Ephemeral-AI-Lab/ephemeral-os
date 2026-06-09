@@ -1,0 +1,29 @@
+[package]
+name = "eos-tool"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Direct eos-types edge: this crate names InvocationId, ToolUseId,
+# WorkflowSessionId, CommandSessionId, AgentRunId, and JsonObject/CoreError
+# in its own signatures, so this is a direct ownership edge.
+eos-types.workspace = true
+eos-sandbox-port.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true }
+insta.workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["insta"]
+
+[lints]
+workspace = true

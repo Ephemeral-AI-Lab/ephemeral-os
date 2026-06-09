@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -64,37 +64,37 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a></code>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Arc &lt; Mutex &lt; UnixStream &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a> (stream : UnixStream) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Arc &lt; Mutex &lt; UnixStream &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a> (stream : UnixStream) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream)),
+            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream)),
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-write-with-timeout-26"><td>method</td><td>write_with_timeout</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-with-timeout-26"><td>method</td><td>write_with_timeout</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a>(
         &amp;<span class="rs-self">self</span>,
         frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">Some</span>(timeout))
     }
 </code></pre>
-</details></td></tr><tr id="method-write-34"><td>method</td><td>write</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-34"><td>method</td><td>write</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">None</span>)
     }
 </code></pre>
-</details></td></tr><tr id="method-write-inner-38"><td>method</td><td>write_inner</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Option &lt; Duration &gt;) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-write-inner-38"><td>method</td><td>write_inner</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a> (&amp; self , frame : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Option &lt; Duration &gt;) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <span class="rs-self">self</span>
             .stream
             .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
             writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
         }
@@ -112,15 +112,15 @@
     <h3>read_frame</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a> (stream : &amp; mut UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a> (stream : &amp; mut UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <p class="docstring">Read one newline-terminated PPC frame from `stream`, capped at the protocol<br>request-byte ceiling.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Read one newline-terminated PPC frame from `stream`, capped at the protocol</span>
 <span class="rs-comment">/// request-byte ceiling.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> one = [0_u8; 1];
     loop {
         <span class="rs-kw">let</span> read = stream.read(&amp;<span class="rs-kw">mut</span> one)?;
@@ -151,13 +151,13 @@
     <h3>read_envelope</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a> (stream : &amp; mut UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a> (stream : &amp; mut UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream)?;
-    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::from)
+    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
 }
 </code></pre>
 </details>
@@ -180,7 +180,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>;
 
 <span class="rs-kw">const</span> <span class="rs-type">MAX_PPC_FRAME_BYTES</span>: usize = eos_protocol::<span class="rs-type">MAX_REQUEST_BYTES</span>;
 
@@ -190,9 +190,9 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream)),
+            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream)),
         }
     }
 
@@ -200,19 +200,19 @@
         &amp;<span class="rs-self">self</span>,
         frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">Some</span>(timeout))
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">None</span>)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-inner-38">write_inner</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <span class="rs-self">self</span>
             .stream
             .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
             writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
         }
@@ -222,15 +222,15 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream)?;
-    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::from)
+    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
 }
 
 <span class="rs-comment">/// Read one newline-terminated PPC frame from `stream`, capped at the protocol</span>
 <span class="rs-comment">/// request-byte ceiling.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> one = [0_u8; 1];
     loop {
         <span class="rs-kw">let</span> read = stream.read(&amp;<span class="rs-kw">mut</span> one)?;

@@ -80,7 +80,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
 
-    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(path, b&quot;&quot;)?;
+    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(path, b&quot;&quot;)?;
     <span class="rs-kw">let</span> trusted = rustix::fs::setxattr(
         path,
         <span class="rs-type">TRUSTED_OVERLAY_WHITEOUT_XATTR</span>,
@@ -125,7 +125,7 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = logical.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(logical, b&quot;&quot;)?;
+    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(logical, b&quot;&quot;)?;
     <span class="rs-type">Ok</span>(())
 }
 </code></pre>
@@ -204,14 +204,14 @@
   <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-logical-whiteout-path-for-target-71">logical_whiteout_path_for_target</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
     <span class="rs-kw">let</span> name = path.file_name().unwrap_or_default();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> whiteout_name = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> whiteout_name = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
     whiteout_name.push(name);
     <span class="rs-kw">match</span> path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
     {
         <span class="rs-type">Some</span>(parent) =&gt; parent.join(whiteout_name),
-        <span class="rs-type">None</span> =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(whiteout_name),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(whiteout_name),
     }
 }
 </code></pre>
@@ -279,7 +279,7 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
 
-    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(path, b&quot;&quot;)?;
+    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(path, b&quot;&quot;)?;
     <span class="rs-kw">let</span> trusted = rustix::fs::setxattr(
         path,
         <span class="rs-type">TRUSTED_OVERLAY_WHITEOUT_XATTR</span>,
@@ -311,21 +311,21 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = logical.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(logical, b&quot;&quot;)?;
+    std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(logical, b&quot;&quot;)?;
     <span class="rs-type">Ok</span>(())
 }
 
 #[cfg(not(target_os = &quot;linux&quot;))]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-logical-whiteout-path-for-target-71">logical_whiteout_path_for_target</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
     <span class="rs-kw">let</span> name = path.file_name().unwrap_or_default();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> whiteout_name = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> whiteout_name = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
     whiteout_name.push(name);
     <span class="rs-kw">match</span> path
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
     {
         <span class="rs-type">Some</span>(parent) =&gt; parent.join(whiteout_name),
-        <span class="rs-type">None</span> =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(whiteout_name),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(whiteout_name),
     }
 }
 

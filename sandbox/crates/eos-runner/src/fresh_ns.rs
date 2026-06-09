@@ -64,7 +64,7 @@ use command::*;
 /// Returns [`RunnerError`] when namespace setup, overlay mounting, request
 /// validation, or child execution fails.
 #[cfg(target_os = "linux")]
-pub fn run_fresh_ns(
+pub(crate) fn run_fresh_ns(
     request: &RunRequest,
     config: &crate::config::RunnerConfig,
 ) -> Result<RunResult, RunnerError> {
@@ -105,7 +105,7 @@ pub fn run_fresh_ns(
 ///
 /// Always returns [`RunnerError::Unsupported`] outside Linux because the
 /// namespace syscalls do not exist.
-pub fn run_fresh_ns(
+pub(crate) fn run_fresh_ns(
     _request: &RunRequest,
     _config: &crate::config::RunnerConfig,
 ) -> Result<RunResult, RunnerError> {

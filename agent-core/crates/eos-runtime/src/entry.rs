@@ -14,7 +14,7 @@ use eos_agent_def::AgentName;
 use eos_agent_ports::{
     AgentName as AgentPortName, AgentRunApi, AgentRunMessageRecordKind, SpawnAgentRequest,
 };
-use eos_agent_runner::AgentRunService as RunnerAgentRunService;
+use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
 use eos_tool_ports::{AttemptSubmissionPort, CancelPort};
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId, WorkflowApi};

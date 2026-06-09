@@ -63,7 +63,7 @@
     <span class="visibility">pub</span>
   </div>
   <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-10">scan_skill_file</a> (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
-  <p class="docstring">Scan a skill body for terminal-tool mentions, returning one<br>human-readable violation per hit (empty means clean).<br>`terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are<br>owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already<br>frontmatter-stripped `body` so author metadata cannot false-positive.</p>
+  <p class="docstring">Scan a skill body for terminal-tool mentions, returning one<br>human-readable violation per hit (empty means clean).<br>`terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are<br>owned by `eos-tool`, GC-eos-agent-def-05). The caller passes an already<br>frontmatter-stripped `body` so author metadata cannot false-positive.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -71,7 +71,7 @@
     <span class="rs-comment">/// human-readable violation per hit (empty means clean).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// `terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are</span>
-    <span class="rs-comment">/// owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already</span>
+    <span class="rs-comment">/// owned by `eos-tool`, GC-eos-agent-def-05). The caller passes an already</span>
     <span class="rs-comment">/// frontmatter-stripped `body` so author metadata cannot false-positive.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-10">scan_skill_file</a>(body: &amp;str, terminal_keys: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
@@ -207,7 +207,7 @@
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! The cyclic edge in the Rust source is broken by injection (GC-eos-agent-def-05):</span>
 <span class="rs-comment">//! terminal keys are passed into the scanner as data rather than imported from</span>
-<span class="rs-comment">//! `eos-tools`.</span>
+<span class="rs-comment">//! `eos-tool`.</span>
 
 <span class="rs-comment">/// Terminal-silence lint over a skill body (`agents/skills/loader.py`).</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> skill_lint {
@@ -215,7 +215,7 @@
     <span class="rs-comment">/// human-readable violation per hit (empty means clean).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// `terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are</span>
-    <span class="rs-comment">/// owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already</span>
+    <span class="rs-comment">/// owned by `eos-tool`, GC-eos-agent-def-05). The caller passes an already</span>
     <span class="rs-comment">/// frontmatter-stripped `body` so author metadata cannot false-positive.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-10">scan_skill_file</a>(body: &amp;str, terminal_keys: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {

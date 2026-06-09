@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,7 +62,7 @@
     <h3>dispatch_registered_op</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -71,7 +71,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
     <span class="rs-kw">if</span> !op.starts_with(&quot;plugin.&quot;) {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -98,11 +98,11 @@
     <h3>route_for_op</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a> (op : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; PluginOperationRoute &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a> (op : &amp; str) -&gt; Result &lt; Option &lt; PluginOperationRoute &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a>(op: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PluginOperationRoute</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a>(op: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PluginOperationRoute</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(state
         .loaded
@@ -119,7 +119,7 @@
     <h3>dispatch_registered_route</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-46">dispatch_registered_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-46">dispatch_registered_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -127,7 +127,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(route, invocation_id, args)? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
@@ -158,11 +158,11 @@
     <h3>dispatch_deferred_route</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a> (route : &amp; PluginOperationRoute) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a> (route : &amp; PluginOperationRoute) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;status&quot;: &quot;deferred&quot;,
@@ -214,7 +214,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
     <span class="rs-kw">if</span> !op.starts_with(&quot;plugin.&quot;) {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
@@ -232,7 +232,7 @@
     <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-route-46">dispatch_registered_route</a>(&amp;route, invocation_id, args))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a>(op: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PluginOperationRoute</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-route-for-op-38">route_for_op</a>(op: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PluginOperationRoute</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(state
         .loaded
@@ -244,7 +244,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> route.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; route.service_id.is_some() {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(route, invocation_id, args)? {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(response);
@@ -266,7 +266,7 @@
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a>(route)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-deferred-route-72">dispatch_deferred_route</a>(route: &amp;<span class="rs-type">PluginOperationRoute</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;status&quot;: &quot;deferred&quot;,

@@ -49,7 +49,7 @@ const RESOLV_CONF: &str = "/etc/resolv.conf";
 /// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join
 /// fails, request validation fails, or child execution fails.
 #[cfg(target_os = "linux")]
-pub fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
+pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
     //   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs
     //   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and
     //   map waitstatus → exit code. The group is its own session so cancel killpgs it.
@@ -66,7 +66,7 @@ pub fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
 ///
 /// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
 /// is unavailable.
-pub fn run_setns(_request: &RunRequest) -> Result<RunResult, RunnerError> {
+pub(crate) fn run_setns(_request: &RunRequest) -> Result<RunResult, RunnerError> {
     Err(RunnerError::Unsupported)
 }
 

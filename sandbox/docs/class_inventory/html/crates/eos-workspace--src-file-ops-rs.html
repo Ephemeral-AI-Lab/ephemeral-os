@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>8</b><span>modules</span></div>
-  <div><b>47</b><span>items</span></div>
+  <div><b>46</b><span>items</span></div>
   <div><b>99</b><span>fields</span></div>
-  <div><b>18</b><span>methods</span></div>
+  <div><b>17</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -215,7 +215,7 @@
     <h3>read_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-read-file-137">read_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileRequest-15">ReadFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> ,</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-read-file-137">read_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileRequest-15">ReadFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> ,</code>
   <p class="docstring">Read one text file through a mode-specific read view.<br># Errors<br>Returns [`WorkspaceApiError`] when the path cannot be resolved, the file<br>cannot be read, or the read exceeds `max_read_bytes`.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -232,11 +232,11 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileRequest-15">ReadFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> read = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> read = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">let</span> content = <span class="rs-kw">if</span> read.exists {
         <span class="rs-kw">let</span> bytes = read.bytes.unwrap_or_default();
         <span class="rs-kw">if</span> bytes.len() &gt; request.max_read_bytes {
@@ -264,7 +264,7 @@
     <h3>write_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-write-file-138">write_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileRequest-22">WriteFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a> ,</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-write-file-138">write_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileRequest-22">WriteFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a> ,</code>
   <p class="docstring">Write one file through a mode-specific mutation sink.<br># Errors<br>Returns [`WorkspaceApiError`] when the path cannot be resolved, the base<br>cannot be read, the request is too large, or the mutation sink fails.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -282,7 +282,7 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileRequest-22">WriteFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">if</span> request.content.len() &gt; request.max_file_bytes {
@@ -292,8 +292,8 @@
             request.max_file_bytes
         )));
     }
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !request.overwrite &amp;&amp; base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
         <a class="symbol-link rs-fn" href="eos-workspace--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
@@ -326,7 +326,7 @@
     <h3>edit_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-edit-file-139">edit_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileRequest-40">EditFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a> ,</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#method-edit-file-139">edit_file</a> &lt; P &gt; (ports : &amp; P , mode : <a class="symbol-link" href="eos-workspace--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , mutation_source : &amp; str , request : <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileRequest-40">EditFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a> , <a class="symbol-link" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt; where P : <a class="symbol-link" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a> ,</code>
   <p class="docstring">Apply exact search/replace edits through a mode-specific mutation sink.<br># Errors<br>Returns [`WorkspaceApiError`] when the path cannot be resolved, the base<br>cannot be read, the file is not UTF-8, or the mutation sink fails.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -344,11 +344,11 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileRequest-40">EditFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
         <a class="symbol-link rs-fn" href="eos-workspace--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
@@ -614,7 +614,7 @@
     <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a>, <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a>,
     <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
 };
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::read_view::<a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::read_view::<a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response::{<a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>};
 
 <span class="rs-comment">/// Read one text file from a workspace mode.</span>
@@ -756,11 +756,11 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileRequest-15">ReadFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> read = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> read = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">let</span> content = <span class="rs-kw">if</span> read.exists {
         <span class="rs-kw">let</span> bytes = read.bytes.unwrap_or_default();
         <span class="rs-kw">if</span> bytes.len() &gt; request.max_read_bytes {
@@ -792,7 +792,7 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileRequest-22">WriteFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">if</span> request.content.len() &gt; request.max_file_bytes {
@@ -802,8 +802,8 @@
             request.max_file_bytes
         )));
     }
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !request.overwrite &amp;&amp; base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
         <a class="symbol-link rs-fn" href="eos-workspace--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
@@ -840,11 +840,11 @@
     request: <a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileRequest-40">EditFileRequest</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;
 <span class="rs-kw">where</span>
-    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-workspace--src-read-view-rs.html#item-trait-WorkspaceReadView-30">WorkspaceReadView</a> + <a class="symbol-link rs-type" href="eos-workspace--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
 {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-44">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-46">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-resolve-path-32">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = ports.<a class="symbol-link rs-fn" href="eos-workspace--src-read-view-rs.html#method-read-bytes-34">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
         <a class="symbol-link rs-fn" href="eos-workspace--src-file-ops-rs.html#item-fn-insert-total-362">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);

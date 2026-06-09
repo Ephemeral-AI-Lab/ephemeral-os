@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,11 +62,11 @@
     <h3>read_request_line</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) async fn <a class="symbol-link" href="eos-daemon--src-transport-framing-rs.html#item-fn-read-request-line-18">read_request_line</a> &lt; R &gt; (reader : &amp; mut R) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; where R : AsyncRead + Unpin ,</code>
+  <code class="signature">pub(super) async fn <a class="symbol-link" href="eos-daemon--src-transport-framing-rs.html#item-fn-read-request-line-18">read_request_line</a> &lt; R &gt; (reader : &amp; mut R) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; where R : AsyncRead + Unpin ,</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
 <span class="rs-kw">where</span>
     <span class="rs-type">R</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">Unpin</span>,
 {
@@ -142,7 +142,7 @@
 <span class="rs-comment">/// Per-request read timeout in seconds.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">REQUEST_READ_TIMEOUT_S</span>: f64 = eos_protocol::<span class="rs-type">REQUEST_READ_TIMEOUT_S</span>;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> read_request_line&lt;<span class="rs-type">R</span>&gt;(reader: &amp;<span class="rs-kw">mut</span> <span class="rs-type">R</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
 <span class="rs-kw">where</span>
     <span class="rs-type">R</span>: <span class="rs-type">AsyncRead</span> + <span class="rs-type">Unpin</span>,
 {

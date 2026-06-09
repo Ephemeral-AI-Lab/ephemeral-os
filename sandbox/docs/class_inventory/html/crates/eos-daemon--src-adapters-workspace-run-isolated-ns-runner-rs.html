@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,11 +62,11 @@
     <h3>lock_holder_children</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; MutexGuard &lt; &#x27;static , HashMap &lt; i32 , Child &gt; &gt; , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a> () -&gt; Result &lt; MutexGuard &lt; &#x27;static , HashMap &lt; i32 , Child &gt; &gt; , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;i32, <span class="rs-type">Child</span>&gt;&gt;, <span class="rs-type">IsolatedError</span>&gt;
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;i32, <span class="rs-type">Child</span>&gt;&gt;, <span class="rs-type">IsolatedError</span>&gt;
 {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-holder-children-24">holder_children</a>()
         .lock()
@@ -82,11 +82,11 @@
     <h3>open_inheritable_fd</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a> (path : impl AsRef &lt; std :: path :: Path &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; RawFd , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a> (path : impl AsRef &lt; std :: path :: Path &gt;) -&gt; Result &lt; RawFd , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;std::path::<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">RawFd</span>, <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;std::path::<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> file = <span class="rs-type">File</span>::open(path.as_ref()).map_err(setup_error)?;
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(file.as_raw_fd())?;
     <span class="rs-type">Ok</span>(file.into_raw_fd())
@@ -101,11 +101,11 @@
     <h3>clear_cloexec</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a> (fd : RawFd) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a> (fd : RawFd) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_SETFD</span>(<span class="rs-type">FdFlag</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>())).map_err(setup_error)?;
     <span class="rs-type">Ok</span>(())
 }
@@ -119,11 +119,11 @@
     <h3>set_nonblocking</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a> (fd : RawFd) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a> (fd : RawFd) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> flags = fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_GETFL</span>).map_err(setup_error)?;
     <span class="rs-kw">let</span> flags = <span class="rs-type">OFlag</span>::from_bits_truncate(flags);
     fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_SETFL</span>(flags | <span class="rs-type">OFlag</span>::<span class="rs-type">O_NONBLOCK</span>)).map_err(setup_error)?;
@@ -139,11 +139,11 @@
     <h3>expect_line</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a> (fd : RawFd , prefix : &amp; [u8] , timeout_s : f64) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a> (fd : RawFd , prefix : &amp; [u8] , timeout_s : f64) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(fd: <span class="rs-type">RawFd</span>, prefix: &amp;[u8], timeout_s: f64) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(fd: <span class="rs-type">RawFd</span>, prefix: &amp;[u8], timeout_s: f64) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(timeout_s.max(0.0));
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>();
     loop {
@@ -189,11 +189,11 @@
     <h3>write_all_fd</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a> (fd : RawFd , bytes : &amp; [u8]) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a> (fd : RawFd , bytes : &amp; [u8]) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(fd: <span class="rs-type">RawFd</span>, bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(fd: <span class="rs-type">RawFd</span>, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>()
         .write(<span class="rs-kw">true</span>)
         .open(format!(&quot;/proc/<span class="rs-self">self</span>/fd/{fd}&quot;))
@@ -235,11 +235,11 @@
     <h3>run_ns_runner_mount_overlay_child</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a> (request : &amp; RunRequest) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a> (request : &amp; RunRequest) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> payload = serde_json::to_vec(request).map_err(setup_error)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe().map_err(setup_error)?)
         .arg(&quot;ns-runner&quot;)
@@ -279,11 +279,11 @@
     <h3>run_ns_runner_configure_dns_child</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a> (request : &amp; RunRequest) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; bool , IsolatedError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a> (request : &amp; RunRequest) -&gt; Result &lt; bool , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;bool, <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> payload = serde_json::to_vec(request).map_err(setup_error)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe().map_err(setup_error)?)
         .arg(&quot;ns-runner&quot;)
@@ -380,32 +380,32 @@
     <span class="rs-type">CHILDREN</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>()))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;i32, <span class="rs-type">Child</span>&gt;&gt;, <span class="rs-type">IsolatedError</span>&gt;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-lock-holder-children-29">lock_holder_children</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;i32, <span class="rs-type">Child</span>&gt;&gt;, <span class="rs-type">IsolatedError</span>&gt;
 {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-holder-children-24">holder_children</a>()
         .lock()
         .map_err(|_| <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-setup-error-415">setup_error</a>(&quot;ns-holder child registry lock poisoned&quot;))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;std::path::<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">RawFd</span>, <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-open-inheritable-fd-36">open_inheritable_fd</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;std::path::<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> file = <span class="rs-type">File</span>::open(path.as_ref()).map_err(setup_error)?;
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(file.as_raw_fd())?;
     <span class="rs-type">Ok</span>(file.into_raw_fd())
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-clear-cloexec-42">clear_cloexec</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_SETFD</span>(<span class="rs-type">FdFlag</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>())).map_err(setup_error)?;
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-set-nonblocking-47">set_nonblocking</a>(fd: <span class="rs-type">RawFd</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> flags = fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_GETFL</span>).map_err(setup_error)?;
     <span class="rs-kw">let</span> flags = <span class="rs-type">OFlag</span>::from_bits_truncate(flags);
     fcntl(fd, <span class="rs-type">FcntlArg</span>::<span class="rs-type">F_SETFL</span>(flags | <span class="rs-type">OFlag</span>::<span class="rs-type">O_NONBLOCK</span>)).map_err(setup_error)?;
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(fd: <span class="rs-type">RawFd</span>, prefix: &amp;[u8], timeout_s: f64) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-expect-line-54">expect_line</a>(fd: <span class="rs-type">RawFd</span>, prefix: &amp;[u8], timeout_s: f64) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs_f64(timeout_s.max(0.0));
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>();
     loop {
@@ -442,7 +442,7 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(fd: <span class="rs-type">RawFd</span>, bytes: &amp;[u8]) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-write-all-fd-91">write_all_fd</a>(fd: <span class="rs-type">RawFd</span>, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>()
         .write(<span class="rs-kw">true</span>)
         .open(format!(&quot;/proc/<span class="rs-self">self</span>/fd/{fd}&quot;))
@@ -462,7 +462,7 @@
     })
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-mount-overlay-child-111">run_ns_runner_mount_overlay_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> payload = serde_json::to_vec(request).map_err(setup_error)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe().map_err(setup_error)?)
         .arg(&quot;ns-runner&quot;)
@@ -493,7 +493,7 @@
     })
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-ns-runner-rs.html#item-fn-run-ns-runner-configure-dns-child-142">run_ns_runner_configure_dns_child</a>(request: &amp;<span class="rs-type">RunRequest</span>) -&gt; <span class="rs-type">Result</span>&lt;bool, <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> payload = serde_json::to_vec(request).map_err(setup_error)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(std::env::current_exe().map_err(setup_error)?)
         .arg(&quot;ns-runner&quot;)

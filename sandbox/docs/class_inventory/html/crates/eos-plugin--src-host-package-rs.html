@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -56,46 +56,46 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PackageEnsureReport-15" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PackageEnsureReport pub pub struct PackageEnsureReport crates/eos-plugin/src/host/package.rs active bool needs_upload bool package_root Option &lt; PathBuf &gt; dependency_root Option &lt; PathBuf &gt; package_published bool setup_ran bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PackageEnsureReport-18" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PackageEnsureReport pub pub struct PackageEnsureReport crates/eos-plugin/src/host/package.rs active bool needs_upload bool package_root Option &lt; PathBuf &gt; dependency_root Option &lt; PathBuf &gt; package_published bool setup_ran bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PackageEnsureReport</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a></code>
   <p class="docstring">Outcome of a package ensure: whether the package contract is active, whether<br>the caller must upload, and the resolved roots / publish + setup status.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>port/service</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active</td><td><code>bool</code></td></tr><tr><td>pub</td><td>needs_upload</td><td><code>bool</code></td></tr><tr><td>pub</td><td>package_root</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>dependency_root</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>package_published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>setup_ran</td><td><code>bool</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:15</p>
-</article><article id="item-struct-PackageRoots-27" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PackageRoots pub pub struct PackageRoots crates/eos-plugin/src/host/package.rs package_root PathBuf dependency_root PathBuf ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:18</p>
+</article><article id="item-struct-PackageRoots-30" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PackageRoots pub(crate) pub(crate) struct PackageRoots crates/eos-plugin/src/host/package.rs package_root PathBuf dependency_root PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PackageRoots</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a></code>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a></code>
   <p class="docstring">Resolved package + dependency roots for a plugin digest.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>package_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>dependency_root</td><td><code>PathBuf</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:27</p>
-</article><article id="item-struct-PackagePaths-112" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PackagePaths private struct PackagePaths crates/eos-plugin/src/host/package.rs package_root PathBuf dependency_root PathBuf upload_digest_root PathBuf setup_tmp_root PathBuf ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:30</p>
+</article><article id="item-struct-PackagePaths-118" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PackagePaths private struct PackagePaths crates/eos-plugin/src/host/package.rs package_root PathBuf dependency_root PathBuf upload_digest_root PathBuf setup_tmp_root PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PackagePaths</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a></code>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>package_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>dependency_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>upload_digest_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>setup_tmp_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-121"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a> (args : &amp; Value , manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>package_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>dependency_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>upload_digest_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>setup_tmp_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-127"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a> (args : &amp; Value , manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> runtime_plugins_root =
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_runtime_root&quot;, &quot;/eos/runtime/plugins/catalog&quot;);
-        <span class="rs-kw">let</span> dependency_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_dependency_root&quot;, &quot;/eos/runtime/packages&quot;);
-        <span class="rs-kw">let</span> upload_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_upload_root&quot;, &quot;/eos/scratch/uploads/plugins&quot;);
-        <span class="rs-kw">let</span> setup_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_setup_root&quot;, &quot;/eos/scratch/setup&quot;);
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_runtime_root&quot;, &quot;/eos/runtime/plugins/catalog&quot;);
+        <span class="rs-kw">let</span> dependency_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_dependency_root&quot;, &quot;/eos/runtime/packages&quot;);
+        <span class="rs-kw">let</span> upload_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_upload_root&quot;, &quot;/eos/scratch/uploads/plugins&quot;);
+        <span class="rs-kw">let</span> setup_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_setup_root&quot;, &quot;/eos/scratch/setup&quot;);
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             package_root: runtime_plugins_root
                 .join(&amp;manifest.plugin_id)
@@ -114,71 +114,50 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:112</p>
-</article><div class="group-label">Aliases</div><article id="item-type-TestResult-515" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:118</p>
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-521" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:515</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-package-roots-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_roots pub pub fn package_roots (args : &amp; Value , manifest : &amp; PluginManifest) -&gt; Result &lt; PackageRoots , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>package_roots</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-34">package_roots</a> (args : &amp; Value , manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-34">package_roots</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args, manifest)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a> {
-        package_root: paths.package_root,
-        dependency_root: paths.dependency_root,
-    })
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-plugin/src/host/package.rs:34</p>
-</article><article id="item-fn-ensure-package-49" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_package pub pub fn ensure_package (args : &amp; Value , manifest : Option &lt; &amp; PluginManifest &gt; ,) -&gt; Result &lt; PackageEnsureReport , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:521</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-ensure-package-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_package pub pub fn ensure_package (args : &amp; Value , manifest : Option &lt; &amp; PluginManifest &gt; ,) -&gt; Result &lt; PackageEnsureReport , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ensure_package</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-49">ensure_package</a> (args : &amp; Value , manifest : Option &lt; &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-55">ensure_package</a> (args : &amp; Value , manifest : Option &lt; &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-49">ensure_package</a>(
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-55">ensure_package</a>(
     args: &amp;<span class="rs-type">Value</span>,
     manifest: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(manifest) = manifest <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
     };
-    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-42">package_contract_active</a>(args) {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
+    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-48">package_contract_active</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
     }
 
-    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args, manifest)?;
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(staged_package_root) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-158">staged_package_root</a>(args)? <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-94">warm_probe</a>(manifest, &amp;paths));
+    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args, manifest)?;
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(staged_package_root) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-164">staged_package_root</a>(args)? <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-100">warm_probe</a>(manifest, &amp;paths));
     };
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-175">validate_staged_package_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-201">validate_staged_package</a>(manifest, &amp;staged_package_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-181">validate_staged_package_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-207">validate_staged_package</a>(manifest, &amp;staged_package_root)?;
 
-    <span class="rs-kw">let</span> package_published = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(&amp;staged_package_root, &amp;paths)?;
-    <span class="rs-kw">let</span> setup_ran = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-349">ensure_setup</a>(manifest, &amp;paths)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-445">cleanup_upload_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root);
+    <span class="rs-kw">let</span> package_published = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(&amp;staged_package_root, &amp;paths)?;
+    <span class="rs-kw">let</span> setup_ran = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-355">ensure_setup</a>(manifest, &amp;paths)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-451">cleanup_upload_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root);
 
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
         active: <span class="rs-kw">true</span>,
         needs_upload: <span class="rs-kw">false</span>,
         package_root: <span class="rs-type">Some</span>(paths.package_root),
@@ -190,18 +169,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:49</p>
-</article><article id="item-fn-needs-upload-response-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn needs_upload_response pub pub fn needs_upload_response (manifest : &amp; PluginManifest , report : &amp; PackageEnsureReport) -&gt; Value crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:55</p>
+</article><article id="item-fn-needs-upload-response-87" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn needs_upload_response pub pub fn needs_upload_response (manifest : &amp; PluginManifest , report : &amp; PackageEnsureReport) -&gt; Value crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>needs_upload_response</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-81">needs_upload_response</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , report : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>) -&gt; Value</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-87">needs_upload_response</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , report : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>) -&gt; Value</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-81">needs_upload_response</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, report: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>) -&gt; <span class="rs-type">Value</span> {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-87">needs_upload_response</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, report: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>) -&gt; <span class="rs-type">Value</span> {
     json!({
         &quot;success&quot;: <span class="rs-kw">true</span>,
         &quot;plugin&quot;: manifest.plugin_id,
@@ -216,18 +195,42 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:81</p>
-</article><article id="item-fn-package-contract-active-42" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_contract_active private fn package_contract_active (args : &amp; Value) -&gt; bool crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:87</p>
+</article><article id="item-fn-package-roots-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_roots pub(crate) pub(crate) fn package_roots (args : &amp; Value , manifest : &amp; PluginManifest ,) -&gt; Result &lt; PackageRoots , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_roots</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-37">package_roots</a> (args : &amp; Value , manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-37">package_roots</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args, manifest)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a> {
+        package_root: paths.package_root,
+        dependency_root: paths.dependency_root,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-plugin/src/host/package.rs:37</p>
+</article><article id="item-fn-package-contract-active-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_contract_active private fn package_contract_active (args : &amp; Value) -&gt; bool crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>package_contract_active</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-42">package_contract_active</a> (args : &amp; Value) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-48">package_contract_active</a> (args : &amp; Value) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-42">package_contract_active</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-48">package_contract_active</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; bool {
     args.get(&quot;staged_package_root&quot;).is_some()
         || args.get(&quot;manifest&quot;).is_some_and(|manifest| {
             manifest.get(&quot;package&quot;).is_some() || manifest.get(&quot;setup&quot;).is_some()
@@ -236,26 +239,26 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:42</p>
-</article><article id="item-fn-warm-probe-94" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn warm_probe private fn warm_probe (manifest : &amp; PluginManifest , paths : &amp; PackagePaths) -&gt; PackageEnsureReport crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:48</p>
+</article><article id="item-fn-warm-probe-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn warm_probe private fn warm_probe (manifest : &amp; PluginManifest , paths : &amp; PackagePaths) -&gt; PackageEnsureReport crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>warm_probe</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-94">warm_probe</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-100">warm_probe</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-94">warm_probe</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
-    <span class="rs-kw">let</span> package_current = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-100">warm_probe</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
+    <span class="rs-kw">let</span> package_current = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(
         &amp;paths.package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>),
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(),
     );
     <span class="rs-kw">let</span> setup_current = manifest
         .<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>()
-        .is_none_or(|digest| <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>), digest));
-    <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
+        .is_none_or(|digest| <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>), digest));
+    <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
         active: <span class="rs-kw">true</span>,
         needs_upload: !(package_current &amp;&amp; setup_current),
         package_root: <span class="rs-type">Some</span>(paths.package_root.clone()),
@@ -267,18 +270,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:94</p>
-</article><article id="item-fn-root-arg-144" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_arg private fn root_arg (args : &amp; Value , key : &amp; str , default : &amp; str) -&gt; PathBuf crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:100</p>
+</article><article id="item-fn-root-arg-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_arg private fn root_arg (args : &amp; Value , key : &amp; str , default : &amp; str) -&gt; PathBuf crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>root_arg</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a> (args : &amp; Value , key : &amp; str , default : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a> (args : &amp; Value , key : &amp; str , default : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str, default: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str, default: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
     #[cfg(feature = &quot;test-root-override&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = args
         .get(key)
@@ -294,18 +297,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:144</p>
-</article><article id="item-fn-staged-package-root-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn staged_package_root private fn staged_package_root (args : &amp; Value) -&gt; Result &lt; Option &lt; PathBuf &gt; , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:150</p>
+</article><article id="item-fn-staged-package-root-164" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn staged_package_root private fn staged_package_root (args : &amp; Value) -&gt; Result &lt; Option &lt; PathBuf &gt; , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>staged_package_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-158">staged_package_root</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Option &lt; PathBuf &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-164">staged_package_root</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Option &lt; PathBuf &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-158">staged_package_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-164">staged_package_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.get(&quot;staged_package_root&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -324,21 +327,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:158</p>
-</article><article id="item-fn-validate-staged-package-root-175" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_staged_package_root private fn validate_staged_package_root (staged_package_root : &amp; Path , upload_digest_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:164</p>
+</article><article id="item-fn-validate-staged-package-root-181" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_staged_package_root private fn validate_staged_package_root (staged_package_root : &amp; Path , upload_digest_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_staged_package_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-175">validate_staged_package_root</a> (staged_package_root : &amp; Path , upload_digest_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-181">validate_staged_package_root</a> (staged_package_root : &amp; Path , upload_digest_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-175">validate_staged_package_root</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-181">validate_staged_package_root</a>(
     staged_package_root: &amp;<span class="rs-type">Path</span>,
     upload_digest_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !staged_package_root.is_absolute() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(&quot;staged_package_root must be absolute&quot;.to_owned()).into());
     }
@@ -363,21 +366,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:175</p>
-</article><article id="item-fn-validate-staged-package-201" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_staged_package private fn validate_staged_package (manifest : &amp; PluginManifest , staged_package_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:181</p>
+</article><article id="item-fn-validate-staged-package-207" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_staged_package private fn validate_staged_package (manifest : &amp; PluginManifest , staged_package_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_staged_package</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-201">validate_staged_package</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , staged_package_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-207">validate_staged_package</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , staged_package_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-201">validate_staged_package</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-207">validate_staged_package</a>(
     manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>,
     staged_package_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !staged_package_root.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
             &quot;staged package root does not exist: {}&quot;,
@@ -386,10 +389,10 @@
         .into());
     }
     <span class="rs-kw">let</span> marker = staged_package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>);
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;marker, manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()) {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;marker, manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
-    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-453">canonical_tree_digest</a>(staged_package_root)?;
+    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-459">canonical_tree_digest</a>(staged_package_root)?;
     <span class="rs-kw">if</span> digest == manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>() {
         <span class="rs-type">Ok</span>(())
     } <span class="rs-kw">else</span> {
@@ -403,21 +406,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:201</p>
-</article><article id="item-fn-publish-package-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_package private fn publish_package (staged_package_root : &amp; Path , paths : &amp; PackagePaths) -&gt; Result &lt; bool , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:207</p>
+</article><article id="item-fn-publish-package-234" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_package private fn publish_package (staged_package_root : &amp; Path , paths : &amp; PackagePaths) -&gt; Result &lt; bool , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>publish_package</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a> (staged_package_root : &amp; Path , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; bool , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a> (staged_package_root : &amp; Path , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; bool , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(
         &amp;paths.package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>),
-        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-439">staged_marker</a>(staged_package_root)
+        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-445">staged_marker</a>(staged_package_root)
             .as_deref()
             .unwrap_or_default(),
     ) {
@@ -426,33 +429,33 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = paths.package_root.parent() {
         fs::create_dir_all(parent)?;
     }
-    <span class="rs-kw">let</span> prepared_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-245">prepare_package_publish_root</a>(staged_package_root, &amp;paths.package_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-262">replace_package_root</a>(&amp;prepared_root, &amp;paths.package_root)?;
+    <span class="rs-kw">let</span> prepared_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-251">prepare_package_publish_root</a>(staged_package_root, &amp;paths.package_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-268">replace_package_root</a>(&amp;prepared_root, &amp;paths.package_root)?;
     <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:228</p>
-</article><article id="item-fn-prepare-package-publish-root-245" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_package_publish_root private fn prepare_package_publish_root (staged_package_root : &amp; Path , package_root : &amp; Path ,) -&gt; Result &lt; PathBuf , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:234</p>
+</article><article id="item-fn-prepare-package-publish-root-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_package_publish_root private fn prepare_package_publish_root (staged_package_root : &amp; Path , package_root : &amp; Path ,) -&gt; Result &lt; PathBuf , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepare_package_publish_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-245">prepare_package_publish_root</a> (staged_package_root : &amp; Path , package_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; PathBuf , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-251">prepare_package_publish_root</a> (staged_package_root : &amp; Path , package_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; PathBuf , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-245">prepare_package_publish_root</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-251">prepare_package_publish_root</a>(
     staged_package_root: &amp;<span class="rs-type">Path</span>,
     package_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> temp_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root, &quot;publish&quot;)?;
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> temp_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root, &quot;publish&quot;)?;
     <span class="rs-kw">match</span> fs::rename(staged_package_root, &amp;temp_root) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(temp_root),
         <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">CrossesDevices</span> =&gt; {
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(staged_package_root, &amp;temp_root).inspect_err(|_| {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(staged_package_root, &amp;temp_root).inspect_err(|_| {
                 <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;temp_root);
             })?;
             <span class="rs-type">Ok</span>(temp_root)
@@ -463,18 +466,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:245</p>
-</article><article id="item-fn-replace-package-root-262" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn replace_package_root private fn replace_package_root (prepared_root : &amp; Path , package_root : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:251</p>
+</article><article id="item-fn-replace-package-root-268" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn replace_package_root private fn replace_package_root (prepared_root : &amp; Path , package_root : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>replace_package_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-262">replace_package_root</a> (prepared_root : &amp; Path , package_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-268">replace_package_root</a> (prepared_root : &amp; Path , package_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-262">replace_package_root</a>(prepared_root: &amp;<span class="rs-type">Path</span>, package_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-268">replace_package_root</a>(prepared_root: &amp;<span class="rs-type">Path</span>, package_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !package_root.exists() {
         <span class="rs-kw">return</span> fs::rename(prepared_root, package_root)
             .inspect_err(|_| {
@@ -483,7 +486,7 @@
             .map_err(<span class="rs-type">Into</span>::into);
     }
 
-    <span class="rs-kw">let</span> previous_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root, &quot;previous&quot;)?;
+    <span class="rs-kw">let</span> previous_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root, &quot;previous&quot;)?;
     fs::rename(package_root, &amp;previous_root)?;
     <span class="rs-kw">match</span> fs::rename(prepared_root, package_root) {
         <span class="rs-type">Ok</span>(()) =&gt; {
@@ -507,18 +510,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:262</p>
-</article><article id="item-fn-package-sibling-temp-root-293" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_sibling_temp_root private fn package_sibling_temp_root (package_root : &amp; Path , label : &amp; str) -&gt; Result &lt; PathBuf , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:268</p>
+</article><article id="item-fn-package-sibling-temp-root-299" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_sibling_temp_root private fn package_sibling_temp_root (package_root : &amp; Path , label : &amp; str) -&gt; Result &lt; PathBuf , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>package_sibling_temp_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a> (package_root : &amp; Path , label : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; PathBuf , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a> (package_root : &amp; Path , label : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; PathBuf , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root: &amp;<span class="rs-type">Path</span>, label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root: &amp;<span class="rs-type">Path</span>, label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> parent = package_root.parent().ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
             &quot;package root has no parent: {}&quot;,
@@ -538,40 +541,40 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:293</p>
-</article><article id="item-fn-copy-package-tree-311" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_tree private fn copy_package_tree (source_root : &amp; Path , target_root : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:299</p>
+</article><article id="item-fn-copy-package-tree-317" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_tree private fn copy_package_tree (source_root : &amp; Path , target_root : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>copy_package_tree</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a> (source_root : &amp; Path , target_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a> (source_root : &amp; Path , target_root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(source_root: &amp;<span class="rs-type">Path</span>, target_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(source_root: &amp;<span class="rs-type">Path</span>, target_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     fs::create_dir_all(target_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(source_root, source_root, target_root)
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(source_root, source_root, target_root)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:311</p>
-</article><article id="item-fn-copy-package-dir-316" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_dir private fn copy_package_dir (source_root : &amp; Path , source_dir : &amp; Path , target_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:317</p>
+</article><article id="item-fn-copy-package-dir-322" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_dir private fn copy_package_dir (source_root : &amp; Path , source_dir : &amp; Path , target_root : &amp; Path ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>copy_package_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a> (source_root : &amp; Path , source_dir : &amp; Path , target_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a> (source_root : &amp; Path , source_dir : &amp; Path , target_root : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(
     source_root: &amp;<span class="rs-type">Path</span>,
     source_dir: &amp;<span class="rs-type">Path</span>,
     target_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> fs::read_dir(source_dir)? {
         <span class="rs-kw">let</span> entry = entry?;
         <span class="rs-kw">let</span> source_path = entry.path();
@@ -582,7 +585,7 @@
         <span class="rs-kw">let</span> target_path = target_root.join(relative);
         <span class="rs-kw">if</span> metadata.is_dir() {
             fs::create_dir_all(&amp;target_path)?;
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(source_root, &amp;source_path, target_root)?;
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(source_root, &amp;source_path, target_root)?;
         } <span class="rs-kw">else</span> <span class="rs-kw">if</span> metadata.is_file() {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target_path.parent() {
                 fs::create_dir_all(parent)?;
@@ -602,23 +605,23 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:316</p>
-</article><article id="item-fn-ensure-setup-349" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_setup private fn ensure_setup (manifest : &amp; PluginManifest , paths : &amp; PackagePaths) -&gt; Result &lt; bool , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:322</p>
+</article><article id="item-fn-ensure-setup-355" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_setup private fn ensure_setup (manifest : &amp; PluginManifest , paths : &amp; PackagePaths) -&gt; Result &lt; bool , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ensure_setup</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-349">ensure_setup</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; bool , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-355">ensure_setup</a> (manifest : &amp; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> , paths : &amp; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; bool , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-349">ensure_setup</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-355">ensure_setup</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(setup) = &amp;manifest.setup <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> setup_marker = paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>);
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;setup_marker, &amp;setup.setup_marker_digest) {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;setup_marker, &amp;setup.setup_marker_digest) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     }
     fs::create_dir_all(&amp;paths.dependency_root)?;
@@ -626,15 +629,15 @@
     fs::create_dir_all(paths.dependency_root.join(&quot;archives&quot;))?;
     fs::create_dir_all(paths.setup_tmp_root.join(&quot;tmp&quot;))?;
     <span class="rs-kw">let</span> cwd = paths.package_root.join(&amp;setup.working_dir);
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-395">reject_forbidden_setup_roots</a>(&amp;setup.command, &amp;cwd)?;
-    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(&amp;setup.command[0])
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-401">reject_forbidden_setup_roots</a>(&amp;setup.command, &amp;cwd)?;
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(&amp;setup.command[0])
         .args(&amp;setup.command[1..])
         .current_dir(&amp;cwd)
         .env_clear()
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_ID</span>&quot;, &amp;manifest.plugin_id)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_DIGEST</span>&quot;, &amp;manifest.plugin_digest)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_PACKAGE_ROOT</span>&quot;, &amp;paths.package_root)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_DEPENDENCY_ROOT</span>&quot;, &amp;paths.dependency_root)
+        .env(<span class="rs-type">ENV_PLUGIN_ID</span>, &amp;manifest.plugin_id)
+        .env(<span class="rs-type">ENV_PLUGIN_DIGEST</span>, &amp;manifest.plugin_digest)
+        .env(<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>, &amp;paths.package_root)
+        .env(<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>, &amp;paths.dependency_root)
         .env(&quot;<span class="rs-type">TMPDIR</span>&quot;, paths.setup_tmp_root.join(&quot;tmp&quot;))
         .env(&quot;<span class="rs-type">HOME</span>&quot;, &amp;paths.setup_tmp_root)
         .stdin(<span class="rs-type">Stdio</span>::null())
@@ -661,25 +664,25 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:349</p>
-</article><article id="item-fn-reject-forbidden-setup-roots-395" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reject_forbidden_setup_roots private fn reject_forbidden_setup_roots (command : &amp; [String] , cwd : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:355</p>
+</article><article id="item-fn-reject-forbidden-setup-roots-401" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reject_forbidden_setup_roots private fn reject_forbidden_setup_roots (command : &amp; [String] , cwd : &amp; Path) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reject_forbidden_setup_roots</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-395">reject_forbidden_setup_roots</a> (command : &amp; [String] , cwd : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-401">reject_forbidden_setup_roots</a> (command : &amp; [String] , cwd : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-395">reject_forbidden_setup_roots</a>(command: &amp;[<span class="rs-type">String</span>], cwd: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-401">reject_forbidden_setup_roots</a>(command: &amp;[<span class="rs-type">String</span>], cwd: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> joined = command.join(&quot;\0&quot;);
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(&quot;plugin setup command&quot;, &amp;joined)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(&quot;plugin setup command&quot;, &amp;joined)?;
     <span class="rs-kw">for</span> arg <span class="rs-kw">in</span> command {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(script) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-412">setup_script_path</a>(arg, cwd) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(script) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-418">setup_script_path</a>(arg, cwd) {
             <span class="rs-kw">if</span> script.is_file() {
                 <span class="rs-kw">let</span> script_text = fs::read_to_string(&amp;script)?;
-                <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(
+                <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(
                     &amp;format!(&quot;plugin setup script {}&quot;, script.display()),
                     &amp;script_text,
                 )?;
@@ -691,19 +694,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:395</p>
-</article><article id="item-fn-setup-script-path-412" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn setup_script_path private fn setup_script_path (arg : &amp; str , cwd : &amp; Path) -&gt; Option &lt; PathBuf &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:401</p>
+</article><article id="item-fn-setup-script-path-418" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn setup_script_path private fn setup_script_path (arg : &amp; str , cwd : &amp; Path) -&gt; Option &lt; PathBuf &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>setup_script_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-412">setup_script_path</a> (arg : &amp; str , cwd : &amp; Path) -&gt; Option &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-418">setup_script_path</a> (arg : &amp; str , cwd : &amp; Path) -&gt; Option &lt; PathBuf &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-412">setup_script_path</a>(arg: &amp;str, cwd: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(arg);
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-418">setup_script_path</a>(arg: &amp;str, cwd: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(arg);
     <span class="rs-kw">if</span> path.is_absolute() {
         path.starts_with(cwd).then(|| path.to_path_buf())
     } <span class="rs-kw">else</span> <span class="rs-kw">if</span> arg.contains(&#x27;/&#x27;) {
@@ -715,18 +718,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:412</p>
-</article><article id="item-fn-reject-forbidden-text-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reject_forbidden_text private fn reject_forbidden_text (context : &amp; str , text : &amp; str) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:418</p>
+</article><article id="item-fn-reject-forbidden-text-429" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reject_forbidden_text private fn reject_forbidden_text (context : &amp; str , text : &amp; str) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reject_forbidden_text</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a> (context : &amp; str , text : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a> (context : &amp; str , text : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(context: &amp;str, text: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(context: &amp;str, text: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> forbidden <span class="rs-kw">in</span> [&quot;/root&quot;, &quot;/var&quot;] {
         <span class="rs-kw">if</span> text.contains(forbidden) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
@@ -740,35 +743,35 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:423</p>
-</article><article id="item-fn-marker-matches-435" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn marker_matches private fn marker_matches (marker : &amp; Path , expected : &amp; str) -&gt; bool crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:429</p>
+</article><article id="item-fn-marker-matches-441" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn marker_matches private fn marker_matches (marker : &amp; Path , expected : &amp; str) -&gt; bool crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>marker_matches</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a> (marker : &amp; Path , expected : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a> (marker : &amp; Path , expected : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(marker: &amp;<span class="rs-type">Path</span>, expected: &amp;str) -&gt; bool {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(marker: &amp;<span class="rs-type">Path</span>, expected: &amp;str) -&gt; bool {
     fs::read_to_string(marker).is_ok_and(|value| value.trim() == expected)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:435</p>
-</article><article id="item-fn-staged-marker-439" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn staged_marker private fn staged_marker (staged_package_root : &amp; Path) -&gt; Option &lt; String &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:441</p>
+</article><article id="item-fn-staged-marker-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn staged_marker private fn staged_marker (staged_package_root : &amp; Path) -&gt; Option &lt; String &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>staged_marker</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-439">staged_marker</a> (staged_package_root : &amp; Path) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-445">staged_marker</a> (staged_package_root : &amp; Path) -&gt; Option &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-439">staged_marker</a>(staged_package_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-445">staged_marker</a>(staged_package_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     fs::read_to_string(staged_package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>))
         .ok()
         .map(|value| value.trim().to_owned())
@@ -776,18 +779,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:439</p>
-</article><article id="item-fn-cleanup-upload-root-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cleanup_upload_root private fn cleanup_upload_root (staged_package_root : &amp; Path , upload_digest_root : &amp; Path) crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:445</p>
+</article><article id="item-fn-cleanup-upload-root-451" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cleanup_upload_root private fn cleanup_upload_root (staged_package_root : &amp; Path , upload_digest_root : &amp; Path) crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cleanup_upload_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-445">cleanup_upload_root</a> (staged_package_root : &amp; Path , upload_digest_root : &amp; Path)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-451">cleanup_upload_root</a> (staged_package_root : &amp; Path , upload_digest_root : &amp; Path)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-445">cleanup_upload_root</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, upload_digest_root: &amp;<span class="rs-type">Path</span>) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-451">cleanup_upload_root</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, upload_digest_root: &amp;<span class="rs-type">Path</span>) {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(upload_id_root) = staged_package_root.parent() {
         <span class="rs-kw">if</span> upload_id_root.starts_with(upload_digest_root) {
             <span class="rs-kw">let</span> _ = fs::remove_dir_all(upload_id_root);
@@ -797,22 +800,22 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:445</p>
-</article><article id="item-fn-canonical-tree-digest-453" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_tree_digest private fn canonical_tree_digest (root : &amp; Path) -&gt; Result &lt; String , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:451</p>
+</article><article id="item-fn-canonical-tree-digest-459" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_tree_digest private fn canonical_tree_digest (root : &amp; Path) -&gt; Result &lt; String , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>canonical_tree_digest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-453">canonical_tree_digest</a> (root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; String , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-459">canonical_tree_digest</a> (root : &amp; Path) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; String , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-453">canonical_tree_digest</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(root, root, &amp;<span class="rs-kw">mut</span> files)?;
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-459">canonical_tree_digest</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(root, root, &amp;<span class="rs-kw">mut</span> files)?;
     files.sort_by(|a, b| a.0.cmp(&amp;b.0));
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     <span class="rs-kw">for</span> (relative, path) <span class="rs-kw">in</span> files {
         <span class="rs-kw">if</span> relative == <span class="rs-type">PACKAGE_SHA256_MARKER</span> || relative == <span class="rs-type">SETUP_SHA256_MARKER</span> {
             <span class="rs-kw">continue</span>;
@@ -829,22 +832,22 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:453</p>
-</article><article id="item-fn-collect-files-472" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_files private fn collect_files (root : &amp; Path , dir : &amp; Path , files : &amp; mut Vec &lt; (String , PathBuf) &gt; ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:459</p>
+</article><article id="item-fn-collect-files-478" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_files private fn collect_files (root : &amp; Path , dir : &amp; Path , files : &amp; mut Vec &lt; (String , PathBuf) &gt; ,) -&gt; Result &lt; () , PpcError &gt; crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>collect_files</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a> (root : &amp; Path , dir : &amp; Path , files : &amp; mut Vec &lt; (String , PathBuf) &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a> (root : &amp; Path , dir : &amp; Path , files : &amp; mut Vec &lt; (String , PathBuf) &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(
     root: &amp;<span class="rs-type">Path</span>,
     dir: &amp;<span class="rs-type">Path</span>,
     files: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">PathBuf</span>)&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> fs::read_dir(dir)? {
         <span class="rs-kw">let</span> entry = entry?;
         <span class="rs-kw">let</span> path = entry.path();
@@ -869,7 +872,7 @@
             .into());
         }
         <span class="rs-kw">if</span> metadata.is_dir() {
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(root, &amp;path, files)?;
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(root, &amp;path, files)?;
         } <span class="rs-kw">else</span> <span class="rs-kw">if</span> metadata.is_file() {
             files.push((relative, path));
         }
@@ -879,20 +882,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:472</p>
-</article><article id="item-fn-copy-package-tree-preserves-nested-files-and-modes-517" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_tree_preserves_nested_files_and_modes private fn copy_package_tree_preserves_nested_files_and_modes () -&gt; TestResult crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:478</p>
+</article><article id="item-fn-copy-package-tree-preserves-nested-files-and-modes-523" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_package_tree_preserves_nested_files_and_modes private fn copy_package_tree_preserves_nested_files_and_modes () -&gt; TestResult crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>copy_package_tree_preserves_nested_files_and_modes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-517">copy_package_tree_preserves_nested_files_and_modes</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-523">copy_package_tree_preserves_nested_files_and_modes</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-517">copy_package_tree_preserves_nested_files_and_modes</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(&quot;copy-package-tree&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-523">copy_package_tree_preserves_nested_files_and_modes</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(&quot;copy-package-tree&quot;);
         <span class="rs-kw">let</span> staged = root.join(&quot;staged&quot;);
         <span class="rs-kw">let</span> target = root.join(&quot;target&quot;);
         fs::create_dir_all(staged.join(&quot;runtime&quot;))?;
@@ -903,7 +906,7 @@
             fs::<span class="rs-type">Permissions</span>::from_mode(0o755),
         )?;
 
-        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(&amp;staged, &amp;target)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(&amp;staged, &amp;target)?;
 
         assert_eq!(
             fs::read_to_string(target.join(&quot;sandbox-plugin.json&quot;))?,
@@ -922,20 +925,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:517</p>
-</article><article id="item-fn-publish-package-replaces-existing-root-without-leaving-temps-547" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_package_replaces_existing_root_without_leaving_temps private fn publish_package_replaces_existing_root_without_leaving_temps () -&gt; TestResult crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:523</p>
+</article><article id="item-fn-publish-package-replaces-existing-root-without-leaving-temps-553" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn publish_package_replaces_existing_root_without_leaving_temps private fn publish_package_replaces_existing_root_without_leaving_temps () -&gt; TestResult crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>publish_package_replaces_existing_root_without_leaving_temps</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-547">publish_package_replaces_existing_root_without_leaving_temps</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-553">publish_package_replaces_existing_root_without_leaving_temps</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-547">publish_package_replaces_existing_root_without_leaving_temps</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(&quot;publish-package&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-553">publish_package_replaces_existing_root_without_leaving_temps</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(&quot;publish-package&quot;);
         <span class="rs-kw">let</span> staged = root.join(&quot;upload&quot;).join(&quot;package&quot;);
         <span class="rs-kw">let</span> package_root = root.join(&quot;runtime&quot;).join(&quot;plugins&quot;).join(&quot;lsp&quot;).join(&quot;new&quot;);
         fs::create_dir_all(&amp;staged)?;
@@ -944,7 +947,7 @@
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(staged.join(&quot;server.js&quot;), &quot;new&quot;)?;
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>), &quot;old\n&quot;)?;
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(package_root.join(&quot;stale.js&quot;), &quot;old&quot;)?;
-        <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a> {
+        <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a> {
             package_root: package_root.clone(),
             dependency_root: root
                 .join(&quot;runtime&quot;)
@@ -955,7 +958,7 @@
             setup_tmp_root: root.join(&quot;setup&quot;),
         };
 
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(&amp;staged, &amp;paths)?);
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(&amp;staged, &amp;paths)?);
 
         assert_eq!(
             fs::read_to_string(package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>))?,
@@ -975,18 +978,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:547</p>
-</article><article id="item-fn-unique-temp-dir-587" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_temp_dir private fn unique_temp_dir (label : &amp; str) -&gt; PathBuf crates/eos-plugin/src/host/package.rs  ">
+  <p class="source">crates/eos-plugin/src/host/package.rs:553</p>
+</article><article id="item-fn-unique-temp-dir-593" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_temp_dir private fn unique_temp_dir (label : &amp; str) -&gt; PathBuf crates/eos-plugin/src/host/package.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unique_temp_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a> (label : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a> (label : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
         <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
             .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
             .map_or(0, |duration| duration.as_nanos());
@@ -995,7 +998,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/package.rs:587</p>
+  <p class="source">crates/eos-plugin/src/host/package.rs:593</p>
 </article></div>
 </section></div>
 </main>
@@ -1016,12 +1019,15 @@
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 <span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::route::{
+    <span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>, <span class="rs-type">ENV_PLUGIN_DIGEST</span>, <span class="rs-type">ENV_PLUGIN_ID</span>, <span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>;
 
 <span class="rs-comment">/// Outcome of a package ensure: whether the package contract is active, whether</span>
 <span class="rs-comment">/// the caller must upload, and the resolved roots / publish + setup status.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
     <span class="rs-kw">pub</span> active: bool,
     <span class="rs-kw">pub</span> needs_upload: bool,
     <span class="rs-kw">pub</span> package_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
@@ -1032,49 +1038,52 @@
 
 <span class="rs-comment">/// Resolved package + dependency roots for a plugin digest.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a> {
     <span class="rs-kw">pub</span> package_root: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> dependency_root: <span class="rs-type">PathBuf</span>,
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-34">package_roots</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args, manifest)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-27">PackageRoots</a> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-roots-37">package_roots</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args, manifest)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageRoots-30">PackageRoots</a> {
         package_root: paths.package_root,
         dependency_root: paths.dependency_root,
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-42">package_contract_active</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-48">package_contract_active</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; bool {
     args.get(&quot;staged_package_root&quot;).is_some()
         || args.get(&quot;manifest&quot;).is_some_and(|manifest| {
             manifest.get(&quot;package&quot;).is_some() || manifest.get(&quot;setup&quot;).is_some()
         })
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-49">ensure_package</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-package-55">ensure_package</a>(
     args: &amp;<span class="rs-type">Value</span>,
     manifest: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(manifest) = manifest <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
     };
-    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-42">package_contract_active</a>(args) {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
+    <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-contract-active-48">package_contract_active</a>(args) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>());
     }
 
-    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args, manifest)?;
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(staged_package_root) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-158">staged_package_root</a>(args)? <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-94">warm_probe</a>(manifest, &amp;paths));
+    <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args, manifest)?;
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(staged_package_root) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-164">staged_package_root</a>(args)? <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-100">warm_probe</a>(manifest, &amp;paths));
     };
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-175">validate_staged_package_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-201">validate_staged_package</a>(manifest, &amp;staged_package_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-181">validate_staged_package_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-207">validate_staged_package</a>(manifest, &amp;staged_package_root)?;
 
-    <span class="rs-kw">let</span> package_published = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(&amp;staged_package_root, &amp;paths)?;
-    <span class="rs-kw">let</span> setup_ran = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-349">ensure_setup</a>(manifest, &amp;paths)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-445">cleanup_upload_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root);
+    <span class="rs-kw">let</span> package_published = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(&amp;staged_package_root, &amp;paths)?;
+    <span class="rs-kw">let</span> setup_ran = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-355">ensure_setup</a>(manifest, &amp;paths)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-451">cleanup_upload_root</a>(&amp;staged_package_root, &amp;paths.upload_digest_root);
 
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
         active: <span class="rs-kw">true</span>,
         needs_upload: <span class="rs-kw">false</span>,
         package_root: <span class="rs-type">Some</span>(paths.package_root),
@@ -1084,7 +1093,7 @@
     })
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-81">needs_upload_response</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, report: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a>) -&gt; <span class="rs-type">Value</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-needs-upload-response-87">needs_upload_response</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, report: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a>) -&gt; <span class="rs-type">Value</span> {
     json!({
         &quot;success&quot;: <span class="rs-kw">true</span>,
         &quot;plugin&quot;: manifest.plugin_id,
@@ -1097,15 +1106,15 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-94">warm_probe</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
-    <span class="rs-kw">let</span> package_current = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-warm-probe-100">warm_probe</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
+    <span class="rs-kw">let</span> package_current = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(
         &amp;paths.package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>),
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(),
     );
     <span class="rs-kw">let</span> setup_current = manifest
         .<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>()
-        .is_none_or(|digest| <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>), digest));
-    <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-15">PackageEnsureReport</a> {
+        .is_none_or(|digest| <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>), digest));
+    <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackageEnsureReport-18">PackageEnsureReport</a> {
         active: <span class="rs-kw">true</span>,
         needs_upload: !(package_current &amp;&amp; setup_current),
         package_root: <span class="rs-type">Some</span>(paths.package_root.clone()),
@@ -1116,20 +1125,20 @@
 }
 
 #[derive(<span class="rs-type">Debug</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a> {
     package_root: <span class="rs-type">PathBuf</span>,
     dependency_root: <span class="rs-type">PathBuf</span>,
     upload_digest_root: <span class="rs-type">PathBuf</span>,
     setup_tmp_root: <span class="rs-type">PathBuf</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(args: &amp;<span class="rs-type">Value</span>, manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> runtime_plugins_root =
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_runtime_root&quot;, &quot;/eos/runtime/plugins/catalog&quot;);
-        <span class="rs-kw">let</span> dependency_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_dependency_root&quot;, &quot;/eos/runtime/packages&quot;);
-        <span class="rs-kw">let</span> upload_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_upload_root&quot;, &quot;/eos/scratch/uploads/plugins&quot;);
-        <span class="rs-kw">let</span> setup_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args, &quot;package_setup_root&quot;, &quot;/eos/scratch/setup&quot;);
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_runtime_root&quot;, &quot;/eos/runtime/plugins/catalog&quot;);
+        <span class="rs-kw">let</span> dependency_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_dependency_root&quot;, &quot;/eos/runtime/packages&quot;);
+        <span class="rs-kw">let</span> upload_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_upload_root&quot;, &quot;/eos/scratch/uploads/plugins&quot;);
+        <span class="rs-kw">let</span> setup_base = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args, &quot;package_setup_root&quot;, &quot;/eos/scratch/setup&quot;);
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             package_root: runtime_plugins_root
                 .join(&amp;manifest.plugin_id)
@@ -1147,7 +1156,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-144">root_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str, default: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-root-arg-150">root_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str, default: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
     #[cfg(feature = &quot;test-root-override&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = args
         .get(key)
@@ -1161,7 +1170,7 @@
     <span class="rs-type">PathBuf</span>::from(default)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-158">staged_package_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-package-root-164">staged_package_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.get(&quot;staged_package_root&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -1178,10 +1187,10 @@
     <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(path)))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-175">validate_staged_package_root</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-root-181">validate_staged_package_root</a>(
     staged_package_root: &amp;<span class="rs-type">Path</span>,
     upload_digest_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !staged_package_root.is_absolute() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(&quot;staged_package_root must be absolute&quot;.to_owned()).into());
     }
@@ -1204,10 +1213,10 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-201">validate_staged_package</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-validate-staged-package-207">validate_staged_package</a>(
     manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>,
     staged_package_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !staged_package_root.is_dir() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
             &quot;staged package root does not exist: {}&quot;,
@@ -1216,10 +1225,10 @@
         .into());
     }
     <span class="rs-kw">let</span> marker = staged_package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>);
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;marker, manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()) {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;marker, manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
-    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-453">canonical_tree_digest</a>(staged_package_root)?;
+    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-459">canonical_tree_digest</a>(staged_package_root)?;
     <span class="rs-kw">if</span> digest == manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>() {
         <span class="rs-type">Ok</span>(())
     } <span class="rs-kw">else</span> {
@@ -1231,10 +1240,10 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(
         &amp;paths.package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>),
-        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-439">staged_marker</a>(staged_package_root)
+        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-445">staged_marker</a>(staged_package_root)
             .as_deref()
             .unwrap_or_default(),
     ) {
@@ -1243,20 +1252,20 @@
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = paths.package_root.parent() {
         fs::create_dir_all(parent)?;
     }
-    <span class="rs-kw">let</span> prepared_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-245">prepare_package_publish_root</a>(staged_package_root, &amp;paths.package_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-262">replace_package_root</a>(&amp;prepared_root, &amp;paths.package_root)?;
+    <span class="rs-kw">let</span> prepared_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-251">prepare_package_publish_root</a>(staged_package_root, &amp;paths.package_root)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-268">replace_package_root</a>(&amp;prepared_root, &amp;paths.package_root)?;
     <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-245">prepare_package_publish_root</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-prepare-package-publish-root-251">prepare_package_publish_root</a>(
     staged_package_root: &amp;<span class="rs-type">Path</span>,
     package_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> temp_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root, &quot;publish&quot;)?;
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> temp_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root, &quot;publish&quot;)?;
     <span class="rs-kw">match</span> fs::rename(staged_package_root, &amp;temp_root) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(temp_root),
         <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">CrossesDevices</span> =&gt; {
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(staged_package_root, &amp;temp_root).inspect_err(|_| {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(staged_package_root, &amp;temp_root).inspect_err(|_| {
                 <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;temp_root);
             })?;
             <span class="rs-type">Ok</span>(temp_root)
@@ -1265,7 +1274,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-262">replace_package_root</a>(prepared_root: &amp;<span class="rs-type">Path</span>, package_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-replace-package-root-268">replace_package_root</a>(prepared_root: &amp;<span class="rs-type">Path</span>, package_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">if</span> !package_root.exists() {
         <span class="rs-kw">return</span> fs::rename(prepared_root, package_root)
             .inspect_err(|_| {
@@ -1274,7 +1283,7 @@
             .map_err(<span class="rs-type">Into</span>::into);
     }
 
-    <span class="rs-kw">let</span> previous_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root, &quot;previous&quot;)?;
+    <span class="rs-kw">let</span> previous_root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root, &quot;previous&quot;)?;
     fs::rename(package_root, &amp;previous_root)?;
     <span class="rs-kw">match</span> fs::rename(prepared_root, package_root) {
         <span class="rs-type">Ok</span>(()) =&gt; {
@@ -1296,7 +1305,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-293">package_sibling_temp_root</a>(package_root: &amp;<span class="rs-type">Path</span>, label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-package-sibling-temp-root-299">package_sibling_temp_root</a>(package_root: &amp;<span class="rs-type">Path</span>, label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> parent = package_root.parent().ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
             &quot;package root has no parent: {}&quot;,
@@ -1314,16 +1323,16 @@
     )))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(source_root: &amp;<span class="rs-type">Path</span>, target_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(source_root: &amp;<span class="rs-type">Path</span>, target_root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     fs::create_dir_all(target_root)?;
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(source_root, source_root, target_root)
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(source_root, source_root, target_root)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(
     source_root: &amp;<span class="rs-type">Path</span>,
     source_dir: &amp;<span class="rs-type">Path</span>,
     target_root: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> fs::read_dir(source_dir)? {
         <span class="rs-kw">let</span> entry = entry?;
         <span class="rs-kw">let</span> source_path = entry.path();
@@ -1334,7 +1343,7 @@
         <span class="rs-kw">let</span> target_path = target_root.join(relative);
         <span class="rs-kw">if</span> metadata.is_dir() {
             fs::create_dir_all(&amp;target_path)?;
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-316">copy_package_dir</a>(source_root, &amp;source_path, target_root)?;
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-dir-322">copy_package_dir</a>(source_root, &amp;source_path, target_root)?;
         } <span class="rs-kw">else</span> <span class="rs-kw">if</span> metadata.is_file() {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target_path.parent() {
                 fs::create_dir_all(parent)?;
@@ -1352,12 +1361,12 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-349">ensure_setup</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-ensure-setup-355">ensure_setup</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, paths: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(setup) = &amp;manifest.setup <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> setup_marker = paths.package_root.join(<span class="rs-type">SETUP_SHA256_MARKER</span>);
-    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(&amp;setup_marker, &amp;setup.setup_marker_digest) {
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(&amp;setup_marker, &amp;setup.setup_marker_digest) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     }
     fs::create_dir_all(&amp;paths.dependency_root)?;
@@ -1365,15 +1374,15 @@
     fs::create_dir_all(paths.dependency_root.join(&quot;archives&quot;))?;
     fs::create_dir_all(paths.setup_tmp_root.join(&quot;tmp&quot;))?;
     <span class="rs-kw">let</span> cwd = paths.package_root.join(&amp;setup.working_dir);
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-395">reject_forbidden_setup_roots</a>(&amp;setup.command, &amp;cwd)?;
-    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(&amp;setup.command[0])
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-401">reject_forbidden_setup_roots</a>(&amp;setup.command, &amp;cwd)?;
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(&amp;setup.command[0])
         .args(&amp;setup.command[1..])
         .current_dir(&amp;cwd)
         .env_clear()
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_ID</span>&quot;, &amp;manifest.plugin_id)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_DIGEST</span>&quot;, &amp;manifest.plugin_digest)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_PACKAGE_ROOT</span>&quot;, &amp;paths.package_root)
-        .env(&quot;<span class="rs-type">EOS_PLUGIN_DEPENDENCY_ROOT</span>&quot;, &amp;paths.dependency_root)
+        .env(<span class="rs-type">ENV_PLUGIN_ID</span>, &amp;manifest.plugin_id)
+        .env(<span class="rs-type">ENV_PLUGIN_DIGEST</span>, &amp;manifest.plugin_digest)
+        .env(<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>, &amp;paths.package_root)
+        .env(<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>, &amp;paths.dependency_root)
         .env(&quot;<span class="rs-type">TMPDIR</span>&quot;, paths.setup_tmp_root.join(&quot;tmp&quot;))
         .env(&quot;<span class="rs-type">HOME</span>&quot;, &amp;paths.setup_tmp_root)
         .stdin(<span class="rs-type">Stdio</span>::null())
@@ -1398,14 +1407,14 @@
     <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-395">reject_forbidden_setup_roots</a>(command: &amp;[<span class="rs-type">String</span>], cwd: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-setup-roots-401">reject_forbidden_setup_roots</a>(command: &amp;[<span class="rs-type">String</span>], cwd: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> joined = command.join(&quot;\0&quot;);
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(&quot;plugin setup command&quot;, &amp;joined)?;
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(&quot;plugin setup command&quot;, &amp;joined)?;
     <span class="rs-kw">for</span> arg <span class="rs-kw">in</span> command {
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(script) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-412">setup_script_path</a>(arg, cwd) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(script) = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-418">setup_script_path</a>(arg, cwd) {
             <span class="rs-kw">if</span> script.is_file() {
                 <span class="rs-kw">let</span> script_text = fs::read_to_string(&amp;script)?;
-                <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(
+                <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(
                     &amp;format!(&quot;plugin setup script {}&quot;, script.display()),
                     &amp;script_text,
                 )?;
@@ -1415,8 +1424,8 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-412">setup_script_path</a>(arg: &amp;str, cwd: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(arg);
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-setup-script-path-418">setup_script_path</a>(arg: &amp;str, cwd: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(arg);
     <span class="rs-kw">if</span> path.is_absolute() {
         path.starts_with(cwd).then(|| path.to_path_buf())
     } <span class="rs-kw">else</span> <span class="rs-kw">if</span> arg.contains(&#x27;/&#x27;) {
@@ -1426,7 +1435,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-423">reject_forbidden_text</a>(context: &amp;str, text: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-reject-forbidden-text-429">reject_forbidden_text</a>(context: &amp;str, text: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> forbidden <span class="rs-kw">in</span> [&quot;/root&quot;, &quot;/var&quot;] {
         <span class="rs-kw">if</span> text.contains(forbidden) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ensure</span>(format!(
@@ -1438,17 +1447,17 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-435">marker_matches</a>(marker: &amp;<span class="rs-type">Path</span>, expected: &amp;str) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-marker-matches-441">marker_matches</a>(marker: &amp;<span class="rs-type">Path</span>, expected: &amp;str) -&gt; bool {
     fs::read_to_string(marker).is_ok_and(|value| value.trim() == expected)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-439">staged_marker</a>(staged_package_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-staged-marker-445">staged_marker</a>(staged_package_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
     fs::read_to_string(staged_package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>))
         .ok()
         .map(|value| value.trim().to_owned())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-445">cleanup_upload_root</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, upload_digest_root: &amp;<span class="rs-type">Path</span>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-cleanup-upload-root-451">cleanup_upload_root</a>(staged_package_root: &amp;<span class="rs-type">Path</span>, upload_digest_root: &amp;<span class="rs-type">Path</span>) {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(upload_id_root) = staged_package_root.parent() {
         <span class="rs-kw">if</span> upload_id_root.starts_with(upload_digest_root) {
             <span class="rs-kw">let</span> _ = fs::remove_dir_all(upload_id_root);
@@ -1456,11 +1465,11 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-453">canonical_tree_digest</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
-    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(root, root, &amp;<span class="rs-kw">mut</span> files)?;
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-canonical-tree-digest-459">canonical_tree_digest</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
+    <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(root, root, &amp;<span class="rs-kw">mut</span> files)?;
     files.sort_by(|a, b| a.0.cmp(&amp;b.0));
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     <span class="rs-kw">for</span> (relative, path) <span class="rs-kw">in</span> files {
         <span class="rs-kw">if</span> relative == <span class="rs-type">PACKAGE_SHA256_MARKER</span> || relative == <span class="rs-type">SETUP_SHA256_MARKER</span> {
             <span class="rs-kw">continue</span>;
@@ -1475,11 +1484,11 @@
     <span class="rs-type">Ok</span>(format!(&quot;{:x}&quot;, hasher.finalize()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(
     root: &amp;<span class="rs-type">Path</span>,
     dir: &amp;<span class="rs-type">Path</span>,
     files: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">PathBuf</span>)&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> fs::read_dir(dir)? {
         <span class="rs-kw">let</span> entry = entry?;
         <span class="rs-kw">let</span> path = entry.path();
@@ -1504,7 +1513,7 @@
             .into());
         }
         <span class="rs-kw">if</span> metadata.is_dir() {
-            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-472">collect_files</a>(root, &amp;path, files)?;
+            <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-collect-files-478">collect_files</a>(root, &amp;path, files)?;
         } <span class="rs-kw">else</span> <span class="rs-kw">if</span> metadata.is_file() {
             files.push((relative, path));
         }
@@ -1518,11 +1527,11 @@
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-517">copy_package_tree_preserves_nested_files_and_modes</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(&quot;copy-package-tree&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-preserves-nested-files-and-modes-523">copy_package_tree_preserves_nested_files_and_modes</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(&quot;copy-package-tree&quot;);
         <span class="rs-kw">let</span> staged = root.join(&quot;staged&quot;);
         <span class="rs-kw">let</span> target = root.join(&quot;target&quot;);
         fs::create_dir_all(staged.join(&quot;runtime&quot;))?;
@@ -1533,7 +1542,7 @@
             fs::<span class="rs-type">Permissions</span>::from_mode(0o755),
         )?;
 
-        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-311">copy_package_tree</a>(&amp;staged, &amp;target)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-copy-package-tree-317">copy_package_tree</a>(&amp;staged, &amp;target)?;
 
         assert_eq!(
             fs::read_to_string(target.join(&quot;sandbox-plugin.json&quot;))?,
@@ -1551,8 +1560,8 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-547">publish_package_replaces_existing_root_without_leaving_temps</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(&quot;publish-package&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-replaces-existing-root-without-leaving-temps-553">publish_package_replaces_existing_root_without_leaving_temps</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(&quot;publish-package&quot;);
         <span class="rs-kw">let</span> staged = root.join(&quot;upload&quot;).join(&quot;package&quot;);
         <span class="rs-kw">let</span> package_root = root.join(&quot;runtime&quot;).join(&quot;plugins&quot;).join(&quot;lsp&quot;).join(&quot;new&quot;);
         fs::create_dir_all(&amp;staged)?;
@@ -1561,7 +1570,7 @@
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(staged.join(&quot;server.js&quot;), &quot;new&quot;)?;
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>), &quot;old\n&quot;)?;
         fs::<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#method-write-34">write</a>(package_root.join(&quot;stale.js&quot;), &quot;old&quot;)?;
-        <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-112">PackagePaths</a> {
+        <span class="rs-kw">let</span> paths = <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-struct-PackagePaths-118">PackagePaths</a> {
             package_root: package_root.clone(),
             dependency_root: root
                 .join(&quot;runtime&quot;)
@@ -1572,7 +1581,7 @@
             setup_tmp_root: root.join(&quot;setup&quot;),
         };
 
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-228">publish_package</a>(&amp;staged, &amp;paths)?);
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-publish-package-234">publish_package</a>(&amp;staged, &amp;paths)?);
 
         assert_eq!(
             fs::read_to_string(package_root.join(<span class="rs-type">PACKAGE_SHA256_MARKER</span>))?,
@@ -1590,7 +1599,7 @@
         <span class="rs-type">Ok</span>(())
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-587">unique_temp_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#item-fn-unique-temp-dir-593">unique_temp_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
         <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
             .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
             .map_or(0, |duration| duration.as_nanos());

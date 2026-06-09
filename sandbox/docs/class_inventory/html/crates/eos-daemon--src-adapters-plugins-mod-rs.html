@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,11 +62,11 @@
     <h3>op_ensure</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args)?;
 
     <span class="rs-kw">let</span> parsed = <span class="rs-type">ParsedEnsure</span>::from_args(args, &amp;<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ppc-socket-root-81">ppc_socket_root</a>(args))?;
@@ -183,11 +183,11 @@
     <h3>op_status</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args)?;
     <span class="rs-kw">let</span> probe_services = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;probe_services&quot;)
@@ -236,7 +236,7 @@
     <h3>dispatch_registered_op</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Option &lt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -245,7 +245,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
     dispatch::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a>(op, invocation_id, args, context)
 }
 </code></pre>
@@ -298,13 +298,13 @@
     <h3>stop_services_for_layer_stack_root</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-358">stop_services_for_layer_stack_root</a> (layer_stack_root : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-358">stop_services_for_layer_stack_root</a> (layer_stack_root : &amp; str ,) -&gt; Result &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-358">stop_services_for_layer_stack_root</a>(
     layer_stack_root: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(stop_services_for_layer_stack_root_in_state(
         &amp;<span class="rs-kw">mut</span> state,
@@ -412,7 +412,7 @@
     <h3>register_ppc_client_for_tests</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-register-ppc-client-for-tests-271">register_ppc_client_for_tests</a> (op : &amp; str , stream : std :: os :: unix :: net :: UnixStream ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-register-ppc-client-for-tests-271">register_ppc_client_for_tests</a> (op : &amp; str , stream : std :: os :: unix :: net :: UnixStream ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: test</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -420,7 +420,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-register-ppc-client-for-tests-271">register_ppc_client_for_tests</a>(
     op: &amp;str,
     stream: std::os::unix::net::<span class="rs-type">UnixStream</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-kw">let</span> (service_instance_id, manifest_key) = state
         .loaded
@@ -466,11 +466,11 @@
     <h3>ensure_plugin_family_allowed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a> (args : &amp; Value) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     validate_plugin_caller_fields(args)?;
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
@@ -659,7 +659,7 @@
     }
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-ensure-107">op_ensure</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args)?;
 
     <span class="rs-kw">let</span> parsed = <span class="rs-type">ParsedEnsure</span>::from_args(args, &amp;<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ppc-socket-root-81">ppc_socket_root</a>(args))?;
@@ -767,7 +767,7 @@
     }))
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args)?;
     <span class="rs-kw">let</span> probe_services = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;probe_services&quot;)
@@ -812,7 +812,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
+) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;&gt; {
     dispatch::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-dispatch-rs.html#item-fn-dispatch-registered-op-15">dispatch_registered_op</a>(op, invocation_id, args, context)
 }
 
@@ -827,7 +827,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-register-ppc-client-for-tests-271">register_ppc_client_for_tests</a>(
     op: &amp;str,
     stream: std::os::unix::net::<span class="rs-type">UnixStream</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-kw">let</span> (service_instance_id, manifest_key) = state
         .loaded
@@ -864,7 +864,7 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-ensure-plugin-family-allowed-312">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     validate_plugin_caller_fields(args)?;
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
@@ -912,7 +912,7 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-358">stop_services_for_layer_stack_root</a>(
     layer_stack_root: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(stop_services_for_layer_stack_root_in_state(
         &amp;<span class="rs-kw">mut</span> state,

@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -96,7 +96,7 @@
     <h3>op_read_file</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-read-file-23">op_read_file</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-read-file-23">op_read_file</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.read_file` — shared public read op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -105,7 +105,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-read-file-23">op_read_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a>(args, context)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -132,7 +132,7 @@
     <h3>op_write_file</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-write-file-45">op_write_file</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-write-file-45">op_write_file</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.write_file` — shared public write op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -141,7 +141,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-write-file-45">op_write_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a>(args, context)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -166,7 +166,7 @@
     <h3>op_edit_file</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-edit-file-65">op_edit_file</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-op-edit-file-65">op_edit_file</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.edit_file` — shared public edit op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -175,7 +175,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-edit-file-65">op_edit_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -200,14 +200,14 @@
     <h3>read_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ReadFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; ReadFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ReadFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ReadFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">ReadFileRequest</span> {
         path: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;path&quot;)?,
         max_read_bytes: context
@@ -225,14 +225,14 @@
     <h3>write_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; WriteFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; WriteFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WriteFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WriteFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">WriteFileRequest</span> {
         path: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;path&quot;)?,
         content: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-raw-string-21">require_raw_string</a>(args, &quot;content&quot;)?.into_bytes(),
@@ -255,11 +255,11 @@
     <h3>edit_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; EditFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a> (args : &amp; Value) -&gt; Result &lt; EditFileRequest , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EditFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EditFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> edits = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;edits&quot;)
         .and_then(<span class="rs-type">Value</span>::as_array)
@@ -458,7 +458,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-read-file-23">op_read_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a>(args, context)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -480,7 +480,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-write-file-45">op_write_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a>(args, context)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -500,7 +500,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-op-edit-file-65">op_edit_file</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-command-handle-for-args-178">command_handle_for_args</a>(args) {
@@ -519,7 +519,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-read-request-85">read_request</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ReadFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ReadFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">ReadFileRequest</span> {
         path: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;path&quot;)?,
         max_read_bytes: context
@@ -531,7 +531,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-write-request-97">write_request</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WriteFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WriteFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">WriteFileRequest</span> {
         path: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;path&quot;)?,
         content: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-raw-string-21">require_raw_string</a>(args, &quot;content&quot;)?.into_bytes(),
@@ -545,7 +545,7 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EditFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-files-rs.html#item-fn-edit-request-114">edit_request</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EditFileRequest</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> edits = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;edits&quot;)
         .and_then(<span class="rs-type">Value</span>::as_array)

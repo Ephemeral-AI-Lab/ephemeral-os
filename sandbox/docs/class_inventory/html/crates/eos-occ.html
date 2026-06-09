@@ -56,44 +56,44 @@
       <span>10 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PreparedChangeset-49" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedChangeset pub pub struct PreparedChangeset crates/eos-occ/src/commit_queue.rs snapshot_version Option &lt; u64 &gt; path_groups Vec &lt; PublishDecision &gt; changes Vec &lt; LayerChange &gt; atomic bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PreparedChangeset-48" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedChangeset pub pub struct PreparedChangeset crates/eos-occ/src/commit_queue.rs snapshot_version Option &lt; u64 &gt; path_groups Vec &lt; PublishDecision &gt; changes Vec &lt; LayerChange &gt; atomic bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PreparedChangeset</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a></code>
   <p class="docstring">A routed changeset ready for the publish transaction.<br>One [`PublishDecision`] per disjoint normalized path plus the typed changes<br>to apply; `atomic` requires every path to validate before any path lands.<br>The `snapshot_version` pins the base the CAS check revalidates against.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>snapshot_version</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>path_groups</td><td><code>Vec &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-PublishDecision-92">PublishDecision</a> &gt;</code></td></tr><tr><td>pub</td><td>changes</td><td><code>Vec &lt; LayerChange &gt;</code></td></tr><tr><td>pub</td><td>atomic</td><td><code>bool</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:49</p>
-</article><article id="item-struct-PublishConflict-86" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishConflict pub pub struct PublishConflict crates/eos-occ/src/commit_queue.rs observed_version Option &lt; u64 &gt; ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:48</p>
+</article><article id="item-struct-PublishConflict-85" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishConflict pub pub struct PublishConflict crates/eos-occ/src/commit_queue.rs observed_version Option &lt; u64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PublishConflict</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a></code>
   <p class="docstring">Signals a manifest CAS mismatch (`ManifestConflictError`) so the writer<br>retries against the fresh base.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>error</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>observed_version</td><td><code>Option &lt; u64 &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:86</p>
-</article><article id="item-struct-CommitQueue-108" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitQueue pub pub struct CommitQueue&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs sender mpsc :: Sender &lt; QueueItem &gt; receiver Mutex &lt; Option &lt; mpsc :: Receiver &lt; QueueItem &gt; &gt; &gt; transaction Mutex &lt; Option &lt; T &gt; &gt; handle Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt; max_batch_size usize batch_window_s f64 max_cas_retries u32 closed bool ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:85</p>
+</article><article id="item-struct-CommitQueue-107" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitQueue pub pub struct CommitQueue&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs sender mpsc :: Sender &lt; QueueItem &gt; receiver Mutex &lt; Option &lt; mpsc :: Receiver &lt; QueueItem &gt; &gt; &gt; transaction Mutex &lt; Option &lt; T &gt; &gt; handle Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt; max_batch_size usize batch_window_s f64 max_cas_retries u32 closed bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommitQueue</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>&lt; T : <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;static &gt;</code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>&lt; T : <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;static &gt;</code>
   <p class="docstring">Serializes OCC publishes while batching disjoint prepared changesets.<br>Owns the `mpsc` producer half; the consumer half is moved into the spawned<br>`occ-commit-queue` thread on [`CommitQueue::start`].</p>
   <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sender</td><td><code>mpsc :: Sender &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>receiver</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>Mutex &lt; Option &lt; T &gt; &gt;</code></td></tr><tr><td>private</td><td>handle</td><td><code>Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt;</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr><tr><td>private</td><td>closed</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-132"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-new-132">new</a> (transaction : T) -&gt; Self</code><p class="docstring">Build a queue with default batching/retry tuning.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sender</td><td><code>mpsc :: Sender &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>receiver</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>Mutex &lt; Option &lt; T &gt; &gt;</code></td></tr><tr><td>private</td><td>handle</td><td><code>Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt;</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr><tr><td>private</td><td>closed</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-131"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-new-131">new</a> (transaction : T) -&gt; Self</code><p class="docstring">Build a queue with default batching/retry tuning.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Build a queue with default batching/retry tuning.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(
             transaction,
             <span class="rs-type">MAX_BATCH_SIZE</span>,
             <span class="rs-type">BATCH_WINDOW_S</span>,
@@ -101,13 +101,13 @@
         )
     }
 </code></pre>
-</details></td></tr><tr id="method-with-config-142"><td>constructor</td><td>with_config</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-with-config-142">with_config</a> (transaction : T , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -&gt; Self</code><p class="docstring">Build a queue with explicit batching/retry tuning.<br>Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,<br>`max_cas_retries &gt;= 1`.</p><details class="function-source">
+</details></td></tr><tr id="method-with-config-141"><td>constructor</td><td>with_config</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-with-config-141">with_config</a> (transaction : T , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -&gt; Self</code><p class="docstring">Build a queue with explicit batching/retry tuning.<br>Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,<br>`max_cas_retries &gt;= 1`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Build a queue with explicit batching/retry tuning.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,</span>
     <span class="rs-comment">/// `max_cas_retries &gt;= 1`.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(
         transaction: <span class="rs-type">T</span>,
         max_batch_size: usize,
         batch_window_s: f64,
@@ -116,8 +116,8 @@
         <span class="rs-kw">let</span> (sender, receiver) = mpsc::channel();
         <span class="rs-self">Self</span> {
             sender,
-            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Some</span>(receiver)),
-            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Some</span>(transaction)),
+            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Some</span>(receiver)),
+            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Some</span>(transaction)),
             handle: <span class="rs-type">None</span>,
             max_batch_size: max_batch_size.max(1),
             batch_window_s: batch_window_s.max(0.0),
@@ -126,7 +126,7 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-start-165"><td>method</td><td>start</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-start-165">start</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Spawn the single `occ-commit-queue` consumer thread.<br># Errors<br>Returns [`OccError`] when the queue is closed, has already consumed its<br>startup state, or the worker thread cannot be spawned.</p><details class="function-source">
+</details></td></tr><tr id="method-start-164"><td>method</td><td>start</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-start-164">start</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Spawn the single `occ-commit-queue` consumer thread.<br># Errors<br>Returns [`OccError`] when the queue is closed, has already consumed its<br>startup state, or the worker thread cannot be spawned.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Spawn the single `occ-commit-queue` consumer thread.</span>
     <span class="rs-comment">///</span>
@@ -134,7 +134,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError`] when the queue is closed, has already consumed its</span>
     <span class="rs-comment">/// startup state, or the worker thread cannot be spawned.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueClosed</span>);
         }
@@ -157,31 +157,31 @@
             .map_err(|_| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;transaction slot&quot;))?
             .take()
             .ok_or(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueNotStarted</span>)?;
-        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-123">CommitWorker</a> {
+        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-122">CommitWorker</a> {
             receiver,
             transaction,
             max_batch_size: <span class="rs-self">self</span>.max_batch_size,
             batch_window_s: <span class="rs-self">self</span>.batch_window_s,
             max_cas_retries: <span class="rs-self">self</span>.max_cas_retries,
         };
-        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>()
+        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>()
             .name(<span class="rs-type">COMMIT_QUEUE_THREAD_NAME</span>.to_owned())
             .spawn(<span class="rs-kw">move</span> || {
-                worker.<a class="symbol-link rs-fn" href="eos-occ.html#method-run-309">run</a>();
+                worker.<a class="symbol-link rs-fn" href="eos-occ.html#method-run-308">run</a>();
             })
             .map_err(|err| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">WorkerStart</span>(err.to_string()))?;
         <span class="rs-self">self</span>.handle = <span class="rs-type">Some</span>(handle);
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-close-211"><td>method</td><td>close</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-close-211">close</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Stop the worker after pending queued work drains.<br># Errors<br>Returns [`OccError::WorkerPanicked`] when the worker thread panicked.</p><details class="function-source">
+</details></td></tr><tr id="method-close-210"><td>method</td><td>close</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-close-210">close</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Stop the worker after pending queued work drains.<br># Errors<br>Returns [`OccError::WorkerPanicked`] when the worker thread panicked.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Stop the worker after pending queued work drains.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError::WorkerPanicked`] when the worker thread panicked.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
@@ -189,13 +189,13 @@
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.handle.is_none() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
-        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Stop</span>);
         <span class="rs-self">self</span>.handle.take().map_or(<span class="rs-type">Ok</span>(()), |handle| {
             handle.join().map_err(|_| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">WorkerPanicked</span>)
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-submit-230"><td>method</td><td>submit</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-submit-230">submit</a> (&amp; self , prepared : <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; mpsc :: Receiver &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt; , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Enqueue a prepared changeset and return a reply receiver to await on.<br>The reply channel is the std analogue of a tokio `oneshot`; the async<br>daemon awaits it off-thread without the queue holding any lock across<br>`.await` (RUST-GUIDANCE §5).<br># Errors<br>Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and<br>[`OccError::QueueNotStarted`] if no live worker is available.</p><details class="function-source">
+</details></td></tr><tr id="method-submit-229"><td>method</td><td>submit</td><td><code>pub fn <a class="symbol-link" href="eos-occ.html#method-submit-229">submit</a> (&amp; self , prepared : <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> ,) -&gt; Result &lt; mpsc :: Receiver &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt; , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt;</code><p class="docstring">Enqueue a prepared changeset and return a reply receiver to await on.<br>The reply channel is the std analogue of a tokio `oneshot`; the async<br>daemon awaits it off-thread without the queue holding any lock across<br>`.await` (RUST-GUIDANCE §5).<br># Errors<br>Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and<br>[`OccError::QueueNotStarted`] if no live worker is available.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Enqueue a prepared changeset and return a reply receiver to await on.</span>
     <span class="rs-comment">///</span>
@@ -207,9 +207,9 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and</span>
     <span class="rs-comment">/// [`OccError::QueueNotStarted`] if no live worker is available.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(
         &amp;<span class="rs-self">self</span>,
-        prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+        prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
     ) -&gt; <span class="rs-type">Result</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueClosed</span>);
@@ -223,7 +223,7 @@
         }
         <span class="rs-kw">let</span> (reply, receiver) = mpsc::channel();
         <span class="rs-self">self</span>.sender
-            .send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> {
+            .send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> {
                 prepared,
                 reply,
                 enqueued_at: <span class="rs-type">Instant</span>::now(),
@@ -232,31 +232,31 @@
         <span class="rs-type">Ok</span>(receiver)
     }
 </code></pre>
-</details></td></tr><tr id="method-commit-batch-265"><td>associated-fn</td><td>commit_batch</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-commit-batch-265">commit_batch</a> (transaction : &amp; T , batch : Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> &gt; , max_cas_retries : u32)</code><p class="docstring">Commit one disjoint batch with the bounded CAS-retry loop, fanning each<br>path's [`FileResult`](crate::FileResult) back to its submitter.</p><details class="function-source">
+</details></td></tr><tr id="method-commit-batch-264"><td>associated-fn</td><td>commit_batch</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-commit-batch-264">commit_batch</a> (transaction : &amp; T , batch : Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> &gt; , max_cas_retries : u32)</code><p class="docstring">Commit one disjoint batch with the bounded CAS-retry loop, fanning each<br>path's [`FileResult`](crate::FileResult) back to its submitter.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Commit one disjoint batch with the bounded CAS-retry loop, fanning each</span>
     <span class="rs-comment">/// path's [`FileResult`](crate::FileResult) back to its submitter.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-265">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;, max_cas_retries: u32) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-264">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;, max_cas_retries: u32) {
         <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-combine-prepared-387">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-combine-prepared-386">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span>;
         };
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempts = 0;
         <span class="rs-kw">let</span> result = loop {
-            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(&amp;combined) {
+            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(&amp;combined) {
                 <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-kw">break</span> result,
                 <span class="rs-type">Err</span>(conflict) =&gt; {
                     attempts += 1;
                     <span class="rs-kw">if</span> attempts &gt;= max_cas_retries {
-                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-424">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
+                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-423">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
                     }
                 }
             }
         };
         <span class="rs-kw">let</span> commit_elapsed_s = commit_start.elapsed().as_secs_f64();
-        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-347">usize_to_f64_saturating</a>(batch.len());
+        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-346">usize_to_f64_saturating</a>(batch.len());
         <span class="rs-kw">for</span> item <span class="rs-kw">in</span> batch {
-            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-407">result_files_for_item</a>(&amp;result, &amp;item.prepared);
+            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-406">result_files_for_item</a>(&amp;result, &amp;item.prepared);
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = result.timings.clone();
             timings.insert(
                 &quot;occ.serial.queue_wait_s&quot;.to_owned(),
@@ -278,17 +278,17 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:108</p>
-</article><article id="item-trait-CommitTransactionPort-67" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommitTransactionPort pub pub trait CommitTransactionPort crates/eos-occ/src/commit_queue.rs  revalidate_and_publish fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:107</p>
+</article><article id="item-trait-CommitTransactionPort-66" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommitTransactionPort pub pub trait CommitTransactionPort crates/eos-occ/src/commit_queue.rs  revalidate_and_publish fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>CommitTransactionPort</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a></code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a></code>
   <p class="docstring">The publish-transaction half of the layer-stack port the queue drives.<br>Defined here as the queue's narrow inverted interface. The daemon injects<br>the layer-stack-backed implementation that revalidates the CAS base and<br>publishes a new manifest version, returning [`PublishConflict`] on a stale<br>base.</p>
   <div class="tags"><span>port/service</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-revalidate-and-publish-74"><td>required</td><td>revalidate_and_publish</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a> (&amp; self , combined : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> &gt;</code><p class="docstring">Revalidate the base hash and atomically publish, or signal a CAS<br>conflict so the queue can retry.<br># Errors<br>Returns [`PublishConflict`] when the manifest CAS base is stale.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-revalidate-and-publish-73"><td>required</td><td>revalidate_and_publish</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a> (&amp; self , combined : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> &gt;</code><p class="docstring">Revalidate the base hash and atomically publish, or signal a CAS<br>conflict so the queue can retry.<br># Errors<br>Returns [`PublishConflict`] when the manifest CAS base is stale.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Revalidate the base hash and atomically publish, or signal a CAS</span>
     <span class="rs-comment">/// conflict so the queue can retry.</span>
@@ -296,51 +296,51 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`PublishConflict`] when the manifest CAS base is stale.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(
         &amp;<span class="rs-self">self</span>,
-        combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>&gt;;
+        combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:67</p>
-</article><article id="item-struct-WorkItem-94" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkItem private struct WorkItem crates/eos-occ/src/commit_queue.rs prepared PreparedChangeset reply mpsc :: Sender &lt; Result &lt; ChangesetResult , OccError &gt; &gt; enqueued_at Instant ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:66</p>
+</article><article id="item-struct-WorkItem-93" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkItem private struct WorkItem crates/eos-occ/src/commit_queue.rs prepared PreparedChangeset reply mpsc :: Sender &lt; Result &lt; ChangesetResult , OccError &gt; &gt; enqueued_at Instant ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkItem</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a></code>
   <p class="docstring">One unit of work on the single-writer queue: a prepared changeset plus the<br>reply channel the submitter awaits.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>prepared</td><td><code><a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a></code></td></tr><tr><td>private</td><td>reply</td><td><code>mpsc :: Sender &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>enqueued_at</td><td><code>Instant</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>prepared</td><td><code><a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a></code></td></tr><tr><td>private</td><td>reply</td><td><code>mpsc :: Sender &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>enqueued_at</td><td><code>Instant</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:94</p>
-</article><article id="item-struct-CommitWorker-123" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitWorker private struct CommitWorker&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs receiver mpsc :: Receiver &lt; QueueItem &gt; transaction T max_batch_size usize batch_window_s f64 max_cas_retries u32 ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:93</p>
+</article><article id="item-struct-CommitWorker-122" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitWorker private struct CommitWorker&lt; T : CommitTransactionPort + 'static &gt; crates/eos-occ/src/commit_queue.rs receiver mpsc :: Receiver &lt; QueueItem &gt; transaction T max_batch_size usize batch_window_s f64 max_cas_retries u32 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommitWorker</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-CommitWorker-123">CommitWorker</a>&lt; T : <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;static &gt;</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-CommitWorker-122">CommitWorker</a>&lt; T : <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;static &gt;</code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>receiver</td><td><code>mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>T</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-run-309"><td>method</td><td>run</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-run-309">run</a> (self)</code><p class="docstring">Consumer loop: block for the first item, non-blocking-drain the rest,<br>pay the batch window only with headroom, then commit disjoint batches.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>receiver</td><td><code>mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>T</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-run-308"><td>method</td><td>run</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-run-308">run</a> (self)</code><p class="docstring">Consumer loop: block for the first item, non-blocking-drain the rest,<br>pay the batch window only with headroom, then commit disjoint batches.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Consumer loop: block for the first item, non-blocking-drain the rest,</span>
     <span class="rs-comment">/// pay the batch window only with headroom, then commit disjoint batches.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-run-309">run</a>(<span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-run-308">run</a>(<span class="rs-self">self</span>) {
         <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(first) = <span class="rs-self">self</span>.receiver.recv() {
-            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
+            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
                 <span class="rs-kw">return</span>;
             };
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = vec![first];
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
             <span class="rs-kw">if</span> !stop_seen &amp;&amp; <span class="rs-self">self</span>.batch_window_s &gt; 0.0 &amp;&amp; items.len() &lt; <span class="rs-self">self</span>.max_batch_size {
                 std::thread::sleep(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-self">self</span>.batch_window_s));
-                stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+                stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
             }
-            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-351">disjoint_batches</a>(items) {
-                <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-265">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
+            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-350">disjoint_batches</a>(items) {
+                <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-264">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
             }
             <span class="rs-kw">if</span> stop_seen {
                 <span class="rs-kw">return</span>;
@@ -350,30 +350,30 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:123</p>
-</article><article id="item-struct-RecordingTransaction-473" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RecordingTransaction private struct RecordingTransaction crates/eos-occ/src/commit_queue.rs calls Arc &lt; Mutex &lt; Vec &lt; PreparedChangeset &gt; &gt; &gt; conflicts_before_success Arc &lt; Mutex &lt; u32 &gt; &gt; ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:122</p>
+</article><article id="item-struct-RecordingTransaction-472" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RecordingTransaction private struct RecordingTransaction crates/eos-occ/src/commit_queue.rs calls Arc &lt; Mutex &lt; Vec &lt; PreparedChangeset &gt; &gt; &gt; conflicts_before_success Arc &lt; Mutex &lt; u32 &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RecordingTransaction</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a></code>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>calls</td><td><code>Arc &lt; Mutex &lt; Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>conflicts_before_success</td><td><code>Arc &lt; Mutex &lt; u32 &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-480"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-new-132">new</a> (conflicts_before_success : u32) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>calls</td><td><code>Arc &lt; Mutex &lt; Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>conflicts_before_success</td><td><code>Arc &lt; Mutex &lt; u32 &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-479"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-new-131">new</a> (conflicts_before_success : u32) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(conflicts_before_success: u32) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(conflicts_before_success: u32) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> {
-                calls: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>())),
-                conflicts_before_success: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(conflicts_before_success)),
+                calls: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>())),
+                conflicts_before_success: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(conflicts_before_success)),
             }
         }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> for <a class="symbol-link" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a></code></summary><table><tbody><tr id="method-revalidate-and-publish-489"><td>method</td><td>revalidate_and_publish</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a> (&amp; self , combined : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> for <a class="symbol-link" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a></code></summary><table><tbody><tr id="method-revalidate-and-publish-488"><td>method</td><td>revalidate_and_publish</td><td><code>fn <a class="symbol-link" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a> (&amp; self , combined : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(
             &amp;<span class="rs-self">self</span>,
-            combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>&gt; {
+            combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>&gt; {
             <span class="rs-self">self</span>.calls
                 .lock()
                 .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
@@ -391,7 +391,7 @@
                 }
             };
             <span class="rs-kw">if</span> should_conflict {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> {
                     observed_version: <span class="rs-type">Some</span>(42),
                 });
             }
@@ -402,58 +402,58 @@
                     .map(|group| <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a> {
                         path: group.path.clone(),
                         status: <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>::<span class="rs-type">Committed</span>,
-                        message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+                        message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
                     })
                     .collect(),
                 published_manifest_version: <span class="rs-type">Some</span>(2),
-                timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+                timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
             })
         }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:473</p>
-</article><article id="item-enum-QueueItem-102" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum QueueItem private enum QueueItem crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:472</p>
+</article><article id="item-enum-QueueItem-101" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum QueueItem private enum QueueItem crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>QueueItem</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a></code>
+  <code class="signature">enum <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a></code>
   <p class="docstring">Either real work or the stop sentinel that drains and exits the worker.</p>
   <div class="tags"></div>
-  <h4>Variants</h4><table><tbody><tr><td>Work</td><td><code>0: <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a></code></td></tr><tr><td>Stop</td><td><code></code></td></tr></tbody></table>
+  <h4>Variants</h4><table><tbody><tr><td>Work</td><td><code>0: <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a></code></td></tr><tr><td>Stop</td><td><code></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:102</p>
-</article><div class="group-label">Aliases</div><article id="item-type-TestResult-471" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:101</p>
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-470" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:471</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-drain-ready-332" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn drain_ready private fn drain_ready (receiver : &amp; mpsc :: Receiver &lt; QueueItem &gt; , items : &amp; mut Vec &lt; WorkItem &gt; , max_batch_size : usize ,) -&gt; bool crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:470</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-drain-ready-331" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn drain_ready private fn drain_ready (receiver : &amp; mpsc :: Receiver &lt; QueueItem &gt; , items : &amp; mut Vec &lt; WorkItem &gt; , max_batch_size : usize ,) -&gt; bool crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>drain_ready</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a> (receiver : &amp; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a> &gt; , items : &amp; mut Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> &gt; , max_batch_size : usize ,) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a> (receiver : &amp; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a> &gt; , items : &amp; mut Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> &gt; , max_batch_size : usize ,) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(
-    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
-    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;,
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(
+    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>&gt;,
+    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;,
     max_batch_size: usize,
 ) -&gt; bool {
     <span class="rs-kw">while</span> items.len() &lt; max_batch_size {
         <span class="rs-kw">match</span> receiver.try_recv() {
-            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
-            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
             <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Empty</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
         }
     }
@@ -462,36 +462,36 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:332</p>
-</article><article id="item-fn-usize-to-f64-saturating-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:331</p>
+</article><article id="item-fn-usize-to-f64-saturating-346" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>usize_to_f64_saturating</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-usize-to-f64-saturating-347">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-usize-to-f64-saturating-346">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-347">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-346">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
     u32::try_from(value).map_or(f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:347</p>
-</article><article id="item-fn-disjoint-batches-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disjoint_batches private fn disjoint_batches (items : Vec &lt; WorkItem &gt;) -&gt; Vec &lt; Vec &lt; WorkItem &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:346</p>
+</article><article id="item-fn-disjoint-batches-350" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disjoint_batches private fn disjoint_batches (items : Vec &lt; WorkItem &gt;) -&gt; Vec &lt; Vec &lt; WorkItem &gt; &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>disjoint_batches</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-disjoint-batches-351">disjoint_batches</a> (items : Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> &gt;) -&gt; Vec &lt; Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-disjoint-batches-350">disjoint_batches</a> (items : Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> &gt;) -&gt; Vec &lt; Vec &lt; <a class="symbol-link" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> &gt; &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-351">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-350">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
         .into_iter()
         .map(|item| {
             <span class="rs-kw">let</span> paths = item
@@ -503,11 +503,11 @@
             (item, paths)
         })
         .collect();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
     <span class="rs-kw">while</span> !pending.is_empty() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
         <span class="rs-kw">for</span> (item, paths) <span class="rs-kw">in</span> pending {
             <span class="rs-kw">if</span> item.prepared.atomic || !used.is_disjoint(&amp;paths) {
                 rest.push((item, paths));
@@ -528,24 +528,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:351</p>
-</article><article id="item-fn-combine-prepared-387" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn combine_prepared private fn combine_prepared &lt; 'a &gt; (items : impl Iterator &lt; Item = &amp; 'a PreparedChangeset &gt; ,) -&gt; Option &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:350</p>
+</article><article id="item-fn-combine-prepared-386" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn combine_prepared private fn combine_prepared &lt; 'a &gt; (items : impl Iterator &lt; Item = &amp; 'a PreparedChangeset &gt; ,) -&gt; Option &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>combine_prepared</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-combine-prepared-387">combine_prepared</a> &lt; &#x27;a &gt; (items : impl Iterator &lt; Item = &amp; &#x27;a <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-combine-prepared-386">combine_prepared</a> &lt; &#x27;a &gt; (items : impl Iterator &lt; Item = &amp; &#x27;a <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> combine_prepared&lt;&#x27;a&gt;(
-    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
-    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; = items.collect();
+    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; {
+    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; = items.collect();
     <span class="rs-kw">let</span> first = items.first()?;
     debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
-    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> {
         snapshot_version: first.snapshot_version,
         path_groups: items
             .iter()
@@ -561,20 +561,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:387</p>
-</article><article id="item-fn-result-files-for-item-407" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn result_files_for_item private fn result_files_for_item (result : &amp; ChangesetResult , prepared : &amp; PreparedChangeset ,) -&gt; Vec &lt; FileResult &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:386</p>
+</article><article id="item-fn-result-files-for-item-406" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn result_files_for_item private fn result_files_for_item (result : &amp; ChangesetResult , prepared : &amp; PreparedChangeset ,) -&gt; Vec &lt; FileResult &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>result_files_for_item</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-result-files-for-item-407">result_files_for_item</a> (result : &amp; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , prepared : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-result-files-for-item-406">result_files_for_item</a> (result : &amp; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , prepared : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-407">result_files_for_item</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-406">result_files_for_item</a>(
     result: &amp;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
-    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
     prepared
         .path_groups
@@ -591,20 +591,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:407</p>
-</article><article id="item-fn-cas-exhaustion-result-424" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_exhaustion_result private fn cas_exhaustion_result (prepared : &amp; PreparedChangeset , conflict : &amp; PublishConflict , max_cas_retries : u32 ,) -&gt; ChangesetResult crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:406</p>
+</article><article id="item-fn-cas-exhaustion-result-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_exhaustion_result private fn cas_exhaustion_result (prepared : &amp; PreparedChangeset , conflict : &amp; PublishConflict , max_cas_retries : u32 ,) -&gt; ChangesetResult crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cas_exhaustion_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-cas-exhaustion-result-424">cas_exhaustion_result</a> (prepared : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> , conflict : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> , max_cas_retries : u32 ,) -&gt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-cas-exhaustion-result-423">cas_exhaustion_result</a> (prepared : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> , conflict : &amp; <a class="symbol-link" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> , max_cas_retries : u32 ,) -&gt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-424">cas_exhaustion_result</a>(
-    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-    conflict: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>,
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-423">cas_exhaustion_result</a>(
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+    conflict: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>,
     max_cas_retries: u32,
 ) -&gt; <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
     <span class="rs-kw">let</span> message = format!(
@@ -636,26 +636,26 @@
     <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
         files,
         published_manifest_version: <span class="rs-type">None</span>,
-        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:424</p>
-</article><article id="item-fn-prepared-530" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepared private fn prepared (path : &amp; str , atomic : bool) -&gt; TestResult &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:423</p>
+</article><article id="item-fn-prepared-529" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepared private fn prepared (path : &amp; str , atomic : bool) -&gt; TestResult &lt; PreparedChangeset &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepared</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-prepared-530">prepared</a> (path : &amp; str , atomic : bool) -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a> &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-prepared-529">prepared</a> (path : &amp; str , atomic : bool) -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a> &lt; <a class="symbol-link" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(path: &amp;str, atomic: bool) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(path: &amp;str, atomic: bool) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(path)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> {
             snapshot_version: <span class="rs-type">Some</span>(1),
             path_groups: vec![<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
                 path: path.clone(),
@@ -673,51 +673,51 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:530</p>
-</article><article id="item-fn-recv-ok-548" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recv_ok private fn recv_ok (receiver : &amp; mpsc :: Receiver &lt; Result &lt; ChangesetResult , OccError &gt; &gt; ,) -&gt; TestResult &lt; ChangesetResult &gt; crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:529</p>
+</article><article id="item-fn-recv-ok-547" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recv_ok private fn recv_ok (receiver : &amp; mpsc :: Receiver &lt; Result &lt; ChangesetResult , OccError &gt; &gt; ,) -&gt; TestResult &lt; ChangesetResult &gt; crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>recv_ok</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a> (receiver : &amp; mpsc :: Receiver &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt; ,) -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a> &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a> (receiver : &amp; mpsc :: Receiver &lt; Result &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> &gt; &gt; ,) -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a> &lt; <a class="symbol-link" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(
         receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt;&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>&gt; {
         <span class="rs-kw">match</span> receiver.recv()? {
             <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-type">Ok</span>(result),
-            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(error)),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(error)),
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:548</p>
-</article><article id="item-fn-batches-disjoint-non-atomic-changesets-557" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn batches_disjoint_non_atomic_changesets private fn batches_disjoint_non_atomic_changesets () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:547</p>
+</article><article id="item-fn-batches-disjoint-non-atomic-changesets-556" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn batches_disjoint_non_atomic_changesets private fn batches_disjoint_non_atomic_changesets () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>batches_disjoint_non_atomic_changesets</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-557">batches_disjoint_non_atomic_changesets</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-556">batches_disjoint_non_atomic_changesets</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-557">batches_disjoint_non_atomic_changesets</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(0);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-556">batches_disjoint_non_atomic_changesets</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(0);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.02, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">false</span>)?)?;
-        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">false</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.02, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">false</span>)?)?;
+        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">false</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         {
             <span class="rs-kw">let</span> calls = calls
@@ -732,29 +732,29 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:557</p>
-</article><article id="item-fn-atomic-changesets-are-not-batched-581" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn atomic_changesets_are_not_batched private fn atomic_changesets_are_not_batched () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:556</p>
+</article><article id="item-fn-atomic-changesets-are-not-batched-580" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn atomic_changesets_are_not_batched private fn atomic_changesets_are_not_batched () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>atomic_changesets_are_not_batched</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-581">atomic_changesets_are_not_batched</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-580">atomic_changesets_are_not_batched</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-581">atomic_changesets_are_not_batched</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(0);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-580">atomic_changesets_are_not_batched</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(0);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.02, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
-        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.02, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         {
             <span class="rs-kw">let</span> calls = calls
@@ -770,27 +770,27 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:581</p>
-</article><article id="item-fn-retries-cas-conflict-then-succeeds-606" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retries_cas_conflict_then_succeeds private fn retries_cas_conflict_then_succeeds () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:580</p>
+</article><article id="item-fn-retries-cas-conflict-then-succeeds-605" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retries_cas_conflict_then_succeeds private fn retries_cas_conflict_then_succeeds () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>retries_cas_conflict_then_succeeds</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-606">retries_cas_conflict_then_succeeds</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-605">retries_cas_conflict_then_succeeds</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-606">retries_cas_conflict_then_succeeds</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(1);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-605">retries_cas_conflict_then_succeeds</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(1);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.0, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.0, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;result)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;result)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         assert_eq!(
             calls
@@ -804,26 +804,26 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:606</p>
-</article><article id="item-fn-cas-retry-exhaustion-surfaces-aborted-version-627" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_retry_exhaustion_surfaces_aborted_version private fn cas_retry_exhaustion_surfaces_aborted_version () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
+  <p class="source">crates/eos-occ/src/commit_queue.rs:605</p>
+</article><article id="item-fn-cas-retry-exhaustion-surfaces-aborted-version-626" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_retry_exhaustion_surfaces_aborted_version private fn cas_retry_exhaustion_surfaces_aborted_version () -&gt; TestResult crates/eos-occ/src/commit_queue.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cas_retry_exhaustion_surfaces_aborted_version</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-627">cas_retry_exhaustion_surfaces_aborted_version</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-471">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-626">cas_retry_exhaustion_surfaces_aborted_version</a> () -&gt; <a class="symbol-link" href="eos-occ.html#item-type-TestResult-470">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-627">cas_retry_exhaustion_surfaces_aborted_version</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(3);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.0, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-626">cas_retry_exhaustion_surfaces_aborted_version</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(3);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.0, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;result)?;
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;result)?;
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         assert!(!result.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
         assert_eq!(result.files[0].status, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>::<span class="rs-type">AbortedVersion</span>);
@@ -832,7 +832,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-occ/src/commit_queue.rs:627</p>
+  <p class="source">crates/eos-occ/src/commit_queue.rs:626</p>
 </article></div>
 </section></div>
 </main>
@@ -858,12 +858,11 @@
 <span class="rs-comment">//! (eos-daemon) is what guarantees one queue per root.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! ## Threading model (per RUST-GUIDANCE §5)</span>
-<span class="rs-comment">//! The Rust uses `threading.Thread` + `queue.Queue` + `concurrent.futures`,</span>
-<span class="rs-comment">//! NOT asyncio, for the queue itself (eos-occ has no tokio dep). The Rust port</span>
-<span class="rs-comment">//! is an `mpsc` work queue with one dedicated consumer thread named</span>
-<span class="rs-comment">//! `occ-commit-queue`; each work item carries a `std::sync::mpsc` reply sender</span>
-<span class="rs-comment">//! (the std analogue of a `oneshot`) so the async daemon can await the result</span>
-<span class="rs-comment">//! without the OCC crate ever holding a lock across `.await`.</span>
+<span class="rs-comment">//! The queue is a synchronous `mpsc` work queue with one dedicated consumer</span>
+<span class="rs-comment">//! thread named `occ-commit-queue` (NOT asyncio/tokio — eos-occ has no tokio</span>
+<span class="rs-comment">//! dep). Each work item carries a `std::sync::mpsc` reply sender (the std</span>
+<span class="rs-comment">//! analogue of a `oneshot`) so the async daemon can await the result without the</span>
+<span class="rs-comment">//! OCC crate ever holding a lock across `.await`.</span>
 
 <span class="rs-kw">use</span> std::collections::<span class="rs-type">HashSet</span>;
 <span class="rs-kw">use</span> std::sync::{mpsc, <span class="rs-type">Mutex</span>};
@@ -895,7 +894,7 @@
 <span class="rs-comment">/// to apply; `atomic` requires every path to validate before any path lands.</span>
 <span class="rs-comment">/// The `snapshot_version` pins the base the CAS check revalidates against.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> {
     <span class="rs-comment">/// Base manifest version this changeset was prepared against (`None` =</span>
     <span class="rs-comment">/// empty root).</span>
     <span class="rs-kw">pub</span> snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
@@ -913,38 +912,38 @@
 <span class="rs-comment">/// the layer-stack-backed implementation that revalidates the CAS base and</span>
 <span class="rs-comment">/// publishes a new manifest version, returning [`PublishConflict`] on a stale</span>
 <span class="rs-comment">/// base.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a>: <span class="rs-type">Send</span> {
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a>: <span class="rs-type">Send</span> {
     <span class="rs-comment">/// Revalidate the base hash and atomically publish, or signal a CAS</span>
     <span class="rs-comment">/// conflict so the queue can retry.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`PublishConflict`] when the manifest CAS base is stale.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(
         &amp;<span class="rs-self">self</span>,
-        combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>&gt;;
+        combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>&gt;;
 }
 
 <span class="rs-comment">/// Signals a manifest CAS mismatch (`ManifestConflictError`) so the writer</span>
 <span class="rs-comment">/// retries against the fresh base.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> {
     <span class="rs-comment">/// The base version the publisher actually observed.</span>
     <span class="rs-kw">pub</span> observed_version: <span class="rs-type">Option</span>&lt;u64&gt;,
 }
 
 <span class="rs-comment">/// One unit of work on the single-writer queue: a prepared changeset plus the</span>
 <span class="rs-comment">/// reply channel the submitter awaits.</span>
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> {
-    prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> {
+    prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
     reply: mpsc::<span class="rs-type">Sender</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt;&gt;,
     enqueued_at: <span class="rs-type">Instant</span>,
 }
 
 <span class="rs-comment">/// Either real work or the stop sentinel that drains and exits the worker.</span>
-<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a> {
-    <span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>),
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a> {
+    <span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>),
     <span class="rs-type">Stop</span>,
 }
 
@@ -952,9 +951,9 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Owns the `mpsc` producer half; the consumer half is moved into the spawned</span>
 <span class="rs-comment">/// `occ-commit-queue` thread on [`CommitQueue::start`].</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
-    sender: mpsc::<span class="rs-type">Sender</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
-    receiver: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>&gt;&gt;&gt;,
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
+    sender: mpsc::<span class="rs-type">Sender</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>&gt;,
+    receiver: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>&gt;&gt;&gt;,
     transaction: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;&gt;,
     handle: <span class="rs-type">Option</span>&lt;std::thread::<span class="rs-type">JoinHandle</span>&lt;()&gt;&gt;,
     max_batch_size: usize,
@@ -963,18 +962,18 @@
     closed: bool,
 }
 
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-123">CommitWorker</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
-    receiver: mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-122">CommitWorker</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
+    receiver: mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>&gt;,
     transaction: <span class="rs-type">T</span>,
     max_batch_size: usize,
     batch_window_s: f64,
     max_cas_retries: u32,
 }
 
-<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt; {
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt; {
     <span class="rs-comment">/// Build a queue with default batching/retry tuning.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(
             transaction,
             <span class="rs-type">MAX_BATCH_SIZE</span>,
             <span class="rs-type">BATCH_WINDOW_S</span>,
@@ -986,7 +985,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,</span>
     <span class="rs-comment">/// `max_cas_retries &gt;= 1`.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(
         transaction: <span class="rs-type">T</span>,
         max_batch_size: usize,
         batch_window_s: f64,
@@ -995,8 +994,8 @@
         <span class="rs-kw">let</span> (sender, receiver) = mpsc::channel();
         <span class="rs-self">Self</span> {
             sender,
-            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Some</span>(receiver)),
-            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Some</span>(transaction)),
+            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Some</span>(receiver)),
+            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Some</span>(transaction)),
             handle: <span class="rs-type">None</span>,
             max_batch_size: max_batch_size.max(1),
             batch_window_s: batch_window_s.max(0.0),
@@ -1011,7 +1010,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError`] when the queue is closed, has already consumed its</span>
     <span class="rs-comment">/// startup state, or the worker thread cannot be spawned.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueClosed</span>);
         }
@@ -1034,17 +1033,17 @@
             .map_err(|_| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;transaction slot&quot;))?
             .take()
             .ok_or(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueNotStarted</span>)?;
-        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-123">CommitWorker</a> {
+        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-122">CommitWorker</a> {
             receiver,
             transaction,
             max_batch_size: <span class="rs-self">self</span>.max_batch_size,
             batch_window_s: <span class="rs-self">self</span>.batch_window_s,
             max_cas_retries: <span class="rs-self">self</span>.max_cas_retries,
         };
-        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>()
+        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>()
             .name(<span class="rs-type">COMMIT_QUEUE_THREAD_NAME</span>.to_owned())
             .spawn(<span class="rs-kw">move</span> || {
-                worker.<a class="symbol-link rs-fn" href="eos-occ.html#method-run-309">run</a>();
+                worker.<a class="symbol-link rs-fn" href="eos-occ.html#method-run-308">run</a>();
             })
             .map_err(|err| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">WorkerStart</span>(err.to_string()))?;
         <span class="rs-self">self</span>.handle = <span class="rs-type">Some</span>(handle);
@@ -1056,7 +1055,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError::WorkerPanicked`] when the worker thread panicked.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
@@ -1064,7 +1063,7 @@
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.handle.is_none() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
         }
-        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Stop</span>);
         <span class="rs-self">self</span>.handle.take().map_or(<span class="rs-type">Ok</span>(()), |handle| {
             handle.join().map_err(|_| <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">WorkerPanicked</span>)
         })
@@ -1080,9 +1079,9 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and</span>
     <span class="rs-comment">/// [`OccError::QueueNotStarted`] if no live worker is available.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(
         &amp;<span class="rs-self">self</span>,
-        prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+        prepared: <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
     ) -&gt; <span class="rs-type">Result</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>::<span class="rs-type">QueueClosed</span>);
@@ -1096,7 +1095,7 @@
         }
         <span class="rs-kw">let</span> (reply, receiver) = mpsc::channel();
         <span class="rs-self">self</span>.sender
-            .send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a> {
+            .send(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a> {
                 prepared,
                 reply,
                 enqueued_at: <span class="rs-type">Instant</span>::now(),
@@ -1107,27 +1106,27 @@
 
     <span class="rs-comment">/// Commit one disjoint batch with the bounded CAS-retry loop, fanning each</span>
     <span class="rs-comment">/// path's [`FileResult`](crate::FileResult) back to its submitter.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-265">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;, max_cas_retries: u32) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-264">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;, max_cas_retries: u32) {
         <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-combine-prepared-387">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-combine-prepared-386">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span>;
         };
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempts = 0;
         <span class="rs-kw">let</span> result = loop {
-            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(&amp;combined) {
+            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(&amp;combined) {
                 <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-kw">break</span> result,
                 <span class="rs-type">Err</span>(conflict) =&gt; {
                     attempts += 1;
                     <span class="rs-kw">if</span> attempts &gt;= max_cas_retries {
-                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-424">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
+                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-423">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
                     }
                 }
             }
         };
         <span class="rs-kw">let</span> commit_elapsed_s = commit_start.elapsed().as_secs_f64();
-        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-347">usize_to_f64_saturating</a>(batch.len());
+        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-346">usize_to_f64_saturating</a>(batch.len());
         <span class="rs-kw">for</span> item <span class="rs-kw">in</span> batch {
-            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-407">result_files_for_item</a>(&amp;result, &amp;item.prepared);
+            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-406">result_files_for_item</a>(&amp;result, &amp;item.prepared);
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = result.timings.clone();
             timings.insert(
                 &quot;occ.serial.queue_wait_s&quot;.to_owned(),
@@ -1148,22 +1147,22 @@
     }
 }
 
-<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-123">CommitWorker</a>&lt;<span class="rs-type">T</span>&gt; {
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitWorker-122">CommitWorker</a>&lt;<span class="rs-type">T</span>&gt; {
     <span class="rs-comment">/// Consumer loop: block for the first item, non-blocking-drain the rest,</span>
     <span class="rs-comment">/// pay the batch window only with headroom, then commit disjoint batches.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-run-309">run</a>(<span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-run-308">run</a>(<span class="rs-self">self</span>) {
         <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(first) = <span class="rs-self">self</span>.receiver.recv() {
-            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
+            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
                 <span class="rs-kw">return</span>;
             };
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = vec![first];
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
             <span class="rs-kw">if</span> !stop_seen &amp;&amp; <span class="rs-self">self</span>.batch_window_s &gt; 0.0 &amp;&amp; items.len() &lt; <span class="rs-self">self</span>.max_batch_size {
                 std::thread::sleep(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-self">self</span>.batch_window_s));
-                stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+                stop_seen = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
             }
-            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-351">disjoint_batches</a>(items) {
-                <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-265">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
+            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-350">disjoint_batches</a>(items) {
+                <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-occ.html#method-commit-batch-264">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
             }
             <span class="rs-kw">if</span> stop_seen {
                 <span class="rs-kw">return</span>;
@@ -1172,27 +1171,27 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-332">drain_ready</a>(
-    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
-    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;,
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-drain-ready-331">drain_ready</a>(
+    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>&gt;,
+    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;,
     max_batch_size: usize,
 ) -&gt; bool {
     <span class="rs-kw">while</span> items.len() &lt; max_batch_size {
         <span class="rs-kw">match</span> receiver.try_recv() {
-            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
-            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-enum-QueueItem-101">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
             <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Empty</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
         }
     }
     <span class="rs-kw">false</span>
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-347">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-usize-to-f64-saturating-346">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
     u32::try_from(value).map_or(f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-351">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>&gt;&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-94">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-disjoint-batches-350">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-WorkItem-93">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
         .into_iter()
         .map(|item| {
             <span class="rs-kw">let</span> paths = item
@@ -1204,11 +1203,11 @@
             (item, paths)
         })
         .collect();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
     <span class="rs-kw">while</span> !pending.is_empty() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>();
         <span class="rs-kw">for</span> (item, paths) <span class="rs-kw">in</span> pending {
             <span class="rs-kw">if</span> item.prepared.atomic || !used.is_disjoint(&amp;paths) {
                 rest.push((item, paths));
@@ -1228,12 +1227,12 @@
 }
 
 <span class="rs-kw">fn</span> combine_prepared&lt;&#x27;a&gt;(
-    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt;,
-) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
-    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; = items.collect();
+    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; {
+    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; = items.collect();
     <span class="rs-kw">let</span> first = items.first()?;
     debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
-    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> {
         snapshot_version: first.snapshot_version,
         path_groups: items
             .iter()
@@ -1247,9 +1246,9 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-407">result_files_for_item</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-result-files-for-item-406">result_files_for_item</a>(
     result: &amp;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
-    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
     prepared
         .path_groups
@@ -1264,9 +1263,9 @@
         .collect()
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-424">cas_exhaustion_result</a>(
-    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-    conflict: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>,
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-exhaustion-result-423">cas_exhaustion_result</a>(
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+    conflict: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>,
     max_cas_retries: u32,
 ) -&gt; <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
     <span class="rs-kw">let</span> message = format!(
@@ -1298,7 +1297,7 @@
     <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
         files,
         published_manifest_version: <span class="rs-type">None</span>,
-        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
     }
 }
 
@@ -1311,28 +1310,28 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-Route-14">Route</a>};
 
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
 
     #[derive(<span class="rs-type">Clone</span>)]
-    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a> {
-        calls: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt;&gt;&gt;,
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a> {
+        calls: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt;&gt;&gt;,
         conflicts_before_success: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;u32&gt;&gt;,
     }
 
-    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(conflicts_before_success: u32) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(conflicts_before_success: u32) -&gt; <span class="rs-self">Self</span> {
             <span class="rs-self">Self</span> {
-                calls: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>())),
-                conflicts_before_success: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(conflicts_before_success)),
+                calls: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>())),
+                conflicts_before_success: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(conflicts_before_success)),
             }
         }
     }
 
-    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-66">CommitTransactionPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#method-revalidate-and-publish-73">revalidate_and_publish</a>(
             &amp;<span class="rs-self">self</span>,
-            combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>&gt; {
+            combined: &amp;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a>&gt; {
             <span class="rs-self">self</span>.calls
                 .lock()
                 .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
@@ -1350,7 +1349,7 @@
                 }
             };
             <span class="rs-kw">if</span> should_conflict {
-                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a> {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-85">PublishConflict</a> {
                     observed_version: <span class="rs-type">Some</span>(42),
                 });
             }
@@ -1361,18 +1360,18 @@
                     .map(|group| <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a> {
                         path: group.path.clone(),
                         status: <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>::<span class="rs-type">Committed</span>,
-                        message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+                        message: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
                     })
                     .collect(),
                 published_manifest_version: <span class="rs-type">Some</span>(2),
-                timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(),
+                timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(),
             })
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(path: &amp;str, atomic: bool) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(path: &amp;str, atomic: bool) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(path)?;
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-48">PreparedChangeset</a> {
             snapshot_version: <span class="rs-type">Some</span>(1),
             path_groups: vec![<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
                 path: path.clone(),
@@ -1388,27 +1387,27 @@
         })
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(
         receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>&gt;&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a>&lt;<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>&gt; {
         <span class="rs-kw">match</span> receiver.recv()? {
             <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-type">Ok</span>(result),
-            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(error)),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(error)),
         }
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-557">batches_disjoint_non_atomic_changesets</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(0);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-batches-disjoint-non-atomic-changesets-556">batches_disjoint_non_atomic_changesets</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(0);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.02, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">false</span>)?)?;
-        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">false</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.02, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">false</span>)?)?;
+        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">false</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         {
             <span class="rs-kw">let</span> calls = calls
@@ -1422,17 +1421,17 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-581">atomic_changesets_are_not_batched</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(0);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-atomic-changesets-are-not-batched-580">atomic_changesets_are_not_batched</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(0);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.02, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
-        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.02, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> first = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> second = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;b.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;first)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;second)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         {
             <span class="rs-kw">let</span> calls = calls
@@ -1447,15 +1446,15 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-606">retries_cas_conflict_then_succeeds</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(1);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-retries-cas-conflict-then-succeeds-605">retries_cas_conflict_then_succeeds</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(1);
         <span class="rs-kw">let</span> calls = transaction.calls.clone();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.0, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.0, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;result)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        assert!(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;result)?.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         assert_eq!(
             calls
@@ -1468,14 +1467,14 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-627">cas_retry_exhaustion_surfaces_aborted_version</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-471">TestResult</a> {
-        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-473">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-132">new</a>(3);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-142">with_config</a>(transaction, 64, 0.0, 3);
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-165">start</a>()?;
-        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-230">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-530">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-cas-retry-exhaustion-surfaces-aborted-version-626">cas_retry_exhaustion_surfaces_aborted_version</a>() -&gt; <a class="symbol-link rs-type" href="eos-occ.html#item-type-TestResult-470">TestResult</a> {
+        <span class="rs-kw">let</span> transaction = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-RecordingTransaction-472">RecordingTransaction</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-new-131">new</a>(3);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> queue = <a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-107">CommitQueue</a>::<a class="symbol-link rs-fn" href="eos-occ.html#method-with-config-141">with_config</a>(transaction, 64, 0.0, 3);
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-start-164">start</a>()?;
+        <span class="rs-kw">let</span> result = queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-submit-229">submit</a>(<a class="symbol-link rs-fn" href="eos-occ.html#item-fn-prepared-529">prepared</a>(&quot;a.txt&quot;, <span class="rs-kw">true</span>)?)?;
 
-        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-548">recv_ok</a>(&amp;result)?;
-        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-211">close</a>()?;
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-occ.html#item-fn-recv-ok-547">recv_ok</a>(&amp;result)?;
+        queue.<a class="symbol-link rs-fn" href="eos-occ.html#method-close-210">close</a>()?;
 
         assert!(!result.<a class="symbol-link rs-fn" href="eos-occ--src-route-rs.html#method-success-147">success</a>());
         assert_eq!(result.files[0].status, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>::<span class="rs-type">AbortedVersion</span>);

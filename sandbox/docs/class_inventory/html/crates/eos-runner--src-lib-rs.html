@@ -62,7 +62,7 @@
     <h3>run</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , config : &amp; config :: RunnerConfig) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> , config : &amp; config :: RunnerConfig) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <p class="docstring">Execute one tool call through the runner, dispatching on [`RunRequest::mode`].<br>This is the crate's single entry point: the daemon hands a fully-resolved<br>[`RunRequest`] (already knowing whether it wants a fresh namespace or a setns<br>into an existing one) and the runner performs the syscalls on this<br>single-threaded caller.<br>Fresh-ns mode mounts the workspace overlay after `unshare`, mirroring the<br>Rust entrypoint's `mount_overlay` call.<br># Errors<br>Returns [`RunnerError`] when the request is invalid for the selected mode,<br>namespace setup fails, overlay mounting fails, or child execution fails.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -81,10 +81,10 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`RunnerError`] when the request is invalid for the selected mode,</span>
 <span class="rs-comment">/// namespace setup fails, overlay mounting fails, or child execution fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">match</span> request.mode {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
     }
 }
 </code></pre>
@@ -141,7 +141,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
-<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> fresh_ns;
+<span class="rs-kw">mod</span> fresh_ns;
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">mod</span> mount_mask;
 #[cfg(target_os = &quot;linux&quot;)]
@@ -154,7 +154,7 @@
 }
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>};
 
 <span class="rs-comment">/// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].</span>
 <span class="rs-comment">///</span>
@@ -170,10 +170,10 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`RunnerError`] when the request is invalid for the selected mode,</span>
 <span class="rs-comment">/// namespace setup fails, overlay mounting fails, or child execution fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">match</span> request.mode {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
     }
 }
 </code></pre>

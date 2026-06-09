@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -65,7 +65,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-struct-CallerCancel-25">CallerCancel</a></code>
   <p class="docstring">Outcome of tearing down one caller's workspace runs.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>cancelled_sessions</td><td><code>usize</code></td></tr><tr><td>pub</td><td>isolated</td><td><code><a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , IsolatedError &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>cancelled_sessions</td><td><code>usize</code></td></tr><tr><td>pub</td><td>isolated</td><td><code>Result &lt; Value , IsolatedError &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/cancel.rs:25</p>
 </article><div class="group-label">Standalone Functions</div><article id="item-fn-cancel-workspace-runs-by-caller-id-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_workspace_runs_by_caller_id pub pub fn cancel_workspace_runs_by_caller_id (caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; CallerCancel crates/eos-daemon/src/adapters/workspace_run/cancel.rs  ">
@@ -95,36 +95,13 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/cancel.rs:35</p>
-</article><article id="item-fn-cancel-all-workspace-runs-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_all_workspace_runs pub pub fn cancel_all_workspace_runs (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize) crates/eos-daemon/src/adapters/workspace_run/cancel.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>cancel_all_workspace_runs</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a> (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize)</code>
-  <p class="docstring">Cancel every workspace run in the sandbox: discard all command sessions,<br>exit every isolated caller, then reap orphaned namespace/cgroup/scratch<br>resources. Returns the per-substrate counts.</p>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Cancel every workspace run in the sandbox: discard all command sessions,</span>
-<span class="rs-comment">/// exit every isolated caller, then reap orphaned namespace/cgroup/scratch</span>
-<span class="rs-comment">/// resources. Returns the per-substrate counts.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
-    <span class="rs-kw">let</span> cancelled_sessions = commands::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-cancel-all-command-sessions-356">cancel_all_command_sessions</a>(grace_s);
-    <span class="rs-kw">let</span> isolated_exited = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-all-and-reap-222">exit_all_and_reap</a>(grace_s);
-    (cancelled_sessions, isolated_exited)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-daemon/src/adapters/workspace_run/cancel.rs:48</p>
 </article><article id="item-fn-op-cancel-workspace-runs-by-caller-id-57" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs_by_caller_id pub pub fn op_cancel_workspace_runs_by_caller_id (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/adapters/workspace_run/cancel.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_cancel_workspace_runs_by_caller_id</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-57">op_cancel_workspace_runs_by_caller_id</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-57">op_cancel_workspace_runs_by_caller_id</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC per-run<br>teardown. Best-effort: a not-open isolated workspace is normal (the caller<br>was ephemeral) and not surfaced as an error.</p>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
@@ -139,7 +116,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-57">op_cancel_workspace_runs_by_caller_id</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -163,7 +140,7 @@
     <h3>op_cancel_workspace_runs</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-82">op_cancel_workspace_runs</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-82">op_cancel_workspace_runs</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.cancel_workspace_runs` — whole-sandbox cancel sweep backstop.</p>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
@@ -176,7 +153,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-82">op_cancel_workspace_runs</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
     <span class="rs-kw">let</span> (cancelled_sessions, isolated_exited) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s);
     <span class="rs-type">Ok</span>(json!({
@@ -189,17 +166,40 @@
 </details>
 
   <p class="source">crates/eos-daemon/src/adapters/workspace_run/cancel.rs:82</p>
+</article><article id="item-fn-cancel-all-workspace-runs-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_all_workspace_runs private fn cancel_all_workspace_runs (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize) crates/eos-daemon/src/adapters/workspace_run/cancel.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cancel_all_workspace_runs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a> (grace_s : Option &lt; f64 &gt;) -&gt; (usize , usize)</code>
+  <p class="docstring">Cancel every workspace run in the sandbox: discard all command sessions,<br>exit every isolated caller, then reap orphaned namespace/cgroup/scratch<br>resources. Returns the per-substrate counts.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Cancel every workspace run in the sandbox: discard all command sessions,</span>
+<span class="rs-comment">/// exit every isolated caller, then reap orphaned namespace/cgroup/scratch</span>
+<span class="rs-comment">/// resources. Returns the per-substrate counts.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
+    <span class="rs-kw">let</span> cancelled_sessions = commands::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-cancel-all-command-sessions-356">cancel_all_command_sessions</a>(grace_s);
+    <span class="rs-kw">let</span> isolated_exited = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-all-and-reap-222">exit_all_and_reap</a>(grace_s);
+    (cancelled_sessions, isolated_exited)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/adapters/workspace_run/cancel.rs:48</p>
 </article><article id="item-fn-require-caller-id-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_caller_id private fn require_caller_id (args : &amp; Value) -&gt; Result &lt; String , Value &gt; crates/eos-daemon/src/adapters/workspace_run/cancel.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_caller_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; String , Value &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a> (args : &amp; Value) -&gt; Result &lt; String , Value &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)
@@ -261,7 +261,7 @@
     <span class="rs-comment">/// Isolated-workspace teardown result: the exit response if the caller was</span>
     <span class="rs-comment">/// isolated, `Err(IsolatedError::NotOpen)` if it was ephemeral (or had no</span>
     <span class="rs-comment">/// isolated workspace), or another `IsolatedError` on teardown failure.</span>
-    <span class="rs-kw">pub</span> isolated: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt;,
+    <span class="rs-kw">pub</span> isolated: <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt;,
 }
 
 <span class="rs-comment">/// Cancel every workspace run owned by `caller_id`: discard its command</span>
@@ -280,7 +280,7 @@
 <span class="rs-comment">/// Cancel every workspace run in the sandbox: discard all command sessions,</span>
 <span class="rs-comment">/// exit every isolated caller, then reap orphaned namespace/cgroup/scratch</span>
 <span class="rs-comment">/// resources. Returns the per-substrate counts.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; (usize, usize) {
     <span class="rs-kw">let</span> cancelled_sessions = commands::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-cancel-all-command-sessions-356">cancel_all_command_sessions</a>(grace_s);
     <span class="rs-kw">let</span> isolated_exited = isolated::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-all-and-reap-222">exit_all_and_reap</a>(grace_s);
     (cancelled_sessions, isolated_exited)
@@ -296,7 +296,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-57">op_cancel_workspace_runs_by_caller_id</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -319,7 +319,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-op-cancel-workspace-runs-82">op_cancel_workspace_runs</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> grace_s = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;grace_s&quot;).and_then(<span class="rs-type">Value</span>::as_f64);
     <span class="rs-kw">let</span> (cancelled_sessions, isolated_exited) = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-cancel-all-workspace-runs-48">cancel_all_workspace_runs</a>(grace_s);
     <span class="rs-type">Ok</span>(json!({
@@ -329,7 +329,7 @@
     }))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-cancel-rs.html#item-fn-require-caller-id-100">require_caller_id</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)

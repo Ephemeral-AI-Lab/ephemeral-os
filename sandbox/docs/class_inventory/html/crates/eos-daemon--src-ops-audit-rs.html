@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,7 +62,7 @@
     <h3>op_audit_pull</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-pull-9">op_audit_pull</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-pull-9">op_audit_pull</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.audit.pull` — drain ring events after a cursor (backs the pull API).</p>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
@@ -77,7 +77,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-pull-9">op_audit_pull</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> after_seq = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;after_seq&quot;).and_then(<span class="rs-type">Value</span>::as_i64).unwrap_or(-1);
     <span class="rs-kw">let</span> default_limit = context
         .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>()
@@ -100,7 +100,7 @@
     <h3>op_audit_snapshot</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-snapshot-33">op_audit_snapshot</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-snapshot-33">op_audit_snapshot</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.audit.snapshot` — ring buffer + snapshot blocks, no events.</p>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
@@ -115,7 +115,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-snapshot-33">op_audit_snapshot</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = args;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">crate</span>::audit::buffer::<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>().<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#method-snapshot-198">snapshot</a>();
     response[&quot;success&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>);
@@ -131,7 +131,7 @@
     <h3>op_audit_reset_floor</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-reset-floor-50">op_audit_reset_floor</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-reset-floor-50">op_audit_reset_floor</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.audit.reset_floor` — gated by typed daemon audit config.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -140,7 +140,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-reset-floor-50">op_audit_reset_floor</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = args;
     <span class="rs-kw">if</span> context
         .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>()
@@ -183,7 +183,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-pull-9">op_audit_pull</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> after_seq = args.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;after_seq&quot;).and_then(<span class="rs-type">Value</span>::as_i64).unwrap_or(-1);
     <span class="rs-kw">let</span> default_limit = context
         .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>()
@@ -207,7 +207,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-snapshot-33">op_audit_snapshot</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = args;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">crate</span>::audit::buffer::<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#item-fn-global-audit-buffer-227">global_audit_buffer</a>().<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#method-snapshot-198">snapshot</a>();
     response[&quot;success&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>);
@@ -218,7 +218,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-audit-rs.html#item-fn-op-audit-reset-floor-50">op_audit_reset_floor</a>(
     args: &amp;<span class="rs-type">Value</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> _ = args;
     <span class="rs-kw">if</span> context
         .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>()

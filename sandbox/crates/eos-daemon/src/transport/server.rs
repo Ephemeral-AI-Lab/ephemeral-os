@@ -387,13 +387,7 @@ impl DaemonServer {
                 ),
             )
         });
-        registry.register(
-            &invocation_id,
-            task.abort_handle(),
-            &caller_id,
-            &op,
-            background,
-        );
+        registry.register(&invocation_id, task.abort_handle(), &caller_id, background);
         let _ = start_tx.send(());
         let response = match task.await {
             Ok(response) => response,

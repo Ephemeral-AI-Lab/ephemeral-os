@@ -56,13 +56,13 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-split-frontmatter-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn split_frontmatter pub(crate) pub(crate) fn split_frontmatter (text : &amp; str) -&gt; Option &lt; (String , String) &gt; crates/eos-plugin-catalog/src/frontmatter.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-split-frontmatter-19" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn split_frontmatter pub(crate) pub(crate) fn split_frontmatter (text : &amp; str) -&gt; Option &lt; (String , String) &gt; crates/eos-plugin-catalog/src/frontmatter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>split_frontmatter</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a> (text : &amp; str) -&gt; Option &lt; (String , String) &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a> (text : &amp; str) -&gt; Option &lt; (String , String) &gt;</code>
   <p class="docstring">Split `plugin.md` text into `(frontmatter_yaml, body)`.<br>Returns `None` when the text does not begin with a `---` line or has no<br>closing `---` line. The `body` is returned untrimmed; the caller trims it.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -71,7 +71,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns `None` when the text does not begin with a `---` line or has no</span>
 <span class="rs-comment">/// closing `---` line. The `body` is returned untrimmed; the caller trims it.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(text: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(text: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> lines = text.lines();
     <span class="rs-comment">// The text must begin with a `---` line (trailing whitespace allowed, no</span>
     <span class="rs-comment">// leading whitespace — matching the regex `\A---\s*`).</span>
@@ -101,69 +101,69 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:20</p>
-</article><article id="item-fn-splits-frontmatter-and-body-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn splits_frontmatter_and_body private fn splits_frontmatter_and_body () crates/eos-plugin-catalog/src/frontmatter.rs  ">
+  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:19</p>
+</article><article id="item-fn-splits-frontmatter-and-body-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn splits_frontmatter_and_body private fn splits_frontmatter_and_body () crates/eos-plugin-catalog/src/frontmatter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>splits_frontmatter_and_body</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-56">splits_frontmatter_and_body</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-55">splits_frontmatter_and_body</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-56">splits_frontmatter_and_body</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-55">splits_frontmatter_and_body</a>() {
         <span class="rs-kw">let</span> text = &quot;---\nname: lsp\n---\n\n# <span class="rs-type">Heading</span>\nbody text\n&quot;;
-        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(text).expect(&quot;splits&quot;);
+        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(text).expect(&quot;splits&quot;);
         assert_eq!(front, &quot;name: lsp&quot;);
         assert_eq!(body.trim(), &quot;# <span class="rs-type">Heading</span>\nbody text&quot;);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:56</p>
-</article><article id="item-fn-missing-or-unterminated-frontmatter-is-none-64" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn missing_or_unterminated_frontmatter_is_none private fn missing_or_unterminated_frontmatter_is_none () crates/eos-plugin-catalog/src/frontmatter.rs  ">
+  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:55</p>
+</article><article id="item-fn-missing-or-unterminated-frontmatter-is-none-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn missing_or_unterminated_frontmatter_is_none private fn missing_or_unterminated_frontmatter_is_none () crates/eos-plugin-catalog/src/frontmatter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>missing_or_unterminated_frontmatter_is_none</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-64">missing_or_unterminated_frontmatter_is_none</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-63">missing_or_unterminated_frontmatter_is_none</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-64">missing_or_unterminated_frontmatter_is_none</a>() {
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;no frontmatter here&quot;).is_none());
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;---\nname: lsp\nno close&quot;).is_none());
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-63">missing_or_unterminated_frontmatter_is_none</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;no frontmatter here&quot;).is_none());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;---\nname: lsp\nno close&quot;).is_none());
         <span class="rs-comment">// Leading whitespace before the opening fence does not match.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;  ---\nname: lsp\n---\n&quot;).is_none());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;  ---\nname: lsp\n---\n&quot;).is_none());
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:64</p>
-</article><article id="item-fn-empty-frontmatter-yields-empty-string-72" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_frontmatter_yields_empty_string private fn empty_frontmatter_yields_empty_string () crates/eos-plugin-catalog/src/frontmatter.rs  ">
+  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:63</p>
+</article><article id="item-fn-empty-frontmatter-yields-empty-string-71" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_frontmatter_yields_empty_string private fn empty_frontmatter_yields_empty_string () crates/eos-plugin-catalog/src/frontmatter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>empty_frontmatter_yields_empty_string</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-72">empty_frontmatter_yields_empty_string</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-71">empty_frontmatter_yields_empty_string</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-72">empty_frontmatter_yields_empty_string</a>() {
-        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;---\n---\n&quot;).expect(&quot;splits&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-71">empty_frontmatter_yields_empty_string</a>() {
+        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;---\n---\n&quot;).expect(&quot;splits&quot;);
         assert_eq!(front, &quot;&quot;);
         assert_eq!(body, &quot;&quot;);
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:72</p>
+  <p class="source">crates/eos-plugin-catalog/src/frontmatter.rs:71</p>
 </article></div>
 </section></div>
 </main>
@@ -186,16 +186,15 @@
 <span class="rs-comment">//! string, and returns `None` on a missing/unterminated block so the caller can</span>
 <span class="rs-comment">//! raise a hard error. The `eos-config` helper instead trims both fences,</span>
 <span class="rs-comment">//! returns a parsed `serde_yaml::Mapping`, and *swallows* a missing/malformed</span>
-<span class="rs-comment">//! block into an empty mapping. `eos-skills` reuses the `eos-config` helper and</span>
-<span class="rs-comment">//! `eos-agent-def` keeps its own `trim`-based raw variant, so consolidating the</span>
-<span class="rs-comment">//! three would change parse/error behavior (and force an `eos-config` edge onto</span>
-<span class="rs-comment">//! the deliberately dependency-free `eos-agent-def`).</span>
+<span class="rs-comment">//! block into an empty mapping. The tool-owned skill loader reuses the</span>
+<span class="rs-comment">//! `eos-types` helper and `eos-agent-def` keeps its own `trim`-based raw</span>
+<span class="rs-comment">//! variant, so consolidating the three would change parse/error behavior.</span>
 
 <span class="rs-comment">/// Split `plugin.md` text into `(frontmatter_yaml, body)`.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns `None` when the text does not begin with a `---` line or has no</span>
 <span class="rs-comment">/// closing `---` line. The `body` is returned untrimmed; the caller trims it.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(text: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(text: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> lines = text.lines();
     <span class="rs-comment">// The text must begin with a `---` line (trailing whitespace allowed, no</span>
     <span class="rs-comment">// leading whitespace — matching the regex `\A---\s*`).</span>
@@ -228,24 +227,24 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-56">splits_frontmatter_and_body</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-splits-frontmatter-and-body-55">splits_frontmatter_and_body</a>() {
         <span class="rs-kw">let</span> text = &quot;---\nname: lsp\n---\n\n# <span class="rs-type">Heading</span>\nbody text\n&quot;;
-        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(text).expect(&quot;splits&quot;);
+        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(text).expect(&quot;splits&quot;);
         assert_eq!(front, &quot;name: lsp&quot;);
         assert_eq!(body.trim(), &quot;# <span class="rs-type">Heading</span>\nbody text&quot;);
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-64">missing_or_unterminated_frontmatter_is_none</a>() {
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;no frontmatter here&quot;).is_none());
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;---\nname: lsp\nno close&quot;).is_none());
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-missing-or-unterminated-frontmatter-is-none-63">missing_or_unterminated_frontmatter_is_none</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;no frontmatter here&quot;).is_none());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;---\nname: lsp\nno close&quot;).is_none());
         <span class="rs-comment">// Leading whitespace before the opening fence does not match.</span>
-        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;  ---\nname: lsp\n---\n&quot;).is_none());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;  ---\nname: lsp\n---\n&quot;).is_none());
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-72">empty_frontmatter_yields_empty_string</a>() {
-        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&quot;---\n---\n&quot;).expect(&quot;splits&quot;);
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-empty-frontmatter-yields-empty-string-71">empty_frontmatter_yields_empty_string</a>() {
+        <span class="rs-kw">let</span> (front, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&quot;---\n---\n&quot;).expect(&quot;splits&quot;);
         assert_eq!(front, &quot;&quot;);
         assert_eq!(body, &quot;&quot;);
     }

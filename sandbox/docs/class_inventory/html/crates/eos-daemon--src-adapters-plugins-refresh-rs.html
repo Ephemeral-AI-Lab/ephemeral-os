@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -152,14 +152,14 @@
     <h3>ensure_connected_service_current</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a>(
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.as_deref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -224,14 +224,14 @@
     <h3>teardown_failed_connected_service</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a> (service_instance_id : &amp; str , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a> (service_instance_id : &amp; str , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a>(
     service_instance_id: &amp;str,
     reason: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> (process, snapshot) = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         state.service_ppc_clients.remove(service_instance_id);
@@ -262,7 +262,7 @@
     <h3>probe_connected_service_health</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-probe-connected-service-health-90">probe_connected_service_health</a> (target : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-struct-ServiceHealthProbeTarget-28">ServiceHealthProbeTarget</a> , index : usize , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-probe-connected-service-health-90">probe_connected_service_health</a> (target : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-struct-ServiceHealthProbeTarget-28">ServiceHealthProbeTarget</a> , index : usize , timeout : Duration ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -270,7 +270,7 @@
     target: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-struct-ServiceHealthProbeTarget-28">ServiceHealthProbeTarget</a>,
     index: usize,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
         manifest_key: target.manifest_key.clone(),
     };
@@ -303,11 +303,11 @@
     <h3>refresh_lock_for_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a> (service_instance_id : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Arc &lt; Mutex &lt; () &gt; &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a> (service_instance_id : &amp; str) -&gt; Result &lt; Arc &lt; Mutex &lt; () &gt; &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(state
         .service_refresh_locks
@@ -325,11 +325,11 @@
     <h3>service_was_started_before</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a> (service_instance_id : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; bool , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a> (service_instance_id : &amp; str) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-find-service-status-114">find_service_status</a>(&amp;state, service_instance_id)
         .is_some_and(|status| status.manifest_key.is_some()))
@@ -344,14 +344,14 @@
     <h3>service_is_ready_on_manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-is-ready-on-manifest-192">service_is_ready_on_manifest</a> (service_instance_id : &amp; str , target_manifest_key : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; bool , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-is-ready-on-manifest-192">service_is_ready_on_manifest</a> (service_instance_id : &amp; str , target_manifest_key : &amp; str ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-is-ready-on-manifest-192">service_is_ready_on_manifest</a>(
     service_instance_id: &amp;str,
     target_manifest_key: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-find-service-status-114">find_service_status</a>(&amp;state, service_instance_id).is_some_and(|status| {
@@ -371,7 +371,7 @@
     <h3>refresh_connected_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-connected-service-206">refresh_connected_service</a> (route : &amp; PluginOperationRoute , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , client : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> , invocation_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-connected-service-206">refresh_connected_service</a> (route : &amp; PluginOperationRoute , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , client : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> , invocation_id : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -381,7 +381,7 @@
     service_instance_id: &amp;str,
     client: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(service_key, &quot;refresh&quot;)?;
     <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(
         route
@@ -425,7 +425,7 @@
     <h3>send_refresh_sequence</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-sequence-247">send_refresh_sequence</a> (client : &amp; eos_plugin :: host :: PpcClient , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , invocation_id : &amp; str , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-sequence-247">send_refresh_sequence</a> (client : &amp; eos_plugin :: host :: PpcClient , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , invocation_id : &amp; str , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -436,7 +436,7 @@
     invocation_id: &amp;str,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request_id = format!(&quot;{invocation_id}:refresh&quot;);
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-request-336">send_refresh_request</a>(
         client,
@@ -491,7 +491,7 @@
     <h3>remount_connected_service_workspace</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-remount-connected-service-workspace-300">remount_connected_service_workspace</a> (service_instance_id : &amp; str , service_key : &amp; PluginServiceKey , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-remount-connected-service-workspace-300">remount_connected_service_workspace</a> (service_instance_id : &amp; str , service_key : &amp; PluginServiceKey , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -500,7 +500,7 @@
     service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = snapshot.overlay.as_ref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -517,11 +517,11 @@
     <h3>service_process_pid</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a> (service_instance_id : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; u32 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a> (service_instance_id : &amp; str) -&gt; Result &lt; u32 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;u32, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> pid = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> process = state
@@ -553,7 +553,7 @@
     <h3>send_refresh_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-request-336">send_refresh_request</a> (client : &amp; eos_plugin :: host :: PpcClient , invocation_id : &amp; str , index : usize , request : &amp; RefreshRequest , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-request-336">send_refresh_request</a> (client : &amp; eos_plugin :: host :: PpcClient , invocation_id : &amp; str , index : usize , request : &amp; RefreshRequest , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -564,7 +564,7 @@
     request: &amp;<span class="rs-type">RefreshRequest</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> envelope = <span class="rs-type">PpcEnvelope</span> {
         message_id: format!(&quot;{invocation_id}:refresh:{index}&quot;),
         direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
@@ -587,13 +587,13 @@
     <h3>restart_read_only_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-restart-read-only-service-357">restart_read_only_service</a> (service_instance_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-restart-read-only-service-357">restart_read_only_service</a> (service_instance_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-restart-read-only-service-357">restart_read_only_service</a>(
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> (spec, old_snapshot) = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> spec = state
@@ -628,13 +628,13 @@
     <h3>ppc_client_for_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ppc-client-for-service-385">ppc_client_for_service</a> (service_instance_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ppc-client-for-service-385">ppc_client_for_service</a> (service_instance_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ppc-client-for-service-385">ppc_client_for_service</a>(
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?
         .service_ppc_clients
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(service_instance_id)
@@ -650,11 +650,11 @@
     <h3>ensure_tracked_service_process_running</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a> (service_instance_id : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a> (service_instance_id : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> snapshot_to_release = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process) = state.service_processes.get_mut(service_instance_id) <span class="rs-kw">else</span> {
@@ -782,7 +782,7 @@
     target: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-struct-ServiceHealthProbeTarget-28">ServiceHealthProbeTarget</a>,
     index: usize,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
         manifest_key: target.manifest_key.clone(),
     };
@@ -809,7 +809,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a>(
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.as_deref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -865,7 +865,7 @@
     <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-refresh-lock-for-service-177">refresh_lock_for_service</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(state
         .service_refresh_locks
@@ -874,7 +874,7 @@
         .clone())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-was-started-before-186">service_was_started_before</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-find-service-status-114">find_service_status</a>(&amp;state, service_instance_id)
         .is_some_and(|status| status.manifest_key.is_some()))
@@ -883,7 +883,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-is-ready-on-manifest-192">service_is_ready_on_manifest</a>(
     service_instance_id: &amp;str,
     target_manifest_key: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
     <span class="rs-type">Ok</span>(
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-find-service-status-114">find_service_status</a>(&amp;state, service_instance_id).is_some_and(|status| {
@@ -900,7 +900,7 @@
     service_instance_id: &amp;str,
     client: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>,
     invocation_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(service_key, &quot;refresh&quot;)?;
     <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(
         route
@@ -942,7 +942,7 @@
     invocation_id: &amp;str,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request_id = format!(&quot;{invocation_id}:refresh&quot;);
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-send-refresh-request-336">send_refresh_request</a>(
         client,
@@ -993,7 +993,7 @@
     service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = snapshot.overlay.as_ref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -1001,7 +1001,7 @@
     process::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-remount-workspace-overlay-224">remount_workspace_overlay</a>(target_pid, &amp;service_key.workspace_root, overlay, timeout)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;u32, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-service-process-pid-313">service_process_pid</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> pid = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> process = state
@@ -1031,7 +1031,7 @@
     request: &amp;<span class="rs-type">RefreshRequest</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     timeout: <span class="rs-type">Duration</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> envelope = <span class="rs-type">PpcEnvelope</span> {
         message_id: format!(&quot;{invocation_id}:refresh:{index}&quot;),
         direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
@@ -1047,7 +1047,7 @@
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-restart-read-only-service-357">restart_read_only_service</a>(
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> (spec, old_snapshot) = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> spec = state
@@ -1075,14 +1075,14 @@
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ppc-client-for-service-385">ppc_client_for_service</a>(
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-type-SharedPpcClient-15">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?
         .service_ppc_clients
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(service_instance_id)
         .cloned())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a>(service_instance_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-ensure-tracked-service-process-running-394">ensure_tracked_service_process_running</a>(service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> snapshot_to_release = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process) = state.service_processes.get_mut(service_instance_id) <span class="rs-kw">else</span> {
@@ -1109,7 +1109,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a>(
     service_instance_id: &amp;str,
     reason: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> (process, snapshot) = {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>()?;
         state.service_ppc_clients.remove(service_instance_id);

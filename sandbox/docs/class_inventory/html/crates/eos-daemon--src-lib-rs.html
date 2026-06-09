@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -106,14 +106,12 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> transport;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> dispatch::dispatcher;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> dispatcher::{error_envelope, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-OpTable-120">OpTable</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> invocation_registry::{
-    <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>, <span class="rs-type">DEFAULT_REAPER_INTERVAL_S</span>, <span class="rs-type">DEFAULT_TTL_S</span>,
-};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> dispatcher::{<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-OpTable-120">OpTable</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> invocation_registry::{<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>, <span class="rs-type">DEFAULT_REAPER_INTERVAL_S</span>, <span class="rs-type">DEFAULT_TTL_S</span>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> runtime::{config, error, invocation_registry};
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> runtime::{request_args, response_timings};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> server::{<a class="symbol-link rs-type" href="eos-daemon--src-transport-server-rs.html#item-struct-DaemonServer-67">DaemonServer</a>, <a class="symbol-link rs-type" href="eos-daemon--src-transport-server-rs.html#item-struct-ServerConfig-52">ServerConfig</a>, <span class="rs-type">MAX_REQUEST_BYTES</span>, <span class="rs-type">REQUEST_READ_TIMEOUT_S</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> server::{<a class="symbol-link rs-type" href="eos-daemon--src-transport-server-rs.html#item-struct-DaemonServer-67">DaemonServer</a>, <a class="symbol-link rs-type" href="eos-daemon--src-transport-server-rs.html#item-struct-ServerConfig-52">ServerConfig</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> transport::server;
 </code></pre>
 </section>

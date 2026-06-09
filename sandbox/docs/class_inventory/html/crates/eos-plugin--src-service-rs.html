@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -65,7 +65,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a></code>
   <p class="docstring">Stable key for sharing a daemon-managed plugin service.<br>Reuse is intentionally stricter than the old per-root cache: service id,<br>service profile digest, mode, and refresh strategy are part of the key so<br>two payloads cannot accidentally share a process just because they use the<br>same `LayerStack` root.<br>`#[non_exhaustive]` makes [`PluginServiceKey::new`] the only way to mint one<br>from another crate, so the validated `Parts` -&gt; `new` path cannot be bypassed<br>by a struct literal; fields stay public for read-only access.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a> (parts : <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self &gt;</code><p class="docstring">Construct a validated service key.<br># Errors<br>Returns [`PluginError::Manifest`] when the supplied key parts are<br>malformed or incompatible.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a> (parts : <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self &gt;</code><p class="docstring">Construct a validated service key.<br># Errors<br>Returns [`PluginError::Manifest`] when the supplied key parts are<br>malformed or incompatible.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct a validated service key.</span>
     <span class="rs-comment">///</span>
@@ -73,7 +73,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the supplied key parts are</span>
     <span class="rs-comment">/// malformed or incompatible.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-kw">let</span> key = <span class="rs-self">Self</span> {
             layer_stack_root: parts.layer_stack_root,
             workspace_root: parts.workspace_root,
@@ -177,7 +177,7 @@
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/service.rs:196</p>
@@ -292,13 +292,13 @@
     <h3>service_key_includes_profile_and_refresh_strategy</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed = base.clone();
         changed.service_profile_digest = &quot;profile-b&quot;.to_owned();
         assert_ne!(base, changed);
@@ -327,7 +327,7 @@
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;);
         parts.layer_stack_root = &quot;relative&quot;.to_owned();
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(parts),
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(parts),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;absolute&quot;)
         ));
     }
@@ -478,7 +478,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the supplied key parts are</span>
     <span class="rs-comment">/// malformed or incompatible.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
         <span class="rs-kw">let</span> key = <span class="rs-self">Self</span> {
             layer_stack_root: parts.layer_stack_root,
             workspace_root: parts.workspace_root,
@@ -591,11 +591,11 @@
 <span class="rs-kw">mod</span> tests {
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
-        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed = base.clone();
         changed.service_profile_digest = &quot;profile-b&quot;.to_owned();
         assert_ne!(base, changed);
@@ -611,7 +611,7 @@
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;);
         parts.layer_stack_root = &quot;relative&quot;.to_owned();
         assert!(matches!(
-            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(parts),
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(parts),
             <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;absolute&quot;)
         ));
     }

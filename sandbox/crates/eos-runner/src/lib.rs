@@ -40,7 +40,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod error;
-pub mod fresh_ns;
+mod fresh_ns;
 #[cfg(target_os = "linux")]
 mod mount_mask;
 #[cfg(target_os = "linux")]

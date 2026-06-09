@@ -429,7 +429,6 @@ name = "eos-agent-def"
 version = "0.1.0"
 dependencies = [
  "eos-types",
- "schemars",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -449,7 +448,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-agent-runner"
+name = "eos-agent-run"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -546,20 +545,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-plugin-catalog"
-version = "0.1.0"
-dependencies = [
- "eos-sandbox-port",
- "eos-types",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "thiserror",
-]
-
-[[package]]
 name = "eos-runtime"
 version = "0.1.0"
 dependencies = [
@@ -568,23 +553,26 @@ dependencies = [
  "console-subscriber",
  "eos-agent-def",
  "eos-agent-ports",
- "eos-agent-runner",
+ "eos-agent-run",
  "eos-audit",
  "eos-config",
  "eos-db",
  "eos-engine",
  "eos-llm-client",
- "eos-plugin-catalog",
  "eos-sandbox-port",
- "eos-skills",
  "eos-testkit",
+ "eos-tool",
  "eos-tool-ports",
- "eos-tools",
  "eos-types",
  "eos-workflow",
  "futures",
+ "schemars",
+ "serde",
  "serde_json",
+ "serde_yaml",
+ "sha2",
  "tempfile",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -606,17 +594,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-skills"
-version = "0.1.0"
-dependencies = [
- "eos-types",
- "insta",
- "serde",
- "serde_yaml",
- "thiserror",
-]
-
-[[package]]
 name = "eos-testkit"
 version = "0.1.0"
 dependencies = [
@@ -634,6 +611,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-tool"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "eos-sandbox-port",
+ "eos-types",
+ "insta",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "eos-tool-ports"
 version = "0.1.0"
 dependencies = [
@@ -645,26 +638,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "eos-tools"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "eos-agent-ports",
- "eos-llm-client",
- "eos-sandbox-port",
- "eos-skills",
- "eos-tool-ports",
- "eos-types",
- "insta",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror",
- "tokio",
 ]
 
 [[package]]
@@ -688,8 +661,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "eos-agent-def",
+ "eos-tool",
  "eos-tool-ports",
- "eos-tools",
  "eos-types",
  "parking_lot",
  "schemars",

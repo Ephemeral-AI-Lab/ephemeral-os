@@ -66,12 +66,12 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Fresh per-operation workspace policy.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! This crate owns the publish-capable ephemeral workspace lifecycle pieces that</span>
+<span class="rs-comment">//! This module owns the publish-capable ephemeral workspace lifecycle pieces that</span>
 <span class="rs-comment">//! are unique to fresh overlay operations: allocate scratch, capture upperdir</span>
 <span class="rs-comment">//! changes, classify path/resource data, prepare runner requests for fresh</span>
 <span class="rs-comment">//! command workspaces, and call an injected publisher. Daemon RPC routing,</span>
 <span class="rs-comment">//! process supervision, command-session registry state, public JSON envelopes,</span>
-<span class="rs-comment">//! and generic OCC publisher ownership stay outside this crate.</span>
+<span class="rs-comment">//! and generic OCC publisher ownership stay outside this module.</span>
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> capture;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> command;

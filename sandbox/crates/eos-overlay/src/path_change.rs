@@ -20,7 +20,7 @@ const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
 /// The kind of a captured overlay path change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OverlayPathChangeKind {
+pub(crate) enum OverlayPathChangeKind {
     /// File content write; `content_path` + `final_hash` required.
     Write,
     /// File/dir removal (overlay whiteout).
@@ -36,7 +36,7 @@ pub enum OverlayPathChangeKind {
 /// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`
 /// carry a staged `content_path` + `final_hash`, the others carry neither.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OverlayPathChange {
+pub(crate) struct OverlayPathChange {
     /// Normalized relative layer path (root `""` allowed only for `opaque_dir`).
     pub path: String,
     /// The change kind.

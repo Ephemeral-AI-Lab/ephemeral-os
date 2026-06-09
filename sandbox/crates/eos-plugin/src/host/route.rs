@@ -135,10 +135,6 @@ impl PluginProcessSpec {
     pub fn service_instance_id(&self) -> String {
         self.key.service_instance_id()
     }
-
-    pub const fn key(&self) -> &PluginServiceKey {
-        &self.key
-    }
 }
 
 fn socket_path_for_key(key: &PluginServiceKey, socket_root: &Path) -> PathBuf {

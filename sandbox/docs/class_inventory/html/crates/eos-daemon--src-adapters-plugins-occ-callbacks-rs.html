@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -86,9 +86,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-struct-Fixture-333">Fixture</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-339"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a> (label : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Self , std :: io :: Error &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-339"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a> (label : &amp; str) -&gt; Result &lt; Self , std :: io :: Error &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-self">Self</span>, std::io::<span class="rs-type">Error</span>&gt; {
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(label: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, std::io::<span class="rs-type">Error</span>&gt; {
             <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(0);
             <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
                 &quot;eos-plugin-occ-callback-{label}-{}-{}&quot;,
@@ -118,9 +118,9 @@
   </div>
   <code class="signature">enum <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-enum-CallbackLayerChange-116">CallbackLayerChange</a></code>
   <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>serde</span><span>serde: rename_all</span><span>serde: tag</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code>path: String, content_utf8: Option &lt; String &gt;, content_bytes: Option &lt; Vec &lt; u8 &gt; &gt;</code></td></tr><tr><td>Delete</td><td><code>path: String</code></td></tr><tr><td>Symlink</td><td><code>path: String, source_path: String</code></td></tr><tr><td>OpaqueDir</td><td><code>path: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-into-layer-change-139"><td>method</td><td>into_layer_change</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a> (self) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; LayerChange , PluginError &gt;</code><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code>path: String, content_utf8: Option &lt; String &gt;, content_bytes: Option &lt; Vec &lt; u8 &gt; &gt;</code></td></tr><tr><td>Delete</td><td><code>path: String</code></td></tr><tr><td>Symlink</td><td><code>path: String, source_path: String</code></td></tr><tr><td>OpaqueDir</td><td><code>path: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-into-layer-change-139"><td>method</td><td>into_layer_change</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a> (self) -&gt; Result &lt; LayerChange , PluginError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">LayerChange</span>, <span class="rs-type">PluginError</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerChange</span>, <span class="rs-type">PluginError</span>&gt; {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Write</span> {
                 path,
@@ -162,7 +162,7 @@
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> = <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a> &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> = Result &lt; () , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/adapters/plugins/occ_callbacks.rs:208</p>
@@ -172,14 +172,14 @@
     <h3>handle_callback_for_root</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a> (expected_root : &amp; Path , request : PpcEnvelope ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a> (expected_root : &amp; Path , request : PpcEnvelope ,) -&gt; Result &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a>(
     expected_root: &amp;<span class="rs-type">Path</span>,
     request: <span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> request.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(
             &quot;daemon plugin callback handling requires a request envelope&quot;.to_owned(),
@@ -201,14 +201,14 @@
     <h3>handle_apply_changeset</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-apply-changeset-37">handle_apply_changeset</a> (expected_root : &amp; Path , request : PpcEnvelope ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-apply-changeset-37">handle_apply_changeset</a> (expected_root : &amp; Path , request : PpcEnvelope ,) -&gt; Result &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-apply-changeset-37">handle_apply_changeset</a>(
     expected_root: &amp;<span class="rs-type">Path</span>,
     request: <span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> body: <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-struct-ApplyChangesetRequest-99">ApplyChangesetRequest</a> = serde_json::from_str(&amp;request.body)
         .map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(&quot;invalid <span class="rs-type">OCC</span> callback payload: {err}&quot;)))?;
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(&amp;body.layer_stack_root)?;
@@ -224,7 +224,7 @@
         .changes
         .into_iter()
         .map(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-enum-CallbackLayerChange-116">CallbackLayerChange</a>::into_layer_change)
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
     <span class="rs-kw">let</span> base_hashes = body
         .base_hashes
         .into_iter()
@@ -234,7 +234,7 @@
                 <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-empty-string-as-none-194">empty_string_as_none</a>(base.hash),
             ))
         })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
     <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
         &amp;root,
         body.snapshot_version,
@@ -276,11 +276,11 @@
     <h3>require_absolute_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a> (root : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PathBuf , PluginError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a> (root : &amp; str) -&gt; Result &lt; PathBuf , PluginError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(root: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PathBuf</span>, <span class="rs-type">PluginError</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(root);
     <span class="rs-kw">if</span> root.is_absolute() {
         <span class="rs-type">Ok</span>(root)
@@ -300,11 +300,11 @@
     <h3>parse_layer_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a> (path : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; LayerPath , PluginError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a> (path : &amp; str) -&gt; Result &lt; LayerPath , PluginError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a>(path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">LayerPath</span>, <span class="rs-type">PluginError</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerPath</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-type">LayerPath</span>::parse(path).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))
 }
 </code></pre>
@@ -317,14 +317,14 @@
     <h3>write_content</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-write-content-178">write_content</a> (content_utf8 : Option &lt; String &gt; , content_bytes : Option &lt; Vec &lt; u8 &gt; &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; u8 &gt; , PluginError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-write-content-178">write_content</a> (content_utf8 : Option &lt; String &gt; , content_bytes : Option &lt; Vec &lt; u8 &gt; &gt; ,) -&gt; Result &lt; Vec &lt; u8 &gt; , PluginError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-write-content-178">write_content</a>(
     content_utf8: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     content_bytes: <span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">match</span> (content_utf8, content_bytes) {
         (<span class="rs-type">Some</span>(content), <span class="rs-type">None</span>) =&gt; <span class="rs-type">Ok</span>(content.into_bytes()),
         (<span class="rs-type">None</span>, <span class="rs-type">Some</span>(content)) =&gt; <span class="rs-type">Ok</span>(content),
@@ -524,14 +524,14 @@
     <h3>callback_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-callback-error-319">callback_error</a> (result : <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; , context : &amp; &#x27;static str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-callback-error-319">callback_error</a> (result : Result &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; , context : &amp; &#x27;static str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-callback-error-319">callback_error</a>(
-        result: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;,
+        result: <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;,
         context: &amp;&#x27;<span class="rs-kw">static</span> str,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt; {
         <span class="rs-kw">match</span> result {
             <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(context).into()),
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Ok</span>(err),
@@ -547,11 +547,11 @@
     <h3>read_text</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a> (root : &amp; Path , path : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a> (root : &amp; Path , path : &amp; str) -&gt; Result &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(path)?.0)
     }
 </code></pre>
@@ -589,7 +589,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a>(
     expected_root: &amp;<span class="rs-type">Path</span>,
     request: <span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> request.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(
             &quot;daemon plugin callback handling requires a request envelope&quot;.to_owned(),
@@ -605,7 +605,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-handle-apply-changeset-37">handle_apply_changeset</a>(
     expected_root: &amp;<span class="rs-type">Path</span>,
     request: <span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> body: <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-struct-ApplyChangesetRequest-99">ApplyChangesetRequest</a> = serde_json::from_str(&amp;request.body)
         .map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(&quot;invalid <span class="rs-type">OCC</span> callback payload: {err}&quot;)))?;
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(&amp;body.layer_stack_root)?;
@@ -621,7 +621,7 @@
         .changes
         .into_iter()
         .map(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-enum-CallbackLayerChange-116">CallbackLayerChange</a>::into_layer_change)
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
     <span class="rs-kw">let</span> base_hashes = body
         .base_hashes
         .into_iter()
@@ -631,7 +631,7 @@
                 <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-empty-string-as-none-194">empty_string_as_none</a>(base.hash),
             ))
         })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
+        .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, <span class="rs-type">PluginError</span>&gt;&gt;()?;
     <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a>(
         &amp;root,
         body.snapshot_version,
@@ -704,7 +704,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-enum-CallbackLayerChange-116">CallbackLayerChange</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">LayerChange</span>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#method-into-layer-change-139">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerChange</span>, <span class="rs-type">PluginError</span>&gt; {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Write</span> {
                 path,
@@ -728,7 +728,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(root: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PathBuf</span>, <span class="rs-type">PluginError</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-require-absolute-root-163">require_absolute_root</a>(root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(root);
     <span class="rs-kw">if</span> root.is_absolute() {
         <span class="rs-type">Ok</span>(root)
@@ -739,14 +739,14 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a>(path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">LayerPath</span>, <span class="rs-type">PluginError</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-parse-layer-path-174">parse_layer_path</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerPath</span>, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-type">LayerPath</span>::parse(path).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-write-content-178">write_content</a>(
     content_utf8: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     content_bytes: <span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <span class="rs-type">PluginError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <span class="rs-type">PluginError</span>&gt; {
     <span class="rs-kw">match</span> (content_utf8, content_bytes) {
         (<span class="rs-type">Some</span>(content), <span class="rs-type">None</span>) =&gt; <span class="rs-type">Ok</span>(content.into_bytes()),
         (<span class="rs-type">None</span>, <span class="rs-type">Some</span>(content)) =&gt; <span class="rs-type">Ok</span>(content),
@@ -773,7 +773,7 @@
     <span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
 
     <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a> = <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + &#x27;<span class="rs-kw">static</span>&gt;;
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> = <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt;;
 
     #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-occ-callback-applies-changeset-through-daemon-writer-210">occ_callback_applies_changeset_through_daemon_writer</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestResult-208">TestResult</a> {
@@ -885,16 +885,16 @@
     }
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-callback-error-319">callback_error</a>(
-        result: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;,
+        result: <span class="rs-type">Result</span>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;,
         context: &amp;&#x27;<span class="rs-kw">static</span> str,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-type-TestError-207">TestError</a>&gt; {
         <span class="rs-kw">match</span> result {
             <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(context).into()),
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Ok</span>(err),
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-fn-read-text-329">read_text</a>(path)?.0)
     }
 
@@ -904,7 +904,7 @@
     }
 
     <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-occ-callbacks-rs.html#item-struct-Fixture-333">Fixture</a> {
-        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-self">Self</span>, std::io::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(label: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, std::io::<span class="rs-type">Error</span>&gt; {
             <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(0);
             <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
                 &quot;eos-plugin-occ-callback-{label}-{}-{}&quot;,

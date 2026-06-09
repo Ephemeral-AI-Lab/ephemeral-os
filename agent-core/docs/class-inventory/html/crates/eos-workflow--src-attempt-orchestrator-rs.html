@@ -228,9 +228,9 @@
         .<span class="rs-kw">await</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-record-plan-205"><td>method</td><td>record_plan</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-205">record_plan</a> (&amp; self , plan : PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Record a validated planner plan from `eos-tools` (Path A-recording).<br>Materializes the generator + reducer task rows, marks the planner Done,<br>and sets stage RUN — but does **not** advance. The single<br>`advance_run_stage` is kicked once by [`settle_planner`](Self::settle_planner)<br>in the planner's spawned continuation, so the submit tool returns promptly<br>(it does not block on the whole run stage).</p><details class="function-source">
+</details></td></tr><tr id="method-record-plan-205"><td>method</td><td>record_plan</td><td><code>pub(crate) async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-205">record_plan</a> (&amp; self , plan : PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><p class="docstring">Record a validated planner plan from `eos-tool` (Path A-recording).<br>Materializes the generator + reducer task rows, marks the planner Done,<br>and sets stage RUN — but does **not** advance. The single<br>`advance_run_stage` is kicked once by [`settle_planner`](Self::settle_planner)<br>in the planner's spawned continuation, so the submit tool returns promptly<br>(it does not block on the whole run stage).</p><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Record a validated planner plan from `eos-tools` (Path A-recording).</span>
+  <pre><code>    <span class="rs-comment">/// Record a validated planner plan from `eos-tool` (Path A-recording).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Materializes the generator + reducer task rows, marks the planner Done,</span>
     <span class="rs-comment">/// and sets stage RUN — but does **not** advance. The single</span>
@@ -953,7 +953,7 @@
         .<span class="rs-kw">await</span>
     }
 
-    <span class="rs-comment">/// Record a validated planner plan from `eos-tools` (Path A-recording).</span>
+    <span class="rs-comment">/// Record a validated planner plan from `eos-tool` (Path A-recording).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// Materializes the generator + reducer task rows, marks the planner Done,</span>
     <span class="rs-comment">/// and sets stage RUN — but does **not** advance. The single</span>

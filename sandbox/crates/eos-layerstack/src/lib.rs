@@ -29,8 +29,8 @@
 //!
 //! Single-threaded core plus a per-root reentrant write lease (the dual-layer
 //! `flock` cross-process lease + in-process reentrant mutex). No tokio. The
-//! reentrant-RLock → non-reentrant-Mutex DEADLOCK TRAP is documented in
-//! [`storage_lock`] — do NOT 1:1-port it.
+//! reentrant write-guard requirement (a non-reentrant `Mutex` would self-deadlock)
+//! is documented in [`storage_lock`].
 #![forbid(unsafe_code)]
 
 pub mod error;
@@ -53,12 +53,8 @@ pub use eos_protocol::{
 pub use error::LayerStackError;
 pub use lease::{LayerStackLeaseRecord, LeaseRegistry};
 pub use metrics::LayerStackStorageMetrics;
-pub use squash::{
-    manifest_prefix_before_plan, CheckpointSegment, LayerCheckpointSquasher, SquashPlan,
-    SquashPlanEntry,
-};
+pub use squash::{CheckpointSegment, LayerCheckpointSquasher, SquashPlan, SquashPlanEntry};
 pub use stack::{LayerStack, Lease, MergedView};
-pub use storage_lock::{StorageWriterLockLease, STORAGE_WRITER_LOCK_FILE};
 pub use workspace_base::{build_workspace_base, ensure_workspace_base, WORKSPACE_BASE_LAYER_ID};
 pub use workspace_binding::{
     read_workspace_binding, require_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE,

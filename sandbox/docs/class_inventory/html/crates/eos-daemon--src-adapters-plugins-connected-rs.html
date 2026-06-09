@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,7 +62,7 @@
     <h3>dispatch_connected_read_only_route</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -70,7 +70,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
 }
 </code></pre>
@@ -83,7 +83,7 @@
     <h3>dispatch_connected_self_managed_route</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -91,7 +91,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -112,13 +112,13 @@
     <h3>response_payload_from_reply</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-response-payload-from-reply-86">response_payload_from_reply</a> (reply : &amp; PpcEnvelope ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-response-payload-from-reply-86">response_payload_from_reply</a> (reply : &amp; PpcEnvelope ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-response-payload-from-reply-86">response_payload_from_reply</a>(
     reply: &amp;<span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> max_response_bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-plugin-runtime-config-69">plugin_runtime_config</a>().max_response_bytes;
     <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
@@ -146,7 +146,7 @@
     <h3>round_trip_connected_route</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -155,7 +155,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -226,7 +226,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
 }
 
@@ -234,7 +234,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -251,7 +251,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
     layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     };
@@ -294,7 +294,7 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-connected-rs.html#item-fn-response-payload-from-reply-86">response_payload_from_reply</a>(
     reply: &amp;<span class="rs-type">PpcEnvelope</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> max_response_bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-plugin-runtime-config-69">plugin_runtime_config</a>().max_response_bytes;
     <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(

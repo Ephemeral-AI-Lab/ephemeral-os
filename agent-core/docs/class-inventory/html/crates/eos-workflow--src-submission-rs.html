@@ -63,7 +63,7 @@
     <span class="visibility">pub</span>
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-submission-rs.html#item-struct-AttemptSubmissionAdapter-13">AttemptSubmissionAdapter</a></code>
-  <p class="docstring">Recording adapter from the `eos-tools` planner/generator/reducer terminal<br>ports to the active per-attempt orchestrators (Path A-recording).<br>The submit tool writes the agent's real submission straight to the<br>orchestrator's non-advancing `record_*` variants and returns the<br>orchestrator's real ack; advancing the DAG stays the exclusive job of the<br>single `advance_run_stage` loop (D4: exactly one writer). This is the wired<br>implementor of [`AttemptSubmissionPort`], constructed once at the composition<br>root over the shared attempt registry.</p>
+  <p class="docstring">Recording adapter from the `eos-tool` planner/generator/reducer terminal<br>ports to the active per-attempt orchestrators (Path A-recording).<br>The submit tool writes the agent's real submission straight to the<br>orchestrator's non-advancing `record_*` variants and returns the<br>orchestrator's real ack; advancing the DAG stays the exclusive job of the<br>single `advance_run_stage` loop (D4: exactly one writer). This is the wired<br>implementor of [`AttemptSubmissionPort`], constructed once at the composition<br>root over the shared attempt registry.</p>
   <div class="tags"><span>derive: Clone</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>registry</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-35"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (registry : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;) -&gt; Self</code><p class="docstring">Create a submission adapter over the active attempt registry.</p><details class="function-source">
   <summary>code</summary>
@@ -155,7 +155,7 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-workflow/src/submission.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Recording adapter from the `eos-tools` planner/generator/reducer terminal</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Recording adapter from the `eos-tool` planner/generator/reducer terminal</span>
 <span class="rs-comment">//! submission port to the active per-attempt orchestrators.</span>
 
 <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
@@ -167,7 +167,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>;
 
-<span class="rs-comment">/// Recording adapter from the `eos-tools` planner/generator/reducer terminal</span>
+<span class="rs-comment">/// Recording adapter from the `eos-tool` planner/generator/reducer terminal</span>
 <span class="rs-comment">/// ports to the active per-attempt orchestrators (Path A-recording).</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// The submit tool writes the agent's real submission straight to the</span>

@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use eos_agent_def::AgentRegistry;
-use eos_skills::SkillRegistry;
-use eos_tools::ToolConfigSet;
+use eos_tool::SkillRegistry;
+use eos_tool::ToolConfigSet;
 
 /// Runtime registries and model-facing tool configuration.
 #[derive(Clone)]

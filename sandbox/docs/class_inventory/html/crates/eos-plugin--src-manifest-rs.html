@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -83,8 +83,8 @@
             setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         }
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
         <span class="rs-kw">for</span> service <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.services {
             service.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
             <span class="rs-kw">if</span> !service_ids.insert(service.service_id.as_str()) {
@@ -96,7 +96,7 @@
             service_modes.insert(service.service_id.as_str(), service.service_mode);
         }
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
         <span class="rs-kw">for</span> operation <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.operations {
             operation.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;service_modes)?;
             <span class="rs-kw">if</span> !op_names.insert(operation.op_name.as_str()) {
@@ -309,7 +309,7 @@
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:298</p>
@@ -442,12 +442,12 @@
     <h3>validates_read_only_service_manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>().<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         <span class="rs-type">Ok</span>(())
     }
@@ -536,12 +536,12 @@
     <h3>op_name_is_only_non_empty_at_manifest_boundary</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         manifest.operations[0].op_name = &quot;1 weird.op&quot;.to_owned();
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
@@ -563,12 +563,12 @@
     <h3>accepts_package_and_setup_contract</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         assert_eq!(manifest.package.runtime_dir, &quot;runtime&quot;);
@@ -678,12 +678,12 @@
     <h3>digest_fields_drive_marker_and_service_identity</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a></code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> base = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> package_changed = base.clone();
         package_changed.plugin_digest = &quot;digest-b&quot;.to_owned();
@@ -827,8 +827,8 @@
             setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         }
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
         <span class="rs-kw">for</span> service <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.services {
             service.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
             <span class="rs-kw">if</span> !service_ids.insert(service.service_id.as_str()) {
@@ -840,7 +840,7 @@
             service_modes.insert(service.service_id.as_str(), service.service_mode);
         }
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
         <span class="rs-kw">for</span> operation <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.operations {
             operation.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;service_modes)?;
             <span class="rs-kw">if</span> !op_names.insert(operation.op_name.as_str()) {
@@ -1072,7 +1072,7 @@
 <span class="rs-kw">mod</span> tests {
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
         <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
@@ -1106,7 +1106,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>().<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         <span class="rs-type">Ok</span>(())
     }
@@ -1148,7 +1148,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         manifest.operations[0].op_name = &quot;1 weird.op&quot;.to_owned();
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
@@ -1162,7 +1162,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
         assert_eq!(manifest.package.runtime_dir, &quot;runtime&quot;);
@@ -1225,7 +1225,7 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-515">TestResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-host-package-rs.html#item-type-TestResult-521">TestResult</a> {
         <span class="rs-kw">let</span> base = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> package_changed = base.clone();
         package_changed.plugin_digest = &quot;digest-b&quot;.to_owned();

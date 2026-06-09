@@ -21,10 +21,10 @@ use eos_agent_ports::{
     AgentName as AgentPortName, AgentRunApi, AgentRunMessageRecordKind, SpawnAgentRequest,
     WorkflowTaskRole,
 };
-use eos_agent_runner::AgentRunService as RunnerAgentRunService;
+use eos_agent_run::AgentRunService as RunnerAgentRunService;
 use eos_llm_client::Message;
+use eos_tool::AttemptSubmissionService;
 use eos_tool_ports::AttemptSubmissionPort;
-use eos_tools::AttemptSubmissionService;
 use eos_types::{AgentRunId, TaskRole, WorkflowApi};
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
 

@@ -59,7 +59,7 @@ impl ProtocolClient {
     ///
     /// # Errors
     /// Returns an error on connect/write/read failure or undecodable response.
-    pub fn request_with_token(
+    fn request_with_token(
         &self,
         op: &str,
         invocation_id: &str,
@@ -99,8 +99,7 @@ impl ProtocolClient {
 /// Build the wire envelope object bytes (no trailing newline):
 /// `{op, invocation_id, args, _eos_daemon_auth_token?}` with the protocol
 /// version folded into `args`.
-#[must_use]
-pub fn envelope_bytes(op: &str, invocation_id: &str, args: &Value, token: Option<&str>) -> Vec<u8> {
+fn envelope_bytes(op: &str, invocation_id: &str, args: &Value, token: Option<&str>) -> Vec<u8> {
     let mut args_obj = match args {
         Value::Object(map) => map.clone(),
         _ => Map::new(),

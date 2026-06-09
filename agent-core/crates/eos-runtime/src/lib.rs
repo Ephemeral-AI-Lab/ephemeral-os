@@ -7,7 +7,7 @@
 //! engine and workflow crates depend on (DIP). For a top-level request it mints
 //! the root [`Task`](eos_types::Task) — its id derived from the caller-injected
 //! `request_id` — and task-triggers the root agent through
-//! [`AgentRunApi`](eos_agent_runner::AgentRunApi), returning the root's outcome
+//! [`AgentRunApi`](eos_agent_run::AgentRunApi), returning the root's outcome
 //! ([`run_request`] → [`RequestOutcome`]); there is no root workflow and no
 //! request handle. It provisions one sandbox binding per request and wires the
 //! per-request delegated-workflow runtime
@@ -26,7 +26,7 @@ mod agent_runner;
 mod cancel;
 mod entry;
 pub mod observability;
-mod plugin_tools;
+mod plugins;
 mod request_input;
 mod runtime_services;
 

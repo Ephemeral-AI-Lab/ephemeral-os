@@ -30,8 +30,9 @@ pub struct LayerStackLeaseRecord {
 
 /// Tracks active snapshot leases and the layers they retain on disk.
 ///
-/// Rust guards this with a `threading.RLock` and a `Counter[LayerRef]`
-/// refcount; the Rust port keeps the same refcount semantics.
+/// A per-layer `BTreeMap` refcount tracks retention; concurrent access is
+/// serialized by the surrounding `SharedLeaseRegistry` (`Arc<Mutex<…>>`),
+/// not by this struct itself.
 #[derive(Debug, Default)]
 pub struct LeaseRegistry {
     leases: HashMap<String, LayerStackLeaseRecord>,

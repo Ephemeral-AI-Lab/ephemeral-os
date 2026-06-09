@@ -60,7 +60,7 @@ const EDIT_CONFLICT_CODES: [&str; 3] = [
     "anchor_occurrence_count_mismatch",
 ];
 // Message substrings, already lowercase (ported from conflict_markers.py). Both
-// the api side (here) and the audit side (relocated to eos-tools) must keep
+// the api side (here) and the audit side (relocated to eos-tool) must keep
 // these in sync — see the conflict_markers.py docstring.
 const EDIT_CONFLICT_MARKERS: [&str; 3] = [
     "anchor not found",

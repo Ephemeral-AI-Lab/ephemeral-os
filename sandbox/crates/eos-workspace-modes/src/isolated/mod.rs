@@ -3,18 +3,18 @@
 //!
 //! # The build-time no-publish guarantee (STATE LOUDLY)
 //!
-//! The single sharpest invariant of this crate is: **isolated writes are
+//! The single sharpest invariant of this module is: **isolated writes are
 //! captured for audit but NEVER published.** This is enforced at BUILD TIME by
-//! this crate NOT depending on `eos-occ`. The publish path lives behind the OCC
-//! commit queue; isolated never links it. The only layer-stack surface this
-//! crate models is the snapshot/lease HINGE (read-only snapshot + lease
-//! acquire/release), exposed here as [`session::LayerStackSnapshotPort`] and
-//! injected by `eos-daemon`. On `exit`, the overlay upperdir is DISCARDED.
+//! `eos-workspace-modes` NOT depending on `eos-occ`. The publish path lives
+//! behind the OCC commit queue; isolated never links it. The only layer-stack
+//! surface this module models is the snapshot/lease HINGE (read-only snapshot +
+//! lease acquire/release), exposed here as [`session::LayerStackSnapshotPort`]
+//! and injected by `eos-daemon`. On `exit`, the overlay upperdir is DISCARDED.
 //!
-//! If `eos-occ` ever appears in this crate's `Cargo.toml`, the guarantee is
-//! silently broken — guard that edge.
+//! If `eos-occ` ever appears in `eos-workspace-modes`'s `Cargo.toml`, the
+//! guarantee is silently broken — guard that edge.
 //!
-//! # What this crate owns
+//! # What this module owns
 //!
 //! - [`caps::ResourceCaps`] — env-sourced lifecycle caps (TTL, cap, upperdir
 //!   bytes, memavail fraction, fallback DNS).
@@ -39,22 +39,16 @@ pub mod config {
     pub use eos_config::configs::isolated_workspace::*;
 }
 
-pub use audit::{AuditSink, JsonlAuditSink};
+pub use audit::JsonlAuditSink;
 pub use command::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
     IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
 };
-pub use caps::{
-    ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION,
-};
+pub use caps::{ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX};
 pub use error::IsolatedError;
-pub use network::{
-    veth_names, BridgeAddressPool, IsolatedNetwork, VethAllocation, BRIDGE_CIDR, BRIDGE_NAME,
-    BRIDGE_PREFIX_LEN, GATEWAY, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS,
-    VETH_PREFIX,
-};
+pub use network::{BRIDGE_PREFIX_LEN, GATEWAY};
 pub use ops::IsolatedWorkspaceOps;
 pub use session::{
     CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease,
-    WorkspaceHandle, WorkspaceHandleId, DEFAULT_ISOLATED_SCRATCH_ROOT,
+    WorkspaceHandle, WorkspaceHandleId,
 };

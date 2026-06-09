@@ -20,7 +20,7 @@ mod wait;
 #[cfg(target_os = "linux")]
 pub mod process;
 
-pub mod config {
+mod config {
     pub use eos_config::configs::command_session::*;
 }
 

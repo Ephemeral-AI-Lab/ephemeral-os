@@ -182,13 +182,14 @@
     <span class="visibility">pub(super)</span>
   </div>
   <code class="signature">pub(super) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a> (root : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
-  <p class="docstring">fsync every non-symlink regular file under `root` (the staged layer tree),<br>matching `os.walk(followlinks=False)` + `is_file()` filtering. Special<br>files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</p>
+  <p class="docstring">fsync every non-symlink regular file under `root` (the staged layer tree).<br>Recurses via `read_dir` and uses `symlink_metadata` so symlinks are not<br>followed; special files (char-device whiteouts) and symlinks are skipped —<br>fsync is N/A for them.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree),</span>
-<span class="rs-comment">/// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special</span>
-<span class="rs-comment">/// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</span>
+  <pre><code><span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree).</span>
+<span class="rs-comment">/// Recurses via `read_dir` and uses `symlink_metadata` so symlinks are not</span>
+<span class="rs-comment">/// followed; special files (char-device whiteouts) and symlinks are skipped —</span>
+<span class="rs-comment">/// fsync is N/A for them.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(root)? {
         <span class="rs-kw">let</span> entry = entry?;
@@ -423,9 +424,10 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree),</span>
-<span class="rs-comment">/// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special</span>
-<span class="rs-comment">/// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</span>
+<span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree).</span>
+<span class="rs-comment">/// Recurses via `read_dir` and uses `symlink_metadata` so symlinks are not</span>
+<span class="rs-comment">/// followed; special files (char-device whiteouts) and symlinks are skipped —</span>
+<span class="rs-comment">/// fsync is N/A for them.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(root)? {
         <span class="rs-kw">let</span> entry = entry?;

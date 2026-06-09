@@ -202,7 +202,7 @@ impl AttemptOrchestrator {
         .await
     }
 
-    /// Record a validated planner plan from `eos-tools` (Path A-recording).
+    /// Record a validated planner plan from `eos-tool` (Path A-recording).
     ///
     /// Materializes the generator + reducer task rows, marks the planner Done,
     /// and sets stage RUN — but does **not** advance. The single

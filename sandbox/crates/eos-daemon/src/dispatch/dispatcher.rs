@@ -253,7 +253,7 @@ impl OpTable {
 /// defaults to `{}` and `internal_error` responses receive a generated
 /// `details.error_id` when the caller did not provide one.
 #[must_use]
-pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
+pub(crate) fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
     let is_internal_error = kind == ErrorKind::InternalError;
     let kind_str = serde_json::to_value(kind).unwrap_or(Value::Null);
     let details = error_details(is_internal_error, details);

@@ -166,15 +166,15 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-ns-holder--src-namespace-rs.html#item-fn-unshare-namespace-stack-94">unshare_namespace_stack</a> (readiness_fd : RawFd , control_fd : RawFd ,) -&gt; Result &lt; <a class="symbol-link" href="eos-ns-holder--src-namespace-rs.html#item-struct-HeldNamespaces-22">HeldNamespaces</a> , <a class="symbol-link" href="eos-ns-holder--src-lib-rs.html#item-enum-NsHolderError-75">NsHolderError</a> &gt;</code>
-  <p class="docstring">`unshare` the full namespace stack on the calling (single-threaded) task and<br>pin the resulting `/proc/self/ns/*` FDs.<br>This is the Rust *consolidation* of the former Rust launcher's<br>`unshare(1)` flags. The previous path spawned the holder process via<br>`unshare --user --map-root-user --net --pid --mount --fork --kill-child<br>--propagation private`, so the namespaces were created by the `unshare`<br>binary, not inside the holder process. The Rust holder owns that step directly:<br>`unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the<br>uid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own<br>`ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].<br># Safety<br>This function MUST run on a single-threaded process; the kernel rejects<br>`CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no<br>tokio dependency and is invoked through the dedicated `eosd ns-holder`<br>subprocess.</p>
+  <p class="docstring">`unshare` the full namespace stack on the calling (single-threaded) task and<br>pin the resulting `/proc/self/ns/*` FDs.<br>This consolidates the `unshare(1)` flags of the former launcher that shelled<br>out to the `unshare` binary. That path spawned the holder process via<br>`unshare --user --map-root-user --net --pid --mount --fork --kill-child<br>--propagation private`, so the namespaces were created by the `unshare`<br>binary, not inside the holder process. The Rust holder owns that step directly:<br>`unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the<br>uid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own<br>`ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].<br># Safety<br>This function MUST run on a single-threaded process; the kernel rejects<br>`CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no<br>tokio dependency and is invoked through the dedicated `eosd ns-holder`<br>subprocess.</p>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// `unshare` the full namespace stack on the calling (single-threaded) task and</span>
 <span class="rs-comment">/// pin the resulting `/proc/self/ns/*` FDs.</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// This is the Rust *consolidation* of the former Rust launcher's</span>
-<span class="rs-comment">/// `unshare(1)` flags. The previous path spawned the holder process via</span>
+<span class="rs-comment">/// This consolidates the `unshare(1)` flags of the former launcher that shelled</span>
+<span class="rs-comment">/// out to the `unshare` binary. That path spawned the holder process via</span>
 <span class="rs-comment">/// `unshare --user --map-root-user --net --pid --mount --fork --kill-child</span>
 <span class="rs-comment">/// --propagation private`, so the namespaces were created by the `unshare`</span>
 <span class="rs-comment">/// binary, not inside the holder process. The Rust holder owns that step directly:</span>
@@ -614,8 +614,8 @@ extern &quot;<span class="rs-type">C</span>&quot; <span class="rs-kw">fn</span> 
 <span class="rs-comment">/// `unshare` the full namespace stack on the calling (single-threaded) task and</span>
 <span class="rs-comment">/// pin the resulting `/proc/self/ns/*` FDs.</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// This is the Rust *consolidation* of the former Rust launcher's</span>
-<span class="rs-comment">/// `unshare(1)` flags. The previous path spawned the holder process via</span>
+<span class="rs-comment">/// This consolidates the `unshare(1)` flags of the former launcher that shelled</span>
+<span class="rs-comment">/// out to the `unshare` binary. That path spawned the holder process via</span>
 <span class="rs-comment">/// `unshare --user --map-root-user --net --pid --mount --fork --kill-child</span>
 <span class="rs-comment">/// --propagation private`, so the namespaces were created by the `unshare`</span>
 <span class="rs-comment">/// binary, not inside the holder process. The Rust holder owns that step directly:</span>

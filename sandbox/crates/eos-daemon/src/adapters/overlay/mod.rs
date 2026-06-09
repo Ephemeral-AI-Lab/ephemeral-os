@@ -118,7 +118,7 @@ fn manifest_from_snapshot(
     })
 }
 
-pub(crate) fn ephemeral_dir_allocator() -> Result<EphemeralDirAllocator, DaemonError> {
+fn ephemeral_dir_allocator() -> Result<EphemeralDirAllocator, DaemonError> {
     Ok(EphemeralDirAllocator::new(
         overlay_writable_root()
             .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
@@ -175,7 +175,7 @@ pub(crate) fn run_ns_runner_child(
         .map_err(|err| DaemonError::OverlayPipeline(format!("invalid ns-runner output: {err}")))
 }
 
-pub(crate) fn overlay_daemon_error(context: &str, err: &eos_overlay::OverlayError) -> DaemonError {
+fn overlay_daemon_error(context: &str, err: &eos_overlay::OverlayError) -> DaemonError {
     DaemonError::OverlayPipeline(format!("{context}: {err}"))
 }
 
@@ -195,7 +195,7 @@ pub(crate) fn path_changes_to_wire(path_changes: &[PathChange]) -> Vec<(String, 
         .collect()
 }
 
-pub(crate) fn path_change_kind_wire(kind: eos_workspace_modes::ephemeral::PathChangeKind) -> &'static str {
+fn path_change_kind_wire(kind: eos_workspace_modes::ephemeral::PathChangeKind) -> &'static str {
     match kind {
         eos_workspace_modes::ephemeral::PathChangeKind::Write => "write",
         eos_workspace_modes::ephemeral::PathChangeKind::Delete => "delete",

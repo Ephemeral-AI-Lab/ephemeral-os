@@ -27,18 +27,6 @@ pub struct WorkspaceReadBytes {
     pub timings: WorkspaceTimings,
 }
 
-impl WorkspaceReadBytes {
-    #[must_use]
-    pub fn missing(timings: WorkspaceTimings) -> Self {
-        Self {
-            bytes: None,
-            exists: false,
-            manifest_version: None,
-            timings,
-        }
-    }
-}
-
 /// Read-side capability below direct file ops and command finalization.
 pub trait WorkspaceReadView {
     fn resolve_path(&self, request_path: &str) -> Result<ResolvedWorkspacePath, WorkspaceApiError>;

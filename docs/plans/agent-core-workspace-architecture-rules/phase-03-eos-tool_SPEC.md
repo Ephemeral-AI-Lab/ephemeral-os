@@ -1,8 +1,29 @@
 # Phase 03 - eos-tool Spec
 
-Status: Draft
+Status: Draft (conformed to the Phase 00 lock)
 Date: 2026-06-09
 Owner: eos-tool
+
+Revision 2026-06-09: conformed the target file tree to the Phase 00 locked
+`eos-tool` shape (flat `tools/` families, no `config.rs`, no
+`isolated_workspace.rs`, flat `submission.rs`) with one deliberate deviation —
+`tools/ask_advisor.rs` stays its own family because `ask_advisor` is an
+**inline (spawned-and-awaited) agent run**, a different lifecycle from the
+**background** `run_subagent` in `tools/subagent.rs`; the two must not share a
+file. The markdown tool-config loader folds into `registry.rs` and
+isolated-workspace tools fold into `tools/sandbox.rs`. Mandated the `ToolRuntime`
+runtime simplifications (no `Option`/`MissingPort` defensive layer; typed ports
+instead of closure callbacks) and corrected two over-stated equivalence claims.
+The `ask_advisor.rs` split needs Phase-0 reconciliation against the locked tree;
+the previously proposed `config.rs` and `tools/submission/` splits are recorded
+under Known Costs as the relief valve if Phase 0 is reopened.
+
+Revision 2026-06-09 (runtime shape): named `ToolRuntime` fields by capability
+(raw `Arc<dyn …>` handles, no `*Service`/`*Resource` field types) and unified the
+subagent / command / workflow session trackers into a single `BackgroundSessions`
+manager port implemented by `eos-engine`'s existing `BackgroundSessionRuntime`.
+The isolated-workspace toggle stays a small `WorkspaceMode` port. Both stay
+inside `registry.rs`; the locked module tree is unchanged.
 
 ## Scope
 
@@ -12,11 +33,11 @@ default tool registry construction, and concrete model-callable tool behavior.
 It removes the current `eos-tool-ports` dependency by moving tool-owned
 contracts into `eos-tool` and routing non-tool contracts to their real owner in
 the crate-map/integration phases. It also collapses the current
-one-file-per-tool command layout into family-level handlers.
+one-file-per-tool command layout into the Phase 00 locked family-level handlers.
 
 Phase 03 does not own root workspace member edits, retired-crate removal, or the
 final dependency DAG. Those are Phase 02 / integration responsibilities. Phase
-03 owns the resulting `eos-tool` crate shape.
+03 owns the resulting `eos-tool` crate shape, which must match the Phase 00 lock.
 
 ## Local Architecture
 
@@ -31,8 +52,9 @@ final dependency DAG. Those are Phase 02 / integration responsibilities. Phase
 - tool executor trait,
 - hook declarations and config tokens,
 - default registry construction,
-- externalized tool config loading and validation (`config.rs`), keyed by
-  `ToolName::ALL` and the `TerminalTool` catalog,
+- externalized tool config loading and validation, keyed by `ToolName::ALL` and
+  the `TerminalTool` catalog, owned by `registry.rs` (the `ToolConfigSet` loader
+  plus the `ToolSpec` schema helpers),
 - concrete model-callable tool behavior,
 - skill registry and skill package loading,
 - `ToolRuntime`, the small executable dependency bundle passed into registry
@@ -66,6 +88,12 @@ flowchart LR
 
 ## Resulting File Structure
 
+This is the Phase 00 locked `eos-tool` source shape with one deliberate
+deviation — `tools/ask_advisor.rs` is kept separate from `tools/subagent.rs`
+(inline vs background agent runs; see Runtime Rules). Every other file matches
+`phase-00-architecture-lock_SPEC.md` (Boundary Rules / eos-tool); the
+`ask_advisor.rs` split is flagged for Phase-0 reconciliation.
+
 ```text
 agent-core/crates/eos-tool/
 ├── Cargo.toml
@@ -74,31 +102,21 @@ agent-core/crates/eos-tool/
 │   ├── error.rs
 │   ├── model.rs
 │   ├── registry.rs
-│   ├── config.rs
 │   ├── hooks.rs
 │   ├── tools.rs
-│   ├── tools/
-│   │   ├── sandbox.rs
-│   │   ├── command.rs
-│   │   ├── isolated_workspace.rs
-│   │   ├── workflow.rs
-│   │   ├── subagent.rs
-│   │   ├── ask_advisor.rs
-│   │   ├── submission/
-│   │   │   ├── mod.rs
-│   │   │   ├── planner.rs
-│   │   │   ├── root.rs
-│   │   │   ├── generator.rs
-│   │   │   ├── reducer.rs
-│   │   │   ├── subagent.rs
-│   │   │   └── advisor.rs
-│   │   ├── skills.rs
-│   │   └── terminal.rs
+│   └── tools/
+│       ├── sandbox.rs
+│       ├── command.rs
+│       ├── workflow.rs
+│       ├── subagent.rs
+│       ├── ask_advisor.rs
+│       ├── submission.rs
+│       ├── skills.rs
+│       └── terminal.rs
 └── tests/
     ├── registry/
     ├── sandbox/
     ├── command/
-    ├── isolated_workspace/
     ├── workflow/
     ├── subagent/
     ├── ask_advisor/
@@ -106,41 +124,21 @@ agent-core/crates/eos-tool/
     └── skills/
 ```
 
-No `builtins.rs` or `builtins/` folder is required in the first target. The
-built-in tool set is closed and should be represented through default registry
-registration plus family handlers in `tools/`.
+`tools.rs` is the routing module for the `tools/` folder: it declares the family
+modules and owns the small shared registration seam (`CallerScope`,
+`register_tool`, `parse_input`). `tools/` holds concrete model-callable
+behavior, one family file per Phase 00 family. `tools.rs` plus `tools/` is the
+allowed `foo.rs` + `foo/` shape (a sibling file and folder), not the banned
+`foo.rs` + `foo/mod.rs` duplicate shape, and there is no nested `mod.rs` router.
 
-No first-target `catalog.rs`, `executor.rs`, `runtime.rs`, `resources.rs`,
-`handles.rs`, `services.rs`, `services/`, or `hooks/` folder is allowed. Those
-splits are only acceptable later if implementation proves that one file has
-become materially harder to understand.
-
-Two splits are pre-authorized in the first target because the alternative is a
-single file over the repo's 800-1000 LOC review-smell line, not because of
-speculative growth:
-
-- `config.rs` owns the externalized tool-config loader/validator
-  (`ToolConfigSet::load_from_dir` plus the `ToolSpec` schema helpers, ~620 LOC).
-  Folding it into `registry.rs` would push `registry.rs` to ~950 LOC mixing the
-  registry data structure, the executor trait, `ToolRuntime`, default
-  construction, *and* markdown loading. `config.rs` is a cohesive loader with its
-  own error enum — a justified split, not a forbidden `catalog.rs`.
-- `tools/submission/` stays a subfolder. It holds six terminal-submission DTO
-  families — `root`, `planner`, `generator`, `reducer`, `subagent`, and
-  `advisor` — plus a shared `lib`; flattened it is ~960 LOC of executor logic in
-  one file, which the family-split rule below already covers. The families are
-  keyed by the launching `AgentRunRecordKind` / `AgentType` axis (`root`
-  → `Root`; `planner`/`generator`/`reducer` → `WorkflowTask`; `subagent` →
-  `Subagent`; `advisor` → `Advisor`), never by a behavioral `AgentRole`. Phase
-  02 removes that profile role axis, so this spec classifies launches by
-  `AgentType` only.
-
-Family files under `tools/` are the first target. A family may gain a
-same-named private subfolder only when the flat file starts mixing multiple
-distinct DTO families, executor bodies, shared rendering paths, and registration
-logic in a way that is less clear than the split. `tools/submission/` is the one
-family that qualifies on the first day and is authorized above; all other
-families start flat.
+`registry.rs` owns the registry data structure, the executor trait,
+`ToolRuntime`, default tool registration, and the externalized tool-config
+loader/validator (`ToolConfigSet::load_from_dir` plus the `ToolSpec` schema
+helpers). There is no first-target `catalog.rs`, `config.rs`, `executor.rs`,
+`runtime.rs`, `resources.rs`, `handles.rs`, `services.rs`, `services/`, or
+`hooks/` folder. The built-in tool set is closed and is represented through
+default registry registration plus the family handlers in `tools/`; there is no
+`builtins.rs` or `builtins/`.
 
 ## Module Collapse Plan
 
@@ -153,15 +151,26 @@ families start flat.
 | `tools/sandbox/write_file.rs` | `registry.rs` default entry plus `tools/sandbox.rs` handler |
 | `tools/sandbox/edit_file.rs` | `registry.rs` default entry plus `tools/sandbox.rs` handler |
 | `tools/sandbox/multi_edit.rs` | `registry.rs` default entry plus `tools/sandbox.rs` handler |
-| `tools/isolated_workspace/*.rs` | `registry.rs` default entry plus `tools/isolated_workspace.rs` handler |
+| `tools/isolated_workspace/*.rs` | `registry.rs` default entry plus `tools/sandbox.rs` handler (folded; both use the sandbox resource) |
 | `tools/workflow/*.rs` | `registry.rs` default entry plus `tools/workflow.rs` handler |
 | `tools/subagent/*.rs` | `registry.rs` default entry plus `tools/subagent.rs` handler |
-| `tools/submission/<family>/*.rs` | `registry.rs` default entry plus `tools/submission/<family>.rs` handler (subfolder kept) |
+| `tools/ask_helper/*.rs` (`ask_advisor`) | `registry.rs` default entry plus `tools/ask_advisor.rs` handler (inline agent run; kept separate from the background `tools/subagent.rs`) |
+| `tools/submission/<family>/*.rs` | `registry.rs` default entry plus `tools/submission.rs` handler (flat; six executors in one file) |
 | `tools/skills/*.rs` | `registry.rs` default entry plus `tools/skills.rs` handler |
-| `tools/ask_helper/*.rs` | `registry.rs` default entry plus `tools/ask_advisor.rs` handler |
 | `tools/terminal.rs` | `tools/terminal.rs` |
-| `registry/config.rs` (markdown tool-config loader) | `config.rs` |
-| `registry/spec.rs` (`ToolSpec` schema helpers) | `config.rs` |
+| `registry/config.rs` (markdown tool-config loader) | `registry.rs` |
+| `registry/spec.rs` (`ToolSpec` schema helpers) | `registry.rs` |
+
+`tools/sandbox.rs` owns the file/edit tools and the isolated-workspace
+enter/exit tools, because the isolated-workspace tools already take only the
+sandbox resource. `tools/subagent.rs` owns the **background** agent-launch tool
+`run_subagent`; `tools/ask_advisor.rs` owns the **inline** agent-launch tool
+`ask_advisor`. Both consume the shared `AgentRunApi` handle but stay in separate
+files because they are different run lifecycles (detached background vs
+spawned-and-awaited; see Runtime Rules). `tools/submission.rs` owns all six
+terminal submission executors and their shared file-private helpers
+(`SubmissionStatus`, `OutcomeInput`, `is_blank`, `meta_obj`,
+`submission_ack_result`).
 
 ## `eos-tool-ports` Ownership Split
 
@@ -181,13 +190,14 @@ to the crate that owns its behavior or to an owner-neutral contract module.
 | `SystemNotification`, `NotificationSink`, background-session count/status DTOs | engine/background contracts unless a passive DTO must move to `eos-types` |
 
 The agent-launch contracts (`AgentType`, `AgentName`, `AgentRunApi`,
-`SpawnAgentRequest`, `AgentRunRecordKind`, `WorkflowTaskRole`) are **not**
+`SpawnAgentRequest`, `AgentRunRecordKind`, `TaskRole`) are **not**
 `eos-tool-ports` items; they arrive from `eos-types` via the Phase 02 contract
-floor (the `eos-agent-ports` split). `tools/subagent.rs` and
-`tools/ask_advisor.rs` consume them to build spawn requests and select the
-record kind. `eos-tool` adds no launch-class types of its own, performs no
-`AgentType` validation, and references the `AgentType` launch axis only — it does
-not consume the `AgentRole` behavioral axis, which Phase 02 retires.
+floor (the `eos-agent-ports` split). `tools/subagent.rs` consumes them to build
+spawn requests and select the record kind. `eos-tool` adds no launch-class types
+of its own, performs no `AgentType` validation, and references the `AgentType`
+launch axis only — it does not consume the `AgentRole` behavioral axis, which
+Phase 02 retires. (`TaskRole` is the lineage-row workflow role from Phase 00,
+not a profile axis.)
 
 ## Runtime Rules
 
@@ -195,61 +205,149 @@ not consume the `AgentRole` behavioral axis, which Phase 02 retires.
 struct passed into registry construction and captured by concrete tools.
 
 The first target uses `ToolRuntime` in `registry.rs`; it does not create
-`runtime.rs`, `resources.rs`, `handles.rs`, or `services.rs`.
+`runtime.rs`, `resources.rs`, `handles.rs`, or `services.rs`. `ToolRuntime`
+replaces the current ten `*Service` structs (the two `services.rs` files in
+`eos-tools` and `eos-tool-ports`) and the eleven-argument
+`build_default_registry_with_services` entry point.
 
-Allowed `ToolRuntime` fields:
+`ToolRuntime` fields are named by capability and hold raw handles; there are no
+`*Service` / `*Resource` field types and no per-tool service. The three
+run-local session trackers (subagent, command, workflow) collapse into one
+`BackgroundSessions` manager port (see Mandated runtime simplifications):
 
-| Resource | Built by | Used by |
-| --- | --- | --- |
-| sandbox resource | `eos-agent-core` | `tools/sandbox.rs`, `tools/isolated_workspace.rs` |
-| command-session resource | `eos-engine` | `tools/command.rs` |
-| workflow resource (workflow API + workflow-session registration) | `eos-agent-core` | `tools/workflow.rs` |
-| agent-launch resource (`AgentRunApi`) | `eos-agent-core` | `tools/subagent.rs` (`record_kind = Subagent`), `tools/ask_advisor.rs` (`record_kind = Advisor`) |
-| subagent-session registry (background tracking only) | `eos-agent-core` | `tools/subagent.rs` |
-| submission resource (root + attempt submission) | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission/` |
-| skill resource | `eos-agent-core` | `tools/skills.rs` |
-| hook-resource bundle (sandbox + workflow + subagent subset) | `eos-agent-core` | stamped onto each `RegisteredTool`'s hook field |
+| Field | Type | Built by | Used by |
+| --- | --- | --- | --- |
+| `sandbox` | `Arc<dyn SandboxTransport>` | `eos-agent-core` | `tools/sandbox.rs` (file/edit + isolated-workspace); `tools/command.rs`'s `SandboxCommandApi` derives from it in the registry, not a separate field |
+| `workflow` | `Arc<dyn WorkflowApi>` | `eos-agent-core` | `tools/workflow.rs` |
+| `launcher` | `Arc<dyn AgentRunApi>` | `eos-agent-core` | `tools/subagent.rs` (`run_subagent`), `tools/ask_advisor.rs` (`ask_advisor`) |
+| `skills` | `Arc<SkillRegistry>` | `eos-agent-core` | `tools/skills.rs` |
+| `submission` | root stores + `AttemptSubmissionPort` | `eos-agent-core`, `eos-agent-run` if needed | `tools/submission.rs` |
+| `background` | `Arc<dyn BackgroundSessions>` | `eos-engine` (its `BackgroundSessionRuntime`) | `tools/subagent.rs`, `tools/command.rs`, `tools/workflow.rs` |
+| `workspace_mode` | `WorkspaceMode` (isolated-workspace toggle) | `eos-agent-core` | `tools/sandbox.rs` |
 
-`run_subagent` and `ask_advisor` share one injected `AgentRunApi` handle (the
-`agent-launch resource`); they differ only in the `AgentRunRecordKind`
-they stamp (`Subagent` vs `Advisor`), which `eos-agent-run` maps to the required
-`AgentType` (`subagent` / `advisor`) and validates against the spawned profile.
-`eos-tool` owns no launch-class policy: it never matches on `AgentType`, it only
-sets the record kind. The subagent-session registry stays a separate field
-because a subagent is a tracked background run while an advisor is
-spawned-and-awaited. The `hook-resource bundle` is a strict subset of the rows
-above (see the hook rule below).
+There is no `command-session` field (command execution derives from `sandbox`;
+command-session tracking is a `background` method) and no separate
+`subagent-session` / `workflow-session` field (both are `background` methods).
+`tools/subagent.rs` reaches `launcher` to spawn and `background` to register the
+detached subagent run; `tools/ask_advisor.rs` reaches only `launcher` and blocks,
+so there is no advisor session field — the subagent/advisor asymmetry is a
+capability difference, not a per-tool service.
 
-Each field is an injected handle whose **trait is defined in `eos-tool`** and
-whose **concrete impl is built at the `eos-agent-core` composition root**, then
-passed into the engine via `AgentLoopExecutionRequest`. This keeps the graph
-acyclic:
+```rust
+pub struct ToolRuntime {
+    pub sandbox:        Arc<dyn SandboxTransport>,   // file/edit/isolated-ws; command API derives from this
+    pub workflow:       Arc<dyn WorkflowApi>,
+    pub launcher:       Arc<dyn AgentRunApi>,        // run_subagent + ask_advisor share this one handle
+    pub skills:         Arc<SkillRegistry>,
+    pub submission:     Submission,                  // root stores + attempt port
+    pub background:     Arc<dyn BackgroundSessions>, // one manager, not three trackers
+    pub workspace_mode: WorkspaceMode,
+}
 
-- `eos-engine` may build the `command-session resource` because it already
-  depends on `eos-tool` (`eos-engine -> eos-tool`).
+// trait defined in registry.rs; impl = eos-engine BackgroundSessionRuntime.
+// count / cancel_all are NOT here — engine-side hook execution reads the aggregate directly.
+#[async_trait]
+pub trait BackgroundSessions: Send + Sync {
+    async fn register_subagent(&self, run: AgentRunId) -> Result<(), ToolError>;
+    async fn register_command(&self, id: CommandSessionId, sandbox: SandboxId) -> Result<(), ToolError>;
+    async fn register_workflow(&self, started: StartedWorkflow) -> Result<(), ToolError>;
+    async fn cancel_subagent(&self, run: AgentRunId, reason: &str) -> Result<bool, ToolError>;
+}
+```
+
+Fields are non-optional per Mandated runtime simplification 1; that requires the
+`eos-agent-core` composition root to build `launcher` / `workflow` before the
+per-run `ToolRuntime`, removing the current `eos-runtime` `OnceLock` that defers
+them. The same per-run build order lets the engine wire one `AgentRunApi` into
+`BackgroundSessionRuntime`.
+
+Each `tools/<family>.rs` registration takes only the narrow slice of
+`ToolRuntime` it needs; the bundle is destructured at the composition root, not
+passed wholesale into every family.
+
+`run_subagent` and `ask_advisor` share the one injected `launcher`
+(`Arc<dyn AgentRunApi>`) but live in **separate family files**
+(`tools/subagent.rs` and `tools/ask_advisor.rs`) because they are different run
+lifecycles. They are **not** the same executor and do **not** "differ only in
+record kind". `run_subagent` is a **detached background** launch — it registers
+the run through `background.register_subagent` and returns immediately.
+`ask_advisor` is an **inline (blocking)** run — it awaits `wait_for_agent_outcome`
+and re-maps the result, with a hardcoded `advisor` agent name, advisor messages,
+a forced non-isolated workspace, and `is_terminal = false`, and touches the
+`background` manager not at all. They share the `AgentRunApi` **port**, not a
+behavior; `ToolRuntime` carries one `launcher` field, and each tool stamps its
+own `AgentRunRecordKind` (`Subagent` vs `Advisor`), which `eos-agent-run` maps to
+the required `AgentType` (`subagent` / `advisor`) and validates against the
+spawned profile. `eos-tool` owns no launch-class policy: it never matches on
+`AgentType`, it only sets the record kind. `ask_advisor` needs no session field
+because it blocks; `run_subagent` reaches `background` because it is a tracked
+background run — the asymmetry is a capability difference, not a per-tool service.
+
+The six submission executors in `tools/submission.rs` are parameterized by their
+submission target, not by a record kind: `submit_root_outcome` uses the
+two-store root-submission resource (task/request stores with a compare-and-set
+commit); `submit_planner_outcome`, `submit_generator_outcome`, and
+`submit_reducer_outcome` call distinct `AttemptSubmissionPort` methods; and
+`submit_subagent_result` and `submit_advisor_feedback` are service-less
+metadata-only terminals with no port call. They share only the file-private
+helpers, not a single dispatch axis.
+
+### Mandated runtime simplifications
+
+1. **No `Option` / `MissingPort` defensive layer.** `ToolRuntime` carries
+   non-optional live handles. Schema-snapshot and registry-validation use a
+   separate constructor (`build_registry_schema(config, caller)`) that builds the
+   registry from config and schema alone and never holds executable handles.
+   Because the snapshot path no longer fakes services, there is no `Option<...>`
+   field on `ToolRuntime`, no `ToolError::MissingPort` variant, and no
+   `InertSandboxTransport` shim.
+2. **One background-session manager, not per-family closures.** The three
+   run-local session trackers (subagent register/cancel, command register,
+   workflow register) collapse into a single object-safe `BackgroundSessions`
+   port defined in `eos-tool` and implemented by `eos-engine`'s existing
+   `BackgroundSessionRuntime` aggregate — the engine already holds all three
+   family managers, so the tool side stops receiving them destructured into loose
+   callbacks. The isolated-workspace mode update is the one remaining run-local
+   port (`WorkspaceMode`). Both replace the
+   `Arc<dyn Fn(...) -> BoxServiceFuture<...>>` closure aliases and the
+   `BoxServiceFuture` machinery in the current `services.rs`. `count` /
+   `cancel_all` are **not** on the tool-facing port: engine-side hook execution
+   reads the aggregate directly. `WorkflowApi` and `AgentRunApi` stay the
+   `eos-types`-owned `dyn` ports they already are.
+
+Each `ToolRuntime` field is an injected handle whose **trait is defined in
+`eos-tool`** (or, for `WorkflowApi`/`AgentRunApi`, in `eos-types`) and whose
+**concrete impl is built at the `eos-agent-core` composition root**, then passed
+into the engine via `AgentLoopExecutionRequest`. This keeps the graph acyclic:
+
+- `eos-engine` builds the `background` manager — its own
+  `BackgroundSessionRuntime`, the `BackgroundSessions` impl — because it already
+  depends on `eos-tool` (`eos-engine -> eos-tool`); the composition root injects
+  the `dyn AgentRunApi` / `dyn WorkflowApi` that the manager tracks for cancel and
+  poll.
 - The `workflow` and `agent-launch` resources must **not** be built by
   `eos-engine`. `eos-engine` consumes `dyn WorkflowApi` and `dyn AgentRunApi`
   from `eos-types` and has no crate edge to the concrete `eos-workflow` or
   `eos-agent-run` crates. Building either impl would require such an edge:
-  `eos-agent-run -> eos-engine` already exists, so an `eos-engine ->
-  eos-agent-run` edge would close a cycle, and `eos-workflow` is simply
-  unreachable from the engine. Only `eos-agent-core`, which depends on every
-  domain crate, may build them.
+  `eos-agent-run -> eos-engine` already exists (Phase 00 locked DAG), so an
+  `eos-engine -> eos-agent-run` edge would close a cycle, and `eos-workflow` is
+  simply unreachable from the engine. Only `eos-agent-core`, which depends on
+  every domain crate, may build them.
 - Concrete tools and engine hooks invoke these handles only through the
   `eos-tool`-defined trait in `ToolRuntime`; they never gain a crate dependency
   on `eos-workflow` or `eos-agent-run`.
 
 Hook *declarations* live in `hooks.rs`. Hook *execution* — the pipeline and
-`HookOutcome` — lives in `eos-engine`. But the stateful pre-hooks
-(`RequireNoBackgroundSessions`, `DisallowNestedPlannerDeferral`) read runtime
-resources at hook time: sandbox transport, workflow API, and subagent sessions,
-held today by `RegisteredTool`'s hook-resource field. Those resources are a
-subset of `ToolRuntime`'s fields and must be folded into `ToolRuntime`, then
-stamped onto each `RegisteredTool` by the registry. They are **not**
-engine-owned: `eos-engine` has no edge to `eos-workflow`, so it cannot build the
-workflow API itself — the same acyclic constraint that governs `ToolRuntime`.
-Only the pure policy/pattern state (the destructive-git/shell regexes, the
-isolated-mode check) is engine-private; the injected handles are not.
+`HookOutcome` — lives in `eos-engine`. The unified `background` manager narrows
+what the hook-resource bundle must carry. `RequireNoBackgroundSessions` counts
+open sessions, which the engine reads from the `BackgroundSessions` aggregate it
+owns — so no subagent handle is stamped onto the tool for that hook.
+`DisallowNestedPlannerDeferral` reads workflow depth through `WorkflowApi`, which
+**is** stamped onto each `RegisteredTool` from `ToolRuntime.workflow`:
+`eos-engine` has no edge to `eos-workflow` and cannot build that port itself — the
+same acyclic constraint that governs `ToolRuntime`. Only the pure policy/pattern
+state (the destructive-git/shell regexes, the isolated-mode check) is
+engine-private; the injected `WorkflowApi` handle is not.
 
 Rejected `Service` names:
 
@@ -266,12 +364,13 @@ Rejected `Service` names:
 Target `lib.rs` exports only:
 
 ```rust
-pub use config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use error::ToolError;
 pub use hooks::Hook;
 pub use model::{ExecutionMetadata, OutputShape, ToolIntent, ToolKey, ToolName, ToolResult};
 pub use registry::{
-    build_default_registry, CallerScope, RegisteredTool, ToolExecutor, ToolRegistry, ToolRuntime,
+    build_default_registry, build_registry_schema, BackgroundSessions, CallerScope, RegisteredTool,
+    Submission, ToolConfig, ToolConfigError, ToolConfigSet, ToolExecutor, ToolRegistry, ToolRuntime,
+    WorkspaceMode,
 };
 pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstructions};
 ```
@@ -279,12 +378,34 @@ pub use tools::terminal::{render_tool_instruction, TerminalTool, ToolInstruction
 The exact names may change during implementation, but the surface must stay
 small and owner-accurate. `HookOutcome` is not public `eos-tool` API.
 
-`ToolConfigSet`/`ToolConfig`/`ToolConfigError` and the `terminal` descriptors are
-restored here because `eos-agent-core` and the request runtime consume them
-today; dropping them silently narrows load-bearing API. The previous 11-argument
+`ToolConfigSet` / `ToolConfig` / `ToolConfigError` are exported from `registry`
+(the loader's new home) and the `terminal` descriptors from `tools::terminal`
+because `eos-agent-core` and the request runtime consume them today; dropping
+them silently narrows load-bearing API. The previous 11-argument
 `build_default_registry_with_services` entry point is **replaced** by
-`build_default_registry(config, caller, runtime)` taking one `ToolRuntime` — that
-collapse is the purpose of `ToolRuntime`, not an incidental rename.
+`build_default_registry(config, caller, runtime)` taking one `ToolRuntime`, and
+the previous 2-argument inert builder is **replaced** by
+`build_registry_schema(config, caller)`. That collapse is the purpose of
+`ToolRuntime`, not an incidental rename.
+
+## Known Costs
+
+Conforming to the Phase 00 flat tree concentrates load-bearing logic into two
+files that sit near or over the repo's 800-1000 LOC review-smell line:
+
+- `registry.rs` carries the registry, the executor trait, `ToolRuntime`, default
+  registration, and the markdown config loader/validator.
+- `tools/submission.rs` carries six executors; planner and root hold genuinely
+  distinct logic (planner DAG validation; root two-store compare-and-set), so the
+  file does not reduce to scaffolding.
+
+The mandated runtime simplifications (no `Option`/`MissingPort` layer, typed
+ports) shrink `registry.rs` relative to today's services, and moving the inline
+executor tests to `tests/submission/` keeps the source files smaller than the
+combined source-plus-test footprint. These two files remain the accepted cost of
+matching the lock. If Phase 0 is ever reopened, the documented relief valve is
+the originally proposed `config.rs` (the cohesive loader) and `tools/submission/`
+subfolder splits, which trade two large cohesive files for two folders.
 
 ## Progress Tracker
 
@@ -293,59 +414,81 @@ collapse is the purpose of `ToolRuntime`, not an incidental rename.
 | Confirm Phase 02 handoff has created or renamed the `eos-tool` crate | Not started |
 | Move tool-owned `eos-tool-ports` contracts into `error.rs`, `model.rs`, `registry.rs`, and `hooks.rs` | Not started |
 | Route non-tool `eos-tool-ports` contracts to owner crates or owner-neutral contract modules | Not started |
-| Fold registry, executor trait, and default tool registration into `registry.rs` | Not started |
+| Fold registry, executor trait, default tool registration, and the markdown tool-config loader/`ToolSpec` helpers into `registry.rs` | Not started |
 | Move hook declarations into `eos-tool/hooks.rs` and keep hook execution in `eos-engine` | Not started |
-| Move the markdown tool-config loader and `ToolSpec` schema helpers into `config.rs` | Not started |
-| Move concrete tool behavior into `tools/` family modules | Not started |
-| Keep `tools/submission/` as a per-family subfolder | Not started |
-| Define `ToolRuntime` in `registry.rs`, including the shared agent-launch and hook-resource fields | Not started |
-| Collapse sandbox file/edit tools into `tools/sandbox.rs` | Not started |
+| Move concrete tool behavior into the Phase 00 `tools/` family modules | Not started |
+| Keep `tools/submission.rs` flat with all six submission executors and shared file-private helpers | Not started |
+| Define `ToolRuntime` in `registry.rs` with non-optional live handles, the shared agent-launch field, and the hook-resource bundle | Not started |
+| Split the schema-snapshot builder (`build_registry_schema`) from the live builder and delete the `Option`/`MissingPort`/`InertSandboxTransport` layer | Not started |
+| Unify subagent/command/workflow session tracking into one `BackgroundSessions` port (impl = engine `BackgroundSessionRuntime`; register/cancel only); keep the `WorkspaceMode` toggle as the one run-local port | Not started |
+| Name `ToolRuntime` fields by capability with raw `Arc<dyn …>` handles; drop the `*Service`/`*Resource` field types and the separate command field (derive `SandboxCommandApi` from `sandbox`) | Not started |
+| Collapse sandbox file/edit and isolated-workspace tools into `tools/sandbox.rs` | Not started |
 | Collapse shell/session tools into `tools/command.rs` | Not started |
-| Collapse isolated-workspace tools into `tools/isolated_workspace.rs` | Not started |
-| Collapse workflow/subagent/submission files | Not started |
-| Move advisor helper behavior into `tools/ask_advisor.rs` | Not started |
-| Collapse skill tool files | Not started |
+| Collapse `run_subagent` into `tools/subagent.rs` (background) and `ask_advisor` into `tools/ask_advisor.rs` (inline); keep the two lifecycles in separate files | Not started |
+| Collapse workflow and skill tool files into `tools/workflow.rs` and `tools/skills.rs` | Not started |
 | Remove obsolete one-file-per-tool deep tree | Not started |
 | Update engine and agent-core imports through the Phase 02 integration lane | Not started |
 
 ## Acceptance Criteria
 
-- `eos-tool` has `tools.rs` and family-level `tools/` modules.
+- `eos-tool` matches the Phase 00 locked source shape — `lib.rs`, `error.rs`,
+  `model.rs`, `registry.rs`, `hooks.rs`, `tools.rs`, and the flat `tools/`
+  family files (`sandbox`, `command`, `workflow`, `subagent`, `submission`,
+  `skills`, `terminal`) — with one deliberate, Phase-0-reconcilable deviation:
+  `tools/ask_advisor.rs` is kept as a separate family for the inline agent run.
 - `eos-tool` has `hooks.rs`.
-- `eos-tool` has `config.rs` owning the externalized tool-config loader and the
-  `ToolSpec` schema helpers; `registry.rs` does not absorb the loader.
-- `eos-tool` has no first-target `catalog.rs`, `executor.rs`, `runtime.rs`,
-  `resources.rs`, `handles.rs`, `services.rs`, `services/`, or `hooks/` folder.
-- `tools/submission/` is a per-family subfolder (root, planner, generator,
-  reducer, subagent, advisor, shared `lib`); it is not flattened into one
-  `tools/submission.rs`.
+- `registry.rs` owns the externalized tool-config loader and the `ToolSpec`
+  schema helpers; there is no `config.rs`.
+- `eos-tool` has no first-target `catalog.rs`, `config.rs`, `executor.rs`,
+  `runtime.rs`, `resources.rs`, `handles.rs`, `services.rs`, `services/`, or
+  `hooks/` folder, and no nested `mod.rs` router under `tools/`.
+- `tools/submission.rs` is a single flat file holding all six submission
+  executors (root, planner, generator, reducer, subagent, advisor) and their
+  shared file-private helpers; it is not a `tools/submission/` subfolder.
 - `eos-tool` has no one-file-per-tool-command module tree.
 - `eos-tool` exports no `*Service` types.
 - Private resource groups are fields on `ToolRuntime`, not `Service`.
+- `ToolRuntime` fields are named by capability (`sandbox`, `workflow`,
+  `launcher`, `skills`, `submission`, `background`, `workspace_mode`) and hold raw
+  `Arc<dyn …>` handles; there are no `*Service` / `*Resource` field types and no
+  per-tool service. `tools/command.rs`'s `SandboxCommandApi` derives from
+  `sandbox` in the registry, so there is no separate command field.
+- `ToolRuntime` has no `Option<...>` field and `eos-tool` has no
+  `ToolError::MissingPort` variant or `InertSandboxTransport`; the
+  schema-snapshot path is `build_registry_schema(config, caller)` and the live
+  path is `build_default_registry(config, caller, runtime)`.
+- The subagent, command, and workflow session trackers are one
+  `BackgroundSessions` port defined in `eos-tool` and implemented by
+  `eos-engine`'s `BackgroundSessionRuntime`; `ToolRuntime` carries one
+  `background` field, not three trackers, and the port exposes only
+  register/cancel (`count` / `cancel_all` stay engine-internal — engine-side hook
+  execution reads the aggregate directly). The isolated-workspace toggle is the
+  one remaining run-local port; neither is an `Arc<dyn Fn(...) -> BoxFuture>`
+  closure.
 - `HookOutcome` is not exported from `eos-tool`.
 - Hook *declarations* live in `eos-tool/hooks.rs`; hook *execution* (the pipeline
-  and `HookOutcome`) lives in `eos-engine/tool_call`. Phase 04 confirms this
-  split (its `tool_call.rs` owns "execution glue" and it states `eos-engine` does
-  not own hook *contracts*); the two specs must use "hook contracts/declarations"
-  for `eos-tool` and "hook execution" for `eos-engine` consistently.
+  and `HookOutcome`) lives in `eos-engine`. Phase 04 confirms this split: its
+  `tool_dispatch/execution.rs` owns "one registered-tool execution glue" and it
+  states `eos-engine` does not own hook *contracts*; the two specs must use
+  "hook contracts/declarations" for `eos-tool` and "hook execution" for
+  `eos-engine` consistently.
 - The stateful pre-hooks' injected resources (sandbox/workflow/subagent) are
   carried by `ToolRuntime` and stamped onto `RegisteredTool`, not built by
   `eos-engine`.
 - `tools/command.rs` owns `exec_command`, `write_stdin`, and
   `read_command_progress`.
-- `tools/isolated_workspace.rs` owns `enter_isolated_workspace` and
+- `tools/sandbox.rs` owns the file/edit tools and `enter_isolated_workspace` /
   `exit_isolated_workspace`.
-- `tools/ask_advisor.rs` owns `ask_advisor` and advisor prompt/result behavior;
-  the name disambiguates it from `tools/submission/advisor.rs`
-  (`submit_advisor_feedback`).
-- `tools/subagent.rs` and `tools/ask_advisor.rs` share one injected `AgentRunApi`
-  handle and differ only in the `AgentRunRecordKind` they stamp
-  (`Subagent` / `Advisor`); `ToolRuntime` does not carry two separate
-  `AgentRunApi` fields.
-- `eos-tool` consumes `AgentType`, `AgentName`, `AgentRunApi`, `SpawnAgentRequest`,
-  and `AgentRunRecordKind` from `eos-types`; it performs no `AgentType`
-  validation (that stays in `eos-agent-run`) and references the `AgentType`
-  launch axis only, never the retired `AgentRole` axis.
+- `tools/subagent.rs` owns the background `run_subagent`; `tools/ask_advisor.rs`
+  owns the inline `ask_advisor` (the advisor prompt/result behavior). They share
+  one injected `AgentRunApi` handle and `ToolRuntime` does not carry two separate
+  `AgentRunApi` fields, but they stay in separate family files because they are
+  different run lifecycles (detached background vs spawned-and-awaited), not
+  "only in record kind".
+- `eos-tool` consumes `AgentType`, `AgentName`, `AgentRunApi`,
+  `SpawnAgentRequest`, and `AgentRunRecordKind` from `eos-types`; it performs no
+  `AgentType` validation (that stays in `eos-agent-run`) and references the
+  `AgentType` launch axis only, never the retired `AgentRole` axis.
 - `eos-engine` imports tool framework contracts from `eos-tool`.
 - `eos-tool` has no dependency on `eos-engine`.
 - `eos-agent-core` builds `ToolRuntime` through `eos-tool`.
@@ -354,8 +497,7 @@ collapse is the purpose of `ToolRuntime`, not an incidental rename.
 - `cargo test -p eos-tool` passes.
 - `cargo check -p eos-engine --all-targets` and
   `cargo check -p eos-agent-core --all-targets` pass after import updates.
-- `eos-tool` final module count is at or below 22, counted net of the two
-  documented justified splits (`config.rs`, `tools/submission/`). The prior `16`
-  target assumed no splits; it is raised, not relaxed — the discipline is "no
-  empty-justification splits," not an arbitrary cap that forces an 800-1000 LOC
-  file the repo treats as a review smell.
+- `eos-tool` final module count is 14: the Phase 00 locked 13-module tree
+  (`lib`, `error`, `model`, `registry`, `hooks`, `tools`, plus the seven flat
+  `tools/` family files) plus the deliberate `tools/ask_advisor.rs` family. No
+  other first-target split raises it.

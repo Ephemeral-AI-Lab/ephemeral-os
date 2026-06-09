@@ -15,12 +15,11 @@
 //! (eos-daemon) is what guarantees one queue per root.
 //!
 //! ## Threading model (per RUST-GUIDANCE §5)
-//! The Rust uses `threading.Thread` + `queue.Queue` + `concurrent.futures`,
-//! NOT asyncio, for the queue itself (eos-occ has no tokio dep). The Rust port
-//! is an `mpsc` work queue with one dedicated consumer thread named
-//! `occ-commit-queue`; each work item carries a `std::sync::mpsc` reply sender
-//! (the std analogue of a `oneshot`) so the async daemon can await the result
-//! without the OCC crate ever holding a lock across `.await`.
+//! The queue is a synchronous `mpsc` work queue with one dedicated consumer
+//! thread named `occ-commit-queue` (NOT asyncio/tokio — eos-occ has no tokio
+//! dep). Each work item carries a `std::sync::mpsc` reply sender (the std
+//! analogue of a `oneshot`) so the async daemon can await the result without the
+//! OCC crate ever holding a lock across `.await`.
 
 use std::collections::HashSet;
 use std::sync::{mpsc, Mutex};

@@ -53,7 +53,7 @@ pub(super) fn spawn_service_processes(
 ) -> Result<Vec<StartedPluginService>, DaemonError> {
     let mut started = Vec::with_capacity(specs.len());
     for spec in specs {
-        let snapshot = acquire_service_snapshot(spec.key(), "start")?;
+        let snapshot = acquire_service_snapshot(&spec.key, "start")?;
         let (process, client) = match super::process::spawn_connected_with_overlay(
             spec,
             snapshot.overlay.as_ref(),
@@ -211,14 +211,7 @@ pub(super) fn stop_plugin_service_processes(state: &mut DaemonPluginState, plugi
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    for service_instance_id in stale_service_ids {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
-            release_service_snapshot(&snapshot);
-        }
-        mark_service_stopped(state, &service_instance_id);
-    }
+    remove_service_instances(state, &stale_service_ids);
 }
 
 pub(super) fn stop_services_for_layer_stack_root(
@@ -232,14 +225,7 @@ pub(super) fn stop_services_for_layer_stack_root(
         .map(|(service_instance_id, _)| service_instance_id.clone())
         .collect::<Vec<_>>();
     let stopped_count = service_instance_ids.len();
-    for service_instance_id in service_instance_ids {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
-            release_service_snapshot(&snapshot);
-        }
-        mark_service_stopped(state, &service_instance_id);
-    }
+    remove_service_instances(state, &service_instance_ids);
     stopped_count
 }
 

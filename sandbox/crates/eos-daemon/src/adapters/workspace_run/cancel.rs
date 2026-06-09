@@ -48,7 +48,7 @@ pub fn cancel_workspace_runs_by_caller_id(caller_id: &str, grace_s: Option<f64>)
 /// Cancel every workspace run in the sandbox: discard all command sessions,
 /// exit every isolated caller, then reap orphaned namespace/cgroup/scratch
 /// resources. Returns the per-substrate counts.
-pub fn cancel_all_workspace_runs(grace_s: Option<f64>) -> (usize, usize) {
+fn cancel_all_workspace_runs(grace_s: Option<f64>) -> (usize, usize) {
     let cancelled_sessions = commands::cancel_all_command_sessions(grace_s);
     let isolated_exited = isolated::exit_all_and_reap(grace_s);
     (cancelled_sessions, isolated_exited)

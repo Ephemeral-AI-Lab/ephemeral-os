@@ -56,75 +56,13 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-setns-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_setns pub pub fn run_setns (request : &amp; RunRequest) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>run_setns</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
-  <p class="docstring">`setns` into the held namespaces, then run the tool command.<br># Safety<br>Calls `setns(2)` (which requires this to be the only thread in the process),<br>then delegates child spawning to the shared shell/tool primitive. The setns<br>FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.<br># Errors<br>Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join<br>fails, request validation fails, or child execution fails.</p>
-  <div class="tags"><span>cfg: target_os</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `setns` into the held namespaces, then run the tool command.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Safety</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Calls `setns(2)` (which requires this to be the only thread in the process),</span>
-<span class="rs-comment">/// then delegates child spawning to the shared shell/tool primitive. The setns</span>
-<span class="rs-comment">/// FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join</span>
-<span class="rs-comment">/// fails, request validation fails, or child execution fails.</span>
-#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
-    <span class="rs-comment">//   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs</span>
-    <span class="rs-comment">//   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and</span>
-    <span class="rs-comment">//   map waitstatus → exit code. The group is its own session so cancel killpgs it.</span>
-    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request)?;
-    <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request)?;
-    <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(&amp;ns_fds)?;
-    <span class="rs-kw">crate</span>::fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(request, 0.0, <span class="rs-type">Instant</span>::now(), <span class="rs-type">None</span>)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-runner/src/setns.rs:39</p>
-</article><article id="item-fn-run-setns-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_setns pub pub fn run_setns (_request : &amp; RunRequest) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>run_setns</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
-  <p class="docstring">Return the non-Linux unsupported error for setns execution.<br># Errors<br>Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`<br>is unavailable.</p>
-  <div class="tags"><span>cfg: not</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
-<span class="rs-comment">/// Return the non-Linux unsupported error for setns execution.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
-<span class="rs-comment">/// is unavailable.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
-    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-runner/src/setns.rs:62</p>
-</article><article id="item-fn-setns-overlay-mount-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn setns_overlay_mount pub pub fn setns_overlay_mount (request : &amp; RunRequest , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-setns-overlay-mount-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn setns_overlay_mount pub pub fn setns_overlay_mount (request : &amp; RunRequest , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>setns_overlay_mount</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <p class="docstring">Mount the overlay inside an existing workspace mount namespace.<br>The runner `setns`es into the holder's `user` then `mnt` FDs, gaining<br>`CAP_SYS_ADMIN` in that namespace before calling [`eos_overlay::mount_overlay`].<br># Invariant<br>Calls `setns(2)` twice (`user`, then `mnt`) before the mount; must run on a<br>single-threaded caller until both setns calls complete.<br># Errors<br>Returns [`RunnerError`] when required namespace/overlay paths are missing,<br>`setns` fails, or the overlay mount fails.</p>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
@@ -145,7 +83,7 @@
 <span class="rs-comment">/// `setns` fails, or the overlay mount fails.</span>
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a>(
-    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>,
     config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-comment">//   setns(ns_fds.user, CLONE_NEWUSER); setns(ns_fds.mnt, CLONE_NEWNS); then build</span>
@@ -188,7 +126,7 @@
     <h3>setns_overlay_mount</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <p class="docstring">Return the non-Linux unsupported error for setns overlay mounting.<br># Errors<br>Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`<br>is unavailable.</p>
   <div class="tags"><span>cfg: not</span></div>
   <details class="function-source">
@@ -201,7 +139,7 @@
 <span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
 <span class="rs-comment">/// is unavailable.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a>(
-    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>,
     _config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
@@ -216,7 +154,7 @@
     <h3>configure_dns</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; serde_json :: Value , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; serde_json :: Value , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <p class="docstring">Configure `/etc/resolv.conf` inside an existing workspace mount namespace.<br>The helper only applies the fallback when the current first nameserver is a<br>loopback resolver such as systemd-resolved's `127.0.0.53` stub.<br># Errors<br>Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the<br>request lacks `fallback_dns`, or the private bind mount cannot be applied.</p>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
@@ -231,7 +169,7 @@
 <span class="rs-comment">/// Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the</span>
 <span class="rs-comment">/// request lacks `fallback_dns`, or the private bind mount cannot be applied.</span>
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request)?;
     <span class="rs-kw">let</span> user = ns_fds.user.ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;configure_dns requires user ns fd&quot;.to_owned())
@@ -282,7 +220,7 @@
     <h3>configure_dns</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub const fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; serde_json :: Value , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">pub const fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; serde_json :: Value , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <p class="docstring">Return the non-Linux unsupported error for DNS configuration.<br># Errors<br>Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`<br>and bind mounts are unavailable.</p>
   <div class="tags"><span>cfg: not</span></div>
   <details class="function-source">
@@ -294,25 +232,87 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
 <span class="rs-comment">/// and bind mounts are unavailable.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
 }
 </code></pre>
 </details>
 
   <p class="source">crates/eos-runner/src/setns.rs:189</p>
+</article><article id="item-fn-run-setns-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_setns pub(crate) pub(crate) fn run_setns (request : &amp; RunRequest) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_setns</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <p class="docstring">`setns` into the held namespaces, then run the tool command.<br># Safety<br>Calls `setns(2)` (which requires this to be the only thread in the process),<br>then delegates child spawning to the shared shell/tool primitive. The setns<br>FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.<br># Errors<br>Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join<br>fails, request validation fails, or child execution fails.</p>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `setns` into the held namespaces, then run the tool command.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Safety</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Calls `setns(2)` (which requires this to be the only thread in the process),</span>
+<span class="rs-comment">/// then delegates child spawning to the shared shell/tool primitive. The setns</span>
+<span class="rs-comment">/// FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join</span>
+<span class="rs-comment">/// fails, request validation fails, or child execution fails.</span>
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-comment">//   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs</span>
+    <span class="rs-comment">//   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and</span>
+    <span class="rs-comment">//   map waitstatus → exit code. The group is its own session so cancel killpgs it.</span>
+    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request)?;
+    <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request)?;
+    <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(&amp;ns_fds)?;
+    <span class="rs-kw">crate</span>::fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(request, 0.0, <span class="rs-type">Instant</span>::now(), <span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-runner/src/setns.rs:39</p>
+</article><article id="item-fn-run-setns-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_setns pub(crate) pub(crate) fn run_setns (_request : &amp; RunRequest) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_setns</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <p class="docstring">Return the non-Linux unsupported error for setns execution.<br># Errors<br>Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`<br>is unavailable.</p>
+  <div class="tags"><span>cfg: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-comment">/// Return the non-Linux unsupported error for setns execution.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
+<span class="rs-comment">/// is unavailable.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-runner/src/setns.rs:62</p>
 </article><article id="item-fn-require-ns-fds-200" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_ns_fds private fn require_ns_fds (request : &amp; RunRequest) -&gt; Result &lt; NsFds , RunnerError &gt; crates/eos-runner/src/setns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_ns_fds</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: any</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(any(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     request
         .ns_fds
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;setns mode requires ns_fds&quot;.to_owned()))
@@ -327,12 +327,12 @@
     <h3>namespace_fd_order</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd) &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd) &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(all(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
     <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds)
         .into_iter()
         .map(|(name, fd, _)| (name, fd))
@@ -348,12 +348,12 @@
     <h3>namespace_fd_order</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd) &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd) &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(all(test, not(target_os = &quot;linux&quot;)))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
     [
         (&quot;user&quot;, ns_fds.user),
         (&quot;mnt&quot;, ns_fds.mnt),
@@ -374,12 +374,12 @@
     <h3>namespace_fd_order_with_types</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd , libc :: c_int) &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; Vec &lt; (&amp; &#x27;static str , RawFd , libc :: c_int) &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>, libc::c_int)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>, libc::c_int)&gt; {
     [
         (&quot;user&quot;, ns_fds.user, libc::<span class="rs-type">CLONE_NEWUSER</span>),
         (&quot;mnt&quot;, ns_fds.mnt, libc::<span class="rs-type">CLONE_NEWNS</span>),
@@ -400,12 +400,12 @@
     <h3>overlay_layer_paths</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Vec &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Vec &lt; PathBuf &gt;</code>
   <div class="tags"><span>cfg: any</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(any(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-kw">if</span> request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
     } <span class="rs-kw">else</span> {
@@ -551,12 +551,12 @@
     <h3>join_cgroup</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = request.cgroup_path.as_ref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -573,12 +573,12 @@
     <h3>join_namespaces</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a> (ns_fds : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">for</span> (name, fd, nstype) <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds) {
         <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-fd-331">setns_fd</a>(name, fd, nstype)?;
     }
@@ -653,11 +653,11 @@
   <summary>code</summary>
   <pre><code>    #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-order-matches-rust-helper-and-skips-missing-fds-368">namespace_order_matches_rust_helper_and_skips_missing_fds</a>() {
-        <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(10)),
-            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(11)),
+        <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(10)),
+            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(11)),
             pid: <span class="rs-type">None</span>,
-            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(12)),
+            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(12)),
         };
         assert_eq!(
             <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(&amp;ns_fds),
@@ -719,22 +719,22 @@
     <h3>request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a> (ns_fds : Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> &gt;) -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a> (ns_fds : Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> &gt;) -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span>,
-            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">SetNs</span>,
+            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a> {
                 invocation_id: &quot;test&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
-                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>,
+                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>,
                 intent: <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
                 args: serde_json::json!({&quot;command&quot;: &quot;<span class="rs-kw">true</span>&quot;}),
                 background: <span class="rs-kw">false</span>,
             },
-            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
+            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
             layer_paths: vec![],
             upperdir: <span class="rs-type">Some</span>(<span class="rs-type">Path</span>::new(&quot;/tmp/iws/upper&quot;).to_path_buf()),
             workdir: <span class="rs-type">Some</span>(<span class="rs-type">Path</span>::new(&quot;/tmp/iws/work&quot;).to_path_buf()),
@@ -753,16 +753,16 @@
     <h3>default_ns_fds</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a> () -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a> () -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a>() -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(10)),
-            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(11)),
-            pid: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(12)),
-            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(13)),
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a>() -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(10)),
+            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(11)),
+            pid: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(12)),
+            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(13)),
         }
     }
 </code></pre>
@@ -809,8 +809,8 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>;
 #[cfg(any(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>};
 
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">const</span> <span class="rs-type">RESOLV_CONF</span>: &amp;str = &quot;/etc/resolv.conf&quot;;
@@ -828,7 +828,7 @@
 <span class="rs-comment">/// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join</span>
 <span class="rs-comment">/// fails, request validation fails, or child execution fails.</span>
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-comment">//   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs</span>
     <span class="rs-comment">//   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and</span>
     <span class="rs-comment">//   map waitstatus → exit code. The group is its own session so cancel killpgs it.</span>
@@ -845,7 +845,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
 <span class="rs-comment">/// is unavailable.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-168">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
 }
 
@@ -865,7 +865,7 @@
 <span class="rs-comment">/// `setns` fails, or the overlay mount fails.</span>
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a>(
-    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>,
     config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-comment">//   setns(ns_fds.user, CLONE_NEWUSER); setns(ns_fds.mnt, CLONE_NEWNS); then build</span>
@@ -907,7 +907,7 @@
 <span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
 <span class="rs-comment">/// is unavailable.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-overlay-mount-73">setns_overlay_mount</a>(
-    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>,
     _config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
@@ -923,7 +923,7 @@
 <span class="rs-comment">/// Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the</span>
 <span class="rs-comment">/// request lacks `fallback_dns`, or the private bind mount cannot be applied.</span>
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request)?;
     <span class="rs-kw">let</span> user = ns_fds.user.ok_or_else(|| {
         <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;configure_dns requires user ns fd&quot;.to_owned())
@@ -972,19 +972,19 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`</span>
 <span class="rs-comment">/// and bind mounts are unavailable.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-configure-dns-137">configure_dns</a>(_request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;serde_json::<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
 }
 
 #[cfg(any(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-require-ns-fds-200">require_ns_fds</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     request
         .ns_fds
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;setns mode requires ns_fds&quot;.to_owned()))
 }
 
 #[cfg(all(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
     <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds)
         .into_iter()
         .map(|(name, fd, _)| (name, fd))
@@ -992,7 +992,7 @@
 }
 
 #[cfg(all(test, not(target_os = &quot;linux&quot;)))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>)&gt; {
     [
         (&quot;user&quot;, ns_fds.user),
         (&quot;mnt&quot;, ns_fds.mnt),
@@ -1005,7 +1005,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>, libc::c_int)&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Vec</span>&lt;(&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">RawFd</span>, libc::c_int)&gt; {
     [
         (&quot;user&quot;, ns_fds.user, libc::<span class="rs-type">CLONE_NEWUSER</span>),
         (&quot;mnt&quot;, ns_fds.mnt, libc::<span class="rs-type">CLONE_NEWNS</span>),
@@ -1018,7 +1018,7 @@
 }
 
 #[cfg(any(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-overlay-layer-paths-241">overlay_layer_paths</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-kw">if</span> request.layer_paths.is_empty() {
         vec![request.workspace_root.0.clone()]
     } <span class="rs-kw">else</span> {
@@ -1091,7 +1091,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-cgroup-314">join_cgroup</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = request.cgroup_path.as_ref() <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     };
@@ -1100,7 +1100,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-join-namespaces-323">join_namespaces</a>(ns_fds: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
     <span class="rs-kw">for</span> (name, fd, nstype) <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-with-types-228">namespace_fd_order_with_types</a>(ns_fds) {
         <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-setns-fd-331">setns_fd</a>(name, fd, nstype)?;
     }
@@ -1131,7 +1131,7 @@
         first_nameserver, namespace_fd_order, needs_fallback_dns, overlay_layer_paths,
         require_ns_fds,
     };
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>};
     <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
     <span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
 
@@ -1146,11 +1146,11 @@
 
     #[test]
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-order-matches-rust-helper-and-skips-missing-fds-368">namespace_order_matches_rust_helper_and_skips_missing_fds</a>() {
-        <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(10)),
-            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(11)),
+        <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(10)),
+            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(11)),
             pid: <span class="rs-type">None</span>,
-            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(12)),
+            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(12)),
         };
         assert_eq!(
             <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-namespace-fd-order-207">namespace_fd_order</a>(&amp;ns_fds),
@@ -1177,18 +1177,18 @@
         assert_eq!(<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-first-nameserver-250">first_nameserver</a>(&quot;search local\n&quot;), <span class="rs-type">None</span>);
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
-            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span>,
-            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-request-240">request</a>(ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-136">RunRequest</a> {
+            mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-18">RunMode</a>::<span class="rs-type">SetNs</span>,
+            tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-120">ToolCall</a> {
                 invocation_id: &quot;test&quot;.to_owned(),
                 caller_id: &quot;caller&quot;.to_owned(),
-                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>,
+                verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-59">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>,
                 intent: <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>,
                 args: serde_json::json!({&quot;command&quot;: &quot;<span class="rs-kw">true</span>&quot;}),
                 background: <span class="rs-kw">false</span>,
             },
-            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
+            workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-38">WorkspaceRoot</a>(<span class="rs-type">Path</span>::new(&quot;/workspace&quot;).to_path_buf()),
             layer_paths: vec![],
             upperdir: <span class="rs-type">Some</span>(<span class="rs-type">Path</span>::new(&quot;/tmp/iws/upper&quot;).to_path_buf()),
             workdir: <span class="rs-type">Some</span>(<span class="rs-type">Path</span>::new(&quot;/tmp/iws/work&quot;).to_path_buf()),
@@ -1198,12 +1198,12 @@
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a>() -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
-            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(10)),
-            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(11)),
-            pid: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(12)),
-            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(13)),
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-default-ns-fds-422">default_ns_fds</a>() -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-42">NsFds</a> {
+            user: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(10)),
+            mnt: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(11)),
+            pid: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(12)),
+            net: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-30">Fd</a>(13)),
         }
     }
 }

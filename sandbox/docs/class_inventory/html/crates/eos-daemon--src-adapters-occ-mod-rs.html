@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -79,7 +79,7 @@
     <h3>apply_occ_changeset</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-apply-occ-changeset-29">apply_occ_changeset</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [LayerChange] , base_hashes : &amp; [(LayerPath , Option &lt; String &gt;)] ,) -&gt; Result &lt; ChangesetResult , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -88,7 +88,7 @@
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
     base_hashes: &amp;[(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> lookup = service_cache::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> result = lookup.service.apply_changeset_with_base_hashes(
         changes,
@@ -109,7 +109,7 @@
     <h3>base_hashes_for_snapshot</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a> (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a> (root : &amp; Path , manifest : &amp; eos_layerstack :: Manifest , changes : &amp; [LayerChange] ,) -&gt; Result &lt; Vec &lt; (LayerPath , Option &lt; String &gt;) &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -117,7 +117,7 @@
     root: &amp;<span class="rs-type">Path</span>,
     manifest: &amp;eos_layerstack::<span class="rs-type">Manifest</span>,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
         root, manifest, changes,
     )?)
@@ -132,11 +132,11 @@
     <h3>manifest_version_u64</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a> (version : i64) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; u64 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a> (version : i64) -&gt; Result &lt; u64 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     u64::try_from(version).map_err(|_| {
         <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">LayerStack</span>(eos_layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(format!(
             &quot;manifest version must be non-negative: {version}&quot;
@@ -188,7 +188,7 @@
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
     base_hashes: &amp;[(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ChangesetResult</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> lookup = service_cache::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#item-fn-occ-service-for-root-173">occ_service_for_root</a>(root)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> result = lookup.service.apply_changeset_with_base_hashes(
         changes,
@@ -204,13 +204,13 @@
     root: &amp;<span class="rs-type">Path</span>,
     manifest: &amp;eos_layerstack::<span class="rs-type">Manifest</span>,
     changes: &amp;[<span class="rs-type">LayerChange</span>],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;(<span class="rs-type">LayerPath</span>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(eos_occ_layerstack::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-base-hashes-for-snapshot-46">base_hashes_for_snapshot</a>(
         root, manifest, changes,
     )?)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-mod-rs.html#item-fn-manifest-version-u64-56">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     u64::try_from(version).map_err(|_| {
         <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">LayerStack</span>(eos_layerstack::<span class="rs-type">LayerStackError</span>::<span class="rs-type">Manifest</span>(format!(
             &quot;manifest version must be non-negative: {version}&quot;

@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -62,13 +62,13 @@
     <h3>op_exec_command</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">`api.v1.exec_command` — command-session start contract.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// `api.v1.exec_command` — command-session start contract.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> cmd = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;cmd&quot;)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">let</span> command_config = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-config-rs.html#item-fn-command-session-config-15">command_session_config</a>();
@@ -147,7 +147,7 @@
     <h3>op_command_write_stdin</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-write-stdin-134">op_command_write_stdin</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-write-stdin-134">op_command_write_stdin</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg_attr: expect</span><span>cfg_attr: not</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -161,7 +161,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-write-stdin-134">op_command_write_stdin</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args)
@@ -182,7 +182,7 @@
     <h3>op_command_read_progress</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-read-progress-156">op_command_read_progress</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-read-progress-156">op_command_read_progress</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg_attr: expect</span><span>cfg_attr: not</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -196,7 +196,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-read-progress-156">op_command_read_progress</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args)
@@ -217,7 +217,7 @@
     <h3>op_command_cancel</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-cancel-178">op_command_cancel</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-cancel-178">op_command_cancel</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg_attr: expect</span><span>cfg_attr: not</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -231,7 +231,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-cancel-178">op_command_cancel</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args)
@@ -252,7 +252,7 @@
     <h3>op_command_collect_completed</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-collect-completed-200">op_command_collect_completed</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-collect-completed-200">op_command_collect_completed</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -263,7 +263,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-collect-completed-200">op_command_collect_completed</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <span class="rs-kw">let</span> response =
@@ -291,7 +291,7 @@
     <h3>op_command_session_count</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-session-count-226">op_command_session_count</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-session-count-226">op_command_session_count</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -302,7 +302,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-session-count-226">op_command_session_count</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)
@@ -576,12 +576,12 @@
     <h3>command_session_write_stdin</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">WriteStdin</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
         chars: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-nonempty-string-22">require_nonempty_string</a>(args, &quot;chars&quot;)?,
@@ -600,12 +600,12 @@
     <h3>command_session_read_progress</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> last_n_lines = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-optional-u64-42">optional_u64</a>(args, &quot;last_n_lines&quot;).unwrap_or(50);
     <span class="rs-kw">let</span> request = <span class="rs-type">ReadCommandProgress</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
@@ -625,12 +625,12 @@
     <h3>command_session_cancel</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a> (args : &amp; Value) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">CancelCommandSession</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
     };
@@ -692,7 +692,7 @@
     <h3>start_manager_command_session</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-start-manager-command-session-252">start_manager_command_session</a> (args : &amp; Value , cmd : &amp; str , timeout_seconds : Option &lt; f64 &gt; , yield_time_ms : u64 , caller_id : String , target : StartTarget ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-start-manager-command-session-252">start_manager_command_session</a> (args : &amp; Value , cmd : &amp; str , timeout_seconds : Option &lt; f64 &gt; , yield_time_ms : u64 , caller_id : String , target : StartTarget ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -704,7 +704,7 @@
     yield_time_ms: u64,
     caller_id: <span class="rs-type">String</span>,
     target: <span class="rs-type">StartTarget</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">StartCommandSession</span> {
         invocation_id: args
             .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;invocation_id&quot;)
@@ -740,14 +740,14 @@
     <h3>command_session_response_to_wire</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-response-to-wire-333">command_session_response_to_wire</a> (response : <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; CommandResponse , CommandSessionError &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-response-to-wire-333">command_session_response_to_wire</a> (response : Result &lt; CommandResponse , CommandSessionError &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-response-to-wire-333">command_session_response_to_wire</a>(
-    response: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    response: <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> response {
         <span class="rs-type">Ok</span>(response) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-command-response-to-wire-75">command_response_to_wire</a>(response)),
         <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(_)) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-command-session-not-found-71">command_session_not_found</a>()),
@@ -818,7 +818,7 @@
 }
 
 <span class="rs-comment">/// `api.v1.exec_command` — command-session start contract.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-exec-command-52">op_exec_command</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> cmd = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;cmd&quot;)?;
     #[cfg(target_os = &quot;linux&quot;)]
     <span class="rs-kw">let</span> command_config = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-config-rs.html#item-fn-command-session-config-15">command_session_config</a>();
@@ -909,7 +909,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-write-stdin-134">op_command_write_stdin</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args)
@@ -931,7 +931,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-read-progress-156">op_command_read_progress</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args)
@@ -953,7 +953,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-cancel-178">op_command_cancel</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args)
@@ -972,7 +972,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-collect-completed-200">op_command_collect_completed</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     #[cfg(target_os = &quot;linux&quot;)]
     {
         <span class="rs-kw">let</span> response =
@@ -998,7 +998,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-op-command-session-count-226">op_command_session_count</a>(
     args: &amp;<span class="rs-type">Value</span>,
     _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
         .and_then(<span class="rs-type">Value</span>::as_str)
@@ -1025,7 +1025,7 @@
     yield_time_ms: u64,
     caller_id: <span class="rs-type">String</span>,
     target: <span class="rs-type">StartTarget</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">StartCommandSession</span> {
         invocation_id: args
             .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(&quot;invocation_id&quot;)
@@ -1053,7 +1053,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-write-stdin-287">command_session_write_stdin</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">WriteStdin</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
         chars: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-nonempty-string-22">require_nonempty_string</a>(args, &quot;chars&quot;)?,
@@ -1064,7 +1064,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-read-progress-298">command_session_read_progress</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> last_n_lines = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-optional-u64-42">optional_u64</a>(args, &quot;last_n_lines&quot;).unwrap_or(50);
     <span class="rs-kw">let</span> request = <span class="rs-type">ReadCommandProgress</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
@@ -1091,7 +1091,7 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-cancel-325">command_session_cancel</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request = <span class="rs-type">CancelCommandSession</span> {
         command_session_id: <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-require-command-string-9">require_command_string</a>(args, &quot;command_session_id&quot;)?,
     };
@@ -1100,8 +1100,8 @@
 
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-commands-rs.html#item-fn-command-session-response-to-wire-333">command_session_response_to_wire</a>(
-    response: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    response: <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <span class="rs-type">CommandSessionError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> response {
         <span class="rs-type">Ok</span>(response) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-command-response-to-wire-75">command_response_to_wire</a>(response)),
         <span class="rs-type">Err</span>(<span class="rs-type">CommandSessionError</span>::<span class="rs-type">NotFound</span>(_)) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-wire-rs.html#item-fn-command-session-not-found-71">command_session_not_found</a>()),

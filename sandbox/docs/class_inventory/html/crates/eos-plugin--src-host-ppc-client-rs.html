@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -65,29 +65,29 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#item-struct-PpcClient-29">PpcClient</a></code>
   <p class="docstring">A connected plugin service's PPC client: a synchronous request/reply façade<br>over the service socket, multiplexed by a background reader thread.</p>
   <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code><a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a></code></td></tr><tr><td>private</td><td>pending</td><td><code><a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-43"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a> (stream : UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><p class="docstring">Wrap a connected service `stream`, spawning the reply-routing reader.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code><a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a></code></td></tr><tr><td>private</td><td>pending</td><td><code><a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-43"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a> (stream : UnixStream) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><p class="docstring">Wrap a connected service `stream`, spawning the reply-routing reader.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Wrap a connected service `stream`, spawning the reply-routing reader.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> reader_stream = stream.try_clone()?;
-        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream);
+        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream);
         <span class="rs-kw">let</span> pending = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>();
         <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-spawn-reader-thread-122">spawn_reader_thread</a>(reader_stream, writer.clone(), pending.clone())?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { writer, pending })
     }
 </code></pre>
-</details></td></tr><tr id="method-round-trip-52"><td>method</td><td>round_trip</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-round-trip-52">round_trip</a> (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><p class="docstring">Send a request and await its reply (no callbacks serviced).</p><details class="function-source">
+</details></td></tr><tr id="method-round-trip-52"><td>method</td><td>round_trip</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-round-trip-52">round_trip</a> (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><p class="docstring">Send a request and await its reply (no callbacks serviced).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Send a request and await its reply (no callbacks serviced).</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-round-trip-52">round_trip</a>(
         &amp;<span class="rs-self">self</span>,
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a>(request, timeout, <span class="rs-type">None</span>)
     }
 </code></pre>
-</details></td></tr><tr id="method-round-trip-with-callbacks-61"><td>method</td><td>round_trip_with_callbacks</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-round-trip-with-callbacks-61">round_trip_with_callbacks</a> &lt; F &gt; (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration , handle_callback : F ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt; where F : FnMut (<a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt; + Send + &#x27;static ,</code><p class="docstring">Send a request and await its reply, servicing plugin-originated callback<br>requests with `handle_callback` until the final reply arrives.</p><details class="function-source">
+</details></td></tr><tr id="method-round-trip-with-callbacks-61"><td>method</td><td>round_trip_with_callbacks</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-round-trip-with-callbacks-61">round_trip_with_callbacks</a> &lt; F &gt; (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration , handle_callback : F ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt; where F : FnMut (<a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt; + Send + &#x27;static ,</code><p class="docstring">Send a request and await its reply, servicing plugin-originated callback<br>requests with `handle_callback` until the final reply arrives.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Send a request and await its reply, servicing plugin-originated callback</span>
     <span class="rs-comment">/// requests with `handle_callback` until the final reply arrives.</span>
@@ -96,28 +96,28 @@
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
         handle_callback: <span class="rs-type">F</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt;
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt;
     <span class="rs-kw">where</span>
-        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
     {
-        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(handle_callback));
-        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-kw">move</span> |frame| {
+        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(handle_callback));
+        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-kw">move</span> |frame| {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> callback = callback
                 .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-                .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
             callback(frame)
         });
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a>(request, timeout, <span class="rs-type">Some</span>(handler))
     }
 </code></pre>
-</details></td></tr><tr id="method-send-request-82"><td>method</td><td>send_request</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a> (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration , callback_handler : Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-send-request-82"><td>method</td><td>send_request</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a> (&amp; self , request : &amp; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , timeout : Duration , callback_handler : Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a>(
         &amp;<span class="rs-self">self</span>,
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
         callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">if</span> request.direction != <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-enum-PpcDirection-25">PpcDirection</a>::<span class="rs-type">Request</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ppc</span>(
                 &quot;daemon <span class="rs-type">PPC</span> round trip requires a request envelope&quot;.to_owned(),
@@ -166,7 +166,7 @@
     <h3>spawn_reader_thread</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-spawn-reader-thread-122">spawn_reader_thread</a> (mut stream : UnixStream , writer : <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , pending : <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a> ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-spawn-reader-thread-122">spawn_reader_thread</a> (mut stream : UnixStream , writer : <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , pending : <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a> ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -174,8 +174,8 @@
     <span class="rs-kw">mut</span> stream: <span class="rs-type">UnixStream</span>,
     writer: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
     pending: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>()
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>()
         .name(&quot;eos-plugin-ppc-reader&quot;.to_owned())
         .spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-reader-loop-133">reader_loop</a>(&amp;<span class="rs-kw">mut</span> stream, &amp;writer, &amp;pending))?;
     <span class="rs-type">Ok</span>(())
@@ -274,7 +274,7 @@
     <h3>write_callback_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-write-callback-error-191">write_callback_error</a> (writer : &amp; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , callback_message_id : &amp; str , message : &amp; str ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-write-callback-error-191">write_callback_error</a> (writer : &amp; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , callback_message_id : &amp; str , message : &amp; str ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -282,7 +282,7 @@
     writer: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
     callback_message_id: &amp;str,
     message: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> body = json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;error&quot;: {
@@ -333,7 +333,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-self">self</span>::frame_io::<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>;
 <span class="rs-kw">use</span> <span class="rs-self">self</span>::pending::{<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-self">self</span>::frame_io::read_frame;
 
@@ -352,9 +352,9 @@
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-rs.html#item-struct-PpcClient-29">PpcClient</a> {
     <span class="rs-comment">/// Wrap a connected service `stream`, spawning the reply-routing reader.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> reader_stream = stream.try_clone()?;
-        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(stream);
+        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(stream);
         <span class="rs-kw">let</span> pending = <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>();
         <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-spawn-reader-thread-122">spawn_reader_thread</a>(reader_stream, writer.clone(), pending.clone())?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { writer, pending })
@@ -365,7 +365,7 @@
         &amp;<span class="rs-self">self</span>,
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a>(request, timeout, <span class="rs-type">None</span>)
     }
 
@@ -376,15 +376,15 @@
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
         handle_callback: <span class="rs-type">F</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt;
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt;
     <span class="rs-kw">where</span>
-        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
     {
-        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(handle_callback));
-        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>(<span class="rs-kw">move</span> |frame| {
+        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(handle_callback));
+        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>(<span class="rs-kw">move</span> |frame| {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> callback = callback
                 .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-                .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
             callback(frame)
         });
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#method-send-request-82">send_request</a>(request, timeout, <span class="rs-type">Some</span>(handler))
@@ -395,7 +395,7 @@
         request: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>,
         timeout: <span class="rs-type">Duration</span>,
         callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">if</span> request.direction != <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-enum-PpcDirection-25">PpcDirection</a>::<span class="rs-type">Request</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Ppc</span>(
                 &quot;daemon <span class="rs-type">PPC</span> round trip requires a request envelope&quot;.to_owned(),
@@ -434,8 +434,8 @@
     <span class="rs-kw">mut</span> stream: <span class="rs-type">UnixStream</span>,
     writer: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
     pending: <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
-    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>()
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
+    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>()
         .name(&quot;eos-plugin-ppc-reader&quot;.to_owned())
         .spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-rs.html#item-fn-reader-loop-133">reader_loop</a>(&amp;<span class="rs-kw">mut</span> stream, &amp;writer, &amp;pending))?;
     <span class="rs-type">Ok</span>(())
@@ -503,7 +503,7 @@
     writer: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
     callback_message_id: &amp;str,
     message: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> body = json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;error&quot;: {

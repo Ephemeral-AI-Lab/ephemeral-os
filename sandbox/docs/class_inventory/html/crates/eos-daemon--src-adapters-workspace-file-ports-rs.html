@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -71,19 +71,19 @@
         <span class="rs-self">Self</span> { root }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspaceReadView for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a></code></summary><table><tbody><tr id="method-resolve-path-62"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspaceReadView for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a></code></summary><table><tbody><tr id="method-resolve-path-62"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;<span class="rs-self">self</span>.root).map_err(api_error)?;
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a>(&amp;binding, request_path)
     }
 </code></pre>
-</details></td></tr><tr id="method-read-bytes-67"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a> (&amp; self , path : &amp; ResolvedWorkspacePath ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; WorkspaceReadBytes , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-read-bytes-67"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a> (&amp; self , path : &amp; ResolvedWorkspacePath ,) -&gt; Result &lt; WorkspaceReadBytes , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(
         &amp;<span class="rs-self">self</span>,
         path: &amp;<span class="rs-type">ResolvedWorkspacePath</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-self">self</span>.root.clone()).map_err(api_error)?;
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> (bytes, exists) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(&amp;path.path).map_err(api_error)?;
@@ -101,12 +101,12 @@
         })
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl WorkspaceMutationSink for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a></code></summary><table><tbody><tr id="method-commit-or-record-90"><td>method</td><td>commit_or_record</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a> (&amp; self , request : WorkspaceMutationRequest ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; WorkspaceMutationOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl WorkspaceMutationSink for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a></code></summary><table><tbody><tr id="method-commit-or-record-90"><td>method</td><td>commit_or_record</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a> (&amp; self , request : WorkspaceMutationRequest ,) -&gt; Result &lt; WorkspaceMutationOutcome , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">WorkspaceMutationRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(&amp;request.path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
             .map_err(api_error)?;
@@ -169,9 +169,9 @@
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-record-isolated-tool-call-358">record_isolated_tool_call</a>(&amp;<span class="rs-self">self</span>.handle, &quot;read_file&quot;, &quot;ok&quot;, &amp;[], <span class="rs-self">self</span>.started_at);
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspaceReadView for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a></code></summary><table><tbody><tr id="method-resolve-path-195"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl WorkspaceReadView for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a></code></summary><table><tbody><tr id="method-resolve-path-195"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> binding = <span class="rs-type">WorkspaceBinding</span> {
             workspace_root: <span class="rs-self">self</span>.handle.workspace_root.to_string_lossy().into_owned(),
             layer_stack_root: <span class="rs-self">self</span>.handle.layer_stack_root.to_string_lossy().into_owned(),
@@ -183,12 +183,12 @@
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a>(&amp;binding, request_path)
     }
 </code></pre>
-</details></td></tr><tr id="method-read-bytes-207"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a> (&amp; self , path : &amp; ResolvedWorkspacePath ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; WorkspaceReadBytes , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-read-bytes-207"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a> (&amp; self , path : &amp; ResolvedWorkspacePath ,) -&gt; Result &lt; WorkspaceReadBytes , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(
         &amp;<span class="rs-self">self</span>,
         path: &amp;<span class="rs-type">ResolvedWorkspacePath</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> layer_path = <span class="rs-type">LayerPath</span>::parse(&amp;path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
@@ -207,12 +207,12 @@
         })
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl WorkspaceMutationSink for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a></code></summary><table><tbody><tr id="method-commit-or-record-232"><td>method</td><td>commit_or_record</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a> (&amp; self , request : WorkspaceMutationRequest ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; WorkspaceMutationOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl WorkspaceMutationSink for <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a></code></summary><table><tbody><tr id="method-commit-or-record-232"><td>method</td><td>commit_or_record</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a> (&amp; self , request : WorkspaceMutationRequest ,) -&gt; Result &lt; WorkspaceMutationOutcome , WorkspaceApiError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">WorkspaceMutationRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> layer_path = <span class="rs-type">LayerPath</span>::parse(&amp;request.path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
             .map_err(api_error)?;
@@ -272,14 +272,14 @@
     <h3>resolve_layer_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a> (binding : &amp; WorkspaceBinding , request_path : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a> (binding : &amp; WorkspaceBinding , request_path : &amp; str ,) -&gt; Result &lt; ResolvedWorkspacePath , WorkspaceApiError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a>(
     binding: &amp;<span class="rs-type">WorkspaceBinding</span>,
     request_path: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> path = <span class="rs-kw">if</span> request_path.starts_with(&#x27;/&#x27;) {
         binding
             .layer_path_from_absolute(request_path)
@@ -376,7 +376,7 @@
     <h3>read_isolated_current</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-read-isolated-current-278">read_isolated_current</a> (handle : &amp; crate :: adapters :: workspace_run :: isolated :: CommandHandle , layer_path : &amp; LayerPath ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; (Option &lt; Vec &lt; u8 &gt; &gt; , bool) , WorkspaceApiError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-read-isolated-current-278">read_isolated_current</a> (handle : &amp; crate :: adapters :: workspace_run :: isolated :: CommandHandle , layer_path : &amp; LayerPath ,) -&gt; Result &lt; (Option &lt; Vec &lt; u8 &gt; &gt; , bool) , WorkspaceApiError &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -384,7 +384,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-read-isolated-current-278">read_isolated_current</a>(
     handle: &amp;<span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<span class="rs-type">CommandHandle</span>,
     layer_path: &amp;<span class="rs-type">LayerPath</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> upper_path = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-upper-path-270">isolated_upper_path</a>(handle, layer_path);
     <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;upper_path) {
         <span class="rs-type">Ok</span>(metadata) <span class="rs-kw">if</span> metadata.is_file() =&gt; {
@@ -420,7 +420,7 @@
     <h3>write_isolated_upper</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-write-isolated-upper-309">write_isolated_upper</a> (handle : &amp; crate :: adapters :: workspace_run :: isolated :: CommandHandle , layer_path : &amp; LayerPath , content : &amp; [u8] ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , WorkspaceApiError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-write-isolated-upper-309">write_isolated_upper</a> (handle : &amp; crate :: adapters :: workspace_run :: isolated :: CommandHandle , layer_path : &amp; LayerPath , content : &amp; [u8] ,) -&gt; Result &lt; () , WorkspaceApiError &gt;</code>
   <div class="tags"><span>cfg: target_os</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -429,7 +429,7 @@
     handle: &amp;<span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<span class="rs-type">CommandHandle</span>,
     layer_path: &amp;<span class="rs-type">LayerPath</span>,
     content: &amp;[u8],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> path = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-upper-path-270">isolated_upper_path</a>(handle, layer_path);
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(api_error)?;
@@ -599,7 +599,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a>(
     binding: &amp;<span class="rs-type">WorkspaceBinding</span>,
     request_path: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> path = <span class="rs-kw">if</span> request_path.starts_with(&#x27;/&#x27;) {
         binding
             .layer_path_from_absolute(request_path)
@@ -625,7 +625,7 @@
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">WorkspaceReadView</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;<span class="rs-self">self</span>.root).map_err(api_error)?;
         <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-resolve-layer-path-33">resolve_layer_path</a>(&amp;binding, request_path)
     }
@@ -633,7 +633,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(
         &amp;<span class="rs-self">self</span>,
         path: &amp;<span class="rs-type">ResolvedWorkspacePath</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-self">self</span>.root.clone()).map_err(api_error)?;
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> (bytes, exists) = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(&amp;path.path).map_err(api_error)?;
@@ -656,7 +656,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">WorkspaceMutationRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(&amp;request.path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
             .map_err(api_error)?;
@@ -758,7 +758,7 @@
 
 #[cfg(target_os = &quot;linux&quot;)]
 <span class="rs-kw">impl</span> <span class="rs-type">WorkspaceReadView</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-resolve-path-62">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">ResolvedWorkspacePath</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> binding = <span class="rs-type">WorkspaceBinding</span> {
             workspace_root: <span class="rs-self">self</span>.handle.workspace_root.to_string_lossy().into_owned(),
             layer_stack_root: <span class="rs-self">self</span>.handle.layer_stack_root.to_string_lossy().into_owned(),
@@ -773,7 +773,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-read-bytes-67">read_bytes</a>(
         &amp;<span class="rs-self">self</span>,
         path: &amp;<span class="rs-type">ResolvedWorkspacePath</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceReadBytes</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> read_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">let</span> layer_path = <span class="rs-type">LayerPath</span>::parse(&amp;path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
@@ -798,7 +798,7 @@
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#method-commit-or-record-90">commit_or_record</a>(
         &amp;<span class="rs-self">self</span>,
         request: <span class="rs-type">WorkspaceMutationRequest</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceMutationOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
         <span class="rs-kw">let</span> layer_path = <span class="rs-type">LayerPath</span>::parse(&amp;request.path.path)
             .map_err(eos_layerstack::<span class="rs-type">LayerStackError</span>::from)
             .map_err(api_error)?;
@@ -845,7 +845,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-read-isolated-current-278">read_isolated_current</a>(
     handle: &amp;<span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<span class="rs-type">CommandHandle</span>,
     layer_path: &amp;<span class="rs-type">LayerPath</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> upper_path = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-upper-path-270">isolated_upper_path</a>(handle, layer_path);
     <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;upper_path) {
         <span class="rs-type">Ok</span>(metadata) <span class="rs-kw">if</span> metadata.is_file() =&gt; {
@@ -877,7 +877,7 @@
     handle: &amp;<span class="rs-kw">crate</span>::adapters::workspace_run::isolated::<span class="rs-type">CommandHandle</span>,
     layer_path: &amp;<span class="rs-type">LayerPath</span>,
     content: &amp;[u8],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">WorkspaceApiError</span>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">WorkspaceApiError</span>&gt; {
     <span class="rs-kw">let</span> path = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-file-ports-rs.html#item-fn-isolated-upper-path-270">isolated_upper_path</a>(handle, layer_path);
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(api_error)?;

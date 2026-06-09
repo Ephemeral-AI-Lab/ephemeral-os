@@ -127,6 +127,3 @@ impl From<eos_checkpoint::CheckpointError> for DaemonError {
         }
     }
 }
-
-/// Convenience alias for fallible daemon operations.
-pub type Result<T> = core::result::Result<T, DaemonError>;

@@ -13,15 +13,15 @@ use eos_engine::{
     EventCallback, ProviderEventSource, TokioAgentLoopLauncher,
 };
 use eos_sandbox_port::SandboxCommandService;
-use eos_tool_ports::{ExecutionMetadata, ToolRegistry};
-use eos_tools::{
+use eos_tool::{
     build_default_registry_with_services, AttemptSubmissionService, CallerScope,
     RootSubmissionService, SandboxToolService, SkillToolService,
 };
+use eos_tool_ports::{ExecutionMetadata, ToolRegistry};
 use eos_types::WorkflowApi;
 
 use super::RuntimeServices;
-use crate::plugin_tools::register_plugin_tools;
+use crate::plugins::register_plugin_tools;
 
 /// Shared cell used to break the runner -> launcher -> tools -> runner cycle.
 pub(crate) type AgentRunApiCell = Arc<OnceLock<Arc<dyn AgentRunApi>>>;

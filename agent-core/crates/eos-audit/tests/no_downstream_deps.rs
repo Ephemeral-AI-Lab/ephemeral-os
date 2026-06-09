@@ -1,6 +1,6 @@
 // AC-audit-07: the crate's dependency set is exactly {eos-types} among
 // EphemeralOS crates. It must not depend on downstream agent-core crates (no
-// eos-tools / eos-engine / eos-workflow / ...), which would create the
+// eos-tool / eos-engine / eos-workflow / ...), which would create the
 // eos-audit -> eos-engine -> eos-audit cycle banned by GC-audit-05. The
 // workspace-wide dependency topology is also guarded centrally by
 // workspace-guard; this is the crate-local proof.

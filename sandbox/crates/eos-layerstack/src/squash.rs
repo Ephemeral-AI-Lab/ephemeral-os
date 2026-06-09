@@ -39,7 +39,7 @@ impl CheckpointSegment {
     /// Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two
     /// layers are provided.
     ///
-    pub fn new(layers: Vec<LayerRef>) -> Result<Self, LayerStackError> {
+    pub(crate) fn new(layers: Vec<LayerRef>) -> Result<Self, LayerStackError> {
         if layers.len() <= 1 {
             return Err(LayerStackError::InvalidSquashPlan(
                 "checkpoint segments must contain at least two layers".to_owned(),
@@ -77,7 +77,7 @@ impl SquashPlan {
     /// Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no
     /// active layers, no entries, or no foldable checkpoint segment.
     ///
-    pub fn new(
+    pub(crate) fn new(
         active_version: i64,
         active_layers: Vec<LayerRef>,
         entries: Vec<SquashPlanEntry>,
@@ -206,7 +206,7 @@ impl LayerCheckpointSquasher {
     /// the segment cannot be projected, or the staging directory cannot be
     /// persisted as a layer.
     ///
-    pub fn build_checkpoint(
+    pub(crate) fn build_checkpoint(
         &self,
         segment: &CheckpointSegment,
         active_version: i64,
@@ -244,7 +244,7 @@ impl LayerCheckpointSquasher {
     /// Returns [`LayerStackError`] when the checkpoint path is invalid, missing,
     /// or cannot be renamed into its final layer id.
     ///
-    pub fn relabel_checkpoint(
+    pub(crate) fn relabel_checkpoint(
         &self,
         checkpoint: &LayerRef,
         manifest_version: i64,
@@ -281,7 +281,7 @@ impl LayerCheckpointSquasher {
     /// Returns [`LayerStackError`] when the checkpoint path is invalid or
     /// removal fails for a reason other than the path already being absent.
     ///
-    pub fn discard_checkpoint(&self, checkpoint: &LayerRef) -> Result<(), LayerStackError> {
+    pub(crate) fn discard_checkpoint(&self, checkpoint: &LayerRef) -> Result<(), LayerStackError> {
         let path = self.layer_path(checkpoint)?;
         match std::fs::remove_dir_all(path) {
             Ok(()) => Ok(()),
@@ -321,7 +321,7 @@ impl LayerCheckpointSquasher {
 /// layers, return the live prefix above them; else `None` (CAS lost).
 ///
 #[must_use]
-pub fn manifest_prefix_before_plan<'m>(
+pub(crate) fn manifest_prefix_before_plan<'m>(
     manifest: &'m Manifest,
     plan: &SquashPlan,
 ) -> Option<&'m [LayerRef]> {

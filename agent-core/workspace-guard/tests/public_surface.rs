@@ -78,7 +78,7 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
             ],
         ),
         (
-            "eos-agent-runner",
+            "eos-agent-run",
             &[
                 "use:active_agent_runs",
                 "use:agent_run_records",
@@ -141,17 +141,6 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
             ],
         ),
         (
-            "eos-plugin-catalog",
-            &[
-                "use:discovery",
-                "use:error",
-                "use:manifest",
-                "use:names",
-                "use:package",
-                "use:tool_specs",
-            ],
-        ),
-        (
             "eos-runtime",
             &[
                 "mod:observability",
@@ -175,10 +164,6 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "use:tool_api",
                 "use:transport",
             ],
-        ),
-        (
-            "eos-skills",
-            &["use:definition", "use:error", "use:registry"],
         ),
         (
             "eos-testkit",
@@ -205,7 +190,10 @@ fn legacy_public_surface() -> BTreeMap<String, BTreeSet<String>> {
                 "use:services",
             ],
         ),
-        ("eos-tools", &["use:registry", "use:tools"]),
+        (
+            "eos-tool",
+            &["use:error", "use:hooks", "use:model", "use:registry", "use:tools"],
+        ),
         (
             "eos-types",
             &[

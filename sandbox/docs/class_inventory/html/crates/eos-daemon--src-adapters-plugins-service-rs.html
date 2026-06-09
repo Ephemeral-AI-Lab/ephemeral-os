@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -112,16 +112,16 @@
     <h3>spawn_service_processes</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-spawn-service-processes-51">spawn_service_processes</a> (specs : &amp; [PluginProcessSpec] ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Vec &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-spawn-service-processes-51">spawn_service_processes</a> (specs : &amp; [PluginProcessSpec] ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-spawn-service-processes-51">spawn_service_processes</a>(
     specs: &amp;[<span class="rs-type">PluginProcessSpec</span>],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> started = <span class="rs-type">Vec</span>::with_capacity(specs.len());
     <span class="rs-kw">for</span> spec <span class="rs-kw">in</span> specs {
-        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(spec.key(), &quot;start&quot;)?;
+        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(&amp;spec.key, &quot;start&quot;)?;
         <span class="rs-kw">let</span> (process, client) = <span class="rs-kw">match</span> <span class="rs-kw">super</span>::process::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-connected-with-overlay-37">spawn_connected_with_overlay</a>(
             spec,
             snapshot.overlay.as_ref(),
@@ -152,14 +152,14 @@
     <h3>insert_started_service_processes</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-insert-started-service-processes-78">insert_started_service_processes</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , started_services : Vec &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-insert-started-service-processes-78">insert_started_service_processes</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , started_services : Vec &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a> &gt; ,) -&gt; Result &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-insert-started-service-processes-78">insert_started_service_processes</a>(
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     started_services: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> started_count = 0;
     <span class="rs-kw">for</span> started <span class="rs-kw">in</span> started_services {
         <span class="rs-kw">if</span> state
@@ -199,14 +199,14 @@
     <h3>acquire_service_snapshot</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a> (key : &amp; PluginServiceKey , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a> (key : &amp; PluginServiceKey , reason : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(
     key: &amp;<span class="rs-type">PluginServiceKey</span>,
     reason: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(&amp;key.layer_stack_root))?;
     <span class="rs-kw">let</span> lease = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#method-acquire-snapshot-46">acquire_snapshot</a>(&amp;format!(
         &quot;plugin-service:{}:{}:{reason}&quot;,
@@ -226,11 +226,11 @@
     <h3>active_manifest_key</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a> (layer_stack_root : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a> (layer_stack_root : &amp; str) -&gt; Result &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a>(layer_stack_root: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a>(layer_stack_root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(layer_stack_root))?.read_active_manifest()?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-manifest-key-326">manifest_key</a>(
         manifest.version,
@@ -269,7 +269,7 @@
     <h3>mark_service_ready</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-ready-143">mark_service_ready</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , refreshed : bool ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-ready-143">mark_service_ready</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> , refreshed : bool ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -278,7 +278,7 @@
     service_instance_id: &amp;str,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     refreshed: bool,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Ready</span>;
     status.manifest_key = <span class="rs-type">Some</span>(snapshot.manifest_key.clone());
@@ -298,14 +298,14 @@
     <h3>mark_service_restarted</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-restarted-159">mark_service_restarted</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-restarted-159">mark_service_restarted</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-restarted-159">mark_service_restarted</a>(
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.restart_count = status.restart_count.saturating_add(1);
     <span class="rs-type">Ok</span>(())
@@ -320,7 +320,7 @@
     <h3>mark_service_stale</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-stale-168">mark_service_stale</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str , reason : impl Into &lt; String &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-stale-168">mark_service_stale</a> (state : &amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str , reason : impl Into &lt; String &gt; ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -328,7 +328,7 @@
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
     reason: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Stale</span>;
     status.last_error = <span class="rs-type">Some</span>(reason.into());
@@ -364,14 +364,14 @@
     <h3>service_status_mut</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a> &lt; &#x27;a &gt; (state : &amp; &#x27;a mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; &amp; &#x27;a mut PluginServiceStatus , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a> &lt; &#x27;a &gt; (state : &amp; &#x27;a mut <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> , service_instance_id : &amp; str ,) -&gt; Result &lt; &amp; &#x27;a mut PluginServiceStatus , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> service_status_mut&lt;&#x27;a&gt;(
     state: &amp;&#x27;a <span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;&amp;&#x27;a <span class="rs-kw">mut</span> <span class="rs-type">PluginServiceStatus</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a <span class="rs-kw">mut</span> <span class="rs-type">PluginServiceStatus</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     state
         .loaded
         .values_mut()
@@ -566,7 +566,7 @@
     <h3>service_overlay_for_snapshot</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a> (key : &amp; PluginServiceKey , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a> (key : &amp; PluginServiceKey , snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: all</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -574,7 +574,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a>(
     key: &amp;<span class="rs-type">PluginServiceKey</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(
         &quot;plugin-service&quot;,
         &amp;format!(&quot;{}-{}&quot;, key.service_id, snapshot.manifest_key),
@@ -596,7 +596,7 @@
     <h3>service_overlay_for_snapshot</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a> (_key : &amp; PluginServiceKey , _snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a> (_key : &amp; PluginServiceKey , _snapshot : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a> ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>cfg: any</span><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -610,7 +610,7 @@
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a>(
     _key: &amp;<span class="rs-type">PluginServiceKey</span>,
     _snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
 }
 </code></pre>
@@ -716,10 +716,10 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-spawn-service-processes-51">spawn_service_processes</a>(
     specs: &amp;[<span class="rs-type">PluginProcessSpec</span>],
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> started = <span class="rs-type">Vec</span>::with_capacity(specs.len());
     <span class="rs-kw">for</span> spec <span class="rs-kw">in</span> specs {
-        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(spec.key(), &quot;start&quot;)?;
+        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(&amp;spec.key, &quot;start&quot;)?;
         <span class="rs-kw">let</span> (process, client) = <span class="rs-kw">match</span> <span class="rs-kw">super</span>::process::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-process-rs.html#item-fn-spawn-connected-with-overlay-37">spawn_connected_with_overlay</a>(
             spec,
             snapshot.overlay.as_ref(),
@@ -744,7 +744,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-insert-started-service-processes-78">insert_started_service_processes</a>(
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     started_services: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-StartedPluginService-29">StartedPluginService</a>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> started_count = 0;
     <span class="rs-kw">for</span> started <span class="rs-kw">in</span> started_services {
         <span class="rs-kw">if</span> state
@@ -778,7 +778,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-acquire-service-snapshot-112">acquire_service_snapshot</a>(
     key: &amp;<span class="rs-type">PluginServiceKey</span>,
     reason: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(&amp;key.layer_stack_root))?;
     <span class="rs-kw">let</span> lease = stack.<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-runtime-rs.html#method-acquire-snapshot-46">acquire_snapshot</a>(&amp;format!(
         &quot;plugin-service:{}:{}:{reason}&quot;,
@@ -789,7 +789,7 @@
     <span class="rs-type">Ok</span>(snapshot)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a>(layer_stack_root: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-active-manifest-key-126">active_manifest_key</a>(layer_stack_root: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(<span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-97">from</a>(layer_stack_root))?.read_active_manifest()?;
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-manifest-key-326">manifest_key</a>(
         manifest.version,
@@ -811,7 +811,7 @@
     service_instance_id: &amp;str,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
     refreshed: bool,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Ready</span>;
     status.manifest_key = <span class="rs-type">Some</span>(snapshot.manifest_key.clone());
@@ -825,7 +825,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-mark-service-restarted-159">mark_service_restarted</a>(
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.restart_count = status.restart_count.saturating_add(1);
     <span class="rs-type">Ok</span>(())
@@ -835,7 +835,7 @@
     state: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
     reason: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-status-mut-186">service_status_mut</a>(state, service_instance_id)?;
     status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Stale</span>;
     status.last_error = <span class="rs-type">Some</span>(reason.into());
@@ -852,7 +852,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> service_status_mut&lt;&#x27;a&gt;(
     state: &amp;&#x27;a <span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>,
     service_instance_id: &amp;str,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;&amp;&#x27;a <span class="rs-kw">mut</span> <span class="rs-type">PluginServiceStatus</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a <span class="rs-kw">mut</span> <span class="rs-type">PluginServiceStatus</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     state
         .loaded
         .values_mut()
@@ -962,7 +962,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a>(
     key: &amp;<span class="rs-type">PluginServiceKey</span>,
     snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(
         &quot;plugin-service&quot;,
         &amp;format!(&quot;{}-{}&quot;, key.service_id, snapshot.manifest_key),
@@ -985,7 +985,7 @@
 <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-service-rs.html#item-fn-service-overlay-for-snapshot-295">service_overlay_for_snapshot</a>(
     _key: &amp;<span class="rs-type">PluginServiceKey</span>,
     _snapshot: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-service-rs.html#item-struct-PluginServiceSnapshot-20">PluginServiceSnapshot</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-process-rs.html#item-struct-PluginServiceOverlay-29">PluginServiceOverlay</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
 }
 

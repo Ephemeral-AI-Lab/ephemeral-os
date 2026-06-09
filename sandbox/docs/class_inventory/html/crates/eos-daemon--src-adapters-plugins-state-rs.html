@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -94,11 +94,11 @@
     <h3>lock_state</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; MutexGuard &lt; &#x27;static , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a> () -&gt; Result &lt; MutexGuard &lt; &#x27;static , <a class="symbol-link" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a> &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>()
         .lock()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin registry&quot;))
@@ -451,7 +451,7 @@
     <span class="rs-type">STATE</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-audit-buffer-rs.html#method-default-210">default</a>()))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-lock-state-60">lock_state</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-state-rs.html#item-struct-DaemonPluginState-45">DaemonPluginState</a>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-state-rs.html#item-fn-state-cell-55">state_cell</a>()
         .lock()
         .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin registry&quot;))

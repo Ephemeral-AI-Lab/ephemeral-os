@@ -5,7 +5,7 @@
 
 /// Build the public op name the daemon dispatcher registers: `plugin.<plugin>.<op>`.
 #[must_use]
-pub fn public_op_name(plugin_name: &str, op_name: &str) -> String {
+pub(crate) fn public_op_name(plugin_name: &str, op_name: &str) -> String {
     format!("plugin.{plugin_name}.{op_name}")
 }
 

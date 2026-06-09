@@ -64,9 +64,9 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-workspace-run/src/lib.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Caller-keyed workspace-run host: the composition tier that drives ephemeral</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Caller-keyed workspace-run tier: the composition tier that drives ephemeral</span>
 <span class="rs-comment">//! and isolated command-session runs over the `eos-command-session` PTY</span>
-<span class="rs-comment">//! substrate and the `eos-ephemeral`/`eos-isolated-workspace` lifecycle.</span>
+<span class="rs-comment">//! substrate and the `eos-workspace-modes` `ephemeral`/`isolated` lifecycle.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! This crate is `eos-occ`-free by construction — the build-time no-publish</span>
 <span class="rs-comment">//! guard. The three daemon-resident seams (the OCC single-writer publish, the</span>

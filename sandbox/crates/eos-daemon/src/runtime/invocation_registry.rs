@@ -25,15 +25,11 @@ pub const DEFAULT_REAPER_INTERVAL_S: f64 = 30.0;
 
 /// One tracked daemon-side invocation.
 #[derive(Debug)]
-pub struct InFlightInvocation {
-    /// The invocation id (registry key).
-    pub invocation_id: String,
+pub(crate) struct InFlightInvocation {
     /// Abort handle to the running task (cancel target).
     pub abort: AbortHandle,
     /// Caller that owns this invocation (for per-caller counts).
     pub caller_id: String,
-    /// The op name (for diagnostics).
-    pub op: String,
     /// Monotonic seconds of the last heartbeat / registration.
     pub last_seen: f64,
     /// Whether this is a background invocation (only background entries reap).
@@ -89,7 +85,6 @@ impl InFlightRegistry {
         invocation_id: &str,
         abort: AbortHandle,
         caller_id: &str,
-        op: &str,
         background: bool,
     ) {
         if invocation_id.is_empty() {
@@ -99,10 +94,8 @@ impl InFlightRegistry {
         state.by_invocation.insert(
             invocation_id.to_owned(),
             InFlightInvocation {
-                invocation_id: invocation_id.to_owned(),
                 abort,
                 caller_id: caller_id.to_owned(),
-                op: op.to_owned(),
                 last_seen: monotonic_seconds(),
                 background,
                 process_group_id: None,
@@ -269,7 +262,6 @@ mod tests {
             "bg-1",
             task.abort_handle(),
             "caller-a",
-            "api.v1.exec_command",
             true,
         );
 
@@ -308,7 +300,6 @@ mod tests {
             "bg-poisoned",
             task.abort_handle(),
             "caller-a",
-            "api.v1.exec_command",
             true,
         );
 
@@ -330,7 +321,6 @@ mod tests {
             "bg-ttl",
             task.abort_handle(),
             "caller-a",
-            "api.v1.exec_command",
             true,
         );
 

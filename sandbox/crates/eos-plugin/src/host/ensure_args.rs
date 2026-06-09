@@ -8,11 +8,13 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use crate::host::package::{package_roots, PackageRoots};
 use crate::host::route::{PluginOperationRoute, PluginProcessSpec};
-use crate::host::{package_roots, PackageRoots, PpcError};
+use crate::host::PpcError;
+use crate::registry::public_op_name;
 use crate::{
-    public_op_name, PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts,
-    PluginServiceManifest, PluginServiceState, PluginServiceStatus, ServiceMode,
+    PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts, PluginServiceManifest,
+    PluginServiceState, PluginServiceStatus, ServiceMode,
 };
 
 pub const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;

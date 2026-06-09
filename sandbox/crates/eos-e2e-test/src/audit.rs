@@ -128,8 +128,7 @@ impl AuditTap {
 }
 
 /// The `type` of a pulled audit event.
-#[must_use]
-pub fn type_of(event: &Value) -> Option<&str> {
+fn type_of(event: &Value) -> Option<&str> {
     event.get("type").and_then(Value::as_str)
 }
 

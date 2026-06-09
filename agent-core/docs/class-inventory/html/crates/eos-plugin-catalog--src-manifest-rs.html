@@ -154,7 +154,7 @@
         path: manifest_path.clone(),
         cause,
     })?;
-    <span class="rs-kw">let</span> (frontmatter, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&amp;text)
+    <span class="rs-kw">let</span> (frontmatter, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&amp;text)
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-plugin-catalog--src-error-rs.html#item-enum-PluginCatalogError-11">PluginCatalogError</a>::<span class="rs-type">MissingFrontmatter</span>(manifest_path.clone()))?;
 
     <span class="rs-kw">let</span> value: serde_yaml::<span class="rs-type">Value</span> =
@@ -836,7 +836,7 @@
         path: manifest_path.clone(),
         cause,
     })?;
-    <span class="rs-kw">let</span> (frontmatter, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-20">split_frontmatter</a>(&amp;text)
+    <span class="rs-kw">let</span> (frontmatter, body) = <a class="symbol-link rs-fn" href="eos-plugin-catalog--src-frontmatter-rs.html#item-fn-split-frontmatter-19">split_frontmatter</a>(&amp;text)
         .ok_or_else(|| <a class="symbol-link rs-type" href="eos-plugin-catalog--src-error-rs.html#item-enum-PluginCatalogError-11">PluginCatalogError</a>::<span class="rs-type">MissingFrontmatter</span>(manifest_path.clone()))?;
 
     <span class="rs-kw">let</span> value: serde_yaml::<span class="rs-type">Value</span> =

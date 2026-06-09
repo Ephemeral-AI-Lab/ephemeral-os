@@ -5649,7 +5649,7 @@
       "path": "crates/eos-daemon",
       "stats": {
         "modules": 50,
-        "items": 447,
+        "items": 446,
         "structs": 38,
         "enums": 2,
         "traits": 0,
@@ -6264,8 +6264,8 @@
             {
               "kind": "fn",
               "name": "ephemeral_dir_allocator",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn ephemeral_dir_allocator () -> Result < EphemeralDirAllocator , DaemonError >",
+              "visibility": "private",
+              "signature": "fn ephemeral_dir_allocator () -> Result < EphemeralDirAllocator , DaemonError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -6312,8 +6312,8 @@
             {
               "kind": "fn",
               "name": "overlay_daemon_error",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn overlay_daemon_error (context : & str , err : & eos_overlay :: OverlayError) -> DaemonError",
+              "visibility": "private",
+              "signature": "fn overlay_daemon_error (context : & str , err : & eos_overlay :: OverlayError) -> DaemonError",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -6360,8 +6360,8 @@
             {
               "kind": "fn",
               "name": "path_change_kind_wire",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn path_change_kind_wire (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -> & 'static str",
+              "visibility": "private",
+              "signature": "fn path_change_kind_wire (kind : eos_workspace_modes :: ephemeral :: PathChangeKind) -> & 'static str",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -9622,8 +9622,8 @@
             {
               "kind": "fn",
               "name": "cancel_all_workspace_runs",
-              "visibility": "pub",
-              "signature": "pub fn cancel_all_workspace_runs (grace_s : Option < f64 >) -> (usize , usize)",
+              "visibility": "private",
+              "signature": "fn cancel_all_workspace_runs (grace_s : Option < f64 >) -> (usize , usize)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -12618,8 +12618,8 @@
             {
               "kind": "fn",
               "name": "error_envelope",
-              "visibility": "pub",
-              "signature": "pub fn error_envelope (kind : ErrorKind , message : & str , details : Value) -> Value",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn error_envelope (kind : ErrorKind , message : & str , details : Value) -> Value",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -13958,22 +13958,6 @@
               "file": "crates/eos-daemon/src/runtime/error.rs",
               "module": "runtime::error",
               "line": 115
-            },
-            {
-              "kind": "type",
-              "name": "Result",
-              "visibility": "pub",
-              "signature": "pub type Result< T > = core :: result :: Result < T , DaemonError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Convenience alias for fallible daemon operations.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/runtime/error.rs",
-              "module": "runtime::error",
-              "line": 131
             }
           ]
         },
@@ -13984,8 +13968,8 @@
             {
               "kind": "struct",
               "name": "InFlightInvocation",
-              "visibility": "pub",
-              "signature": "pub struct InFlightInvocation",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct InFlightInvocation",
               "fields": [
                 {
                   "name": "invocation_id",
@@ -16872,7 +16856,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Tracks active snapshot leases and the layers they retain on disk.\n\nRust guards this with a `threading.RLock` and a `Counter[LayerRef]`\nrefcount; the Rust port keeps the same refcount semantics.",
+              "docs": "Tracks active snapshot leases and the layers they retain on disk.\n\nA per-layer `BTreeMap` refcount tracks retention; concurrent access is\nserialized by the surrounding `SharedLeaseRegistry` (`Arc<Mutex<…>>`),\nnot by this struct itself.",
               "tags": [
                 "derive: Debug",
                 "derive: Default"
@@ -16895,7 +16879,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 41
+              "line": 42
             },
             {
               "kind": "fn",
@@ -16911,7 +16895,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 43
+              "line": 44
             },
             {
               "kind": "fn",
@@ -16927,7 +16911,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 62
+              "line": 63
             },
             {
               "kind": "fn",
@@ -16943,7 +16927,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 70
+              "line": 71
             },
             {
               "kind": "impl",
@@ -16958,42 +16942,42 @@
                   "signature": "pub fn new () -> Self",
                   "kind": "constructor",
                   "docs": "Create an empty registry.",
-                  "line": 79
+                  "line": 80
                 },
                 {
                   "name": "acquire",
                   "signature": "pub fn acquire (& mut self , manifest : Manifest , owner_request_id : & str ,) -> Result < LayerStackLeaseRecord , LayerStackError >",
                   "kind": "method",
                   "docs": "Register a new lease over `manifest`, owned by `owner_request_id`,\nincrementing the per-layer refcount. Rejects an empty owner id.\n\n# Errors\n\nReturns [`LayerStackError::InvalidLeaseOwner`] when `owner_request_id` is\nempty.",
-                  "line": 85
+                  "line": 86
                 },
                 {
                   "name": "release",
                   "signature": "pub fn release (& mut self , lease_id : & str) -> Option < LayerStackLeaseRecord >",
                   "kind": "method",
                   "docs": "Release a lease by id, decrementing per-layer refcounts. Returns the\nreleased record, or `None` if the id was unknown.",
-                  "line": 113
+                  "line": 114
                 },
                 {
                   "name": "leased_layers",
                   "signature": "pub fn leased_layers (& self) -> Vec < LayerRef >",
                   "kind": "method",
                   "docs": "FULL on-disk retention set (sorted): every layer pinned by an active\nlease. This is the GC keep-set. DISTINCT from [`Self::lease_head_layers`].",
-                  "line": 130
+                  "line": 131
                 },
                 {
                   "name": "lease_head_layers",
                   "signature": "pub fn lease_head_layers (& self) -> Vec < LayerRef >",
                   "kind": "method",
                   "docs": "SQUASH-KEEP barrier set (sorted): the newest layer of each active\nlease's manifest. DISTINCT from (a subset of) [`Self::leased_layers`].",
-                  "line": 136
+                  "line": 137
                 },
                 {
                   "name": "active_count",
                   "signature": "pub fn active_count (& self) -> usize",
                   "kind": "method",
                   "docs": "Number of active leases.",
-                  "line": 149
+                  "line": 150
                 }
               ],
               "impl_target": "LeaseRegistry",
@@ -17004,7 +16988,7 @@
               ],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 78
+              "line": 79
             },
             {
               "kind": "struct",
@@ -17038,7 +17022,7 @@
               ],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 156
+              "line": 157
             },
             {
               "kind": "impl",
@@ -17053,7 +17037,7 @@
                   "signature": "fn from (layer : & LayerRef) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 163
+                  "line": 164
                 }
               ],
               "impl_target": "LayerRefKey",
@@ -17065,7 +17049,7 @@
               ],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 162
+              "line": 163
             },
             {
               "kind": "impl",
@@ -17080,7 +17064,7 @@
                   "signature": "fn from (layer : & LayerRefKey) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 172
+                  "line": 173
                 }
               ],
               "impl_target": "LayerRef",
@@ -17092,7 +17076,7 @@
               ],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 171
+              "line": 172
             },
             {
               "kind": "fn",
@@ -17108,7 +17092,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 180
+              "line": 181
             },
             {
               "kind": "fn",
@@ -17124,7 +17108,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease",
-              "line": 190
+              "line": 191
             },
             {
               "kind": "type",
@@ -17140,7 +17124,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease::tests",
-              "line": 199
+              "line": 200
             },
             {
               "kind": "fn",
@@ -17158,7 +17142,7 @@
               ],
               "file": "crates/eos-layerstack/src/lease.rs",
               "module": "lease::tests",
-              "line": 201
+              "line": 202
             }
           ]
         },
@@ -17310,7 +17294,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (layers : Vec < LayerRef >) -> Result < Self , LayerStackError >",
+                  "signature": "pub(crate) fn new (layers : Vec < LayerRef >) -> Result < Self , LayerStackError >",
                   "kind": "constructor",
                   "docs": "Construct a segment, enforcing the >=2-layer invariant.\n\n# Errors\n\nReturns [`LayerStackError::InvalidSquashPlan`] when fewer than two\nlayers are provided.",
                   "line": 35
@@ -17415,7 +17399,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (active_version : i64 , active_layers : Vec < LayerRef > , entries : Vec < SquashPlanEntry > ,) -> Result < Self , LayerStackError >",
+                  "signature": "pub(crate) fn new (active_version : i64 , active_layers : Vec < LayerRef > , entries : Vec < SquashPlanEntry > ,) -> Result < Self , LayerStackError >",
                   "kind": "constructor",
                   "docs": "Construct + validate (non-empty active layers, non-empty entries, >=1\ncheckpoint segment).\n\n# Errors\n\nReturns [`LayerStackError::InvalidSquashPlan`] when the plan has no\nactive layers, no entries, or no foldable checkpoint segment.",
                   "line": 72
@@ -17491,21 +17475,21 @@
                 },
                 {
                   "name": "build_checkpoint",
-                  "signature": "pub fn build_checkpoint (& self , segment : & CheckpointSegment , active_version : i64 ,) -> Result < LayerRef , LayerStackError >",
+                  "signature": "pub(crate) fn build_checkpoint (& self , segment : & CheckpointSegment , active_version : i64 ,) -> Result < LayerRef , LayerStackError >",
                   "kind": "method",
                   "docs": "Project a segment's layers into a fresh checkpoint layer directory and\nreturn its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).\n\n# Errors\n\nReturns [`LayerStackError`] when checkpoint paths cannot be allocated,\nthe segment cannot be projected, or the staging directory cannot be\npersisted as a layer.",
                   "line": 200
                 },
                 {
                   "name": "relabel_checkpoint",
-                  "signature": "pub fn relabel_checkpoint (& self , checkpoint : & LayerRef , manifest_version : i64 ,) -> Result < LayerRef , LayerStackError >",
+                  "signature": "pub(crate) fn relabel_checkpoint (& self , checkpoint : & LayerRef , manifest_version : i64 ,) -> Result < LayerRef , LayerStackError >",
                   "kind": "method",
                   "docs": "Rename a prebuilt checkpoint so its id matches the publishing manifest\nversion (the `B{manifest_version:06}-…` prefix invariant).\n\n# Errors\n\nReturns [`LayerStackError`] when the checkpoint path is invalid, missing,\nor cannot be renamed into its final layer id.",
                   "line": 239
                 },
                 {
                   "name": "discard_checkpoint",
-                  "signature": "pub fn discard_checkpoint (& self , checkpoint : & LayerRef) -> Result < () , LayerStackError >",
+                  "signature": "pub(crate) fn discard_checkpoint (& self , checkpoint : & LayerRef) -> Result < () , LayerStackError >",
                   "kind": "method",
                   "docs": "Best-effort removal of an uncommitted checkpoint (rollback path).\n\n# Errors\n\nReturns [`LayerStackError`] when the checkpoint path is invalid or\nremoval fails for a reason other than the path already being absent.",
                   "line": 277
@@ -17538,8 +17522,8 @@
             {
               "kind": "fn",
               "name": "manifest_prefix_before_plan",
-              "visibility": "pub",
-              "signature": "pub fn manifest_prefix_before_plan < 'm > (manifest : & 'm Manifest , plan : & SquashPlan ,) -> Option < & 'm [LayerRef] >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn manifest_prefix_before_plan < 'm > (manifest : & 'm Manifest , plan : & SquashPlan ,) -> Option < & 'm [LayerRef] >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -18158,7 +18142,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "fsync every non-symlink regular file under `root` (the staged layer tree),\nmatching `os.walk(followlinks=False)` + `is_file()` filtering. Special\nfiles (char-device whiteouts) and symlinks are skipped — fsync is N/A.",
+              "docs": "fsync every non-symlink regular file under `root` (the staged layer tree).\nRecurses via `read_dir` and uses `symlink_metadata` so symlinks are not\nfollowed; special files (char-device whiteouts) and symlinks are skipped —\nfsync is N/A for them.",
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/fs.rs",
               "module": "stack::fs",
@@ -18504,8 +18488,8 @@
             {
               "kind": "struct",
               "name": "StorageWriterLockLease",
-              "visibility": "pub",
-              "signature": "pub struct StorageWriterLockLease",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct StorageWriterLockLease",
               "fields": [
                 {
                   "name": "key",
@@ -18523,7 +18507,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 44
+              "line": 41
             },
             {
               "kind": "impl",
@@ -18538,28 +18522,28 @@
                   "signature": "pub fn acquire (storage_root : & Path) -> Result < Self , LayerStackError >",
                   "kind": "associated-fn",
                   "docs": "Acquire (or refcount-bump) the dual-layer writer lease for `storage_root`.\n\nFails with [`LayerStackError::StorageRootOwned`] if another process holds\nthe `flock`. The registry key is the canonicalized absolute path.\n\n# Errors\n\nReturns [`LayerStackError`] when the storage root cannot be created,\ncanonicalized/locked, or when the process-local registry is poisoned.",
-                  "line": 55
+                  "line": 52
                 },
                 {
                   "name": "shared",
                   "signature": "pub fn shared (& self) -> Result < SharedGuard < '_ > , LayerStackError >",
                   "kind": "method",
                   "docs": "Enter the in-process shared read guard for this root.\n\nMultiple shared guards can coexist. An active writer excludes new readers,\nand pending writers block new readers so write-side maintenance is not\nstarved by a stream of snapshots.\n\n# Errors\n\nReturns [`LayerStackError`] when the registry or lock state is poisoned, or\nwhen this lease has already been closed.",
-                  "line": 106
+                  "line": 103
                 },
                 {
                   "name": "exclusive",
                   "signature": "pub fn exclusive (& self) -> Result < ExclusiveGuard < '_ > , LayerStackError >",
                   "kind": "method",
                   "docs": "Enter the in-process exclusive (reentrant) write guard for this root.\n\nSee the module-level DEADLOCK TRAP: the returned guard must tolerate\nsame-thread re-entry (a reentrant write lock).\n\nCAUTION: re-entry is write-over-write only. Calling `exclusive()` while\nthe same thread still holds a [`SharedGuard`] for this root self-deadlocks\n(the writer waits for `readers == 0`, which includes its own read). Drop\nthe shared guard before acquiring the exclusive one.\n\n# Errors\n\nReturns [`LayerStackError`] when the registry or reentrant lock state is\npoisoned, or when this lease has already been closed.",
-                  "line": 125
+                  "line": 122
                 },
                 {
                   "name": "lock",
                   "signature": "fn lock (& self) -> Result < Arc < ReentrantRwLock > , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 148
+                  "line": 145
                 }
               ],
               "impl_target": "StorageWriterLockLease",
@@ -18570,7 +18554,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 54
+              "line": 51
             },
             {
               "kind": "impl",
@@ -18585,7 +18569,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 158
+                  "line": 155
                 }
               ],
               "impl_target": "StorageWriterLockLease",
@@ -18597,7 +18581,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 157
+              "line": 154
             },
             {
               "kind": "struct",
@@ -18626,7 +18610,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 175
+              "line": 172
             },
             {
               "kind": "impl",
@@ -18641,7 +18625,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 183
+                  "line": 180
                 }
               ],
               "impl_target": "SharedGuard < '_ >",
@@ -18653,7 +18637,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 182
+              "line": 179
             },
             {
               "kind": "struct",
@@ -18682,7 +18666,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 188
+              "line": 185
             },
             {
               "kind": "impl",
@@ -18697,7 +18681,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 196
+                  "line": 193
                 }
               ],
               "impl_target": "ExclusiveGuard < '_ >",
@@ -18709,7 +18693,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 195
+              "line": 192
             },
             {
               "kind": "struct",
@@ -18743,7 +18727,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 201
+              "line": 198
             },
             {
               "kind": "struct",
@@ -18773,7 +18757,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 208
+              "line": 205
             },
             {
               "kind": "struct",
@@ -18813,7 +18797,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 214
+              "line": 211
             },
             {
               "kind": "impl",
@@ -18828,28 +18812,28 @@
                   "signature": "fn read (& self) -> Result < () , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 223
+                  "line": 220
                 },
                 {
                   "name": "read_unlock",
                   "signature": "fn read_unlock (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 242
+                  "line": 239
                 },
                 {
                   "name": "write",
                   "signature": "fn write (& self) -> Result < () , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 254
+                  "line": 251
                 },
                 {
                   "name": "write_unlock",
                   "signature": "fn write_unlock (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 283
+                  "line": 280
                 }
               ],
               "impl_target": "ReentrantRwLock",
@@ -18860,7 +18844,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 222
+              "line": 219
             },
             {
               "kind": "fn",
@@ -18876,7 +18860,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 301
+              "line": 298
             },
             {
               "kind": "fn",
@@ -18892,7 +18876,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock",
-              "line": 306
+              "line": 303
             },
             {
               "kind": "type",
@@ -18908,7 +18892,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 321
+              "line": 318
             },
             {
               "kind": "fn",
@@ -18926,7 +18910,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 325
+              "line": 322
             },
             {
               "kind": "fn",
@@ -18944,7 +18928,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 365
+              "line": 362
             },
             {
               "kind": "fn",
@@ -18960,7 +18944,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 395
+              "line": 392
             },
             {
               "kind": "struct",
@@ -18982,7 +18966,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 401
+              "line": 398
             },
             {
               "kind": "impl",
@@ -18997,7 +18981,7 @@
                   "signature": "fn new (label : & str) -> TestResult < Self >",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 406
+                  "line": 403
                 }
               ],
               "impl_target": "Fixture",
@@ -19008,7 +18992,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 405
+              "line": 402
             },
             {
               "kind": "impl",
@@ -19023,7 +19007,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 419
+                  "line": 416
                 }
               ],
               "impl_target": "Fixture",
@@ -19035,7 +19019,7 @@
               ],
               "file": "crates/eos-layerstack/src/storage_lock.rs",
               "module": "storage_lock::tests",
-              "line": 418
+              "line": 415
             }
           ]
         },
@@ -20183,7 +20167,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "`unshare` the full namespace stack on the calling (single-threaded) task and\npin the resulting `/proc/self/ns/*` FDs.\n\nThis is the Rust *consolidation* of the former Rust launcher's\n`unshare(1)` flags. The previous path spawned the holder process via\n`unshare --user --map-root-user --net --pid --mount --fork --kill-child\n--propagation private`, so the namespaces were created by the `unshare`\nbinary, not inside the holder process. The Rust holder owns that step directly:\n`unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the\nuid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own\n`ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].\n\n# Safety\n\nThis function MUST run on a single-threaded process; the kernel rejects\n`CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no\ntokio dependency and is invoked through the dedicated `eosd ns-holder`\nsubprocess.",
+              "docs": "`unshare` the full namespace stack on the calling (single-threaded) task and\npin the resulting `/proc/self/ns/*` FDs.\n\nThis consolidates the `unshare(1)` flags of the former launcher that shelled\nout to the `unshare` binary. That path spawned the holder process via\n`unshare --user --map-root-user --net --pid --mount --fork --kill-child\n--propagation private`, so the namespaces were created by the `unshare`\nbinary, not inside the holder process. The Rust holder owns that step directly:\n`unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the\nuid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own\n`ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].\n\n# Safety\n\nThis function MUST run on a single-threaded process; the kernel rejects\n`CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no\ntokio dependency and is invoked through the dedicated `eosd ns-holder`\nsubprocess.",
               "tags": [
                 "cfg: target_os"
               ],
@@ -21272,7 +21256,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 49
+              "line": 48
             },
             {
               "kind": "trait",
@@ -21287,7 +21271,7 @@
                   "signature": "fn revalidate_and_publish (& self , combined : & PreparedChangeset ,) -> Result < ChangesetResult , PublishConflict >",
                   "kind": "required",
                   "docs": "Revalidate the base hash and atomically publish, or signal a CAS\nconflict so the queue can retry.\n\n# Errors\n\nReturns [`PublishConflict`] when the manifest CAS base is stale.",
-                  "line": 74
+                  "line": 73
                 }
               ],
               "impl_target": null,
@@ -21298,7 +21282,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 67
+              "line": 66
             },
             {
               "kind": "struct",
@@ -21326,7 +21310,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 86
+              "line": 85
             },
             {
               "kind": "struct",
@@ -21358,7 +21342,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 94
+              "line": 93
             },
             {
               "kind": "enum",
@@ -21389,7 +21373,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 102
+              "line": 101
             },
             {
               "kind": "struct",
@@ -21448,7 +21432,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 108
+              "line": 107
             },
             {
               "kind": "struct",
@@ -21490,7 +21474,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 123
+              "line": 122
             },
             {
               "kind": "impl",
@@ -21505,42 +21489,42 @@
                   "signature": "pub fn new (transaction : T) -> Self",
                   "kind": "constructor",
                   "docs": "Build a queue with default batching/retry tuning.",
-                  "line": 132
+                  "line": 131
                 },
                 {
                   "name": "with_config",
                   "signature": "pub fn with_config (transaction : T , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build a queue with explicit batching/retry tuning.\n\nClamps to match Rust: `max_batch_size >= 1`, `batch_window_s >= 0.0`,\n`max_cas_retries >= 1`.",
-                  "line": 142
+                  "line": 141
                 },
                 {
                   "name": "start",
                   "signature": "pub fn start (& mut self) -> Result < () , OccError >",
                   "kind": "method",
                   "docs": "Spawn the single `occ-commit-queue` consumer thread.\n\n# Errors\n\nReturns [`OccError`] when the queue is closed, has already consumed its\nstartup state, or the worker thread cannot be spawned.",
-                  "line": 165
+                  "line": 164
                 },
                 {
                   "name": "close",
                   "signature": "pub fn close (& mut self) -> Result < () , OccError >",
                   "kind": "method",
                   "docs": "Stop the worker after pending queued work drains.\n\n# Errors\n\nReturns [`OccError::WorkerPanicked`] when the worker thread panicked.",
-                  "line": 211
+                  "line": 210
                 },
                 {
                   "name": "submit",
                   "signature": "pub fn submit (& self , prepared : PreparedChangeset ,) -> Result < mpsc :: Receiver < Result < ChangesetResult , OccError > > , OccError >",
                   "kind": "method",
                   "docs": "Enqueue a prepared changeset and return a reply receiver to await on.\n\nThe reply channel is the std analogue of a tokio `oneshot`; the async\ndaemon awaits it off-thread without the queue holding any lock across\n`.await` (RUST-GUIDANCE §5).\n\n# Errors\n\nReturns [`OccError::QueueClosed`] if the queue is closed/disconnected and\n[`OccError::QueueNotStarted`] if no live worker is available.",
-                  "line": 230
+                  "line": 229
                 },
                 {
                   "name": "commit_batch",
                   "signature": "fn commit_batch (transaction : & T , batch : Vec < WorkItem > , max_cas_retries : u32)",
                   "kind": "associated-fn",
                   "docs": "Commit one disjoint batch with the bounded CAS-retry loop, fanning each\npath's [`FileResult`](crate::FileResult) back to its submitter.",
-                  "line": 265
+                  "line": 264
                 }
               ],
               "impl_target": "CommitQueue < T >",
@@ -21551,7 +21535,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 131
+              "line": 130
             },
             {
               "kind": "impl",
@@ -21566,7 +21550,7 @@
                   "signature": "fn run (self)",
                   "kind": "method",
                   "docs": "Consumer loop: block for the first item, non-blocking-drain the rest,\npay the batch window only with headroom, then commit disjoint batches.",
-                  "line": 309
+                  "line": 308
                 }
               ],
               "impl_target": "CommitWorker < T >",
@@ -21577,7 +21561,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 308
+              "line": 307
             },
             {
               "kind": "fn",
@@ -21593,7 +21577,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 332
+              "line": 331
             },
             {
               "kind": "fn",
@@ -21609,7 +21593,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 347
+              "line": 346
             },
             {
               "kind": "fn",
@@ -21625,7 +21609,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 351
+              "line": 350
             },
             {
               "kind": "fn",
@@ -21641,7 +21625,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 387
+              "line": 386
             },
             {
               "kind": "fn",
@@ -21657,7 +21641,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 407
+              "line": 406
             },
             {
               "kind": "fn",
@@ -21673,7 +21657,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue",
-              "line": 424
+              "line": 423
             },
             {
               "kind": "type",
@@ -21689,7 +21673,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 471
+              "line": 470
             },
             {
               "kind": "struct",
@@ -21718,7 +21702,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 473
+              "line": 472
             },
             {
               "kind": "impl",
@@ -21733,7 +21717,7 @@
                   "signature": "fn new (conflicts_before_success : u32) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 480
+                  "line": 479
                 }
               ],
               "impl_target": "RecordingTransaction",
@@ -21744,7 +21728,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 479
+              "line": 478
             },
             {
               "kind": "impl",
@@ -21759,7 +21743,7 @@
                   "signature": "fn revalidate_and_publish (& self , combined : & PreparedChangeset ,) -> Result < ChangesetResult , PublishConflict >",
                   "kind": "method",
                   "docs": null,
-                  "line": 489
+                  "line": 488
                 }
               ],
               "impl_target": "RecordingTransaction",
@@ -21771,7 +21755,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 488
+              "line": 487
             },
             {
               "kind": "fn",
@@ -21787,7 +21771,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 530
+              "line": 529
             },
             {
               "kind": "fn",
@@ -21803,7 +21787,7 @@
               "tags": [],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 548
+              "line": 547
             },
             {
               "kind": "fn",
@@ -21821,7 +21805,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 557
+              "line": 556
             },
             {
               "kind": "fn",
@@ -21839,7 +21823,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 581
+              "line": 580
             },
             {
               "kind": "fn",
@@ -21857,7 +21841,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 606
+              "line": 605
             },
             {
               "kind": "fn",
@@ -21875,7 +21859,7 @@
               ],
               "file": "crates/eos-occ/src/commit_queue.rs",
               "module": "commit_queue::tests",
-              "line": 627
+              "line": 626
             }
           ]
         },
@@ -24020,8 +24004,8 @@
             {
               "kind": "enum",
               "name": "OverlayPathChangeKind",
-              "visibility": "pub",
-              "signature": "pub enum OverlayPathChangeKind",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) enum OverlayPathChangeKind",
               "fields": [],
               "variants": [
                 {
@@ -24059,8 +24043,8 @@
             {
               "kind": "struct",
               "name": "OverlayPathChange",
-              "visibility": "pub",
-              "signature": "pub struct OverlayPathChange",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct OverlayPathChange",
               "fields": [
                 {
                   "name": "path",
@@ -24629,7 +24613,7 @@
         "functions": 87,
         "impls": 19,
         "fields": 122,
-        "methods": 44
+        "methods": 43
       },
       "modules": [
         {
@@ -24758,7 +24742,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 20
+              "line": 22
             },
             {
               "kind": "fn",
@@ -24774,7 +24758,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 34
+              "line": 36
             },
             {
               "kind": "struct",
@@ -24831,7 +24815,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 56
+              "line": 58
             },
             {
               "kind": "impl",
@@ -24846,14 +24830,14 @@
                   "signature": "pub fn from_args (args : & Value , ppc_socket_root : & str) -> Result < Self , PpcError >",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 70
+                  "line": 72
                 },
                 {
                   "name": "from_manifest",
                   "signature": "fn from_manifest (args : & Value , manifest : PluginManifest , ppc_socket_root : & str ,) -> Result < Self , PpcError >",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 103
+                  "line": 105
                 }
               ],
               "impl_target": "ParsedEnsure",
@@ -24864,7 +24848,7 @@
               ],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 69
+              "line": 71
             },
             {
               "kind": "fn",
@@ -24880,7 +24864,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 144
+              "line": 146
             },
             {
               "kind": "fn",
@@ -24896,7 +24880,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 193
+              "line": 195
             },
             {
               "kind": "fn",
@@ -24912,7 +24896,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 232
+              "line": 234
             },
             {
               "kind": "fn",
@@ -24928,7 +24912,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 241
+              "line": 243
             },
             {
               "kind": "fn",
@@ -24944,7 +24928,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 259
+              "line": 261
             },
             {
               "kind": "fn",
@@ -24960,7 +24944,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 275
+              "line": 277
             },
             {
               "kind": "fn",
@@ -24976,7 +24960,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 282
+              "line": 284
             },
             {
               "kind": "fn",
@@ -24992,7 +24976,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 301
+              "line": 303
             },
             {
               "kind": "fn",
@@ -25008,7 +24992,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 329
+              "line": 331
             },
             {
               "kind": "fn",
@@ -25024,7 +25008,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/ensure_args.rs",
               "module": "host::ensure_args",
-              "line": 344
+              "line": 346
             }
           ]
         },
@@ -25101,7 +25085,7 @@
               ],
               "file": "crates/eos-plugin/src/host/mod.rs",
               "module": "host",
-              "line": 28
+              "line": 26
             }
           ]
         },
@@ -25159,13 +25143,13 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 15
+              "line": 18
             },
             {
               "kind": "struct",
               "name": "PackageRoots",
-              "visibility": "pub",
-              "signature": "pub struct PackageRoots",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct PackageRoots",
               "fields": [
                 {
                   "name": "package_root",
@@ -25191,13 +25175,13 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 27
+              "line": 30
             },
             {
               "kind": "fn",
               "name": "package_roots",
-              "visibility": "pub",
-              "signature": "pub fn package_roots (args : & Value , manifest : & PluginManifest) -> Result < PackageRoots , PpcError >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn package_roots (args : & Value , manifest : & PluginManifest ,) -> Result < PackageRoots , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -25207,7 +25191,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 34
+              "line": 37
             },
             {
               "kind": "fn",
@@ -25223,7 +25207,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 42
+              "line": 48
             },
             {
               "kind": "fn",
@@ -25239,7 +25223,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 49
+              "line": 55
             },
             {
               "kind": "fn",
@@ -25255,7 +25239,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 81
+              "line": 87
             },
             {
               "kind": "fn",
@@ -25271,7 +25255,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 94
+              "line": 100
             },
             {
               "kind": "struct",
@@ -25310,7 +25294,7 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 112
+              "line": 118
             },
             {
               "kind": "impl",
@@ -25325,7 +25309,7 @@
                   "signature": "fn new (args : & Value , manifest : & PluginManifest) -> Result < Self , PpcError >",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 121
+                  "line": 127
                 }
               ],
               "impl_target": "PackagePaths",
@@ -25336,7 +25320,7 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 120
+              "line": 126
             },
             {
               "kind": "fn",
@@ -25352,7 +25336,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 144
+              "line": 150
             },
             {
               "kind": "fn",
@@ -25368,7 +25352,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 158
+              "line": 164
             },
             {
               "kind": "fn",
@@ -25384,7 +25368,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 175
+              "line": 181
             },
             {
               "kind": "fn",
@@ -25400,7 +25384,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 201
+              "line": 207
             },
             {
               "kind": "fn",
@@ -25416,7 +25400,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 228
+              "line": 234
             },
             {
               "kind": "fn",
@@ -25432,7 +25416,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 245
+              "line": 251
             },
             {
               "kind": "fn",
@@ -25448,7 +25432,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 262
+              "line": 268
             },
             {
               "kind": "fn",
@@ -25464,7 +25448,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 293
+              "line": 299
             },
             {
               "kind": "fn",
@@ -25480,7 +25464,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 311
+              "line": 317
             },
             {
               "kind": "fn",
@@ -25496,7 +25480,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 316
+              "line": 322
             },
             {
               "kind": "fn",
@@ -25512,7 +25496,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 349
+              "line": 355
             },
             {
               "kind": "fn",
@@ -25528,7 +25512,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 395
+              "line": 401
             },
             {
               "kind": "fn",
@@ -25544,7 +25528,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 412
+              "line": 418
             },
             {
               "kind": "fn",
@@ -25560,7 +25544,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 423
+              "line": 429
             },
             {
               "kind": "fn",
@@ -25576,7 +25560,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 435
+              "line": 441
             },
             {
               "kind": "fn",
@@ -25592,7 +25576,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 439
+              "line": 445
             },
             {
               "kind": "fn",
@@ -25608,7 +25592,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 445
+              "line": 451
             },
             {
               "kind": "fn",
@@ -25624,7 +25608,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 453
+              "line": 459
             },
             {
               "kind": "fn",
@@ -25640,7 +25624,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package",
-              "line": 472
+              "line": 478
             },
             {
               "kind": "type",
@@ -25656,7 +25640,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package::tests",
-              "line": 515
+              "line": 521
             },
             {
               "kind": "fn",
@@ -25674,7 +25658,7 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package::tests",
-              "line": 517
+              "line": 523
             },
             {
               "kind": "fn",
@@ -25692,7 +25676,7 @@
               ],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package::tests",
-              "line": 547
+              "line": 553
             },
             {
               "kind": "fn",
@@ -25708,7 +25692,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/package.rs",
               "module": "host::package::tests",
-              "line": 587
+              "line": 593
             }
           ]
         },
@@ -26379,13 +26363,6 @@
                   "kind": "method",
                   "docs": null,
                   "line": 135
-                },
-                {
-                  "name": "key",
-                  "signature": "pub const fn key (& self) -> & PluginServiceKey",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 139
                 }
               ],
               "impl_target": "PluginProcessSpec",
@@ -26412,7 +26389,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/route.rs",
               "module": "host::route",
-              "line": 144
+              "line": 140
             },
             {
               "kind": "fn",
@@ -26428,7 +26405,7 @@
               "tags": [],
               "file": "crates/eos-plugin/src/host/route.rs",
               "module": "host::route",
-              "line": 153
+              "line": 149
             }
           ]
         },
@@ -27713,8 +27690,8 @@
             {
               "kind": "fn",
               "name": "public_op_name",
-              "visibility": "pub",
-              "signature": "pub fn public_op_name (plugin_name : & str , op_name : & str) -> String",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn public_op_name (plugin_name : & str , op_name : & str) -> String",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -30777,8 +30754,8 @@
             {
               "kind": "fn",
               "name": "run_fresh_ns",
-              "visibility": "pub",
-              "signature": "pub fn run_fresh_ns (request : & RunRequest , config : & crate :: config :: RunnerConfig ,) -> Result < RunResult , RunnerError >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn run_fresh_ns (request : & RunRequest , config : & crate :: config :: RunnerConfig ,) -> Result < RunResult , RunnerError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -30795,8 +30772,8 @@
             {
               "kind": "fn",
               "name": "run_fresh_ns",
-              "visibility": "pub",
-              "signature": "pub fn run_fresh_ns (_request : & RunRequest , _config : & crate :: config :: RunnerConfig ,) -> Result < RunResult , RunnerError >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn run_fresh_ns (_request : & RunRequest , _config : & crate :: config :: RunnerConfig ,) -> Result < RunResult , RunnerError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31414,7 +31391,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 17
+              "line": 18
             },
             {
               "kind": "struct",
@@ -31446,7 +31423,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 29
+              "line": 30
             },
             {
               "kind": "struct",
@@ -31476,7 +31453,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 37
+              "line": 38
             },
             {
               "kind": "struct",
@@ -31522,7 +31499,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 41
+              "line": 42
             },
             {
               "kind": "enum",
@@ -31562,7 +31539,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 58
+              "line": 59
             },
             {
               "kind": "impl",
@@ -31577,7 +31554,7 @@
                   "signature": "pub fn as_str (& self) -> & str",
                   "kind": "method",
                   "docs": null,
-                  "line": 71
+                  "line": 72
                 }
               ],
               "impl_target": "RunnerVerb",
@@ -31588,7 +31565,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 70
+              "line": 71
             },
             {
               "kind": "impl",
@@ -31603,7 +31580,7 @@
                   "signature": "fn from (value : & str) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 82
+                  "line": 83
                 }
               ],
               "impl_target": "RunnerVerb",
@@ -31615,7 +31592,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 81
+              "line": 82
             },
             {
               "kind": "impl",
@@ -31630,7 +31607,7 @@
                   "signature": "fn from (value : String) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 92
+                  "line": 93
                 }
               ],
               "impl_target": "RunnerVerb",
@@ -31642,7 +31619,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 91
+              "line": 92
             },
             {
               "kind": "impl",
@@ -31657,7 +31634,7 @@
                   "signature": "fn serialize < S > (& self , serializer : S) -> Result < S :: Ok , S :: Error > where S : Serializer ,",
                   "kind": "method",
                   "docs": null,
-                  "line": 102
+                  "line": 103
                 }
               ],
               "impl_target": "RunnerVerb",
@@ -31669,7 +31646,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 101
+              "line": 102
             },
             {
               "kind": "impl",
@@ -31684,7 +31661,7 @@
                   "signature": "fn deserialize < D > (deserializer : D) -> Result < Self , D :: Error > where D : Deserializer < 'de > ,",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 111
+                  "line": 112
                 }
               ],
               "impl_target": "RunnerVerb",
@@ -31696,7 +31673,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 110
+              "line": 111
             },
             {
               "kind": "struct",
@@ -31751,7 +31728,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 119
+              "line": 120
             },
             {
               "kind": "struct",
@@ -31821,7 +31798,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 135
+              "line": 136
             },
             {
               "kind": "struct",
@@ -31844,7 +31821,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The runner's result.\n\nContains the in-namespace tool result JSON plus the child's exit code. The\nRust helpers return the tool primitive's `asdict` dict verbatim\n(defaulting `workspace`), which the runner forwards opaquely as [`Value`].",
+              "docs": "The runner's result.\n\nContains the in-namespace tool result JSON plus the child's exit code. The\nrunner constructs the tool result object in-namespace and carries it\nopaquely as [`Value`].",
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -31856,7 +31833,7 @@
               ],
               "file": "crates/eos-runner/src/request.rs",
               "module": "request",
-              "line": 167
+              "line": 168
             },
             {
               "kind": "fn",
@@ -31885,8 +31862,8 @@
             {
               "kind": "fn",
               "name": "run_setns",
-              "visibility": "pub",
-              "signature": "pub fn run_setns (request : & RunRequest) -> Result < RunResult , RunnerError >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn run_setns (request : & RunRequest) -> Result < RunResult , RunnerError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31903,8 +31880,8 @@
             {
               "kind": "fn",
               "name": "run_setns",
-              "visibility": "pub",
-              "signature": "pub fn run_setns (_request : & RunRequest) -> Result < RunResult , RunnerError >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn run_setns (_request : & RunRequest) -> Result < RunResult , RunnerError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -32337,14 +32314,14 @@
       "path": "crates/eos-workspace",
       "stats": {
         "modules": 8,
-        "items": 47,
+        "items": 46,
         "structs": 18,
         "enums": 3,
         "traits": 3,
         "functions": 11,
-        "impls": 10,
+        "impls": 9,
         "fields": 99,
-        "methods": 18
+        "methods": 17
       },
       "modules": [
         {
@@ -33756,32 +33733,6 @@
               "line": 18
             },
             {
-              "kind": "impl",
-              "name": "impl WorkspaceReadBytes",
-              "visibility": "private",
-              "signature": "impl WorkspaceReadBytes",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "missing",
-                  "signature": "pub fn missing (timings : WorkspaceTimings) -> Self",
-                  "kind": "associated-fn",
-                  "docs": null,
-                  "line": 31
-                }
-              ],
-              "impl_target": "WorkspaceReadBytes",
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "impl"
-              ],
-              "file": "crates/eos-workspace/src/read_view.rs",
-              "module": "read_view",
-              "line": 30
-            },
-            {
               "kind": "trait",
               "name": "WorkspaceReadView",
               "visibility": "pub",
@@ -33794,14 +33745,14 @@
                   "signature": "fn resolve_path (& self , request_path : & str) -> Result < ResolvedWorkspacePath , WorkspaceApiError >",
                   "kind": "required",
                   "docs": null,
-                  "line": 44
+                  "line": 32
                 },
                 {
                   "name": "read_bytes",
                   "signature": "fn read_bytes (& self , path : & ResolvedWorkspacePath ,) -> Result < WorkspaceReadBytes , WorkspaceApiError >",
                   "kind": "required",
                   "docs": null,
-                  "line": 46
+                  "line": 34
                 }
               ],
               "impl_target": null,
@@ -33810,7 +33761,7 @@
               "tags": [],
               "file": "crates/eos-workspace/src/read_view.rs",
               "module": "read_view",
-              "line": 42
+              "line": 30
             }
           ]
         },
@@ -40305,7 +40256,7 @@
               "tags": [],
               "file": "crates/eosd/src/main.rs",
               "module": "bin",
-              "line": 41
+              "line": 40
             },
             {
               "kind": "fn",
@@ -40321,7 +40272,7 @@
               "tags": [],
               "file": "crates/eosd/src/main.rs",
               "module": "bin",
-              "line": 62
+              "line": 61
             },
             {
               "kind": "fn",
@@ -40337,7 +40288,7 @@
               "tags": [],
               "file": "crates/eosd/src/main.rs",
               "module": "bin",
-              "line": 99
+              "line": 98
             }
           ]
         },

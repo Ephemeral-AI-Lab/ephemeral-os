@@ -40,12 +40,10 @@ pub(crate) mod runtime;
 pub(crate) mod transport;
 
 pub use dispatch::dispatcher;
-pub use dispatcher::{error_envelope, DispatchContext, OpTable};
-pub use error::{DaemonError, Result};
-pub use invocation_registry::{
-    InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
-};
+pub use dispatcher::{DispatchContext, OpTable};
+pub use error::DaemonError;
+pub use invocation_registry::{InFlightRegistry, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
 pub use runtime::{config, error, invocation_registry};
 pub(crate) use runtime::{request_args, response_timings};
-pub use server::{DaemonServer, ServerConfig, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+pub use server::{DaemonServer, ServerConfig};
 pub use transport::server;

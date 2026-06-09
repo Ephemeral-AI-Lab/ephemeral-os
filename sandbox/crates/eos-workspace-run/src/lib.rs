@@ -1,6 +1,6 @@
-//! Caller-keyed workspace-run host: the composition tier that drives ephemeral
+//! Caller-keyed workspace-run tier: the composition tier that drives ephemeral
 //! and isolated command-session runs over the `eos-command-session` PTY
-//! substrate and the `eos-ephemeral`/`eos-isolated-workspace` lifecycle.
+//! substrate and the `eos-workspace-modes` `ephemeral`/`isolated` lifecycle.
 //!
 //! This crate is `eos-occ`-free by construction — the build-time no-publish
 //! guard. The three daemon-resident seams (the OCC single-writer publish, the

@@ -7,7 +7,7 @@
 //! * [`PpcClient`] — the daemon-side PPC request/reply transport over a
 //!   connected service socket, including the multiplexing reader thread and the
 //!   plugin-originated callback bridge.
-//! * package publish/setup ([`ensure_package`], [`package_roots`], …).
+//! * package publish/setup ([`ensure_package`], …).
 //!
 //! The OCC single writer, the per-op overlay, the live process registry, and the
 //! OCC callback body stay **daemon-owned**: the daemon injects its callback as a
@@ -20,9 +20,7 @@ mod ppc_client;
 pub mod ensure_args;
 pub mod route;
 
-pub use package::{
-    ensure_package, needs_upload_response, package_roots, PackageEnsureReport, PackageRoots,
-};
+pub use package::{ensure_package, needs_upload_response, PackageEnsureReport};
 pub use ppc_client::{read_frame, PpcClient};
 
 /// Failures surfaced by the plugin PPC transport and package pipeline.

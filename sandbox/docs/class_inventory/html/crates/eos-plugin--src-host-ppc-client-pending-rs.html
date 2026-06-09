@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -64,13 +64,13 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Default</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-register-25"><td>method</td><td>register</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-register-25">register</a> (&amp; self , message_id : String , callback_handler : Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-register-25"><td>method</td><td>register</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-register-25">register</a> (&amp; self , message_id : String , callback_handler : Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-register-25">register</a>(
         &amp;<span class="rs-self">self</span>,
         message_id: <span class="rs-type">String</span>,
         callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> (reply_tx, reply_rx) = mpsc::channel();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?;
         <span class="rs-kw">if</span> pending.contains_key(&amp;message_id) {
@@ -89,9 +89,9 @@
         <span class="rs-type">Ok</span>(reply_rx)
     }
 </code></pre>
-</details></td></tr><tr id="method-discard-48"><td>method</td><td>discard</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a> (&amp; self , message_id : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-discard-48"><td>method</td><td>discard</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a> (&amp; self , message_id : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?.remove(message_id);
         <span class="rs-type">Ok</span>(())
     }
@@ -193,19 +193,19 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-lock-142"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a> (&amp; self ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; std :: sync :: MutexGuard &lt; &#x27;_ , HashMap &lt; String , <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-lock-142"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a> (&amp; self ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; std :: sync :: MutexGuard &lt; &#x27;_ , HashMap &lt; String , <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>(
         &amp;<span class="rs-self">self</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.inner
             .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc pending&quot;))
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc pending&quot;))
     }
 </code></pre>
-</details></td></tr><tr id="method-take-150"><td>method</td><td>take</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a> (&amp; self , message_id : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-take-150"><td>method</td><td>take</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a> (&amp; self , message_id : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Option &lt; <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a> &gt; , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?.remove(message_id))
     }
 </code></pre>
@@ -229,7 +229,7 @@
     <h3>CallbackHandler</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) type <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = Arc &lt; dyn Fn (<a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt; + Send + Sync &gt;</code>
+  <code class="signature">pub(super) type <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = Arc &lt; dyn Fn (<a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt; + Send + Sync &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/host/ppc_client/pending.rs:10</p>
@@ -239,7 +239,7 @@
     <h3>PpcResult</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) type <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> = <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a> &gt;</code>
+  <code class="signature">pub(super) type <a class="symbol-link" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> = <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; <a class="symbol-link" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a> , <a class="symbol-link" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/host/ppc_client/pending.rs:12</p>
@@ -280,11 +280,11 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> =
-    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> = <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt;;
+    <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Fn</span>(<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a> = <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt;;
 
 #[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a> {
@@ -301,7 +301,7 @@
         &amp;<span class="rs-self">self</span>,
         message_id: <span class="rs-type">String</span>,
         callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-type-PpcResult-12">PpcResult</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-kw">let</span> (reply_tx, reply_rx) = mpsc::channel();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?;
         <span class="rs-kw">if</span> pending.contains_key(&amp;message_id) {
@@ -320,7 +320,7 @@
         <span class="rs-type">Ok</span>(reply_rx)
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-discard-48">discard</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?.remove(message_id);
         <span class="rs-type">Ok</span>(())
     }
@@ -416,13 +416,13 @@
 
     <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>(
         &amp;<span class="rs-self">self</span>,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;std::sync::<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-self">self</span>.inner
             .<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()
-            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc pending&quot;))
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::<span class="rs-type">LockPoisoned</span>(&quot;plugin ppc pending&quot;))
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-28">PpcError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-take-150">take</a>(&amp;<span class="rs-self">self</span>, message_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-pending-rs.html#item-struct-PendingRequest-19">PendingRequest</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-pending-rs.html#method-lock-142">lock</a>()?.remove(message_id))
     }
 }

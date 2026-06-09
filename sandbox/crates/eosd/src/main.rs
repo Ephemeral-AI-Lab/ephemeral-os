@@ -9,10 +9,9 @@
 //! - `eosd ns-runner`  -> the single-threaded namespace runner in `eos-runner`.
 //! - `eosd ns-holder`  -> the single-threaded namespace holder in `eos-ns-holder`.
 //!
-//! Three real processes, one static binary. This is the Rust replacement for
-//! the Rust launcher chain: `daemon` owns the RPC server, `ns-runner` owns
-//! fresh/setns tool execution, and `ns-holder` owns the persistent isolated
-//! namespace holder lifecycle.
+//! Three real processes, one static binary. This is the launcher chain:
+//! `daemon` owns the RPC server, `ns-runner` owns fresh/setns tool execution,
+//! and `ns-holder` owns the persistent isolated namespace holder lifecycle.
 //!
 //! `anyhow` is allowed here (binary crate); library crates keep `thiserror`. A
 //! tiny hand-rolled arg match is used instead of `clap` — the surface is three

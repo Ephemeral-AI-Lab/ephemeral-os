@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -83,7 +83,7 @@
     <h3>op_enter</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -91,7 +91,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -131,11 +131,11 @@
     <h3>op_exit</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -158,7 +158,7 @@
     <h3>op_status</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -166,7 +166,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -195,7 +195,7 @@
     <h3>op_list_open</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a> (_args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a> (_args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -203,7 +203,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a>(|state| <span class="rs-type">Ok</span>(state.session.list_open_callers())) {
         <span class="rs-type">Ok</span>(open_caller_ids) =&gt; <span class="rs-type">Ok</span>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;open_caller_ids&quot;: open_caller_ids})),
         <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>) =&gt; <span class="rs-type">Ok</span>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;open_caller_ids&quot;: []})),
@@ -220,7 +220,7 @@
     <h3>op_test_reset</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a> (_args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a> (_args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
   <details class="function-source">
   <summary>code</summary>
@@ -228,7 +228,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-env-true-459">env_true</a>(<span class="rs-type">TEST_HARNESS_ENV</span>) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-error-json-448">error_json</a>(
             &quot;forbidden&quot;,
@@ -325,7 +325,7 @@
     <h3>exit_isolated</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a> (caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , IsolatedError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a> (caller_id : &amp; str , grace_s : Option &lt; f64 &gt;) -&gt; Result &lt; Value , IsolatedError &gt;</code>
   <p class="docstring">Tear down `caller_id`'s isolated workspace if open: namespace/network/cgroup,<br>release the lease, discard the upperdir (never published). The single<br>isolated-teardown primitive shared by `op_exit` and the workspace-run cancel<br>surface. Returns `Err(IsolatedError::NotOpen)` when the caller is not<br>isolated (the cancel surface treats that as a no-op).</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -335,7 +335,7 @@
 <span class="rs-comment">/// isolated-teardown primitive shared by `op_exit` and the workspace-run cancel</span>
 <span class="rs-comment">/// surface. Returns `Err(IsolatedError::NotOpen)` when the caller is not</span>
 <span class="rs-comment">/// isolated (the cancel surface treats that as a no-op).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a>(|state| state.session.exit(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), grace_s))
 }
 </code></pre>
@@ -471,11 +471,11 @@
     <h3>ensure_state</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a> (root : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , IsolatedError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a> (root : &amp; Path) -&gt; Result &lt; () , IsolatedError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-normalized-root-319">normalized_root</a>(root);
     {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-lock-state-cell-386">lock_state_cell</a>();
@@ -657,13 +657,13 @@
     <h3>with_state</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a> &lt; T &gt; (f : impl FnOnce (&amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; T , IsolatedError &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; T , IsolatedError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a> &lt; T &gt; (f : impl FnOnce (&amp; mut <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; Result &lt; T , IsolatedError &gt; ,) -&gt; Result &lt; T , IsolatedError &gt;</code>
   <div class="tags"><span>constructor</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> with_state&lt;<span class="rs-type">T</span>&gt;(
-    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
+    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-lock-state-cell-386">lock_state_cell</a>()
         .as_mut()
         .ok_or(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>)
@@ -714,11 +714,11 @@
     <h3>require_arg</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a> (args : &amp; Value , key : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; String , Value &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a> (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , Value &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
     <span class="rs-kw">let</span> value = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(key)
         .and_then(<span class="rs-type">Value</span>::as_str)
@@ -950,7 +950,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-enter-56">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -981,7 +981,7 @@
     }
 }
 
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-exit-91">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -1001,7 +1001,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-mod-rs.html#item-fn-op-status-215">op_status</a>(args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> caller_id = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args, &quot;caller_id&quot;) {
         <span class="rs-type">Ok</span>(caller_id) =&gt; caller_id,
         <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(error),
@@ -1027,7 +1027,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-list-open-133">op_list_open</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a>(|state| <span class="rs-type">Ok</span>(state.session.list_open_callers())) {
         <span class="rs-type">Ok</span>(open_caller_ids) =&gt; <span class="rs-type">Ok</span>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;open_caller_ids&quot;: open_caller_ids})),
         <span class="rs-type">Err</span>(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>) =&gt; <span class="rs-type">Ok</span>(json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;open_caller_ids&quot;: []})),
@@ -1041,7 +1041,7 @@
     clippy::unnecessary_wraps,
     reason = &quot;dispatcher handlers share a fallible <span class="rs-type">ABI</span>&quot;
 )]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-op-test-reset-147">op_test_reset</a>(_args: &amp;<span class="rs-type">Value</span>, _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> !<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-env-true-459">env_true</a>(<span class="rs-type">TEST_HARNESS_ENV</span>) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-error-json-448">error_json</a>(
             &quot;forbidden&quot;,
@@ -1108,7 +1108,7 @@
 <span class="rs-comment">/// isolated-teardown primitive shared by `op_exit` and the workspace-run cancel</span>
 <span class="rs-comment">/// surface. Returns `Err(IsolatedError::NotOpen)` when the caller is not</span>
 <span class="rs-comment">/// isolated (the cancel surface treats that as a no-op).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-exit-isolated-213">exit_isolated</a>(caller_id: &amp;str, grace_s: <span class="rs-type">Option</span>&lt;f64&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-with-state-372">with_state</a>(|state| state.session.exit(&amp;<span class="rs-type">CallerId</span>(caller_id.to_owned()), grace_s))
 }
 
@@ -1154,7 +1154,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-ensure-state-264">ensure_state</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">IsolatedError</span>&gt; {
     <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-normalized-root-319">normalized_root</a>(root);
     {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-lock-state-cell-386">lock_state_cell</a>();
@@ -1263,8 +1263,8 @@
 }
 
 <span class="rs-kw">fn</span> with_state&lt;<span class="rs-type">T</span>&gt;(
-    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
+    f: <span class="rs-kw">impl</span> <span class="rs-type">FnOnce</span>(&amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-struct-DaemonIsolatedState-41">DaemonIsolatedState</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">IsolatedError</span>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-lock-state-cell-386">lock_state_cell</a>()
         .as_mut()
         .ok_or(<span class="rs-type">IsolatedError</span>::<span class="rs-type">FeatureDisabled</span>)
@@ -1288,7 +1288,7 @@
         .unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-workspace-run-isolated-mod-rs.html#item-fn-require-arg-398">require_arg</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
     <span class="rs-kw">let</span> value = args
         .<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-occ-service-cache-rs.html#method-get-85">get</a>(key)
         .and_then(<span class="rs-type">Value</span>::as_str)

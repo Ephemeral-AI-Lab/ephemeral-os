@@ -4,8 +4,9 @@
 //! and the namespace request/result files — the tool-call payload, the fresh-ns
 //! request file, and the setns stdin payload. The verb-specific `args`
 //! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim
-//! to the in-namespace tool primitive); the typed per-verb args/results live in
-//! `eos_protocol::models`.
+//! to the in-namespace tool primitive); the typed per-verb args/results are the
+//! daemon's concern (decoded into `eos-workspace` / `eos-command-session` types),
+//! not modeled here.
 
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;
@@ -167,12 +168,11 @@ pub struct RunRequest {
 /// The runner's result.
 ///
 /// Contains the in-namespace tool result JSON plus the child's exit code. The
-/// Rust helpers return the tool primitive's `asdict` dict verbatim
-/// (defaulting `workspace`), which the runner forwards opaquely as [`Value`].
+/// runner constructs the tool result object in-namespace and carries it
+/// opaquely as [`Value`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunResult {
-    /// The tool primitive's result object (`SandboxResultBase`/`GuardedResultBase`
-    /// `asdict`), forwarded unchanged.
+    /// The in-namespace tool result object, forwarded unchanged.
     pub tool_result: Value,
     /// The child process exit code.
     pub exit_code: i32,

@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -84,7 +84,7 @@
     <h3>dispatch_oneshot_overlay_route</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-dispatch-oneshot-overlay-route-45">dispatch_oneshot_overlay_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-dispatch-oneshot-overlay-route-45">dispatch_oneshot_overlay_route</a> (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -92,7 +92,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> route.service_mode != <span class="rs-type">Some</span>(<span class="rs-type">ServiceMode</span>::<span class="rs-type">OneshotOverlay</span>) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     }
@@ -166,7 +166,7 @@
     <h3>run_plugin_overlay_command</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-run-plugin-overlay-command-124">run_plugin_overlay_command</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , total_start : Instant ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-run-plugin-overlay-command-124">run_plugin_overlay_command</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , total_start : Instant ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -174,7 +174,7 @@
     spec: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a>,
     args: &amp;<span class="rs-type">Value</span>,
     total_start: <span class="rs-type">Instant</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> spec.command.is_empty() || spec.command[0].trim().is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(
             &quot;plugin overlay command must not be empty&quot;.to_owned(),
@@ -208,7 +208,7 @@
     <h3>run_plugin_overlay_once</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-run-plugin-overlay-once-153">run_plugin_overlay_once</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , binding : &amp; WorkspaceBinding , lease : &amp; Lease ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-run-plugin-overlay-once-153">run_plugin_overlay_once</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , binding : &amp; WorkspaceBinding , lease : &amp; Lease ,) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -217,7 +217,7 @@
     args: &amp;<span class="rs-type">Value</span>,
     binding: &amp;<span class="rs-type">WorkspaceBinding</span>,
     lease: &amp;<span class="rs-type">Lease</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(&amp;spec.invocation_id)?;
     <span class="rs-kw">let</span> _cleanup = <span class="rs-type">RunDirCleanup</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(dirs.run_dir.clone());
     <span class="rs-kw">let</span> request_path = dirs.run_dir.join(&quot;plugin-overlay-request.json&quot;);
@@ -277,7 +277,7 @@
     <h3>plugin_overlay_response</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-response-209">plugin_overlay_response</a> (root : &amp; Path , outcome : <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a> , total_start : Instant , lease_acquire_s : f64 ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-response-209">plugin_overlay_response</a> (root : &amp; Path , outcome : <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a> , total_start : Instant , lease_acquire_s : f64 ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -286,7 +286,7 @@
     outcome: <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>,
     total_start: <span class="rs-type">Instant</span>,
     lease_acquire_s: f64,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.read_active_manifest()?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
     <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
@@ -397,11 +397,11 @@
     <h3>plugin_overlay_dirs</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a> (invocation_id : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; EphemeralRunDirs , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a> (invocation_id : &amp; str) -&gt; Result &lt; EphemeralRunDirs , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(invocation_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(invocation_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(&quot;plugin-overlay&quot;, invocation_id)
 }
 </code></pre>
@@ -414,7 +414,7 @@
     <h3>write_plugin_overlay_request</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-write-plugin-overlay-request-307">write_plugin_overlay_request</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , binding : &amp; WorkspaceBinding , lease : &amp; Lease , request_path : &amp; Path , result_path : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-write-plugin-overlay-request-307">write_plugin_overlay_request</a> (spec : &amp; <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a> , args : &amp; Value , binding : &amp; WorkspaceBinding , lease : &amp; Lease , request_path : &amp; Path , result_path : &amp; Path ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -425,7 +425,7 @@
     lease: &amp;<span class="rs-type">Lease</span>,
     request_path: &amp;<span class="rs-type">Path</span>,
     result_path: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request_payload = json!({
         &quot;plugin&quot;: spec.plugin_id,
         &quot;op_name&quot;: spec.op_name,
@@ -515,11 +515,11 @@
     <h3>read_plugin_overlay_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a> (path : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a> (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> std::fs::read_to_string(path) {
         <span class="rs-type">Ok</span>(raw) =&gt; {
             <span class="rs-kw">if</span> raw.trim().is_empty() {
@@ -594,7 +594,7 @@
     route: &amp;<span class="rs-type">PluginOperationRoute</span>,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> route.service_mode != <span class="rs-type">Some</span>(<span class="rs-type">ServiceMode</span>::<span class="rs-type">OneshotOverlay</span>) {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     }
@@ -673,7 +673,7 @@
     spec: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayCommand-33">PluginOverlayCommand</a>,
     args: &amp;<span class="rs-type">Value</span>,
     total_start: <span class="rs-type">Instant</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">if</span> spec.command.is_empty() || spec.command[0].trim().is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(
             &quot;plugin overlay command must not be empty&quot;.to_owned(),
@@ -703,7 +703,7 @@
     args: &amp;<span class="rs-type">Value</span>,
     binding: &amp;<span class="rs-type">WorkspaceBinding</span>,
     lease: &amp;<span class="rs-type">Lease</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(&amp;spec.invocation_id)?;
     <span class="rs-kw">let</span> _cleanup = <span class="rs-type">RunDirCleanup</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#method-new-33">new</a>(dirs.run_dir.clone());
     <span class="rs-kw">let</span> request_path = dirs.run_dir.join(&quot;plugin-overlay-request.json&quot;);
@@ -759,7 +759,7 @@
     outcome: <a class="symbol-link rs-type" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-struct-PluginOverlayRunOutcome-114">PluginOverlayRunOutcome</a>,
     total_start: <span class="rs-type">Instant</span>,
     lease_acquire_s: f64,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <span class="rs-type">LayerStack</span>::open(root.to_path_buf())?.read_active_manifest()?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(&amp;manifest, outcome.changeset.published_file_count());
     <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, &amp;outcome.runner);
@@ -848,7 +848,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(invocation_id: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-plugin-overlay-dirs-303">plugin_overlay_dirs</a>(invocation_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralRunDirs</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-overlay-mod-rs.html#item-fn-overlay-run-dirs-129">overlay_run_dirs</a>(&quot;plugin-overlay&quot;, invocation_id)
 }
 
@@ -859,7 +859,7 @@
     lease: &amp;<span class="rs-type">Lease</span>,
     request_path: &amp;<span class="rs-type">Path</span>,
     result_path: &amp;<span class="rs-type">Path</span>,
-) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">let</span> request_payload = json!({
         &quot;plugin&quot;: spec.plugin_id,
         &quot;op_name&quot;: spec.op_name,
@@ -927,7 +927,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-adapters-plugins-overlay-rs.html#item-fn-read-plugin-overlay-result-382">read_plugin_overlay_result</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
     <span class="rs-kw">match</span> std::fs::read_to_string(path) {
         <span class="rs-type">Ok</span>(raw) =&gt; {
             <span class="rs-kw">if</span> raw.trim().is_empty() {

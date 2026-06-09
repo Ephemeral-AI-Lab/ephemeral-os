@@ -65,7 +65,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a></code>
   <p class="docstring">A foldable run of &gt;=2 contiguous layers that collapse into one checkpoint.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-35"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> (layers : Vec &lt; LayerRef &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Construct a segment, enforcing the &gt;=2-layer invariant.<br># Errors<br>Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two<br>layers are provided.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-35"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a> (layers : Vec &lt; LayerRef &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Construct a segment, enforcing the &gt;=2-layer invariant.<br># Errors<br>Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two<br>layers are provided.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct a segment, enforcing the &gt;=2-layer invariant.</span>
     <span class="rs-comment">///</span>
@@ -74,7 +74,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two</span>
     <span class="rs-comment">/// layers are provided.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">if</span> layers.len() &lt;= 1 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidSquashPlan</span>(
                 &quot;checkpoint segments must contain at least two layers&quot;.to_owned(),
@@ -95,7 +95,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a></code>
   <p class="docstring">A computed squash plan: the active manifest snapshot + the per-run entries.<br>Requires &gt;=1 checkpoint segment (else there is nothing to fold).</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>active_layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr><tr><td>pub</td><td>entries</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-72"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> (active_version : i64 , active_layers : Vec &lt; LayerRef &gt; , entries : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a> &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Construct + validate (non-empty active layers, non-empty entries, &gt;=1<br>checkpoint segment).<br># Errors<br>Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no<br>active layers, no entries, or no foldable checkpoint segment.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>active_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>active_layers</td><td><code>Vec &lt; LayerRef &gt;</code></td></tr><tr><td>pub</td><td>entries</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-72"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a> (active_version : i64 , active_layers : Vec &lt; LayerRef &gt; , entries : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a> &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Construct + validate (non-empty active layers, non-empty entries, &gt;=1<br>checkpoint segment).<br># Errors<br>Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no<br>active layers, no entries, or no foldable checkpoint segment.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Construct + validate (non-empty active layers, non-empty entries, &gt;=1</span>
     <span class="rs-comment">/// checkpoint segment).</span>
@@ -105,7 +105,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no</span>
     <span class="rs-comment">/// active layers, no entries, or no foldable checkpoint segment.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
         active_version: i64,
         active_layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;,
         entries: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>&gt;,
@@ -161,13 +161,13 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a></code>
   <p class="docstring">Plans runs between lease heads and projects each run into a checkpoint layer.</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>view</td><td><code><a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-131"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> (storage_root : PathBuf) -&gt; Self</code><p class="docstring">Bind a squasher to a storage root (owns its own [`crate::MergedView`]).</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>view</td><td><code><a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-131"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a> (storage_root : PathBuf) -&gt; Self</code><p class="docstring">Bind a squasher to a storage root (owns its own [`crate::MergedView`]).</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Bind a squasher to a storage root (owns its own [`crate::MergedView`]).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            view: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root.clone()),
+            view: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root.clone()),
             storage_root,
         }
     }
@@ -226,7 +226,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         }
 
-        <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             active_manifest.version,
             active_manifest.layers.clone(),
             entries,
@@ -234,7 +234,7 @@
         .map(<span class="rs-type">Some</span>)
     }
 </code></pre>
-</details></td></tr><tr id="method-build-checkpoint-200"><td>method</td><td>build_checkpoint</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a> (&amp; self , segment : &amp; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a> , active_version : i64 ,) -&gt; Result &lt; LayerRef , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Project a segment's layers into a fresh checkpoint layer directory and<br>return its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).<br># Errors<br>Returns [`LayerStackError`] when checkpoint paths cannot be allocated,<br>the segment cannot be projected, or the staging directory cannot be<br>persisted as a layer.</p><details class="function-source">
+</details></td></tr><tr id="method-build-checkpoint-200"><td>method</td><td>build_checkpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a> (&amp; self , segment : &amp; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a> , active_version : i64 ,) -&gt; Result &lt; LayerRef , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Project a segment's layers into a fresh checkpoint layer directory and<br>return its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).<br># Errors<br>Returns [`LayerStackError`] when checkpoint paths cannot be allocated,<br>the segment cannot be projected, or the staging directory cannot be<br>persisted as a layer.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Project a segment's layers into a fresh checkpoint layer directory and</span>
     <span class="rs-comment">/// return its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).</span>
@@ -245,14 +245,14 @@
     <span class="rs-comment">/// the segment cannot be projected, or the staging directory cannot be</span>
     <span class="rs-comment">/// persisted as a layer.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a>(
         &amp;<span class="rs-self">self</span>,
         segment: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>,
         active_version: i64,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerRef</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> (layer_id, staging_dir, layer_dir) =
             <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-allocate-checkpoint-paths-293">allocate_checkpoint_paths</a>(active_version + 1)?;
-        <span class="rs-kw">let</span> segment_manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        <span class="rs-kw">let</span> segment_manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             active_version,
             segment.layers.clone(),
             <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>,
@@ -275,7 +275,7 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-relabel-checkpoint-239"><td>method</td><td>relabel_checkpoint</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a> (&amp; self , checkpoint : &amp; LayerRef , manifest_version : i64 ,) -&gt; Result &lt; LayerRef , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Rename a prebuilt checkpoint so its id matches the publishing manifest<br>version (the `B{manifest_version:06}-…` prefix invariant).<br># Errors<br>Returns [`LayerStackError`] when the checkpoint path is invalid, missing,<br>or cannot be renamed into its final layer id.</p><details class="function-source">
+</details></td></tr><tr id="method-relabel-checkpoint-239"><td>method</td><td>relabel_checkpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a> (&amp; self , checkpoint : &amp; LayerRef , manifest_version : i64 ,) -&gt; Result &lt; LayerRef , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Rename a prebuilt checkpoint so its id matches the publishing manifest<br>version (the `B{manifest_version:06}-…` prefix invariant).<br># Errors<br>Returns [`LayerStackError`] when the checkpoint path is invalid, missing,<br>or cannot be renamed into its final layer id.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Rename a prebuilt checkpoint so its id matches the publishing manifest</span>
     <span class="rs-comment">/// version (the `B{manifest_version:06}-…` prefix invariant).</span>
@@ -285,7 +285,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError`] when the checkpoint path is invalid, missing,</span>
     <span class="rs-comment">/// or cannot be renamed into its final layer id.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a>(
         &amp;<span class="rs-self">self</span>,
         checkpoint: &amp;<span class="rs-type">LayerRef</span>,
         manifest_version: i64,
@@ -315,7 +315,7 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-discard-checkpoint-277"><td>method</td><td>discard_checkpoint</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a> (&amp; self , checkpoint : &amp; LayerRef) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Best-effort removal of an uncommitted checkpoint (rollback path).<br># Errors<br>Returns [`LayerStackError`] when the checkpoint path is invalid or<br>removal fails for a reason other than the path already being absent.</p><details class="function-source">
+</details></td></tr><tr id="method-discard-checkpoint-277"><td>method</td><td>discard_checkpoint</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a> (&amp; self , checkpoint : &amp; LayerRef) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Best-effort removal of an uncommitted checkpoint (rollback path).<br># Errors<br>Returns [`LayerStackError`] when the checkpoint path is invalid or<br>removal fails for a reason other than the path already being absent.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Best-effort removal of an uncommitted checkpoint (rollback path).</span>
     <span class="rs-comment">///</span>
@@ -324,7 +324,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError`] when the checkpoint path is invalid or</span>
     <span class="rs-comment">/// removal fails for a reason other than the path already being absent.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a>(&amp;<span class="rs-self">self</span>, checkpoint: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a>(&amp;<span class="rs-self">self</span>, checkpoint: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-layer-path-314">layer_path</a>(checkpoint)?;
         <span class="rs-kw">match</span> std::fs::remove_dir_all(path) {
             <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
@@ -378,13 +378,13 @@
   <h4>Variants</h4><table><tbody><tr><td>Keep</td><td><code>0: LayerRef</code></td></tr><tr><td>Segment</td><td><code>0: <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a></code></td></tr></tbody></table>
 
   <p class="source">crates/eos-layerstack/src/squash.rs:52</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-manifest-prefix-before-plan-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_prefix_before_plan pub pub fn manifest_prefix_before_plan &lt; 'm &gt; (manifest : &amp; 'm Manifest , plan : &amp; SquashPlan ,) -&gt; Option &lt; &amp; 'm [LayerRef] &gt; crates/eos-layerstack/src/squash.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-manifest-prefix-before-plan-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest_prefix_before_plan pub(crate) pub(crate) fn manifest_prefix_before_plan &lt; 'm &gt; (manifest : &amp; 'm Manifest , plan : &amp; SquashPlan ,) -&gt; Option &lt; &amp; 'm [LayerRef] &gt; crates/eos-layerstack/src/squash.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>manifest_prefix_before_plan</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-fn-manifest-prefix-before-plan-320">manifest_prefix_before_plan</a> &lt; &#x27;m &gt; (manifest : &amp; &#x27;m Manifest , plan : &amp; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a> ,) -&gt; Option &lt; &amp; &#x27;m [LayerRef] &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-fn-manifest-prefix-before-plan-320">manifest_prefix_before_plan</a> &lt; &#x27;m &gt; (manifest : &amp; &#x27;m Manifest , plan : &amp; <a class="symbol-link" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a> ,) -&gt; Option &lt; &amp; &#x27;m [LayerRef] &gt;</code>
   <p class="docstring">If the active manifest's tail still equals the plan's snapshotted active<br>layers, return the live prefix above them; else `None` (CAS lost).</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -393,7 +393,7 @@
 <span class="rs-comment">/// layers, return the live prefix above them; else `None` (CAS lost).</span>
 <span class="rs-comment">///</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> manifest_prefix_before_plan&lt;&#x27;m&gt;(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> manifest_prefix_before_plan&lt;&#x27;m&gt;(
     manifest: &amp;&#x27;m <span class="rs-type">Manifest</span>,
     plan: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>,
 ) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;m [<span class="rs-type">LayerRef</span>]&gt; {
@@ -425,8 +425,8 @@
     layers: &amp;[<span class="rs-type">LayerRef</span>],
     lease_head_layers: &amp;[<span class="rs-type">LayerRef</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> layers {
         <span class="rs-kw">if</span> lease_head_layers.contains(layer) {
             <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#item-fn-flush-run-357">flush_run</a>(&amp;<span class="rs-kw">mut</span> entries, &amp;<span class="rs-kw">mut</span> run)?;
@@ -459,7 +459,7 @@
     <span class="rs-kw">match</span> run.len() {
         0 =&gt; {}
         1 =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Keep</span>(run[0].clone())),
-        _ =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Segment</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        _ =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Segment</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             std::mem::take(run),
         )?)),
     }
@@ -519,7 +519,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two</span>
     <span class="rs-comment">/// layers are provided.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">if</span> layers.len() &lt;= 1 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidSquashPlan</span>(
                 &quot;checkpoint segments must contain at least two layers&quot;.to_owned(),
@@ -557,7 +557,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no</span>
     <span class="rs-comment">/// active layers, no entries, or no foldable checkpoint segment.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
         active_version: i64,
         active_layers: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt;,
         entries: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>&gt;,
@@ -610,9 +610,9 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a> {
     <span class="rs-comment">/// Bind a squasher to a storage root (owns its own [`crate::MergedView`]).</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
-            view: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root.clone()),
+            view: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root.clone()),
             storage_root,
         }
     }
@@ -669,7 +669,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         }
 
-        <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             active_manifest.version,
             active_manifest.layers.clone(),
             entries,
@@ -686,14 +686,14 @@
     <span class="rs-comment">/// the segment cannot be projected, or the staging directory cannot be</span>
     <span class="rs-comment">/// persisted as a layer.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-build-checkpoint-200">build_checkpoint</a>(
         &amp;<span class="rs-self">self</span>,
         segment: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>,
         active_version: i64,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">LayerRef</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> (layer_id, staging_dir, layer_dir) =
             <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-allocate-checkpoint-paths-293">allocate_checkpoint_paths</a>(active_version + 1)?;
-        <span class="rs-kw">let</span> segment_manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        <span class="rs-kw">let</span> segment_manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             active_version,
             segment.layers.clone(),
             <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>,
@@ -724,7 +724,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError`] when the checkpoint path is invalid, missing,</span>
     <span class="rs-comment">/// or cannot be renamed into its final layer id.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-relabel-checkpoint-239">relabel_checkpoint</a>(
         &amp;<span class="rs-self">self</span>,
         checkpoint: &amp;<span class="rs-type">LayerRef</span>,
         manifest_version: i64,
@@ -761,7 +761,7 @@
     <span class="rs-comment">/// Returns [`LayerStackError`] when the checkpoint path is invalid or</span>
     <span class="rs-comment">/// removal fails for a reason other than the path already being absent.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a>(&amp;<span class="rs-self">self</span>, checkpoint: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-discard-checkpoint-277">discard_checkpoint</a>(&amp;<span class="rs-self">self</span>, checkpoint: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-layer-path-314">layer_path</a>(checkpoint)?;
         <span class="rs-kw">match</span> std::fs::remove_dir_all(path) {
             <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
@@ -801,7 +801,7 @@
 <span class="rs-comment">/// layers, return the live prefix above them; else `None` (CAS lost).</span>
 <span class="rs-comment">///</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> manifest_prefix_before_plan&lt;&#x27;m&gt;(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> manifest_prefix_before_plan&lt;&#x27;m&gt;(
     manifest: &amp;&#x27;m <span class="rs-type">Manifest</span>,
     plan: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>,
 ) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;m [<span class="rs-type">LayerRef</span>]&gt; {
@@ -820,8 +820,8 @@
     layers: &amp;[<span class="rs-type">LayerRef</span>],
     lease_head_layers: &amp;[<span class="rs-type">LayerRef</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> layers {
         <span class="rs-kw">if</span> lease_head_layers.contains(layer) {
             <a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#item-fn-flush-run-357">flush_run</a>(&amp;<span class="rs-kw">mut</span> entries, &amp;<span class="rs-kw">mut</span> run)?;
@@ -841,7 +841,7 @@
     <span class="rs-kw">match</span> run.len() {
         0 =&gt; {}
         1 =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Keep</span>(run[0].clone())),
-        _ =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Segment</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(
+        _ =&gt; entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>::<span class="rs-type">Segment</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(
             std::mem::take(run),
         )?)),
     }
@@ -849,7 +849,7 @@
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">static</span> <span class="rs-type">NEXT_CHECKPOINT</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
+<span class="rs-kw">static</span> <span class="rs-type">NEXT_CHECKPOINT</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0);
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

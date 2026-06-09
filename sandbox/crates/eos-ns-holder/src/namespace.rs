@@ -94,8 +94,8 @@ pub(crate) const fn rbind_proc() {}
 /// `unshare` the full namespace stack on the calling (single-threaded) task and
 /// pin the resulting `/proc/self/ns/*` FDs.
 ///
-/// This is the Rust *consolidation* of the former Rust launcher's
-/// `unshare(1)` flags. The previous path spawned the holder process via
+/// This consolidates the `unshare(1)` flags of the former launcher that shelled
+/// out to the `unshare` binary. That path spawned the holder process via
 /// `unshare --user --map-root-user --net --pid --mount --fork --kill-child
 /// --propagation private`, so the namespaces were created by the `unshare`
 /// binary, not inside the holder process. The Rust holder owns that step directly:

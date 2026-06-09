@@ -77,11 +77,11 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a></code>
   <p class="docstring">Layered read view over a storage root's manifest (lowest→highest precedence).<br>Reads resolve through the manifest's layer directories without materializing<br>a tree; this is the pure-read sibling of the overlay mount.</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-69"><td>constructor</td><td>new</td><td><code>pub const fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> (storage_root : PathBuf) -&gt; Self</code><p class="docstring">Bind a merged view to a storage root.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-69"><td>constructor</td><td>new</td><td><code>pub const fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a> (storage_root : PathBuf) -&gt; Self</code><p class="docstring">Bind a merged view to a storage root.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Bind a merged view to a storage root.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { storage_root }
     }
 </code></pre>
@@ -116,7 +116,7 @@
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(target.to_string_lossy().as_bytes().to_vec()), <span class="rs-kw">true</span>));
                 }
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_file() =&gt; {
-                    <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(&amp;target)
+                    <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-220">read</a>(&amp;target)
                         .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(bytes), <span class="rs-kw">true</span>));
                 }
@@ -166,12 +166,12 @@
         <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-is-kernel-whiteout-85">is_kernel_whiteout</a>(&amp;<a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(layer_dir, rel)) {
             <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
         }
-        <span class="rs-kw">let</span> rel_path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(rel);
+        <span class="rs-kw">let</span> rel_path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(rel);
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = rel_path.file_name() <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
         };
         <span class="rs-kw">let</span> marker_name = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> marker = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> marker = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
             marker.push(name);
             marker
         };
@@ -219,7 +219,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-LayerStack-188">LayerStack</a></code>
   <p class="docstring">Durable storage facade for one layer-stack root.<br>Owns the manifest pointer, the lease registry, the merged read view, the<br>publisher, and the squasher. Holds the dual-layer storage-writer lease for<br>its lifetime (acquired in [`LayerStack::open`]).</p>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>writer_lock</td><td><code><a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a></code></td></tr><tr><td>private</td><td>leases</td><td><code><a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a></code></td></tr><tr><td>private</td><td>view</td><td><code><a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-storage-root-224"><td>method</td><td>storage_root</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-storage-root-224">storage_root</a> (&amp; self) -&gt; &amp; Path</code><p class="docstring">The storage root this stack manages.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>storage_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>writer_lock</td><td><code><a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a></code></td></tr><tr><td>private</td><td>leases</td><td><code><a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-42">SharedLeaseRegistry</a></code></td></tr><tr><td>private</td><td>view</td><td><code><a class="symbol-link" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-storage-root-224"><td>method</td><td>storage_root</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-storage-root-224">storage_root</a> (&amp; self) -&gt; &amp; Path</code><p class="docstring">The storage root this stack manages.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// The storage root this stack manages.</span>
     #[must_use]
@@ -251,11 +251,11 @@
     <span class="rs-comment">/// lease registry cannot be acquired.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-acquire-snapshot-241">acquire_snapshot</a>(&amp;<span class="rs-self">self</span>, owner_request_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-Lease-43">Lease</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-103">shared</a>()?;
         <span class="rs-kw">let</span> manifest = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">let</span> lease = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(manifest.clone(), owner_request_id)?
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(manifest.clone(), owner_request_id)?
         };
         <span class="rs-kw">let</span> layer_paths = manifest
             .layers
@@ -269,7 +269,7 @@
             root_hash: manifest_root_hash(&amp;manifest),
             manifest,
             layer_paths,
-            timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(),
+            timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(),
         })
     }
 </code></pre>
@@ -284,8 +284,8 @@
     <span class="rs-comment">/// unreferenced layer cleanup fails.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-release-lease-272">release_lease</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
     }
 </code></pre>
@@ -299,8 +299,8 @@
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-can-squash-286">can_squash</a>(&amp;<span class="rs-self">self</span>, max_depth: usize) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
-        <span class="rs-kw">let</span> lease_head_layers = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>();
+        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+        <span class="rs-kw">let</span> lease_head_layers = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>();
         <span class="rs-type">Ok</span>(squasher
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-plan-140">plan</a>(&amp;active, max_depth, &amp;lease_head_layers, 2)?
             .is_some())
@@ -317,25 +317,25 @@
     <span class="rs-comment">/// manifest swapping, lease release, or rollback cleanup fails.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-squash-301">squash</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max_depth: usize) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Manifest</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
         <span class="rs-kw">let</span> lease_head_layers = {
-            <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>()
+            <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>()
         };
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(plan) = squasher.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-plan-140">plan</a>(&amp;active, max_depth, &amp;lease_head_layers, 1)? <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         };
         <span class="rs-kw">let</span> squash_lease = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(
                 active,
                 &amp;format!(&quot;squash-{}&quot;, <span class="rs-type">NEXT_LAYER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)),
             )?
         };
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> checkpoints = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> checkpoints = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> committed = <span class="rs-kw">false</span>;
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">for</span> segment <span class="rs-kw">in</span> plan.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-checkpoint-segments-110">checkpoint_segments</a>() {
@@ -364,7 +364,7 @@
                     }
                 }
             }
-            <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(next_version, new_layers, current.schema_version)
+            <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(next_version, new_layers, current.schema_version)
                 .map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(<span class="rs-self">self</span>.storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest)?;
             committed = <span class="rs-kw">true</span>;
@@ -377,7 +377,7 @@
             }
         }
         <span class="rs-kw">let</span> release = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
         };
         <span class="rs-kw">match</span> (outcome, release) {
@@ -397,20 +397,20 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-leased-layers-390"><td>method</td><td>leased_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">Full retention keep-set (GC). DISTINCT from squash barriers.</p><details class="function-source">
+</details></td></tr><tr id="method-leased-layers-390"><td>method</td><td>leased_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">Full retention keep-set (GC). DISTINCT from squash barriers.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Full retention keep-set (GC). DISTINCT from squash barriers.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>()
     }
 </code></pre>
-</details></td></tr><tr id="method-lease-head-layers-396"><td>method</td><td>lease_head_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">Squash-keep barrier set. DISTINCT from the GC retention set.</p><details class="function-source">
+</details></td></tr><tr id="method-lease-head-layers-396"><td>method</td><td>lease_head_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">Squash-keep barrier set. DISTINCT from the GC retention set.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Squash-keep barrier set. DISTINCT from the GC retention set.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>()
     }
 </code></pre>
 </details></td></tr><tr id="method-active-lease-count-402"><td>method</td><td>active_lease_count</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-active-lease-count-402">active_lease_count</a> (&amp; self) -&gt; usize</code><p class="docstring">Number of active snapshot leases.</p><details class="function-source">
@@ -418,7 +418,7 @@
   <pre><code>    <span class="rs-comment">/// Number of active snapshot leases.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-active-lease-count-402">active_lease_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>()
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-150">active_count</a>()
     }
 </code></pre>
 </details></td></tr><tr id="method-commit-to-workspace-408"><td>method</td><td>commit_to_workspace</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-stack-rs.html#method-commit-to-workspace-408">commit_to_workspace</a> (&amp; mut self , workspace_root : &amp; Path ,) -&gt; Result &lt; (Manifest , BTreeMap &lt; String , f64 &gt;) , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Collapse the active manifest back into the bound workspace base.<br>Refuses to run while any snapshot lease is active. The projection<br>materializes the current merged view into `workspace_root`, resets<br>layer-stack storage, and rebuilds a fresh base layer from those bytes.<br># Errors<br>Returns [`LayerStackError`] when the workspace is invalid, active leases<br>exist, projection/replacement fails, or base rebuild fails.</p><details class="function-source">
@@ -438,8 +438,8 @@
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         workspace_root: &amp;<span class="rs-type">Path</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Manifest</span>, <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
-        <span class="rs-kw">let</span> _guard = writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
+        <span class="rs-kw">let</span> _guard = writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">if</span> !workspace_root.is_dir() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>(format!(
@@ -447,7 +447,7 @@
                 workspace_root.display()
             )));
         }
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>() &gt; 0 {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-150">active_count</a>() &gt; 0 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(
                 &quot;commit_to_workspace blocked by active leases&quot;.to_owned(),
             ));
@@ -455,7 +455,7 @@
 
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>()?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">let</span> project_start = <span class="rs-type">Instant</span>::now();
             <span class="rs-self">self</span>.view.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-project-116">project</a>(&amp;projection, &amp;active)?;
@@ -476,7 +476,7 @@
             <span class="rs-kw">let</span> rebuild_start = <span class="rs-type">Instant</span>::now();
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-clear-storage-root-preserving-lock-61">clear_storage_root_preserving_lock</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#item-fn-build-workspace-base-89">build_workspace_base</a>(&amp;<span class="rs-self">self</span>.storage_root, workspace_root, <span class="rs-kw">false</span>)?;
-            <span class="rs-self">self</span>.view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+            <span class="rs-self">self</span>.view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
             <span class="rs-kw">let</span> new_manifest = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(
                 &amp;<span class="rs-kw">mut</span> timings,
@@ -519,7 +519,7 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-text-490">read_text</a>(&amp;<span class="rs-self">self</span>, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">String</span>, bool), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-bytes-75">read_bytes</a>(path)?;
         <span class="rs-kw">if</span> !exists {
-            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(), <span class="rs-kw">false</span>));
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(), <span class="rs-kw">false</span>));
         }
         <span class="rs-kw">let</span> bytes = bytes.unwrap_or_default();
         <span class="rs-kw">let</span> text =
@@ -542,7 +542,7 @@
     <span class="rs-comment">/// digest persistence, CAS validation, or manifest writes fail.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-publish-layer-508">publish_layer</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">if</span> changes.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(active);
@@ -596,7 +596,7 @@
             path: format!(&quot;{<span class="rs-type">LAYERS_DIR</span>}/{layer_id}&quot;),
         });
         layers.extend(active.layers);
-        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(next_version, layers, active.schema_version)
+        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(next_version, layers, active.schema_version)
             .map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(<span class="rs-self">self</span>.storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest) {
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;layer_dir);
@@ -691,9 +691,9 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         std::fs::create_dir_all(storage_root.join(<span class="rs-type">LAYERS_DIR</span>))?;
         std::fs::create_dir_all(storage_root.join(<span class="rs-type">STAGING_DIR</span>))?;
-        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;storage_root)?;
-        <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-43">shared_registry_for_root</a>(&amp;storage_root)?;
-        <span class="rs-kw">let</span> view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root.clone());
+        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(&amp;storage_root)?;
+        <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-44">shared_registry_for_root</a>(&amp;storage_root)?;
+        <span class="rs-kw">let</span> view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root.clone());
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             storage_root,
             writer_lock,
@@ -720,7 +720,7 @@
     leases: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
     lease_id: &amp;str,
 ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease) = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-113">release</a>(lease_id) <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease) = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-114">release</a>(lease_id) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> active = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>))?;
@@ -747,7 +747,7 @@
     active: &amp;<span class="rs-type">Manifest</span>,
     leases: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-    <span class="rs-kw">let</span> retained_layers = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>();
+    <span class="rs-kw">let</span> retained_layers = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>();
     candidates
         .iter()
         .filter(|layer| !active.layers.contains(layer) &amp;&amp; !retained_layers.contains(layer))
@@ -822,7 +822,7 @@
                     std::fs::create_dir_all(parent)?;
                 }
                 <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
-                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(target, content)?;
+                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(target, content)?;
             }
             <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { path } =&gt; {
                 <span class="rs-kw">let</span> target = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(layer_dir, path.as_str());
@@ -845,7 +845,7 @@
                 <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = marker.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(marker, b&quot;&quot;)?;
+                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(marker, b&quot;&quot;)?;
             }
         }
     }
@@ -928,10 +928,10 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::fsutil::{join_layer_path, record_elapsed, remove_path, resolve_layer_path};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::lease::{
     lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
-    <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+    <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-42">SharedLeaseRegistry</a>,
 };
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::squash::{manifest_prefix_before_plan, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>};
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::storage_lock::<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::storage_lock::<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::workspace_base::build_workspace_base;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<span class="rs-type">ACTIVE_MANIFEST_FILE</span>, <span class="rs-type">LAYERS_DIR</span>, <span class="rs-type">LAYER_METADATA_DIR</span>, <span class="rs-type">STAGING_DIR</span>};
 
@@ -973,7 +973,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a> {
     <span class="rs-comment">/// Bind a merged view to a storage root.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { storage_root }
     }
 
@@ -1006,7 +1006,7 @@
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(target.to_string_lossy().as_bytes().to_vec()), <span class="rs-kw">true</span>));
                 }
                 <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_file() =&gt; {
-                    <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(&amp;target)
+                    <span class="rs-kw">let</span> bytes = std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-220">read</a>(&amp;target)
                         .map_err(|err| <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer, rel.as_str(), &amp;err))?;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">Some</span>(bytes), <span class="rs-kw">true</span>));
                 }
@@ -1050,12 +1050,12 @@
         <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-is-kernel-whiteout-85">is_kernel_whiteout</a>(&amp;<a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(layer_dir, rel)) {
             <span class="rs-kw">return</span> <span class="rs-kw">true</span>;
         }
-        <span class="rs-kw">let</span> rel_path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(rel);
+        <span class="rs-kw">let</span> rel_path = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(rel);
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = rel_path.file_name() <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
         };
         <span class="rs-kw">let</span> marker_name = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> marker = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> marker = <span class="rs-type">OsString</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
             marker.push(name);
             marker
         };
@@ -1098,8 +1098,8 @@
 #[derive(<span class="rs-type">Debug</span>)]
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-LayerStack-188">LayerStack</a> {
     storage_root: <span class="rs-type">PathBuf</span>,
-    writer_lock: <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>,
-    leases: <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+    writer_lock: <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>,
+    leases: <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-42">SharedLeaseRegistry</a>,
     view: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>,
 }
 
@@ -1115,9 +1115,9 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(storage_root: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         std::fs::create_dir_all(storage_root.join(<span class="rs-type">LAYERS_DIR</span>))?;
         std::fs::create_dir_all(storage_root.join(<span class="rs-type">STAGING_DIR</span>))?;
-        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;storage_root)?;
-        <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-43">shared_registry_for_root</a>(&amp;storage_root)?;
-        <span class="rs-kw">let</span> view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(storage_root.clone());
+        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(&amp;storage_root)?;
+        <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-44">shared_registry_for_root</a>(&amp;storage_root)?;
+        <span class="rs-kw">let</span> view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(storage_root.clone());
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             storage_root,
             writer_lock,
@@ -1152,11 +1152,11 @@
     <span class="rs-comment">/// lease registry cannot be acquired.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-acquire-snapshot-241">acquire_snapshot</a>(&amp;<span class="rs-self">self</span>, owner_request_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-Lease-43">Lease</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-103">shared</a>()?;
         <span class="rs-kw">let</span> manifest = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">let</span> lease = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(manifest.clone(), owner_request_id)?
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(manifest.clone(), owner_request_id)?
         };
         <span class="rs-kw">let</span> layer_paths = manifest
             .layers
@@ -1170,7 +1170,7 @@
             root_hash: manifest_root_hash(&amp;manifest),
             manifest,
             layer_paths,
-            timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(),
+            timings: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(),
         })
     }
 
@@ -1183,8 +1183,8 @@
     <span class="rs-comment">/// unreferenced layer cleanup fails.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-release-lease-272">release_lease</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
         <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, lease_id)
     }
 
@@ -1196,8 +1196,8 @@
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-can-squash-286">can_squash</a>(&amp;<span class="rs-self">self</span>, max_depth: usize) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
-        <span class="rs-kw">let</span> lease_head_layers = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>();
+        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+        <span class="rs-kw">let</span> lease_head_layers = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>();
         <span class="rs-type">Ok</span>(squasher
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-plan-140">plan</a>(&amp;active, max_depth, &amp;lease_head_layers, 2)?
             .is_some())
@@ -1212,25 +1212,25 @@
     <span class="rs-comment">/// manifest swapping, lease release, or rollback cleanup fails.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-squash-301">squash</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max_depth: usize) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Manifest</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
-        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+        <span class="rs-kw">let</span> squasher = <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
         <span class="rs-kw">let</span> lease_head_layers = {
-            <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>()
+            <span class="rs-kw">let</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>()
         };
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(plan) = squasher.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-plan-140">plan</a>(&amp;active, max_depth, &amp;lease_head_layers, 1)? <span class="rs-kw">else</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
         };
         <span class="rs-kw">let</span> squash_lease = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
-            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(
                 active,
                 &amp;format!(&quot;squash-{}&quot;, <span class="rs-type">NEXT_LAYER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)),
             )?
         };
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> checkpoints = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> checkpoints = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> committed = <span class="rs-kw">false</span>;
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">for</span> segment <span class="rs-kw">in</span> plan.<a class="symbol-link rs-fn" href="eos-layerstack--src-squash-rs.html#method-checkpoint-segments-110">checkpoint_segments</a>() {
@@ -1259,7 +1259,7 @@
                     }
                 }
             }
-            <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(next_version, new_layers, current.schema_version)
+            <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(next_version, new_layers, current.schema_version)
                 .map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(<span class="rs-self">self</span>.storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest)?;
             committed = <span class="rs-kw">true</span>;
@@ -1272,7 +1272,7 @@
             }
         }
         <span class="rs-kw">let</span> release = {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> leases = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-release-lease-locked-648">release_lease_locked</a>(&amp;<span class="rs-self">self</span>.storage_root, &amp;<span class="rs-kw">mut</span> leases, &amp;squash_lease.lease_id)
         };
         <span class="rs-kw">match</span> (outcome, release) {
@@ -1294,20 +1294,20 @@
 
     <span class="rs-comment">/// Full retention keep-set (GC). DISTINCT from squash barriers.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>()
     }
 
     <span class="rs-comment">/// Squash-keep barrier set. DISTINCT from the GC retention set.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>()
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-137">lease_head_layers</a>()
     }
 
     <span class="rs-comment">/// Number of active snapshot leases.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-active-lease-count-402">active_lease_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
-        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>()
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-71">lock_shared_registry_recover</a>(&amp;<span class="rs-self">self</span>.leases).<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-150">active_count</a>()
     }
 
     <span class="rs-comment">/// Collapse the active manifest back into the bound workspace base.</span>
@@ -1325,8 +1325,8 @@
         &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
         workspace_root: &amp;<span class="rs-type">Path</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Manifest</span>, <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
-        <span class="rs-kw">let</span> _guard = writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> writer_lock = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-41">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-86">acquire</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
+        <span class="rs-kw">let</span> _guard = writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
         <span class="rs-kw">if</span> !workspace_root.is_dir() {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>(format!(
@@ -1334,7 +1334,7 @@
                 workspace_root.display()
             )));
         }
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>() &gt; 0 {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-63">lock_shared_registry</a>(&amp;<span class="rs-self">self</span>.leases)?.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-150">active_count</a>() &gt; 0 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(
                 &quot;commit_to_workspace blocked by active leases&quot;.to_owned(),
             ));
@@ -1342,7 +1342,7 @@
 
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">let</span> projection = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-commit-projection-dir-627">commit_projection_dir</a>()?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>();
         <span class="rs-kw">let</span> outcome = (|| {
             <span class="rs-kw">let</span> project_start = <span class="rs-type">Instant</span>::now();
             <span class="rs-self">self</span>.view.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-project-116">project</a>(&amp;projection, &amp;active)?;
@@ -1363,7 +1363,7 @@
             <span class="rs-kw">let</span> rebuild_start = <span class="rs-type">Instant</span>::now();
             <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-clear-storage-root-preserving-lock-61">clear_storage_root_preserving_lock</a>(&amp;<span class="rs-self">self</span>.storage_root)?;
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#item-fn-build-workspace-base-89">build_workspace_base</a>(&amp;<span class="rs-self">self</span>.storage_root, workspace_root, <span class="rs-kw">false</span>)?;
-            <span class="rs-self">self</span>.view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-self">self</span>.storage_root.clone());
+            <span class="rs-self">self</span>.view = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(<span class="rs-self">self</span>.storage_root.clone());
             <span class="rs-kw">let</span> new_manifest = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
             <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(
                 &amp;<span class="rs-kw">mut</span> timings,
@@ -1402,7 +1402,7 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-text-490">read_text</a>(&amp;<span class="rs-self">self</span>, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">String</span>, bool), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
         <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-bytes-75">read_bytes</a>(path)?;
         <span class="rs-kw">if</span> !exists {
-            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(), <span class="rs-kw">false</span>));
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(), <span class="rs-kw">false</span>));
         }
         <span class="rs-kw">let</span> bytes = bytes.unwrap_or_default();
         <span class="rs-kw">let</span> text =
@@ -1423,7 +1423,7 @@
     <span class="rs-comment">/// digest persistence, CAS validation, or manifest writes fail.</span>
     <span class="rs-comment">///</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-publish-layer-508">publish_layer</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, changes: &amp;[<span class="rs-type">LayerChange</span>]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> _guard = <span class="rs-self">self</span>.writer_lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-122">exclusive</a>()?;
         <span class="rs-kw">let</span> active = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-read-active-manifest-230">read_active_manifest</a>()?;
         <span class="rs-kw">if</span> changes.is_empty() {
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(active);
@@ -1477,7 +1477,7 @@
             path: format!(&quot;{<span class="rs-type">LAYERS_DIR</span>}/{layer_id}&quot;),
         });
         layers.extend(active.layers);
-        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(next_version, layers, active.schema_version)
+        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(next_version, layers, active.schema_version)
             .map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(<span class="rs-self">self</span>.storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest) {
             <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;layer_dir);
@@ -1555,7 +1555,7 @@
     leases: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
     lease_id: &amp;str,
 ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease) = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-113">release</a>(lease_id) <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(lease) = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-114">release</a>(lease_id) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">false</span>);
     };
     <span class="rs-kw">let</span> active = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(storage_root.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>))?;
@@ -1569,7 +1569,7 @@
     active: &amp;<span class="rs-type">Manifest</span>,
     leases: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>,
 ) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
-    <span class="rs-kw">let</span> retained_layers = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>();
+    <span class="rs-kw">let</span> retained_layers = leases.<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-131">leased_layers</a>();
     candidates
         .iter()
         .filter(|layer| !active.layers.contains(layer) &amp;&amp; !retained_layers.contains(layer))
@@ -1605,7 +1605,7 @@
                     std::fs::create_dir_all(parent)?;
                 }
                 <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
-                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(target, content)?;
+                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(target, content)?;
             }
             <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { path } =&gt; {
                 <span class="rs-kw">let</span> target = <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(layer_dir, path.as_str());
@@ -1628,15 +1628,15 @@
                 <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = marker.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(marker, b&quot;&quot;)?;
+                std::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-251">write</a>(marker, b&quot;&quot;)?;
             }
         }
     }
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">static</span> <span class="rs-type">NEXT_LAYER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
-<span class="rs-kw">static</span> <span class="rs-type">NEXT_TMP_WRITE</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
+<span class="rs-kw">static</span> <span class="rs-type">NEXT_LAYER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0);
+<span class="rs-kw">static</span> <span class="rs-type">NEXT_TMP_WRITE</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-80">new</a>(0);
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#item-fn-stale-layer-error-736">stale_layer_error</a>(layer: &amp;<span class="rs-type">LayerRef</span>, rel: &amp;str, err: &amp;std::io::<span class="rs-type">Error</span>) -&gt; <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
     <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(format!(

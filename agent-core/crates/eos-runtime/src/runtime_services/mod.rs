@@ -13,7 +13,7 @@ mod message_records;
 mod sandbox;
 mod state_reader;
 
-use eos_agent_runner::AgentMessageRecords;
+use eos_agent_run::AgentMessageRecords;
 
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
 pub(crate) use agent_loop::build_agent_loop_launcher;

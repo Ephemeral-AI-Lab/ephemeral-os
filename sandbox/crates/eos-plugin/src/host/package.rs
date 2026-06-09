@@ -10,6 +10,9 @@ use crate::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MAR
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+use crate::host::route::{
+    ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_DIGEST, ENV_PLUGIN_ID, ENV_PLUGIN_PACKAGE_ROOT,
+};
 use crate::host::PpcError;
 
 /// Outcome of a package ensure: whether the package contract is active, whether
@@ -26,12 +29,15 @@ pub struct PackageEnsureReport {
 
 /// Resolved package + dependency roots for a plugin digest.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PackageRoots {
+pub(crate) struct PackageRoots {
     pub package_root: PathBuf,
     pub dependency_root: PathBuf,
 }
 
-pub fn package_roots(args: &Value, manifest: &PluginManifest) -> Result<PackageRoots, PpcError> {
+pub(crate) fn package_roots(
+    args: &Value,
+    manifest: &PluginManifest,
+) -> Result<PackageRoots, PpcError> {
     let paths = PackagePaths::new(args, manifest)?;
     Ok(PackageRoots {
         package_root: paths.package_root,
@@ -364,10 +370,10 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
         .args(&setup.command[1..])
         .current_dir(&cwd)
         .env_clear()
-        .env("EOS_PLUGIN_ID", &manifest.plugin_id)
-        .env("EOS_PLUGIN_DIGEST", &manifest.plugin_digest)
-        .env("EOS_PLUGIN_PACKAGE_ROOT", &paths.package_root)
-        .env("EOS_PLUGIN_DEPENDENCY_ROOT", &paths.dependency_root)
+        .env(ENV_PLUGIN_ID, &manifest.plugin_id)
+        .env(ENV_PLUGIN_DIGEST, &manifest.plugin_digest)
+        .env(ENV_PLUGIN_PACKAGE_ROOT, &paths.package_root)
+        .env(ENV_PLUGIN_DEPENDENCY_ROOT, &paths.dependency_root)
         .env("TMPDIR", paths.setup_tmp_root.join("tmp"))
         .env("HOME", &paths.setup_tmp_root)
         .stdin(Stdio::null())

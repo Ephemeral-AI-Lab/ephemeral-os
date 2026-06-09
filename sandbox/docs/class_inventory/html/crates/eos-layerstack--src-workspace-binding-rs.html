@@ -108,8 +108,8 @@
                 &quot;path must be absolute: {raw}&quot;
             )));
         }
-        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(&amp;<span class="rs-self">self</span>.workspace_root);
-        <span class="rs-kw">let</span> candidate = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(raw);
+        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(&amp;<span class="rs-self">self</span>.workspace_root);
+        <span class="rs-kw">let</span> candidate = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(raw);
         <span class="rs-kw">let</span> relative = candidate.strip_prefix(&amp;workspace).map_err(|_| {
             <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>(format!(
                 &quot;path is outside bound workspace {}: {raw}&quot;,
@@ -279,8 +279,8 @@
                 &quot;path must be absolute: {raw}&quot;
             )));
         }
-        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(&amp;<span class="rs-self">self</span>.workspace_root);
-        <span class="rs-kw">let</span> candidate = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(raw);
+        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(&amp;<span class="rs-self">self</span>.workspace_root);
+        <span class="rs-kw">let</span> candidate = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(raw);
         <span class="rs-kw">let</span> relative = candidate.strip_prefix(&amp;workspace).map_err(|_| {
             <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>(format!(
                 &quot;path is outside bound workspace {}: {raw}&quot;,

@@ -3,7 +3,7 @@
 //!
 //! The cyclic edge in the Rust source is broken by injection (GC-eos-agent-def-05):
 //! terminal keys are passed into the scanner as data rather than imported from
-//! `eos-tools`.
+//! `eos-tool`.
 
 /// Terminal-silence lint over a skill body (`agents/skills/loader.py`).
 pub mod skill_lint {
@@ -11,7 +11,7 @@ pub mod skill_lint {
     /// human-readable violation per hit (empty means clean).
     ///
     /// `terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are
-    /// owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already
+    /// owned by `eos-tool`, GC-eos-agent-def-05). The caller passes an already
     /// frontmatter-stripped `body` so author metadata cannot false-positive.
     #[must_use]
     pub fn scan_skill_file(body: &str, terminal_keys: &[&str]) -> Vec<String> {

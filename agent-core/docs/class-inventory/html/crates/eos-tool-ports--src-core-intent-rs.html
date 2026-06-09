@@ -208,7 +208,7 @@
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! [`ToolIntent`] — the tool-classification intent (read-only / write / lifecycle).</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! `eos-tools` owns this enum (anchor §5). It shares the three values of</span>
+<span class="rs-comment">//! `eos-tool` owns this enum (anchor §5). It shares the three values of</span>
 <span class="rs-comment">//! `eos_sandbox_port::Intent` (the foreground sandbox-call intent) but is a</span>
 <span class="rs-comment">//! distinct, locally-owned contract; the sandbox boundary converts via</span>
 <span class="rs-comment">//! [`From`]/[`Into`] rather than aliasing another crate's type (GC: avoids an</span>

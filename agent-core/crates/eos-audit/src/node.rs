@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// Every field defaults to `None`; build one with [`AuditNode::builder`] or
 /// [`AuditNode::default`] plus field assignment. Typed ids come from `eos-types`;
 /// `agent_name` is a human label and `tool_name` is owned downstream
-/// (`eos-tools`), so both stay `String` to keep this crate's dependency set at
+/// (`eos-tool`), so both stay `String` to keep this crate's dependency set at
 /// exactly `eos-types`.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]

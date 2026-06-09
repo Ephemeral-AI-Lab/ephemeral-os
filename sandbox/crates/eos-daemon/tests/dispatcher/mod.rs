@@ -159,7 +159,6 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
         "cancel-target",
         task.abort_handle(),
         "caller-a",
-        "api.v1.exec_command",
         true,
     );
     let cleanup_registry = Arc::clone(&registry);

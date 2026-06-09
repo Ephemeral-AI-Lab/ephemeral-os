@@ -1,6 +1,6 @@
 //! [`ToolIntent`] — the tool-classification intent (read-only / write / lifecycle).
 //!
-//! `eos-tools` owns this enum (anchor §5). It shares the three values of
+//! `eos-tool` owns this enum (anchor §5). It shares the three values of
 //! `eos_sandbox_port::Intent` (the foreground sandbox-call intent) but is a
 //! distinct, locally-owned contract; the sandbox boundary converts via
 //! [`From`]/[`Into`] rather than aliasing another crate's type (GC: avoids an

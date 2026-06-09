@@ -25,7 +25,7 @@
   <div><b>15</b><span>modules</span></div>
   <div><b>142</b><span>items</span></div>
   <div><b>122</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -53,7 +53,7 @@
       <span>2 types</span>
       <span>2 impls</span>
       <span>2 fns</span>
-      <span>5 methods</span>
+      <span>4 methods</span>
     </div>
   </div>
   <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PluginOperationRoute-28" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginOperationRoute pub pub struct PluginOperationRoute crates/eos-plugin/src/host/route.rs plugin_id String op_name String public_op String layer_stack_root Option &lt; String &gt; intent Intent auto_workspace_overlay bool service_id Option &lt; String &gt; service_instance_id Option &lt; String &gt; service_key Option &lt; PluginServiceKey &gt; service_mode Option &lt; ServiceMode &gt; service_command Vec &lt; String &gt; service_ppc_protocol_version Option &lt; u32 &gt; timeout_ms Option &lt; u64 &gt; ">
@@ -127,12 +127,6 @@
         <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>()
     }
 </code></pre>
-</details></td></tr><tr id="method-key-139"><td>method</td><td>key</td><td><code>pub const fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#method-key-139">key</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a></code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-key-139">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> {
-        &amp;<span class="rs-self">self</span>.key
-    }
-</code></pre>
 </details></td></tr><tr id="method-new-with-package-paths-72"><td>associated-fn</td><td>new_with_package_paths</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#method-new-with-package-paths-72">new_with_package_paths</a> (key : <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> , command : Vec &lt; String &gt; , package_root : PathBuf , dependency_root : PathBuf , working_dir : PathBuf , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-new-with-package-paths-72">new_with_package_paths</a>(
@@ -155,7 +149,7 @@
                 &quot;ppc_protocol_version must be positive&quot;.to_owned(),
             ));
         }
-        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-144">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
+        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-140">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             key,
             command,
@@ -170,39 +164,39 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-plugin/src/host/route.rs:58</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-socket-path-for-key-144" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn socket_path_for_key private fn socket_path_for_key (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf crates/eos-plugin/src/host/route.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-socket-path-for-key-140" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn socket_path_for_key private fn socket_path_for_key (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf crates/eos-plugin/src/host/route.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>socket_path_for_key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-144">socket_path_for_key</a> (key : &amp; <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> , socket_root : &amp; Path) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-140">socket_path_for_key</a> (key : &amp; <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> , socket_root : &amp; Path) -&gt; PathBuf</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-144">socket_path_for_key</a>(key: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-140">socket_path_for_key</a>(key: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     hasher.update(key.<a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>().as_bytes());
     hasher.update(b&quot;\0&quot;);
     hasher.update(key.plugin_digest.as_bytes());
     <span class="rs-kw">let</span> digest = hasher.finalize();
-    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-153">lower_hex</a>(&amp;digest[..16])))
+    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-149">lower_hex</a>(&amp;digest[..16])))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/route.rs:144</p>
-</article><article id="item-fn-lower-hex-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lower_hex private fn lower_hex (bytes : &amp; [u8]) -&gt; String crates/eos-plugin/src/host/route.rs  ">
+  <p class="source">crates/eos-plugin/src/host/route.rs:140</p>
+</article><article id="item-fn-lower-hex-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lower_hex private fn lower_hex (bytes : &amp; [u8]) -&gt; String crates/eos-plugin/src/host/route.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lower_hex</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-153">lower_hex</a> (bytes : &amp; [u8]) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-149">lower_hex</a> (bytes : &amp; [u8]) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-153">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-149">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">const</span> <span class="rs-type">HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
     <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> bytes {
@@ -214,7 +208,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-plugin/src/host/route.rs:153</p>
+  <p class="source">crates/eos-plugin/src/host/route.rs:149</p>
 </article></div>
 </section></div>
 </main>
@@ -314,7 +308,7 @@
                 &quot;ppc_protocol_version must be positive&quot;.to_owned(),
             ));
         }
-        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-144">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
+        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-140">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             key,
             command,
@@ -360,22 +354,18 @@
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
         <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>()
     }
-
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-key-139">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> {
-        &amp;<span class="rs-self">self</span>.key
-    }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-144">socket_path_for_key</a>(key: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-121">new</a>();
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-socket-path-for-key-140">socket_path_for_key</a>(key: &amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-host-package-rs.html#method-new-127">new</a>();
     hasher.update(key.<a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#method-service-instance-id-135">service_instance_id</a>().as_bytes());
     hasher.update(b&quot;\0&quot;);
     hasher.update(key.plugin_digest.as_bytes());
     <span class="rs-kw">let</span> digest = hasher.finalize();
-    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-153">lower_hex</a>(&amp;digest[..16])))
+    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-149">lower_hex</a>(&amp;digest[..16])))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-153">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-route-rs.html#item-fn-lower-hex-149">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">const</span> <span class="rs-type">HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
     <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> bytes {

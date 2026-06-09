@@ -16,7 +16,7 @@
 //!   and parse the JSON envelope into a typed result.
 //!
 //! It deliberately does **not** implement the daemon-backed transport, stamp the
-//! protocol version, emit audit events (audit wrapping lives in `eos-tools`),
+//! protocol version, emit audit events (audit wrapping lives in `eos-tool`),
 //! select a sandbox provider, or own a Tokio runtime.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]

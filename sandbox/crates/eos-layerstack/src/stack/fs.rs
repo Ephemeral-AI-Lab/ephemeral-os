@@ -120,9 +120,10 @@ pub(crate) fn fsync_dir(path: &Path) -> Result<(), LayerStackError> {
     Ok(())
 }
 
-/// fsync every non-symlink regular file under `root` (the staged layer tree),
-/// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special
-/// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.
+/// fsync every non-symlink regular file under `root` (the staged layer tree).
+/// Recurses via `read_dir` and uses `symlink_metadata` so symlinks are not
+/// followed; special files (char-device whiteouts) and symlinks are skipped —
+/// fsync is N/A for them.
 pub(super) fn fsync_tree_files(root: &Path) -> Result<(), LayerStackError> {
     for entry in std::fs::read_dir(root)? {
         let entry = entry?;

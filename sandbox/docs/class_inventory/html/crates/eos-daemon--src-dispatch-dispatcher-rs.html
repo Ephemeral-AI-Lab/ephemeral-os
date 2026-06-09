@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>50</b><span>modules</span></div>
-  <div><b>447</b><span>items</span></div>
+  <div><b>446</b><span>items</span></div>
   <div><b>171</b><span>fields</span></div>
   <div><b>83</b><span>methods</span></div>
 </section>
@@ -280,18 +280,18 @@
     <h3>Handler</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = for &lt; &#x27;ctx &gt; fn (&amp; Value , <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;ctx &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = for &lt; &#x27;ctx &gt; fn (&amp; Value , <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;ctx &gt;) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <p class="docstring">A synchronous op handler: decoded args -&gt; response value.<br>The daemon keeps the routing surface explicit here and lets each op facade<br>own request shaping before delegating to its implementation service.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:50</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-error-envelope-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope pub pub fn error_envelope (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-error-envelope-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope pub(crate) pub(crate) fn error_envelope (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_envelope</h3>
-    <span class="visibility">pub</span>
+    <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a> (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a> (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value</code>
   <p class="docstring">Build the structured wire error envelope.<br>`warnings`/`timings` are always `[]`/`{}` at the builder. `details`<br>defaults to `{}` and `internal_error` responses receive a generated<br>`details.error_id` when the caller did not provide one.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -302,7 +302,7 @@
 <span class="rs-comment">/// defaults to `{}` and `internal_error` responses receive a generated</span>
 <span class="rs-comment">/// `details.error_id` when the caller did not provide one.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> is_internal_error = kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>;
     <span class="rs-kw">let</span> kind_str = serde_json::to_value(kind).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
     <span class="rs-kw">let</span> details = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error, details);
@@ -488,7 +488,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// The daemon keeps the routing surface explicit here and lets each op facade</span>
 <span class="rs-comment">/// own request shaping before delegating to its implementation service.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = <span class="rs-kw">for</span>&lt;&#x27;ctx&gt; <span class="rs-kw">fn</span>(&amp;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;ctx&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-131">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = <span class="rs-kw">for</span>&lt;&#x27;ctx&gt; <span class="rs-kw">fn</span>(&amp;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;ctx&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;;
 
 <span class="rs-comment">/// Per-dispatch daemon services used by handlers that need runtime state.</span>
 #[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>)]
@@ -690,7 +690,7 @@
 <span class="rs-comment">/// defaults to `{}` and `internal_error` responses receive a generated</span>
 <span class="rs-comment">/// `details.error_id` when the caller did not provide one.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> is_internal_error = kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>;
     <span class="rs-kw">let</span> kind_str = serde_json::to_value(kind).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
     <span class="rs-kw">let</span> details = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error, details);
