@@ -15,6 +15,10 @@ use super::{
 };
 use crate::notifications::EngineNotificationQueue;
 use crate::provider_stream::{messages::build_provider_messages, ProviderStreamSource};
+use crate::records::{
+    AgentRecordWriter, AgentRunRecordHandle, AgentRunRecordKind, AgentRunRecordStart,
+    NodeFinishStatus,
+};
 use crate::tool_call::{
     execute_tool_once, lifecycle_batch_decision, reject_terminal_batch, DispatchCall,
 };
@@ -29,6 +33,7 @@ pub(crate) struct AgentLoopExecutor {
     background_inputs: Option<BackgroundSessionInputs>,
     hook_stores: Option<ToolCallHookStores>,
     event_sink: Option<crate::event::EngineEventSink>,
+    record_writer: Option<AgentRecordWriter>,
     agent_run_api: Arc<dyn AgentRunApi>,
 }
 
@@ -41,6 +46,7 @@ pub(crate) struct AgentLoopExecutorInput {
     pub(crate) background_inputs: Option<BackgroundSessionInputs>,
     pub(crate) hook_stores: Option<ToolCallHookStores>,
     pub(crate) event_sink: Option<crate::event::EngineEventSink>,
+    pub(crate) record_writer: Option<AgentRecordWriter>,
     pub(crate) agent_run_api: Arc<dyn AgentRunApi>,
 }
 
@@ -60,6 +66,7 @@ impl AgentLoopExecutor {
             background_inputs: input.background_inputs,
             hook_stores: input.hook_stores,
             event_sink: input.event_sink,
+            record_writer: input.record_writer,
             agent_run_api: input.agent_run_api,
         }
     }
@@ -84,8 +91,21 @@ impl AgentLoopExecutor {
                 };
             }
         };
+        let record = match self.start_agent_run_record(&request, &event_identity).await {
+            Ok(record) => record,
+            Err(error) => {
+                return AgentLoopOutcome {
+                    kind: AgentLoopOutcomeKind::LoopFailed {
+                        error_summary: error.to_string(),
+                    },
+                    final_conversation_messages: request.initial_messages,
+                    total_token_count: None,
+                };
+            }
+        };
         let provider_stream_source = self.resolve_provider_stream_source(&request, &event_identity);
         let run_services = self.build_run_services(&request.record_target.agent_run_id);
+        let initial_messages_for_error = request.initial_messages.clone();
         let mut state = match AgentLoopState::from_request(
             request,
             &*self.tool_registry_factory,
@@ -94,13 +114,14 @@ impl AgentLoopExecutor {
         ) {
             Ok(state) => state,
             Err(error) => {
-                return AgentLoopOutcome {
+                let outcome = AgentLoopOutcome {
                     kind: AgentLoopOutcomeKind::LoopFailed {
                         error_summary: error.to_string(),
                     },
-                    final_conversation_messages: Vec::new(),
+                    final_conversation_messages: initial_messages_for_error,
                     total_token_count: None,
                 };
+                return self.finish_agent_run_record(record, outcome).await;
             }
         };
 
@@ -109,14 +130,17 @@ impl AgentLoopExecutor {
                 state
                     .teardown_background(&format!("agent loop cancelled: {reason}"))
                     .await;
-                return state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
+                let outcome =
+                    state.loop_failed_summary(format!("agent loop cancelled: {reason}"));
+                return self.finish_agent_run_record(record, outcome).await;
             }
             if state.turn_limit_reached() {
                 state
                     .teardown_background("agent loop exited without a terminal tool submission")
                     .await;
                 let summary = state.terminal_not_submitted_summary();
-                return state.loop_failed_summary(summary);
+                let outcome = state.loop_failed_summary(summary);
+                return self.finish_agent_run_record(record, outcome).await;
             }
 
             self.drain_notifications(&mut state, &event_identity).await;
@@ -129,7 +153,8 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background(&format!("agent loop failed: {error}"))
                         .await;
-                    return state.loop_failed(&error);
+                    let outcome = state.loop_failed(&error);
+                    return self.finish_agent_run_record(record, outcome).await;
                 }
             };
 
@@ -139,10 +164,67 @@ impl AgentLoopExecutor {
                     state
                         .teardown_background("parent agent submitted its terminal")
                         .await;
-                    return state.terminal_tool_submitted(&outcome);
+                    let outcome = state.terminal_tool_submitted(&outcome);
+                    return self.finish_agent_run_record(record, outcome).await;
                 }
             }
         }
+    }
+
+    async fn start_agent_run_record(
+        &self,
+        request: &StartAgentLoopRequest,
+        event_identity: &AgentRunRuntimeSnapshot,
+    ) -> Result<Option<LoopRecordHandle>, EngineError> {
+        let Some(record_writer) = &self.record_writer else {
+            return Ok(None);
+        };
+        let record_kind =
+            AgentRunRecordKind::from_task_agent_run_kind(&request.record_target.task_agent_run_kind);
+        let (system_prompt, initial_messages) =
+            split_record_initial_messages(&request.initial_messages);
+        let handle = record_writer
+            .start_agent_run_at(
+                &request.record_target.record_dir,
+                AgentRunRecordStart {
+                    request_id: &request.record_target.request_id,
+                    task_id: Some(&request.record_target.task_id),
+                    agent_run_id: &request.record_target.agent_run_id,
+                    agent_name: &event_identity.agent_name,
+                    kind: &record_kind,
+                    system_prompt: &system_prompt,
+                    initial_messages: &initial_messages,
+                },
+            )
+            .await
+            .map_err(|error| EngineError::Internal(error.to_string()))?;
+        Ok(Some(LoopRecordHandle {
+            handle,
+            initial_message_count: initial_messages.len(),
+        }))
+    }
+
+    async fn finish_agent_run_record(
+        &self,
+        record: Option<LoopRecordHandle>,
+        outcome: AgentLoopOutcome,
+    ) -> AgentLoopOutcome {
+        let Some(record) = record else {
+            return outcome;
+        };
+        let later_messages = loop_messages_to_llm_messages(&outcome.final_conversation_messages);
+        let later_message_start = record.initial_message_count.min(later_messages.len());
+        if let Err(error) = record
+            .handle
+            .append_messages(&later_messages[later_message_start..])
+            .await
+        {
+            return record_write_failed(outcome, error);
+        }
+        if let Err(error) = record.handle.finish(node_finish_status(&outcome.kind)).await {
+            return record_write_failed(outcome, error);
+        }
+        outcome
     }
 
     async fn execute_assistant_turn(
@@ -371,6 +453,11 @@ impl AgentLoopExecutor {
     }
 }
 
+struct LoopRecordHandle {
+    handle: AgentRunRecordHandle,
+    initial_message_count: usize,
+}
+
 /// Result of one private assistant turn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AssistantTurnResult {
@@ -447,6 +534,41 @@ fn loop_messages_to_llm_messages(messages: &[AgentLoopMessage]) -> Vec<Message> 
             | AgentLoopMessage::AssistantMessage(message) => Some(message.clone()),
         })
         .collect()
+}
+
+fn split_record_initial_messages(messages: &[AgentLoopMessage]) -> (String, Vec<Message>) {
+    let mut system_prompt = String::new();
+    let llm_messages = messages
+        .iter()
+        .filter_map(|message| match message {
+            AgentLoopMessage::SystemPrompt(prompt) => {
+                if system_prompt.is_empty() {
+                    system_prompt = prompt.clone();
+                }
+                None
+            }
+            AgentLoopMessage::UserMessage(message)
+            | AgentLoopMessage::AssistantMessage(message) => Some(message.clone()),
+        })
+        .collect();
+    (system_prompt, llm_messages)
+}
+
+fn node_finish_status(kind: &AgentLoopOutcomeKind) -> NodeFinishStatus {
+    match kind {
+        AgentLoopOutcomeKind::TerminalToolSubmitted { .. } => NodeFinishStatus::Completed,
+        AgentLoopOutcomeKind::LoopFailed { .. } => NodeFinishStatus::Failed,
+    }
+}
+
+fn record_write_failed(
+    mut outcome: AgentLoopOutcome,
+    error: impl std::fmt::Display,
+) -> AgentLoopOutcome {
+    outcome.kind = AgentLoopOutcomeKind::LoopFailed {
+        error_summary: format!("agent-run record write failed: {error}"),
+    };
+    outcome
 }
 
 fn result_block(tool_use_id: &ToolUseId, result: &ToolResult) -> ContentBlock {

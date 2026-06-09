@@ -4,21 +4,19 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_types::{
-    AgentDefinition, AgentLoopCompletion, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome,
+    AgentLoopCompletion, AgentLoopLauncher, AgentLoopMessage, AgentLoopOutcome,
     AgentLoopOutcomeKind, AgentName as DefinitionAgentName, AgentRegistry, AgentRunApi,
-    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunRecordTarget, AgentRunStatus,
-    AgentRunStore, AgentType, CreatedTaskAgentRun, Message, ParentedAgentRunKind,
-    SpawnAgentRequest, SpawnAgentTarget, TaskAgentRunKind, TaskAgentRunStore, TaskStatus,
+    AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, AgentType,
+    CreatedTaskAgentRun, Message, ParentedAgentRunKind, SpawnAgentRequest, SpawnAgentTarget,
+    TaskAgentRunKind, TaskAgentRunStore, TaskStatus,
 };
 
-use crate::active_agent_runs::{ActiveAgentRunRecord, ActiveAgentRunRegistry};
+use crate::active_agent_runs::ActiveAgentRunRegistry;
 use crate::agent_loop_request::build_start_agent_loop_request;
 use crate::agent_run_persistence::{
     completion_from_agent_run, create_compat_agent_run, finish_compat_agent_run,
     finish_compat_agent_run_cancelled,
 };
-use crate::agent_run_records::to_agent_run_record_kind;
-use crate::records::{AgentMessageRecords, AgentRunRecordStart, NodeFinishStatus};
 
 type RuntimeStateRecorder = Arc<
     dyn Fn(&SpawnAgentRequest, &CreatedTaskAgentRun) -> Result<(), AgentRunError> + Send + Sync,
@@ -32,7 +30,6 @@ pub struct AgentRunService {
     agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
     agent_run_store: Arc<dyn AgentRunStore>,
     task_agent_run_store: Arc<dyn TaskAgentRunStore>,
-    message_records: Option<AgentMessageRecords>,
     active_agent_runs: ActiveAgentRunRegistry,
     runtime_state_recorder: Option<RuntimeStateRecorder>,
     runtime_state_remover: Option<RuntimeStateRemover>,
@@ -52,14 +49,12 @@ impl AgentRunService {
         agent_loop_launcher: Arc<dyn AgentLoopLauncher>,
         agent_run_store: Arc<dyn AgentRunStore>,
         task_agent_run_store: Arc<dyn TaskAgentRunStore>,
-        message_records: Option<AgentMessageRecords>,
     ) -> Self {
         Self {
             agent_registry,
             agent_loop_launcher,
             agent_run_store,
             task_agent_run_store,
-            message_records,
             active_agent_runs: ActiveAgentRunRegistry::new(),
             runtime_state_recorder: None,
             runtime_state_remover: None,
@@ -86,73 +81,6 @@ impl AgentRunService {
         self.runtime_state_recorder = Some(Arc::new(record));
         self.runtime_state_remover = Some(Arc::new(remove));
         self
-    }
-
-    async fn start_message_record(
-        &self,
-        request: &SpawnAgentRequest,
-        agent_def: &AgentDefinition,
-        record_target: &AgentRunRecordTarget,
-    ) -> Result<Option<ActiveAgentRunRecord>, AgentRunError> {
-        let Some(message_records) = &self.message_records else {
-            return Ok(None);
-        };
-        let kind = to_agent_run_record_kind(&request.target.task_agent_run_kind());
-        let handle = message_records
-            .start_agent_run_at(
-                &record_target.record_dir,
-                AgentRunRecordStart {
-                    request_id: &record_target.request_id,
-                    task_id: Some(&record_target.task_id),
-                    agent_run_id: &record_target.agent_run_id,
-                    agent_name: agent_def.name.as_str(),
-                    kind: &kind,
-                    system_prompt: agent_def.system_prompt.as_deref().unwrap_or_default(),
-                    initial_messages: &request.initial_messages,
-                },
-            )
-            .await
-            .map_err(|err| AgentRunError::Internal(err.to_string()))?;
-        Ok(Some(ActiveAgentRunRecord::new(
-            handle,
-            request.initial_messages.len(),
-        )))
-    }
-
-    async fn finish_message_record(
-        &self,
-        message_record: Option<ActiveAgentRunRecord>,
-        outcome: &AgentRunOutcome,
-    ) {
-        let Some(message_record) = message_record else {
-            return;
-        };
-        let later_message_start = message_record
-            .initial_message_count
-            .min(outcome.message_history.len());
-        if let Err(err) = message_record
-            .handle
-            .append_messages(&outcome.message_history[later_message_start..])
-            .await
-        {
-            tracing::warn!(
-                agent_run_id = %outcome.agent_run_id,
-                error = %err,
-                "failed to append agent-run message record messages"
-            );
-        }
-
-        let status = match outcome.status {
-            AgentRunStatus::Completed => NodeFinishStatus::Completed,
-            AgentRunStatus::Failed | AgentRunStatus::Cancelled => NodeFinishStatus::Failed,
-        };
-        if let Err(err) = message_record.handle.finish(status).await {
-            tracing::warn!(
-                agent_run_id = %outcome.agent_run_id,
-                error = %err,
-                "failed to finish agent-run message record"
-            );
-        }
     }
 
     async fn finalize_agent_run_from_agent_loop_outcome(
@@ -356,9 +284,6 @@ impl AgentRunApi for AgentRunService {
         )
         .await?;
         let record_target = created_run.record_target.clone();
-        let message_record = self
-            .start_message_record(&request, &agent_def, &record_target)
-            .await?;
         if let Some(record_runtime_state) = &self.runtime_state_recorder {
             record_runtime_state(&request, &created_run)?;
         }
@@ -369,7 +294,7 @@ impl AgentRunApi for AgentRunService {
             .start_agent_loop(start_request, agent_run_api);
 
         self.active_agent_runs
-            .insert(agent_run_id.clone(), started.cancellation, message_record)
+            .insert(agent_run_id.clone(), started.cancellation)
             .await;
         let service = self.clone();
         let forward_agent_run_id = agent_run_id.clone();
@@ -421,7 +346,7 @@ impl AgentRunApi for AgentRunService {
         agent_run_id: &AgentRunId,
         reason: &str,
     ) -> Result<(), AgentRunError> {
-        let mut completion = self.active_agent_runs.take(agent_run_id).await;
+        let completion = self.active_agent_runs.take(agent_run_id).await;
         if let Some(completion) = &completion {
             completion.cancel(reason);
         }
@@ -443,10 +368,6 @@ impl AgentRunApi for AgentRunService {
             token_count: None,
             error: Some(reason.to_owned()),
         };
-        if let Some(completion) = &mut completion {
-            self.finish_message_record(completion.take_message_record(), &outcome)
-                .await;
-        }
         if let Some(completion) = completion {
             completion.publish(outcome);
         }
@@ -463,7 +384,7 @@ async fn forward_agent_loop_outcome(
     loop_completion: AgentLoopCompletion,
 ) {
     let received = loop_completion.wait().await;
-    let Some(mut completion) = service.active_agent_runs.take(&agent_run_id).await else {
+    let Some(completion) = service.active_agent_runs.take(&agent_run_id).await else {
         return;
     };
     let outcome = match received {
@@ -478,9 +399,6 @@ async fn forward_agent_loop_outcome(
                 .await
         }
     };
-    service
-        .finish_message_record(completion.take_message_record(), &outcome)
-        .await;
     completion.publish(outcome);
     if let Some(remove_runtime_state) = &service.runtime_state_remover {
         remove_runtime_state(&agent_run_id);
@@ -564,6 +482,20 @@ const fn expected_agent_type(run_kind: &TaskAgentRunKind) -> AgentType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use std::num::NonZeroU32;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Mutex as StdMutex, MutexGuard};
+    use tokio::sync::oneshot;
+    use tokio::time::{timeout, Duration};
+
+    use eos_types::{
+        format_record_dir, root_task_id, AgentDefinition, AgentLoopCancellation, AgentName,
+        AgentRegistryBuilder, AgentRun, AgentRunRecordIndex, AgentRunRecordTarget, ContentBlock,
+        CoreError, JsonObject, ParentAgentRunAnchor, ParentedRun, RequestId,
+        StartAgentLoopRequest, StartedAgentLoop, TaskAgentRunKind, TaskExecutionIndex, TaskId,
+        TaskRole, TaskRun, ToolUseId, UtcDateTime, WorkflowCoordinates, WorkflowNodeId,
+    };
 
     #[test]
     fn task_agent_run_kind_declares_required_agent_type() {
@@ -586,5 +518,423 @@ mod tests {
             }),
             AgentType::Advisor
         );
+    }
+
+    #[tokio::test]
+    async fn engine_completion_finalizes_once_and_publishes_waiters() {
+        let harness = ServiceHarness::new();
+        let run_id = harness
+            .service
+            .spawn_agent(root_spawn_request())
+            .await
+            .expect("spawn succeeds");
+        let waiter = {
+            let service = harness.service.clone();
+            let run_id = run_id.clone();
+            tokio::spawn(async move { service.wait_for_agent_outcome(&run_id).await })
+        };
+
+        harness.launcher.complete(successful_loop_outcome());
+
+        let outcome = timeout(Duration::from_secs(1), waiter)
+            .await
+            .expect("waiter completes")
+            .expect("waiter task joins")
+            .expect("waiter returns outcome");
+        assert_eq!(outcome.status, AgentRunStatus::Completed);
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
+        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+        assert_eq!(
+            harness
+                .service
+                .poll_agent_run_outcome(&run_id)
+                .await
+                .expect("poll succeeds")
+                .expect("outcome is persisted")
+                .status,
+            AgentRunStatus::Completed
+        );
+    }
+
+    #[tokio::test]
+    async fn cancellation_before_engine_completion_finalizes_once() {
+        let harness = ServiceHarness::new();
+        let run_id = harness
+            .service
+            .spawn_agent(root_spawn_request())
+            .await
+            .expect("spawn succeeds");
+        let waiter = {
+            let service = harness.service.clone();
+            let run_id = run_id.clone();
+            tokio::spawn(async move { service.wait_for_agent_outcome(&run_id).await })
+        };
+
+        harness
+            .service
+            .cancel_agent_run(&run_id, "caller cancelled")
+            .await
+            .expect("cancel succeeds");
+
+        let outcome = timeout(Duration::from_secs(1), waiter)
+            .await
+            .expect("waiter completes")
+            .expect("waiter task joins")
+            .expect("waiter returns outcome");
+        assert_eq!(outcome.status, AgentRunStatus::Cancelled);
+        assert_eq!(
+            harness.launcher.cancellation_reason(),
+            Some("caller cancelled".to_owned())
+        );
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
+        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+
+        harness.launcher.complete(successful_loop_outcome());
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        assert_eq!(harness.agent_run_store.finish_count(), 1);
+        assert_eq!(harness.task_agent_run_store.finish_count(), 1);
+    }
+
+    struct ServiceHarness {
+        service: AgentRunService,
+        launcher: Arc<ControlledLauncher>,
+        agent_run_store: Arc<FakeAgentRunStore>,
+        task_agent_run_store: Arc<FakeTaskAgentRunStore>,
+    }
+
+    impl ServiceHarness {
+        fn new() -> Self {
+            let mut registry = AgentRegistryBuilder::new();
+            registry.add(root_agent_definition());
+            let launcher = Arc::new(ControlledLauncher::default());
+            let agent_run_store = Arc::new(FakeAgentRunStore::default());
+            let task_agent_run_store = Arc::new(FakeTaskAgentRunStore::default());
+            let service = AgentRunService::new(
+                Arc::new(registry.build()),
+                launcher.clone(),
+                agent_run_store.clone(),
+                task_agent_run_store.clone(),
+            );
+            Self {
+                service,
+                launcher,
+                agent_run_store,
+                task_agent_run_store,
+            }
+        }
+    }
+
+    fn root_agent_definition() -> AgentDefinition {
+        AgentDefinition {
+            name: AgentName::new("root").expect("valid agent name"),
+            description: "root test agent".to_owned(),
+            system_prompt: Some("system".to_owned()),
+            model: Some("test-model".to_owned()),
+            tool_call_limit: NonZeroU32::new(4).expect("non-zero"),
+            agent_type: AgentType::Agent,
+            allowed_tools: Vec::new(),
+            terminals: Vec::new(),
+            notification_triggers: Vec::new(),
+            skill: None,
+            context_recipe: None,
+        }
+    }
+
+    fn root_spawn_request() -> SpawnAgentRequest {
+        SpawnAgentRequest {
+            agent_name: AgentName::new("root").expect("valid agent name"),
+            initial_messages: vec![Message::from_user_text("start")],
+            target: SpawnAgentTarget::Root {
+                request_id: RequestId::new_v4(),
+            },
+            tool_use_id: None,
+            sandbox_id: None,
+            workspace_root: "/workspace".to_owned(),
+            is_isolated_workspace_mode: false,
+        }
+    }
+
+    fn successful_loop_outcome() -> AgentLoopOutcome {
+        let mut payload = JsonObject::new();
+        payload.insert("summary".to_owned(), serde_json::json!("done"));
+        AgentLoopOutcome {
+            kind: AgentLoopOutcomeKind::TerminalToolSubmitted {
+                submission_payload: payload,
+            },
+            final_conversation_messages: vec![
+                AgentLoopMessage::UserMessage(Message::from_user_text("start")),
+                AgentLoopMessage::AssistantMessage(Message {
+                    role: eos_types::MessageRole::Assistant,
+                    content: vec![ContentBlock::Text {
+                        text: "done".to_owned(),
+                    }],
+                }),
+            ],
+            total_token_count: Some(12),
+        }
+    }
+
+    #[derive(Default)]
+    struct ControlledLauncher {
+        completion_sender: StdMutex<Option<oneshot::Sender<Option<AgentLoopOutcome>>>>,
+        cancellation: Arc<TestCancellation>,
+    }
+
+    impl ControlledLauncher {
+        fn complete(&self, outcome: AgentLoopOutcome) {
+            let Some(sender) = lock(&self.completion_sender).take() else {
+                panic!("agent loop was not started");
+            };
+            let _ignored = sender.send(Some(outcome));
+        }
+
+        fn cancellation_reason(&self) -> Option<String> {
+            lock(&self.cancellation.reason).clone()
+        }
+    }
+
+    impl AgentLoopLauncher for ControlledLauncher {
+        fn start_agent_loop(
+            &self,
+            _request: StartAgentLoopRequest,
+            _agent_run_api: Arc<dyn AgentRunApi>,
+        ) -> StartedAgentLoop {
+            let (sender, receiver) = oneshot::channel();
+            *lock(&self.completion_sender) = Some(sender);
+            StartedAgentLoop {
+                completion: AgentLoopCompletion::new(async move { receiver.await.ok().flatten() }),
+                cancellation: self.cancellation.clone(),
+            }
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct TestCancellation {
+        reason: StdMutex<Option<String>>,
+    }
+
+    impl AgentLoopCancellation for TestCancellation {
+        fn cancel(&self, reason: &str) {
+            let mut stored = lock(&self.reason);
+            if stored.is_none() {
+                *stored = Some(reason.to_owned());
+            }
+        }
+    }
+
+    #[derive(Default)]
+    struct FakeAgentRunStore {
+        runs: StdMutex<HashMap<AgentRunId, AgentRun>>,
+        finish_count: AtomicUsize,
+    }
+
+    impl FakeAgentRunStore {
+        fn finish_count(&self) -> usize {
+            self.finish_count.load(Ordering::SeqCst)
+        }
+    }
+
+    impl eos_types::Sealed for FakeAgentRunStore {}
+
+    #[async_trait]
+    impl AgentRunStore for FakeAgentRunStore {
+        async fn create_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            task_id: Option<&TaskId>,
+            agent_name: &str,
+        ) -> Result<AgentRun, CoreError> {
+            let run = AgentRun {
+                id: agent_run_id.clone(),
+                task_id: task_id.cloned(),
+                agent_name: agent_name.to_owned(),
+                terminal_payload: None,
+                token_count: 0,
+                error: None,
+                created_at: UtcDateTime::now(),
+                finished_at: None,
+            };
+            lock(&self.runs).insert(agent_run_id.clone(), run.clone());
+            Ok(run)
+        }
+
+        async fn finish_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            terminal_payload: Option<&JsonObject>,
+            token_count: i64,
+            error: Option<&str>,
+        ) -> Result<Option<AgentRun>, CoreError> {
+            self.finish_count.fetch_add(1, Ordering::SeqCst);
+            let mut runs = lock(&self.runs);
+            let Some(run) = runs.get_mut(agent_run_id) else {
+                return Ok(None);
+            };
+            run.terminal_payload = terminal_payload.cloned();
+            run.token_count = token_count;
+            run.error = error.map(str::to_owned);
+            run.finished_at = Some(UtcDateTime::now());
+            Ok(Some(run.clone()))
+        }
+
+        async fn get(&self, agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(lock(&self.runs).get(agent_run_id).cloned())
+        }
+
+        async fn get_for_task(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(lock(&self.runs)
+                .values()
+                .find(|run| run.task_id.as_ref() == Some(task_id))
+                .cloned())
+        }
+    }
+
+    #[derive(Default)]
+    struct FakeTaskAgentRunStore {
+        indexes: StdMutex<HashMap<AgentRunId, AgentRunRecordIndex>>,
+        finish_count: AtomicUsize,
+    }
+
+    impl FakeTaskAgentRunStore {
+        fn finish_count(&self) -> usize {
+            self.finish_count.load(Ordering::SeqCst)
+        }
+    }
+
+    impl eos_types::Sealed for FakeTaskAgentRunStore {}
+
+    #[async_trait]
+    impl TaskAgentRunStore for FakeTaskAgentRunStore {
+        async fn create_root_task_agent_run(
+            &self,
+            request_id: &RequestId,
+            agent_run_id: &AgentRunId,
+            _agent_name: &AgentName,
+        ) -> Result<CreatedTaskAgentRun, CoreError> {
+            let index = AgentRunRecordIndex {
+                request_id: request_id.clone(),
+                agent_run_id: agent_run_id.clone(),
+                task_id: root_task_id(request_id),
+                kind: TaskAgentRunKind::Root,
+                parent_record_dir: None,
+            };
+            lock(&self.indexes).insert(agent_run_id.clone(), index.clone());
+            Ok(created_from_index(&index))
+        }
+
+        async fn create_workflow_task_agent_run(
+            &self,
+            _request_id: &RequestId,
+            _agent_run_id: &AgentRunId,
+            _workflow: &WorkflowCoordinates,
+            _workflow_node_id: &WorkflowNodeId,
+            _agent_name: &AgentName,
+        ) -> Result<CreatedTaskAgentRun, CoreError> {
+            Err(CoreError::Store("workflow fake not implemented".to_owned()))
+        }
+
+        async fn create_parented_task_agent_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _parent: &ParentAgentRunAnchor,
+            _kind: ParentedAgentRunKind,
+            _tool_use_id: Option<&ToolUseId>,
+            _agent_name: &AgentName,
+        ) -> Result<CreatedTaskAgentRun, CoreError> {
+            Err(CoreError::Store("parented fake not implemented".to_owned()))
+        }
+
+        async fn finish_task_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            status: TaskStatus,
+            terminal_payload: Option<&JsonObject>,
+            token_count: i64,
+            error: Option<&str>,
+        ) -> Result<Option<TaskRun>, CoreError> {
+            self.finish_count.fetch_add(1, Ordering::SeqCst);
+            let Some(index) = lock(&self.indexes).get(agent_run_id).cloned() else {
+                return Ok(None);
+            };
+            Ok(Some(TaskRun {
+                task_id: index.task_id,
+                agent_run_id: index.agent_run_id,
+                request_id: index.request_id,
+                role: TaskRole::Root,
+                status,
+                workflow_id: None,
+                iteration_id: None,
+                attempt_id: None,
+                agent_name: AgentName::new("root").expect("valid agent name"),
+                terminal_payload: terminal_payload.cloned(),
+                token_count,
+                error: error.map(str::to_owned),
+                created_at: UtcDateTime::now(),
+                updated_at: UtcDateTime::now(),
+                finished_at: Some(UtcDateTime::now()),
+            }))
+        }
+
+        async fn finish_parented_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _status: TaskStatus,
+            _terminal_payload: Option<&JsonObject>,
+            _token_count: i64,
+            _error: Option<&str>,
+        ) -> Result<Option<ParentedRun>, CoreError> {
+            Err(CoreError::Store("parented fake not implemented".to_owned()))
+        }
+
+        async fn record_index_for_agent_run(
+            &self,
+            agent_run_id: &AgentRunId,
+        ) -> Result<Option<AgentRunRecordIndex>, CoreError> {
+            Ok(lock(&self.indexes).get(agent_run_id).cloned())
+        }
+
+        async fn get_task_run(&self, _task_id: &TaskId) -> Result<Option<TaskRun>, CoreError> {
+            Err(CoreError::Store("get task fake not implemented".to_owned()))
+        }
+
+        async fn list_parented_runs_for_parent_task(
+            &self,
+            _parent_task_id: &TaskId,
+            _kind: ParentedAgentRunKind,
+        ) -> Result<Vec<ParentedRun>, CoreError> {
+            Err(CoreError::Store(
+                "list parented fake not implemented".to_owned(),
+            ))
+        }
+
+        async fn task_execution_index(
+            &self,
+            _task_id: &TaskId,
+        ) -> Result<Option<TaskExecutionIndex>, CoreError> {
+            Err(CoreError::Store(
+                "task execution index fake not implemented".to_owned(),
+            ))
+        }
+    }
+
+    fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
+        CreatedTaskAgentRun {
+            agent_run_id: index.agent_run_id.clone(),
+            task_id: index.task_id.clone(),
+            record_target: AgentRunRecordTarget {
+                request_id: index.request_id.clone(),
+                agent_run_id: index.agent_run_id.clone(),
+                task_id: index.task_id.clone(),
+                task_agent_run_kind: index.kind.clone(),
+                record_dir: format_record_dir(index),
+            },
+        }
+    }
+
+    fn lock<T>(mutex: &StdMutex<T>) -> MutexGuard<'_, T> {
+        mutex
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 }

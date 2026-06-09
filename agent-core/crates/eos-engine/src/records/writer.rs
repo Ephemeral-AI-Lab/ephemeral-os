@@ -10,13 +10,13 @@ use super::kind::AgentRunRecordStart;
 use super::layout;
 use super::record::{NodeEvent, RecordBytes, RecordIdentity};
 
-/// Shared message-record root service.
+/// File-backed writer for one resolved agent-run record tree.
 #[derive(Debug, Clone)]
-pub struct AgentMessageRecords {
+pub struct AgentRecordWriter {
     root: PathBuf,
 }
 
-impl AgentMessageRecords {
+impl AgentRecordWriter {
     /// Create a service rooted at `root`.
     #[must_use]
     pub fn new(root: impl Into<PathBuf>) -> Self {

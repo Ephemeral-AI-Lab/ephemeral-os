@@ -841,7 +841,7 @@
 
 <span class="rs-kw">use</span> anyhow::{<span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
 <span class="rs-kw">use</span> async_trait::async_trait;
-<span class="rs-kw">use</span> eos_agent_run::<span class="rs-type">AgentMessageRecords</span>;
+<span class="rs-kw">use</span> eos_engine::records::<span class="rs-type">AgentMessageRecords</span>;
 <span class="rs-kw">use</span> eos_db::{<span class="rs-type">Database</span>, <span class="rs-type">DatabaseConfig</span>, <span class="rs-type">DatabaseUrl</span>};
 <span class="rs-kw">use</span> eos_llm_client::{
     <span class="rs-type">Auth</span>, <span class="rs-type">ConfiguredLlmClient</span>, <span class="rs-type">LlmClient</span>, <span class="rs-type">LlmRequest</span>, <span class="rs-type">LlmRequestDefaults</span>, <span class="rs-type">LlmStream</span>, <span class="rs-type">ProviderError</span>,

@@ -7,6 +7,7 @@ pub mod background;
 pub mod event;
 mod notifications;
 pub mod provider_stream;
+pub mod records;
 mod support;
 mod telemetry;
 pub mod tool_call;

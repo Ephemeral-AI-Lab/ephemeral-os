@@ -213,6 +213,8 @@ pub struct AgentRunRecordTarget {
     pub agent_run_id: AgentRunId,
     /// The run's own task id.
     pub task_id: TaskId,
+    /// Closed lineage kind used by the engine record writer.
+    pub task_agent_run_kind: TaskAgentRunKind,
     /// Resolved request-rooted record directory.
     pub record_dir: AgentRunRecordDir,
 }

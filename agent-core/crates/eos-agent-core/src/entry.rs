@@ -213,7 +213,6 @@ pub async fn run_request(
                     loop_launcher,
                     services.db.agent_run_store.clone(),
                     services.db.task_agent_run_store.clone(),
-                    services.message_records.message_records.clone(),
                 )
                 .with_runtime_state_hooks(
                     {

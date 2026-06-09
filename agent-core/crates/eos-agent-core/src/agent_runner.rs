@@ -96,7 +96,6 @@ impl AgentRunner for RuntimeAgentRunner {
                 loop_launcher,
                 self.services.db.agent_run_store.clone(),
                 self.services.db.task_agent_run_store.clone(),
-                self.services.message_records.message_records.clone(),
             )
             .with_runtime_state_hooks(
                 {

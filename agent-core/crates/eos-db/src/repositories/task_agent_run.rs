@@ -365,6 +365,7 @@ fn created_from_index(index: &AgentRunRecordIndex) -> CreatedTaskAgentRun {
             request_id: index.request_id.clone(),
             agent_run_id: index.agent_run_id.clone(),
             task_id: index.task_id.clone(),
+            task_agent_run_kind: index.kind.clone(),
             record_dir: format_record_dir(index),
         },
     }

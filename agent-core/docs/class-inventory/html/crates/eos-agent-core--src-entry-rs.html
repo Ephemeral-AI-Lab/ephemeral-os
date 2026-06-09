@@ -190,7 +190,7 @@
     <span class="rs-comment">// Publish the completed workflow service to the already-captured workflow</span>
     <span class="rs-comment">// runner before root or delegated agents start.</span>
     <span class="rs-kw">let</span> _ = workflow_service_cell.set(workflow_service.clone());
-    <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-22">build_agent_loop_launcher</a>(
+    <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-23">build_agent_loop_launcher</a>(
         services,
         attempt_submission,
         workflow_service.clone(),
@@ -236,7 +236,6 @@
                     loop_launcher,
                     services.db.agent_run_store.clone(),
                     services.db.task_agent_run_store.clone(),
-                    services.message_records.message_records.clone(),
                 )
                 .with_runtime_state_hooks(
                     {
@@ -294,7 +293,7 @@
     <span class="rs-comment">// The single framework-side closure guard, called unconditionally: a no-op once</span>
     <span class="rs-comment">// submit_root_outcome has closed the task; otherwise marks the root Failed +</span>
     <span class="rs-comment">// finish_request(Failed).</span>
-    <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-291">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
+    <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-290">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
     services.<a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-rs.html#method-flush-audit-83">flush_audit</a>();
 
     <span class="rs-comment">// [7] RETURN OUTCOME — single read-back of the persisted root task.</span>
@@ -337,13 +336,13 @@
 </details>
 
   <p class="source">crates/eos-agent-core/src/entry.rs:50</p>
-</article><article id="item-fn-fail-unfinished-root-291" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fail_unfinished_root private async fn fail_unfinished_root (services : &amp; AgentCoreRuntime , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,) crates/eos-agent-core/src/entry.rs  ">
+</article><article id="item-fn-fail-unfinished-root-290" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fail_unfinished_root private async fn fail_unfinished_root (services : &amp; AgentCoreRuntime , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,) crates/eos-agent-core/src/entry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fail_unfinished_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn <a class="symbol-link" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-291">fail_unfinished_root</a> (services : &amp; <a class="symbol-link" href="eos-agent-core--src-runtime-rs.html#item-struct-AgentCoreRuntime-41">AgentCoreRuntime</a> , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-290">fail_unfinished_root</a> (services : &amp; <a class="symbol-link" href="eos-agent-core--src-runtime-rs.html#item-struct-AgentCoreRuntime-41">AgentCoreRuntime</a> , request_id : &amp; RequestId , root_task_id : &amp; TaskId , summary : &amp; str ,)</code>
   <p class="docstring">Fail the root **iff** it is still running (idempotent compare-and-set) and<br>finish the request as `Failed`. Called unconditionally after the root agent<br>has completed or failed; a no-op once `submit_root_outcome` has closed the<br>task. The root role is not in `ExecutionRole`, so the summary rides in<br>`terminal_payload` rather than a typed outcome row (documented deviation;<br>the typed outcome column is left empty for root).</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
@@ -354,7 +353,7 @@
 <span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
 <span class="rs-comment">/// `terminal_payload` rather than a typed outcome row (documented deviation;</span>
 <span class="rs-comment">/// the typed outcome column is left empty for root).</span>
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-291">fail_unfinished_root</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-290">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-agent-core--src-runtime-rs.html#item-struct-AgentCoreRuntime-41">AgentCoreRuntime</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,
     root_task_id: &amp;<span class="rs-type">TaskId</span>,
@@ -396,7 +395,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-core/src/entry.rs:291</p>
+  <p class="source">crates/eos-agent-core/src/entry.rs:290</p>
 </article></div>
 </section></div>
 </main>
@@ -574,7 +573,7 @@
     <span class="rs-comment">// Publish the completed workflow service to the already-captured workflow</span>
     <span class="rs-comment">// runner before root or delegated agents start.</span>
     <span class="rs-kw">let</span> _ = workflow_service_cell.set(workflow_service.clone());
-    <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-22">build_agent_loop_launcher</a>(
+    <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-23">build_agent_loop_launcher</a>(
         services,
         attempt_submission,
         workflow_service.clone(),
@@ -620,7 +619,6 @@
                     loop_launcher,
                     services.db.agent_run_store.clone(),
                     services.db.task_agent_run_store.clone(),
-                    services.message_records.message_records.clone(),
                 )
                 .with_runtime_state_hooks(
                     {
@@ -678,7 +676,7 @@
     <span class="rs-comment">// The single framework-side closure guard, called unconditionally: a no-op once</span>
     <span class="rs-comment">// submit_root_outcome has closed the task; otherwise marks the root Failed +</span>
     <span class="rs-comment">// finish_request(Failed).</span>
-    <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-291">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
+    <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-290">fail_unfinished_root</a>(services, &amp;request_id, &amp;root_task_id, &amp;summary).<span class="rs-kw">await</span>;
     services.<a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-rs.html#method-flush-audit-83">flush_audit</a>();
 
     <span class="rs-comment">// [7] RETURN OUTCOME — single read-back of the persisted root task.</span>
@@ -701,7 +699,7 @@
 <span class="rs-comment">/// task. The root role is not in `ExecutionRole`, so the summary rides in</span>
 <span class="rs-comment">/// `terminal_payload` rather than a typed outcome row (documented deviation;</span>
 <span class="rs-comment">/// the typed outcome column is left empty for root).</span>
-<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-291">fail_unfinished_root</a>(
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-core--src-entry-rs.html#item-fn-fail-unfinished-root-290">fail_unfinished_root</a>(
     services: &amp;<a class="symbol-link rs-type" href="eos-agent-core--src-runtime-rs.html#item-struct-AgentCoreRuntime-41">AgentCoreRuntime</a>,
     request_id: &amp;<span class="rs-type">RequestId</span>,
     root_task_id: &amp;<span class="rs-type">TaskId</span>,

@@ -14,6 +14,7 @@ use super::{
 };
 use crate::event::EngineEventSink;
 use crate::provider_stream::{ProviderStreamSource, ProviderStreamSourceFactory};
+use crate::records::AgentRecordWriter;
 
 #[derive(Clone, Debug)]
 struct WatchAgentLoopCancellation {
@@ -66,6 +67,7 @@ pub struct TokioAgentLoopLauncher {
     background_inputs: Option<BackgroundSessionInputs>,
     hook_stores: Option<ToolCallHookStores>,
     event_sink: Option<EngineEventSink>,
+    record_writer: Option<AgentRecordWriter>,
 }
 
 impl std::fmt::Debug for TokioAgentLoopLauncher {
@@ -117,6 +119,7 @@ impl TokioAgentLoopLauncher {
             background_inputs: None,
             hook_stores: None,
             event_sink: None,
+            record_writer: None,
         }
     }
 
@@ -140,6 +143,13 @@ impl TokioAgentLoopLauncher {
         self.event_sink = sink;
         self
     }
+
+    /// Attach the optional engine-owned record writer.
+    #[must_use]
+    pub fn with_record_writer(mut self, record_writer: Option<AgentRecordWriter>) -> Self {
+        self.record_writer = record_writer;
+        self
+    }
 }
 
 impl AgentLoopLauncher for TokioAgentLoopLauncher {
@@ -158,6 +168,7 @@ impl AgentLoopLauncher for TokioAgentLoopLauncher {
             background_inputs: self.background_inputs.clone(),
             hook_stores: self.hook_stores.clone(),
             event_sink: self.event_sink.clone(),
+            record_writer: self.record_writer.clone(),
             agent_run_api,
         });
 

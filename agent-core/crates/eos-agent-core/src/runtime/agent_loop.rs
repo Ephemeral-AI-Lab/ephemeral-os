@@ -61,7 +61,8 @@ pub(crate) fn build_agent_loop_launcher(
     }
     .with_background_inputs(background_inputs)
     .with_tool_call_hook_stores(hook_stores)
-    .with_event_sink(event_sink);
+    .with_event_sink(event_sink)
+    .with_record_writer(services.message_records.record_writer.clone());
     Arc::new(launcher_impl)
 }
 

@@ -423,7 +423,7 @@ async fn successful_root_keeps_engine_terminal() {
 }
 
 #[tokio::test]
-async fn root_run_writes_runner_owned_message_records() {
+async fn root_run_writes_engine_owned_message_records() {
     let payload = json!({"status": "success", "outcome": "recorded"});
     let factory = factory_by_agent(vec![
         (

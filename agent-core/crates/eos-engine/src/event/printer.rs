@@ -64,3 +64,34 @@ fn render_engine_event(event: &StreamEvent) -> String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use eos_types::{AgentRunId, JsonObject};
+
+    use super::*;
+
+    #[test]
+    fn printer_renders_midflight_tool_events_without_records() {
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let captured = lines.clone();
+        let printer = EngineEventPrinter::new(move |line| {
+            captured.lock().expect("lines lock").push(line);
+        });
+
+        printer.print(&StreamEvent::ToolExecutionStarted {
+            agent_name: "root".to_owned(),
+            agent_run_id: Some(AgentRunId::new_v4()),
+            tool_name: "submit_root_outcome".to_owned(),
+            tool_input: JsonObject::new(),
+            tool_use_id: "toolu_1".parse().expect("valid tool use id"),
+        });
+
+        assert_eq!(
+            lines.lock().expect("lines lock").as_slice(),
+            ["tool started: submit_root_outcome"]
+        );
+    }
+}

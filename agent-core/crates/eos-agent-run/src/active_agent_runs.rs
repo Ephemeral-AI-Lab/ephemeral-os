@@ -6,8 +6,6 @@ use std::sync::Arc;
 use eos_types::{AgentLoopCancellationHandle, AgentRunError, AgentRunId, AgentRunOutcome};
 use tokio::sync::{watch, Mutex};
 
-use crate::records::AgentRunRecordHandle;
-
 /// Registry of active in-process agent runs.
 #[derive(Clone, Default)]
 pub struct ActiveAgentRunRegistry {
@@ -25,22 +23,6 @@ impl std::fmt::Debug for ActiveAgentRunRegistry {
 struct ActiveAgentRun {
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
     cancel_handle: AgentLoopCancellationHandle,
-    message_record: Option<ActiveAgentRunRecord>,
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct ActiveAgentRunRecord {
-    pub(crate) handle: AgentRunRecordHandle,
-    pub(crate) initial_message_count: usize,
-}
-
-impl ActiveAgentRunRecord {
-    pub(crate) fn new(handle: AgentRunRecordHandle, initial_message_count: usize) -> Self {
-        Self {
-            handle,
-            initial_message_count,
-        }
-    }
 }
 
 impl ActiveAgentRunRegistry {
@@ -54,7 +36,6 @@ impl ActiveAgentRunRegistry {
         &self,
         agent_run_id: AgentRunId,
         cancel_handle: AgentLoopCancellationHandle,
-        message_record: Option<ActiveAgentRunRecord>,
     ) {
         let (outcome_tx, _) = watch::channel(None);
         self.inner.lock().await.insert(
@@ -62,7 +43,6 @@ impl ActiveAgentRunRegistry {
             ActiveAgentRun {
                 outcome_tx,
                 cancel_handle,
-                message_record,
             },
         );
     }
@@ -75,7 +55,6 @@ impl ActiveAgentRunRegistry {
             .map(|handle| ActiveAgentRunCompletion {
                 outcome_tx: handle.outcome_tx,
                 cancel_handle: handle.cancel_handle,
-                message_record: handle.message_record,
             })
     }
 
@@ -106,16 +85,11 @@ impl ActiveAgentRunRegistry {
 pub(crate) struct ActiveAgentRunCompletion {
     outcome_tx: watch::Sender<Option<AgentRunOutcome>>,
     cancel_handle: AgentLoopCancellationHandle,
-    message_record: Option<ActiveAgentRunRecord>,
 }
 
 impl ActiveAgentRunCompletion {
     pub(crate) fn cancel(&self, reason: &str) {
         self.cancel_handle.cancel(reason);
-    }
-
-    pub(crate) fn take_message_record(&mut self) -> Option<ActiveAgentRunRecord> {
-        self.message_record.take()
     }
 
     pub(crate) fn publish(self, outcome: AgentRunOutcome) {

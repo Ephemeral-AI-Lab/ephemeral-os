@@ -1,6 +1,6 @@
 use eos_types::{
-    AgentRunId, AttemptId, IterationId, JsonObject, Message, RequestId, TaskId, WorkflowId,
-    WorkflowTaskRole,
+    AgentRunId, AttemptId, IterationId, JsonObject, Message, ParentedAgentRunKind, RequestId,
+    TaskAgentRunKind, TaskId, WorkflowId, WorkflowTaskRole,
 };
 use serde_json::json;
 
@@ -52,6 +52,29 @@ pub enum AgentRunRecordKind {
 }
 
 impl AgentRunRecordKind {
+    pub(crate) fn from_task_agent_run_kind(kind: &TaskAgentRunKind) -> Self {
+        match kind {
+            TaskAgentRunKind::Root => Self::Root,
+            TaskAgentRunKind::Workflow { workflow, role } => Self::WorkflowTask {
+                workflow_id: workflow.workflow_id.clone(),
+                iteration_id: workflow.iteration_id.clone(),
+                attempt_id: workflow.attempt_id.clone(),
+                role: *role,
+            },
+            TaskAgentRunKind::Parented {
+                parent_agent_run_id,
+                kind,
+            } => match kind {
+                ParentedAgentRunKind::Subagent => Self::Subagent {
+                    parent_agent_run_id: parent_agent_run_id.clone(),
+                },
+                ParentedAgentRunKind::Advisor => Self::Advisor {
+                    parent_agent_run_id: parent_agent_run_id.clone(),
+                },
+            },
+        }
+    }
+
     pub(crate) fn node_type(&self) -> &'static str {
         match self {
             Self::Root => "root_agent",

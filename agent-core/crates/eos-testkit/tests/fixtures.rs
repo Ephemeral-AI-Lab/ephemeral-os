@@ -9,7 +9,7 @@ use eos_testkit::{
 };
 use eos_types::{
     AgentRunId, AgentRunRecordDir, AgentRunRecordTarget, AgentRunRuntimeSnapshot, JsonObject,
-    RequestId, SandboxId, StartAgentLoopRequest, TaskId,
+    RequestId, SandboxId, StartAgentLoopRequest, TaskAgentRunKind, TaskId,
 };
 use futures::StreamExt;
 use serde_json::json;
@@ -41,6 +41,7 @@ fn start_request() -> StartAgentLoopRequest {
             request_id,
             agent_run_id,
             task_id,
+            task_agent_run_kind: TaskAgentRunKind::Root,
             record_dir: AgentRunRecordDir::new(
                 "requests/test-request/root-task-test-task/agent-run-test-run",
             ),

@@ -24,7 +24,7 @@
 <section class="summary">
   <div><b>40</b><span>modules</span></div>
   <div><b>196</b><span>items</span></div>
-  <div><b>310</b><span>fields</span></div>
+  <div><b>311</b><span>fields</span></div>
   <div><b>167</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -122,7 +122,7 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-types/src/contracts/record.rs:177</p>
-</article><article id="item-struct-AgentRunRecordTarget-207" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRecordTarget pub pub struct AgentRunRecordTarget crates/eos-types/src/contracts/record.rs request_id RequestId agent_run_id AgentRunId task_id TaskId record_dir AgentRunRecordDir ">
+</article><article id="item-struct-AgentRunRecordTarget-207" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRecordTarget pub pub struct AgentRunRecordTarget crates/eos-types/src/contracts/record.rs request_id RequestId agent_run_id AgentRunId task_id TaskId task_agent_run_kind TaskAgentRunKind record_dir AgentRunRecordDir ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunRecordTarget</h3>
@@ -131,33 +131,33 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordTarget-207">AgentRunRecordTarget</a></code>
   <p class="docstring">Passive engine-facing record target.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>record_dir</td><td><code><a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>task_agent_run_kind</td><td><code><a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a></code></td></tr><tr><td>pub</td><td>record_dir</td><td><code><a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a></code></td></tr></tbody></table>
 
   <p class="source">crates/eos-types/src/contracts/record.rs:207</p>
-</article><article id="item-struct-CreatedTaskAgentRun-220" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CreatedTaskAgentRun pub pub struct CreatedTaskAgentRun crates/eos-types/src/contracts/record.rs agent_run_id AgentRunId task_id TaskId record_target AgentRunRecordTarget ">
+</article><article id="item-struct-CreatedTaskAgentRun-222" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CreatedTaskAgentRun pub pub struct CreatedTaskAgentRun crates/eos-types/src/contracts/record.rs agent_run_id AgentRunId task_id TaskId record_target AgentRunRecordTarget ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CreatedTaskAgentRun</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-CreatedTaskAgentRun-220">CreatedTaskAgentRun</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-CreatedTaskAgentRun-222">CreatedTaskAgentRun</a></code>
   <p class="docstring">Row-creation-local task-agent-run result.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>record_target</td><td><code><a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordTarget-207">AgentRunRecordTarget</a></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-types/src/contracts/record.rs:220</p>
-</article><article id="item-struct-TaskExecutionIndex-231" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TaskExecutionIndex pub pub struct TaskExecutionIndex crates/eos-types/src/contracts/record.rs task_id TaskId agent_run_id AgentRunId workflow_ids Vec &lt; WorkflowId &gt; subagent_ids Vec &lt; AgentRunId &gt; advisor_ids Vec &lt; AgentRunId &gt; ">
+  <p class="source">crates/eos-types/src/contracts/record.rs:222</p>
+</article><article id="item-struct-TaskExecutionIndex-233" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct TaskExecutionIndex pub pub struct TaskExecutionIndex crates/eos-types/src/contracts/record.rs task_id TaskId agent_run_id AgentRunId workflow_ids Vec &lt; WorkflowId &gt; subagent_ids Vec &lt; AgentRunId &gt; advisor_ids Vec &lt; AgentRunId &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>TaskExecutionIndex</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-TaskExecutionIndex-231">TaskExecutionIndex</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-TaskExecutionIndex-233">TaskExecutionIndex</a></code>
   <p class="docstring">Flat read-side child index for one task-backed run.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>workflow_ids</td><td><code>Vec &lt; WorkflowId &gt;</code></td></tr><tr><td>pub</td><td>subagent_ids</td><td><code>Vec &lt; AgentRunId &gt;</code></td></tr><tr><td>pub</td><td>advisor_ids</td><td><code>Vec &lt; AgentRunId &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-types/src/contracts/record.rs:231</p>
+  <p class="source">crates/eos-types/src/contracts/record.rs:233</p>
 </article><article id="item-enum-ParentedAgentRunKind-22" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ParentedAgentRunKind pub pub enum ParentedAgentRunKind crates/eos-types/src/contracts/record.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
@@ -287,13 +287,13 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-types/src/contracts/record.rs:87</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-format-record-dir-246" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn format_record_dir pub pub fn format_record_dir (index : &amp; AgentRunRecordIndex) -&gt; AgentRunRecordDir crates/eos-types/src/contracts/record.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-format-record-dir-248" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn format_record_dir pub pub fn format_record_dir (index : &amp; AgentRunRecordIndex) -&gt; AgentRunRecordDir crates/eos-types/src/contracts/record.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>format_record_dir</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-246">format_record_dir</a> (index : &amp; <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a></code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-248">format_record_dir</a> (index : &amp; <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a></code>
   <p class="docstring">Format a request-rooted record directory from a resolved record index.<br>The formatter is intentionally pure and owns the path-segment literals.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -302,24 +302,24 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// The formatter is intentionally pure and owns the path-segment literals.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-246">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-248">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a> {
     <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
     <span class="rs-kw">let</span> task_id = index.task_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>();
     <span class="rs-kw">let</span> dir = <span class="rs-kw">match</span> &amp;index.kind {
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<span class="rs-type">Root</span> =&gt; format!(
             &quot;{}/{}/{}&quot;,
             request_root,
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;root-task&quot;, task_id),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;root-task&quot;, task_id),
             agent_run_segment
         ),
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<a class="symbol-link rs-type" href="eos-types--src-state-workflow-entity-rs.html#item-struct-Workflow-52">Workflow</a> { workflow, role } =&gt; format!(
             &quot;{}/workflows/{}/{}/{}/{}/{}&quot;,
             request_root,
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;workflow&quot;, workflow.workflow_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;iteration&quot;, workflow.iteration_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;attempt&quot;, workflow.attempt_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(role.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-task-segment-prefix-76">task_segment_prefix</a>(), task_id),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;workflow&quot;, workflow.workflow_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;iteration&quot;, workflow.iteration_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;attempt&quot;, workflow.attempt_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(role.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-task-segment-prefix-76">task_segment_prefix</a>(), task_id),
             agent_run_segment
         ),
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<span class="rs-type">Parented</span> { kind, .. } =&gt; {
@@ -331,7 +331,7 @@
                 &quot;{}/{}/{}&quot;,
                 parent_root,
                 kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-collection-segment-140">collection_segment</a>(),
-                <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-run-segment-prefix-149">run_segment_prefix</a>(), index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>())
+                <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-run-segment-prefix-149">run_segment_prefix</a>(), index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>())
             )
         }
     };
@@ -340,24 +340,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/contracts/record.rs:246</p>
-</article><article id="item-fn-prefixed-286" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prefixed private fn prefixed (prefix : &amp; str , id : &amp; str) -&gt; String crates/eos-types/src/contracts/record.rs  ">
+  <p class="source">crates/eos-types/src/contracts/record.rs:248</p>
+</article><article id="item-fn-prefixed-288" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prefixed private fn prefixed (prefix : &amp; str , id : &amp; str) -&gt; String crates/eos-types/src/contracts/record.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prefixed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a> (prefix : &amp; str , id : &amp; str) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a> (prefix : &amp; str , id : &amp; str) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(prefix: &amp;str, id: &amp;str) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(prefix: &amp;str, id: &amp;str) -&gt; <span class="rs-type">String</span> {
     format!(&quot;{prefix}-{id}&quot;)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-types/src/contracts/record.rs:286</p>
+  <p class="source">crates/eos-types/src/contracts/record.rs:288</p>
 </article></div>
 </section></div>
 </main>
@@ -581,13 +581,15 @@
     <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
     <span class="rs-comment">/// The run's own task id.</span>
     <span class="rs-kw">pub</span> task_id: <span class="rs-type">TaskId</span>,
+    <span class="rs-comment">/// Closed lineage kind used by the engine record writer.</span>
+    <span class="rs-kw">pub</span> task_agent_run_kind: <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>,
     <span class="rs-comment">/// Resolved request-rooted record directory.</span>
     <span class="rs-kw">pub</span> record_dir: <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a>,
 }
 
 <span class="rs-comment">/// Row-creation-local task-agent-run result.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-CreatedTaskAgentRun-220">CreatedTaskAgentRun</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-CreatedTaskAgentRun-222">CreatedTaskAgentRun</a> {
     <span class="rs-comment">/// Agent-run id.</span>
     <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
     <span class="rs-comment">/// The run's own task id.</span>
@@ -598,7 +600,7 @@
 
 <span class="rs-comment">/// Flat read-side child index for one task-backed run.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-TaskExecutionIndex-231">TaskExecutionIndex</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-TaskExecutionIndex-233">TaskExecutionIndex</a> {
     <span class="rs-comment">/// The task id being indexed.</span>
     <span class="rs-kw">pub</span> task_id: <span class="rs-type">TaskId</span>,
     <span class="rs-comment">/// Its main agent-run id.</span>
@@ -615,24 +617,24 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// The formatter is intentionally pure and owns the path-segment literals.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-246">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-format-record-dir-248">format_record_dir</a>(index: &amp;<a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordIndex-159">AgentRunRecordIndex</a>) -&gt; <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a> {
     <span class="rs-kw">let</span> request_root = format!(&quot;requests/{}&quot;, index.request_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
-    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
+    <span class="rs-kw">let</span> agent_run_segment = <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;agent-run&quot;, index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>());
     <span class="rs-kw">let</span> task_id = index.task_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>();
     <span class="rs-kw">let</span> dir = <span class="rs-kw">match</span> &amp;index.kind {
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<span class="rs-type">Root</span> =&gt; format!(
             &quot;{}/{}/{}&quot;,
             request_root,
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;root-task&quot;, task_id),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;root-task&quot;, task_id),
             agent_run_segment
         ),
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<a class="symbol-link rs-type" href="eos-types--src-state-workflow-entity-rs.html#item-struct-Workflow-52">Workflow</a> { workflow, role } =&gt; format!(
             &quot;{}/workflows/{}/{}/{}/{}/{}&quot;,
             request_root,
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;workflow&quot;, workflow.workflow_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;iteration&quot;, workflow.iteration_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(&quot;attempt&quot;, workflow.attempt_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
-            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(role.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-task-segment-prefix-76">task_segment_prefix</a>(), task_id),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;workflow&quot;, workflow.workflow_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;iteration&quot;, workflow.iteration_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(&quot;attempt&quot;, workflow.attempt_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>()),
+            <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(role.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-task-segment-prefix-76">task_segment_prefix</a>(), task_id),
             agent_run_segment
         ),
         <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-enum-TaskAgentRunKind-32">TaskAgentRunKind</a>::<span class="rs-type">Parented</span> { kind, .. } =&gt; {
@@ -644,14 +646,14 @@
                 &quot;{}/{}/{}&quot;,
                 parent_root,
                 kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-collection-segment-140">collection_segment</a>(),
-                <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-run-segment-prefix-149">run_segment_prefix</a>(), index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>())
+                <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(kind.<a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#method-run-segment-prefix-149">run_segment_prefix</a>(), index.agent_run_id.<a class="symbol-link rs-fn" href="eos-types.html#method-as-str-46">as_str</a>())
             )
         }
     };
     <a class="symbol-link rs-type" href="eos-types--src-contracts-record-rs.html#item-struct-AgentRunRecordDir-177">AgentRunRecordDir</a>::<a class="symbol-link rs-fn" href="eos-types.html#method-new-34">new</a>(dir)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-286">prefixed</a>(prefix: &amp;str, id: &amp;str) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-contracts-record-rs.html#item-fn-prefixed-288">prefixed</a>(prefix: &amp;str, id: &amp;str) -&gt; <span class="rs-type">String</span> {
     format!(&quot;{prefix}-{id}&quot;)
 }
 </code></pre>

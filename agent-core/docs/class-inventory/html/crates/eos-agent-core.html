@@ -107,7 +107,7 @@
                 failure_summary: <span class="rs-type">Some</span>(&quot;workflow <span class="rs-type">API</span> not initialized&quot;.to_owned()),
             });
         };
-        <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-22">build_agent_loop_launcher</a>(
+        <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-23">build_agent_loop_launcher</a>(
             &amp;<span class="rs-self">self</span>.services,
             <span class="rs-self">self</span>.attempt_submission.clone(),
             workflow_service,
@@ -119,7 +119,6 @@
                 loop_launcher,
                 <span class="rs-self">self</span>.services.db.agent_run_store.clone(),
                 <span class="rs-self">self</span>.services.db.task_agent_run_store.clone(),
-                <span class="rs-self">self</span>.services.message_records.message_records.clone(),
             )
             .with_runtime_state_hooks(
                 {
@@ -266,7 +265,7 @@
                 failure_summary: <span class="rs-type">Some</span>(&quot;workflow <span class="rs-type">API</span> not initialized&quot;.to_owned()),
             });
         };
-        <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-22">build_agent_loop_launcher</a>(
+        <span class="rs-kw">let</span> loop_launcher = <a class="symbol-link rs-fn" href="eos-agent-core--src-runtime-agent-loop-rs.html#item-fn-build-agent-loop-launcher-23">build_agent_loop_launcher</a>(
             &amp;<span class="rs-self">self</span>.services,
             <span class="rs-self">self</span>.attempt_submission.clone(),
             workflow_service,
@@ -278,7 +277,6 @@
                 loop_launcher,
                 <span class="rs-self">self</span>.services.db.agent_run_store.clone(),
                 <span class="rs-self">self</span>.services.db.task_agent_run_store.clone(),
-                <span class="rs-self">self</span>.services.message_records.message_records.clone(),
             )
             .with_runtime_state_hooks(
                 {
