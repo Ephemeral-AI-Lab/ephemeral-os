@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{RequestId, SandboxId, TaskId, UtcDateTime};
+use crate::{RequestId, SandboxId, UtcDateTime};
 
 /// Lifecycle status of a top-level request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -38,8 +38,6 @@ pub struct Request {
     pub sandbox_id: Option<SandboxId>,
     /// The original request prompt.
     pub request_prompt: String,
-    /// The root `Task(role=root, workflow_id=None)`, once minted.
-    pub root_task_id: Option<TaskId>,
     /// Request lifecycle status; set via `RequestStore::finish_request`.
     pub status: RequestStatus,
     /// Creation timestamp.

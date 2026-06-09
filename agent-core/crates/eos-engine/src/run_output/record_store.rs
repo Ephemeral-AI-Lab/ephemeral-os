@@ -3,8 +3,7 @@ use std::path::{Path, PathBuf};
 
 use eos_types::{
     AgentRunId, AgentRunRecordDir, AgentRunRecordTarget, ContentBlock, JsonObject, Message,
-    MessageRole, ParentedAgentRunKind, RequestId, TaskAgentRunKind, TaskId, UtcDateTime,
-    WorkflowTaskRole,
+    MessageRole, RequestId, UtcDateTime,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -47,27 +46,21 @@ impl AgentRunRecordStore {
             record_dir,
             AgentRunRecordIdentity {
                 request_id: record_target.request_id.clone(),
-                task_id: record_target.task_id.clone(),
                 agent_run_id: record_target.agent_run_id.clone(),
             },
         );
 
         let mut payload = JsonObject::new();
-        payload.insert(
-            "type".to_owned(),
-            json!(node_type(&record_target.task_agent_run_kind)),
-        );
+        payload.insert("type".to_owned(), json!("agent_run"));
         payload.insert(
             "agent_run_id".to_owned(),
             json!(record_target.agent_run_id.as_str()),
         );
         payload.insert("agent".to_owned(), json!(agent_name));
-        payload.insert("task_id".to_owned(), json!(record_target.task_id.as_str()));
         payload.insert(
             "request_id".to_owned(),
             json!(record_target.request_id.as_str()),
         );
-        extend_payload(&record_target.task_agent_run_kind, &mut payload);
         handle.append_record_event("node_started", payload).await?;
 
         let range = handle
@@ -252,7 +245,6 @@ impl AgentRunRecordFinishStatus {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct AgentRunRecordIdentity {
     request_id: RequestId,
-    task_id: TaskId,
     agent_run_id: AgentRunId,
 }
 
@@ -282,11 +274,7 @@ pub struct AgentRunRecordEvent {
     /// Owning request id.
     #[serde(default)]
     pub request_id: String,
-    /// Owning task id.
-    #[serde(default)]
-    pub task_id: String,
     /// Agent-run id.
-    #[serde(default)]
     pub agent_run_id: String,
     /// Record-local sequence, starting at 1.
     pub seq: u64,
@@ -303,7 +291,6 @@ struct MessageRow<'a> {
     #[serde(rename = "type")]
     row_type: &'static str,
     request_id: &'a str,
-    task_id: &'a str,
     agent_run_id: &'a str,
     role: &'static str,
     content: &'a [ContentBlock],
@@ -314,7 +301,6 @@ struct MessageRowOwned<'a> {
     #[serde(rename = "type")]
     row_type: &'static str,
     request_id: &'a str,
-    task_id: &'a str,
     agent_run_id: &'a str,
     role: &'static str,
     content: Vec<ContentBlock>,
@@ -331,7 +317,6 @@ async fn append_message_rows(
         .map(|message| MessageRow {
             row_type,
             request_id: identity.request_id.as_str(),
-            task_id: identity.task_id.as_str(),
             agent_run_id: identity.agent_run_id.as_str(),
             role: role_wire(message.role),
             content: &message.content,
@@ -350,7 +335,6 @@ async fn append_initial_message_rows(
     rows.push(MessageRowOwned {
         row_type: "initial_message",
         request_id: identity.request_id.as_str(),
-        task_id: identity.task_id.as_str(),
         agent_run_id: identity.agent_run_id.as_str(),
         role: "system",
         content: vec![ContentBlock::Text {
@@ -360,7 +344,6 @@ async fn append_initial_message_rows(
     rows.extend(initial_messages.iter().map(|message| MessageRowOwned {
         row_type: "initial_message",
         request_id: identity.request_id.as_str(),
-        task_id: identity.task_id.as_str(),
         agent_run_id: identity.agent_run_id.as_str(),
         role: role_wire(message.role),
         content: message.content.clone(),
@@ -411,7 +394,6 @@ async fn append_record_event(
     let seq = next_record_event_seq(path).await?;
     let event = AgentRunRecordEvent {
         request_id: identity.request_id.as_str().to_owned(),
-        task_id: identity.task_id.as_str().to_owned(),
         agent_run_id: identity.agent_run_id.as_str().to_owned(),
         seq,
         kind,
@@ -500,77 +482,8 @@ async fn file_len_or_zero(path: &Path) -> Result<u64> {
 
 fn validate_record_target(target: &AgentRunRecordTarget) -> Result<()> {
     layout::safe_segment("request_id", target.request_id.as_str())?;
-    layout::safe_segment("task_id", target.task_id.as_str())?;
     layout::safe_segment("agent-run", target.agent_run_id.as_str())?;
-    validate_kind_segments(&target.task_agent_run_kind)
-}
-
-fn validate_kind_segments(kind: &TaskAgentRunKind) -> Result<()> {
-    match kind {
-        TaskAgentRunKind::Workflow { workflow, .. } => {
-            layout::safe_segment("workflow", workflow.workflow_id.as_str())?;
-            layout::safe_segment("iteration", workflow.iteration_id.as_str())?;
-            layout::safe_segment("attempt", workflow.attempt_id.as_str())?;
-            Ok(())
-        }
-        TaskAgentRunKind::Parented {
-            parent_agent_run_id,
-            ..
-        } => {
-            layout::safe_segment("agent_run_id", parent_agent_run_id.as_str())?;
-            Ok(())
-        }
-        TaskAgentRunKind::Root => Ok(()),
-    }
-}
-
-fn node_type(kind: &TaskAgentRunKind) -> &'static str {
-    match kind {
-        TaskAgentRunKind::Root => "root_agent",
-        TaskAgentRunKind::Workflow { role, .. } => workflow_node_type(*role),
-        TaskAgentRunKind::Parented {
-            kind: ParentedAgentRunKind::Subagent,
-            ..
-        } => "subagent",
-        TaskAgentRunKind::Parented {
-            kind: ParentedAgentRunKind::Advisor,
-            ..
-        } => "advisor",
-    }
-}
-
-fn extend_payload(kind: &TaskAgentRunKind, payload: &mut JsonObject) {
-    match kind {
-        TaskAgentRunKind::Workflow { workflow, role } => {
-            payload.insert(
-                "workflow_id".to_owned(),
-                json!(workflow.workflow_id.as_str()),
-            );
-            payload.insert(
-                "iteration_id".to_owned(),
-                json!(workflow.iteration_id.as_str()),
-            );
-            payload.insert("attempt_id".to_owned(), json!(workflow.attempt_id.as_str()));
-            payload.insert("role".to_owned(), json!(role.as_str()));
-        }
-        TaskAgentRunKind::Parented {
-            parent_agent_run_id,
-            ..
-        } => {
-            payload.insert(
-                "parent_agent_run_id".to_owned(),
-                json!(parent_agent_run_id.as_str()),
-            );
-        }
-        TaskAgentRunKind::Root => {}
-    }
-}
-
-fn workflow_node_type(role: WorkflowTaskRole) -> &'static str {
-    match role {
-        WorkflowTaskRole::Planner => "workflow_planner",
-        WorkflowTaskRole::Worker => "workflow_worker",
-    }
+    Ok(())
 }
 
 fn message_types(messages: &[Message]) -> Vec<String> {

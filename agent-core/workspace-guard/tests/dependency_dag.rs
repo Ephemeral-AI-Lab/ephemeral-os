@@ -28,16 +28,6 @@ fn expected_edges() -> Edges {
             "eos-agent-core-server",
             &["eos-agent-run", "eos-sandbox-port", "eos-types"],
         ),
-        (
-            "eos-testkit",
-            &[
-                "eos-engine",
-                "eos-tool",
-                "eos-types",
-                "eos-llm-client",
-                "eos-sandbox-port",
-            ],
-        ),
     ];
     rows.iter()
         .map(|(name, deps)| {

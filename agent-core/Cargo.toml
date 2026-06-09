@@ -7,7 +7,6 @@ members = [
   "crates/eos-sandbox-port",
   "crates/eos-tool", "crates/eos-engine", "crates/eos-workflow",
   "crates/eos-agent-core-server",
-  "crates/eos-testkit",
   "workspace-guard",
 ]
 
@@ -71,10 +70,6 @@ eos-tool           = { path = "crates/eos-tool" }
 eos-engine         = { path = "crates/eos-engine" }
 eos-workflow       = { path = "crates/eos-workflow" }
 eos-agent-core-server = { path = "crates/eos-agent-core-server" }
-# Dev-only shared test doubles (scripted LLM/EventSource, fake sandbox edges,
-# AppState builder, Layer-B workflow runners). Consumed under [dev-dependencies]
-# with the minimal feature; the resulting dev-only dep cycles are Cargo-legal.
-eos-testkit        = { path = "crates/eos-testkit" }
 
 [profile.release]
 opt-level = 3

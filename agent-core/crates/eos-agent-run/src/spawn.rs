@@ -4,9 +4,8 @@ use std::sync::Arc;
 
 use eos_types::{
     AgentDefinition, AgentLoopMessage, AgentName as DefinitionAgentName, AgentRunApi,
-    AgentRunError, AgentRunId, AgentRunRecordTarget, AgentType, CreatedTaskAgentRun, Message,
-    MessageRole, ParentedAgentRunKind, SpawnAgentRequest, SpawnAgentTarget, StartAgentLoopRequest,
-    TaskAgentRunKind, DEFAULT_MAX_TOKENS,
+    AgentRunError, AgentRunId, AgentRunRecordTarget, AgentType, CreatedAgentRun, Message,
+    MessageRole, SpawnAgentRequest, StartAgentLoopRequest, DEFAULT_MAX_TOKENS,
 };
 
 use crate::completion::spawn_forwarder;
@@ -27,18 +26,17 @@ pub(crate) async fn spawn_agent(
     let Some(agent_def) = service.agent_registry.get(&agent_name) else {
         return Err(AgentRunError::AgentNotRegistered(requested_agent_name));
     };
-    let expected = expected_agent_type(&request.target.task_agent_run_kind());
-    if agent_def.agent_type != expected {
+    if agent_def.agent_type != request.agent_type {
         return Err(AgentRunError::WrongAgentType {
             agent_name: requested_agent_name,
-            expected: agent_type_value(expected),
+            expected: agent_type_value(request.agent_type),
             actual: agent_type_value(agent_def.agent_type),
         });
     }
 
     let agent_def = (**agent_def).clone();
-    let agent_run_id = AgentRunId::new_v4();
-    let created_run = create_task_agent_run(service, &request, &agent_run_id, &agent_name).await?;
+    let agent_run_id = request.agent_run_id.clone();
+    let created_run = create_agent_run(service, &request, &agent_name).await?;
     let record_target = created_run.record_target.clone();
     let start_request = build_start_agent_loop_request(&agent_def, request, record_target);
     let agent_run_api: Arc<dyn AgentRunApi> = Arc::new(service.clone());
@@ -55,64 +53,22 @@ pub(crate) async fn spawn_agent(
     Ok(agent_run_id)
 }
 
-async fn create_task_agent_run(
+async fn create_agent_run(
     service: &AgentRunService,
     request: &SpawnAgentRequest,
-    agent_run_id: &AgentRunId,
     agent_name: &DefinitionAgentName,
-) -> Result<CreatedTaskAgentRun, AgentRunError> {
-    match &request.target {
-        SpawnAgentTarget::Root { request_id } => {
-            service
-                .task_agent_run_store
-                .create_root_task_agent_run(request_id, agent_run_id, agent_name)
-                .await
-        }
-        SpawnAgentTarget::Workflow {
-            request_id,
-            coords,
-            role,
-            plan_id,
-            work_item_id,
-        } => {
-            service
-                .task_agent_run_store
-                .create_workflow_task_agent_run(
-                    request_id,
-                    agent_run_id,
-                    coords,
-                    *role,
-                    plan_id,
-                    work_item_id.as_ref(),
-                    agent_name,
-                )
-                .await
-        }
-        SpawnAgentTarget::Subagent { parent } => {
-            service
-                .task_agent_run_store
-                .create_parented_task_agent_run(
-                    agent_run_id,
-                    parent,
-                    ParentedAgentRunKind::Subagent,
-                    request.tool_use_id.as_ref(),
-                    agent_name,
-                )
-                .await
-        }
-        SpawnAgentTarget::Advisor { parent } => {
-            service
-                .task_agent_run_store
-                .create_parented_task_agent_run(
-                    agent_run_id,
-                    parent,
-                    ParentedAgentRunKind::Advisor,
-                    request.tool_use_id.as_ref(),
-                    agent_name,
-                )
-                .await
-        }
-    }
+) -> Result<CreatedAgentRun, AgentRunError> {
+    service
+        .agent_run_store
+        .create_agent_run(
+            &request.agent_run_id,
+            &request.request_id,
+            agent_name,
+            request.agent_type,
+            request.parent_agent_run_id.as_ref(),
+            request.tool_use_id.as_ref(),
+        )
+        .await
     .map_err(|err| AgentRunError::Internal(err.to_string()))
 }
 
@@ -160,19 +116,5 @@ const fn agent_type_value(agent_type: AgentType) -> &'static str {
         AgentType::Agent => "agent",
         AgentType::Subagent => "subagent",
         AgentType::Advisor => "advisor",
-    }
-}
-
-pub(crate) const fn expected_agent_type(run_kind: &TaskAgentRunKind) -> AgentType {
-    match run_kind {
-        TaskAgentRunKind::Root | TaskAgentRunKind::Workflow { .. } => AgentType::Agent,
-        TaskAgentRunKind::Parented {
-            kind: ParentedAgentRunKind::Subagent,
-            ..
-        } => AgentType::Subagent,
-        TaskAgentRunKind::Parented {
-            kind: ParentedAgentRunKind::Advisor,
-            ..
-        } => AgentType::Advisor,
     }
 }

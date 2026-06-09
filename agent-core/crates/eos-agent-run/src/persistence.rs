@@ -1,14 +1,14 @@
 //! Agent-run persistence helpers owned by the runner.
 
 use eos_types::{
-    AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject, ParentedOutcome,
-    ParentedRun, TaskAgentRunStore, TaskOutcome, TaskStatus,
+    AgentRun, AgentRunId, AgentRunOutcome, AgentRunStatus, AgentRunStore, JsonObject,
+    TaskOutcome, TaskStatus,
 };
 
 use crate::AgentRunError;
 
-pub(crate) async fn finish_task_agent_run(
-    store: &dyn TaskAgentRunStore,
+pub(crate) async fn finish_agent_run(
+    store: &dyn AgentRunStore,
     agent_run_id: &AgentRunId,
     status: TaskStatus,
     terminal_payload: Option<&JsonObject>,
@@ -17,7 +17,7 @@ pub(crate) async fn finish_task_agent_run(
 ) -> Result<(), AgentRunError> {
     let task_outcome = terminal_payload.and_then(decode_task_outcome);
     if store
-        .finish_task_run(
+        .finish_agent_run(
             agent_run_id,
             status,
             terminal_payload,
@@ -32,25 +32,8 @@ pub(crate) async fn finish_task_agent_run(
         return Ok(());
     }
 
-    let parented_outcome = terminal_payload.and_then(decode_parented_outcome);
-    if store
-        .finish_parented_run(
-            agent_run_id,
-            status,
-            terminal_payload,
-            parented_outcome.as_ref(),
-            token_count,
-            error,
-        )
-        .await
-        .map_err(|err| AgentRunError::Internal(err.to_string()))?
-        .is_some()
-    {
-        return Ok(());
-    }
-
     Err(AgentRunError::Internal(format!(
-        "task-agent-run row not updated for {}",
+        "agent-run row not updated for {}",
         agent_run_id.as_str()
     )))
 }
@@ -58,19 +41,6 @@ pub(crate) async fn finish_task_agent_run(
 pub(crate) fn completion_from_agent_run(
     agent_run_id: &AgentRunId,
     run: &AgentRun,
-) -> Option<AgentRunOutcome> {
-    completion_from_parts(
-        agent_run_id,
-        run.finished_at,
-        run.terminal_payload.as_ref(),
-        run.token_count,
-        run.error.as_ref(),
-    )
-}
-
-pub(crate) fn completion_from_parented_run(
-    agent_run_id: &AgentRunId,
-    run: &ParentedRun,
 ) -> Option<AgentRunOutcome> {
     completion_from_parts(
         agent_run_id,
@@ -131,9 +101,5 @@ fn is_cancelled_payload(payload: &JsonObject) -> bool {
 }
 
 fn decode_task_outcome(payload: &JsonObject) -> Option<TaskOutcome> {
-    serde_json::from_value(serde_json::Value::Object(payload.clone())).ok()
-}
-
-fn decode_parented_outcome(payload: &JsonObject) -> Option<ParentedOutcome> {
     serde_json::from_value(serde_json::Value::Object(payload.clone())).ok()
 }

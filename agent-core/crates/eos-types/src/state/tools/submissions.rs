@@ -3,7 +3,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AttemptId, DeferredGoal, TaskId, WorkItemId, WorkItemSpec};
+use crate::{AttemptId, DeferredGoal, WorkItemId, WorkItemSpec};
 
 /// Model-facing pass/fail status used by terminal outcome tools.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -51,8 +51,6 @@ pub struct PlanOutcomeSubmission {
 pub struct WorkerOutcomeSubmission {
     /// Owning attempt.
     pub attempt_id: AttemptId,
-    /// Opaque worker task id.
-    pub task_id: TaskId,
     /// Planner-authored work item id.
     pub work_item_id: WorkItemId,
     /// Success or failure.

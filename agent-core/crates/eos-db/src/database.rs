@@ -4,16 +4,13 @@ use std::sync::Arc;
 
 use sqlx::SqlitePool;
 
-use eos_types::{
-    AttemptStore, IterationStore, ModelStore, RequestStore, TaskAgentRunStore, TaskStore,
-    WorkflowStore,
-};
+use eos_types::{AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, WorkflowStore};
 
 use crate::error::DbError;
 use crate::model_registry::ModelRegistry;
 use crate::pool;
 use crate::repositories::{
-    SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlTaskAgentRunStore, SqlWorkflowStore,
+    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlWorkflowStore,
 };
 use crate::DatabaseConfig;
 
@@ -26,7 +23,7 @@ pub struct Database {
     workflows: Arc<SqlWorkflowStore>,
     iterations: Arc<SqlIterationStore>,
     attempts: Arc<SqlAttemptStore>,
-    task_agent_runs: Arc<SqlTaskAgentRunStore>,
+    agent_runs: Arc<SqlAgentRunStore>,
     models: Arc<ModelRegistry>,
 }
 
@@ -44,7 +41,7 @@ impl Database {
             workflows: Arc::new(SqlWorkflowStore::new(pool.clone())),
             iterations: Arc::new(SqlIterationStore::new(pool.clone())),
             attempts: Arc::new(SqlAttemptStore::new(pool.clone())),
-            task_agent_runs: Arc::new(SqlTaskAgentRunStore::new(pool.clone())),
+            agent_runs: Arc::new(SqlAgentRunStore::new(pool.clone())),
             models: Arc::new(ModelRegistry::new(pool.clone())),
             pool,
         })
@@ -53,12 +50,6 @@ impl Database {
     /// The request store.
     #[must_use]
     pub fn requests(&self) -> Arc<dyn RequestStore> {
-        self.request_tasks.clone()
-    }
-
-    /// The task store.
-    #[must_use]
-    pub fn tasks(&self) -> Arc<dyn TaskStore> {
         self.request_tasks.clone()
     }
 
@@ -80,10 +71,10 @@ impl Database {
         self.attempts.clone()
     }
 
-    /// The task-agent-run lineage store.
+    /// The agent-run lineage store.
     #[must_use]
-    pub fn task_agent_runs(&self) -> Arc<dyn TaskAgentRunStore> {
-        self.task_agent_runs.clone()
+    pub fn agent_runs(&self) -> Arc<dyn AgentRunStore> {
+        self.agent_runs.clone()
     }
 
     /// The model store (trait surface).

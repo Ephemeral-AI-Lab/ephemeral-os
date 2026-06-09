@@ -5,9 +5,9 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_types::{
-    Attempt, AttemptClosure, AttemptExecutionTree, AttemptId, AttemptStage, AttemptStore,
-    CoreError, ExecutionNode, IterationId, PlanId, RequestId, Sealed, TaskId, WorkItemId,
-    WorkflowId,
+    AgentRunId, Attempt, AttemptClosure, AttemptExecutionTree, AttemptId, AttemptStage,
+    AttemptStore, CoreError, ExecutionNode, IterationId, PlanId, RequestId, Sealed, TaskOutcome,
+    TaskStatus, WorkItemId, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -76,19 +76,19 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row.map(row_to_attempt).transpose()?)
     }
 
-    async fn bind_planner_task(
+    async fn bind_planner_agent_run(
         &self,
         id: &AttemptId,
-        planner_task_id: &TaskId,
+        planner_agent_run_id: &AgentRunId,
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts \
-             SET execution_tree = json_set(execution_tree, '$.planner_task_id', ?), \
+             SET execution_tree = json_set(execution_tree, '$.planner_agent_run_id', ?), \
                  updated_at = ? \
              WHERE id = ? RETURNING *",
         )
-        .bind(planner_task_id.as_str())
+        .bind(planner_agent_run_id.as_str())
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)
@@ -97,13 +97,15 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
     }
 
-    async fn record_plan_nodes(
+    async fn record_plan_outcome(
         &self,
         id: &AttemptId,
+        planner_outcome: &TaskOutcome,
         nodes: &[ExecutionNode],
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let mut attempt = self.get(id).await?.ok_or_else(|| Self::not_found(id))?;
+        attempt.execution_tree.planner_outcome = Some(planner_outcome.clone());
         attempt.execution_tree.nodes = nodes.to_vec();
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts SET stage = ?, execution_tree = ?, updated_at = ? \
@@ -119,11 +121,11 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
     }
 
-    async fn bind_worker_task(
+    async fn bind_worker_agent_run(
         &self,
         id: &AttemptId,
         work_item_id: &WorkItemId,
-        task_id: &TaskId,
+        agent_run_id: &AgentRunId,
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let mut attempt = self.get(id).await?.ok_or_else(|| Self::not_found(id))?;
@@ -139,7 +141,43 @@ impl AttemptStore for SqlAttemptStore {
                 id.as_str()
             )));
         };
-        node.task_id = Some(task_id.clone());
+        node.agent_run_id = Some(agent_run_id.clone());
+        node.status = Some(TaskStatus::Running);
+        let row = sqlx::query_as::<Sqlite, AttemptRow>(
+            "UPDATE attempts SET execution_tree = ?, updated_at = ? WHERE id = ? RETURNING *",
+        )
+        .bind(json_col::encode(&attempt.execution_tree)?)
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(DbError::from)?;
+        Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
+    }
+
+    async fn record_worker_outcome(
+        &self,
+        id: &AttemptId,
+        work_item_id: &WorkItemId,
+        status: TaskStatus,
+        outcome: &TaskOutcome,
+    ) -> Result<Attempt, CoreError> {
+        let now = OffsetDateTime::now_utc();
+        let mut attempt = self.get(id).await?.ok_or_else(|| Self::not_found(id))?;
+        let Some(node) = attempt
+            .execution_tree
+            .nodes
+            .iter_mut()
+            .find(|node| node.work_item_id == *work_item_id)
+        else {
+            return Err(CoreError::Store(format!(
+                "work item '{}' not found in attempt '{}'",
+                work_item_id.as_str(),
+                id.as_str()
+            )));
+        };
+        node.status = Some(status);
+        node.outcome = Some(outcome.clone());
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts SET execution_tree = ?, updated_at = ? WHERE id = ? RETURNING *",
         )

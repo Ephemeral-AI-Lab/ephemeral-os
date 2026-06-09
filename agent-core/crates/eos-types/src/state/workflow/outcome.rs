@@ -100,24 +100,6 @@ pub enum AdvisorVerdict {
     Reject,
 }
 
-/// Parented family outcome for advisor and subagent rows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum ParentedOutcome {
-    /// Advisor terminal verdict.
-    Advisor {
-        /// Advisor verdict.
-        verdict: AdvisorVerdict,
-        /// Natural-language review outcome.
-        outcome: String,
-    },
-    /// Subagent terminal result.
-    Subagent {
-        /// Natural-language result.
-        outcome: String,
-    },
-}
-
 /// Read-side projection for one attempt.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct AttemptOutcome {

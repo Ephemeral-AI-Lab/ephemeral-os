@@ -110,16 +110,6 @@ fn final_public_surface() -> BTreeMap<String, BTreeSet<String>> {
             ],
         ),
         (
-            "eos-testkit",
-            &[
-                "use:agents",
-                "use:engine",
-                "use:llm",
-                "use:meta",
-                "use:sandbox",
-            ],
-        ),
-        (
             "eos-tool",
             &[
                 "use:error",

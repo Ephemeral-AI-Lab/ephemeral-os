@@ -9,29 +9,27 @@ mod agent_run {
     //! Agent-run lifecycle launch contracts.
 
     use async_trait::async_trait;
-    use schemars::JsonSchema;
-    use serde::{Deserialize, Serialize};
-
     use crate::{
-        AgentName, AgentRunId, AttemptId, IterationId, JsonObject, Message, PlanId, RequestId,
-        SandboxId, TaskId, ToolUseId, WorkItemId, WorkflowId,
-    };
-
-    use super::record::{
-        ParentedAgentRunKind, TaskAgentRunKind, WorkflowCoordinates, WorkflowTaskRole,
+        AgentName, AgentRunId, AgentType, AttemptId, IterationId, JsonObject, Message, RequestId,
+        SandboxId, ToolUseId, WorkflowId,
     };
 
     /// Request to spawn any agent kind.
     #[derive(Debug, Clone)]
     pub struct SpawnAgentRequest {
+        /// Agent-run id to launch.
+        pub agent_run_id: AgentRunId,
         /// Agent profile name to launch.
         pub agent_name: AgentName,
+        /// Expected runtime profile type to launch.
+        pub agent_type: AgentType,
+        /// Owning request id.
+        pub request_id: RequestId,
+        /// Optional parent agent-run id for lineage.
+        pub parent_agent_run_id: Option<AgentRunId>,
         /// Initial transcript.
         pub initial_messages: Vec<Message>,
-        /// Closed spawn target and lineage facts.
-        pub target: SpawnAgentTarget,
-        /// Durable launch fact for workflow/parented launches. It is never part of
-        /// the record-dir target.
+        /// Durable launch fact for tool-launched runs.
         pub tool_use_id: Option<ToolUseId>,
         /// Bound sandbox id.
         pub sandbox_id: Option<SandboxId>,
@@ -50,8 +48,6 @@ mod agent_run {
         pub agent_name: String,
         /// Owning request id.
         pub request_id: Option<RequestId>,
-        /// Owning task id.
-        pub task_id: Option<TaskId>,
         /// Owning workflow id.
         pub workflow_id: Option<WorkflowId>,
         /// Owning workflow iteration id.
@@ -64,90 +60,6 @@ mod agent_run {
         pub workspace_root: String,
         /// Whether the run currently has an isolated workspace open.
         pub is_isolated_workspace_mode: bool,
-    }
-
-    /// Parent run anchor for a parent-launched agent run.
-    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-    pub struct ParentAgentRunAnchor {
-        /// Owning request id.
-        pub request_id: RequestId,
-        /// Parent task id.
-        pub parent_task_id: TaskId,
-        /// Parent agent-run id.
-        pub agent_run_id: AgentRunId,
-    }
-
-    /// Closed spawn target for agent-run creation.
-    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-    pub enum SpawnAgentTarget {
-        /// Root request agent.
-        Root {
-            /// Owning request id.
-            request_id: RequestId,
-        },
-        /// Workflow planner/worker task agent.
-        Workflow {
-            /// Owning request id.
-            request_id: RequestId,
-            /// Owning workflow coordinates.
-            coords: WorkflowCoordinates,
-            /// Workflow task role.
-            role: WorkflowTaskRole,
-            /// Attempt-local plan id.
-            plan_id: PlanId,
-            /// Work item id for workers; `None` for planner.
-            work_item_id: Option<WorkItemId>,
-        },
-        /// Parent-launched subagent run.
-        Subagent {
-            /// Parent run anchor.
-            parent: ParentAgentRunAnchor,
-        },
-        /// Parent-launched advisor run.
-        Advisor {
-            /// Parent run anchor.
-            parent: ParentAgentRunAnchor,
-        },
-    }
-
-    impl SpawnAgentTarget {
-        /// Owning request id.
-        #[must_use]
-        pub const fn request_id(&self) -> &RequestId {
-            match self {
-                Self::Root { request_id } | Self::Workflow { request_id, .. } => request_id,
-                Self::Subagent { parent } | Self::Advisor { parent } => &parent.request_id,
-            }
-        }
-
-        /// Workflow coordinates for workflow task-agent-runs.
-        #[must_use]
-        pub const fn workflow(&self) -> Option<&WorkflowCoordinates> {
-            match self {
-                Self::Workflow { coords, .. } => Some(coords),
-                Self::Root { .. } | Self::Subagent { .. } | Self::Advisor { .. } => None,
-            }
-        }
-
-        /// Convert the spawn target into the current task-agent-run classification.
-        #[must_use]
-        pub fn task_agent_run_kind(&self) -> TaskAgentRunKind {
-            match self {
-                Self::Root { .. } => TaskAgentRunKind::Root,
-                Self::Workflow { coords, role, .. } => TaskAgentRunKind::Workflow {
-                    workflow: coords.clone(),
-                    role: *role,
-                },
-                Self::Subagent { parent } => TaskAgentRunKind::Parented {
-                    parent_agent_run_id: parent.agent_run_id.clone(),
-                    kind: ParentedAgentRunKind::Subagent,
-                },
-                Self::Advisor { parent } => TaskAgentRunKind::Parented {
-                    parent_agent_run_id: parent.agent_run_id.clone(),
-                    kind: ParentedAgentRunKind::Advisor,
-                },
-            }
-        }
     }
 
     /// Terminal outcome for one agent run.
@@ -249,7 +161,7 @@ mod cancellation {
 
     use async_trait::async_trait;
 
-    use crate::{AgentRunId, CoreError, TaskId};
+    use crate::{AgentRunId, CoreError};
 
     /// Error returned by recursive request/workflow cancellation.
     #[derive(Debug, thiserror::Error)]
@@ -266,9 +178,6 @@ mod cancellation {
     /// Recursive agent-core cancellation primitives.
     #[async_trait]
     pub trait AgentCoreCancellationApi: Send + Sync {
-        /// Cancel a persisted task and any live run bound to it.
-        async fn cancel_task(&self, task_id: &TaskId, reason: &str) -> Result<(), CancelError>;
-
         /// Cancel a live agent run.
         async fn cancel_agent_run(
             &self,
@@ -282,13 +191,12 @@ mod workflow;
 
 pub use agent_run::{
     AgentRunApi, AgentRunError, AgentRunOutcome, AgentRunRuntimeSnapshot, AgentRunStatus,
-    ParentAgentRunAnchor, SpawnAgentRequest, SpawnAgentTarget,
+    SpawnAgentRequest,
 };
 pub use cancellation::{AgentCoreCancellationApi, CancelError};
 pub use record::{
     format_record_dir, AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget,
-    CreatedTaskAgentRun, ParentedAgentRunKind, TaskAgentRunKind, TaskExecutionIndex,
-    WorkflowCoordinates, WorkflowTaskRole,
+    CreatedAgentRun, WorkflowCoordinates, WorkflowTaskRole,
 };
 pub use workflow::{
     OpenDelegatedWorkflow, StartWorkflowRequest, StartedWorkflow, SubmissionAck, TerminalWorkflow,

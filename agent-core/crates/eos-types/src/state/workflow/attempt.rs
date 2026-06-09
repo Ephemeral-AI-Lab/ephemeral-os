@@ -6,7 +6,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::CoreError;
-use crate::{AttemptId, IterationId, PlanId, TaskId, UtcDateTime, WorkItemId, WorkflowId};
+use crate::{
+    AgentRunId, AttemptId, IterationId, PlanId, TaskOutcome, TaskStatus, UtcDateTime, WorkItemId,
+    WorkflowId,
+};
 
 /// Validated attempt budget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -229,14 +232,17 @@ impl AttemptState {
     }
 }
 
-/// Attempt-owned mapping from planner/work item ids to opaque task ids.
+/// Attempt-owned mapping from planner/work item ids to agent runs and outcomes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct AttemptExecutionTree {
     /// Attempt-local plan id.
     pub plan_id: PlanId,
-    /// Opaque planner task id, bound when the planner is spawned.
+    /// Planner agent run id, bound when the planner is spawned.
     #[serde(default)]
-    pub planner_task_id: Option<TaskId>,
+    pub planner_agent_run_id: Option<AgentRunId>,
+    /// Planner terminal outcome, recorded by `submit_plan_outcome`.
+    #[serde(default)]
+    pub planner_outcome: Option<TaskOutcome>,
     /// Work item nodes materialized when the planner submits a plan.
     #[serde(default)]
     pub nodes: Vec<ExecutionNode>,
@@ -248,17 +254,18 @@ impl AttemptExecutionTree {
     pub fn new(plan_id: PlanId) -> Self {
         Self {
             plan_id,
-            planner_task_id: None,
+            planner_agent_run_id: None,
+            planner_outcome: None,
             nodes: Vec::new(),
         }
     }
 
-    /// All bound worker task ids.
+    /// All bound worker agent-run ids.
     #[must_use]
-    pub fn worker_task_ids(&self) -> Vec<TaskId> {
+    pub fn worker_agent_run_ids(&self) -> Vec<AgentRunId> {
         self.nodes
             .iter()
-            .filter_map(|node| node.task_id.clone())
+            .filter_map(|node| node.agent_run_id.clone())
             .collect()
     }
 
@@ -279,9 +286,15 @@ pub struct ExecutionNode {
     /// Direct work item dependencies.
     #[serde(default)]
     pub needs: Vec<WorkItemId>,
-    /// Opaque worker task id, bound when this work item is spawned.
+    /// Worker agent run id, bound when this work item is spawned.
     #[serde(default)]
-    pub task_id: Option<TaskId>,
+    pub agent_run_id: Option<AgentRunId>,
+    /// Worker lifecycle status, recorded by scheduler and terminal submissions.
+    #[serde(default)]
+    pub status: Option<TaskStatus>,
+    /// Worker terminal outcome, recorded by `submit_worker_outcome`.
+    #[serde(default)]
+    pub outcome: Option<TaskOutcome>,
 }
 
 /// Immutable view of a persisted Attempt.
@@ -297,7 +310,7 @@ pub struct Attempt {
     pub attempt_sequence_no: i64,
     /// Attempt-local plan id.
     pub plan_id: PlanId,
-    /// Attempt↔task and `work_item`↔task index.
+    /// Attempt↔agent-run and `work_item`↔agent-run index.
     pub execution_tree: AttemptExecutionTree,
     /// Lifecycle state.
     pub state: AttemptState,
@@ -326,16 +339,16 @@ impl Attempt {
         matches!(self.state, AttemptState::Closed { .. })
     }
 
-    /// Planner task id, if bound.
+    /// Planner agent-run id, if bound.
     #[must_use]
-    pub const fn planner_task_id(&self) -> Option<&TaskId> {
-        self.execution_tree.planner_task_id.as_ref()
+    pub const fn planner_agent_run_id(&self) -> Option<&AgentRunId> {
+        self.execution_tree.planner_agent_run_id.as_ref()
     }
 
-    /// Bound worker task ids.
+    /// Bound worker agent-run ids.
     #[must_use]
-    pub fn worker_task_ids(&self) -> Vec<TaskId> {
-        self.execution_tree.worker_task_ids()
+    pub fn worker_agent_run_ids(&self) -> Vec<AgentRunId> {
+        self.execution_tree.worker_agent_run_ids()
     }
 
     /// Terminal closure, if closed.

@@ -1,12 +1,11 @@
 //! `Workflow` lifecycle DTO and status.
 //!
-//! Ports the Workflow half of `workflow/_core/state.py`. `parent_task_id` is a
-//! durable back-link and is **never** mutated at close (anchor §3).
+//! Ports the Workflow half of `workflow/_core/state.py`.
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{AgentRunId, IterationId, RequestId, TaskId, ToolUseId, UtcDateTime, WorkflowId};
+use crate::{AgentRunId, IterationId, RequestId, ToolUseId, UtcDateTime, WorkflowId};
 
 /// Lifecycle status of a [`Workflow`] (Rust `WorkflowStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -35,8 +34,6 @@ pub struct Workflow {
     pub status: WorkflowStatus,
     /// Ordered child iteration ids.
     pub iteration_ids: Vec<IterationId>,
-    /// The launching task; durable back-link, never mutated at close.
-    pub parent_task_id: TaskId,
     /// Agent run that launched this workflow.
     pub parent_agent_run_id: AgentRunId,
     /// Tool use that launched this workflow, if available.

@@ -5,8 +5,8 @@ use time::OffsetDateTime;
 
 use eos_types::{
     Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree, AttemptFailReason, AttemptStage,
-    AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request, RequestStatus, Task,
-    TaskOutcome, UtcDateTime, Workflow,
+    AttemptState, AttemptStatus, CoreError, Iteration, PlanId, Request, RequestStatus,
+    UtcDateTime, Workflow,
 };
 
 use crate::error::DbError;
@@ -20,7 +20,6 @@ pub(crate) struct RequestRow {
     pub cwd: String,
     pub sandbox_id: Option<String>,
     pub request_prompt: String,
-    pub root_task_id: Option<String>,
     pub status: String,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
@@ -28,21 +27,9 @@ pub(crate) struct RequestRow {
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
-pub(crate) struct TaskRow {
-    pub id: String,
-    pub request_id: String,
-    pub role: String,
-    pub instruction: String,
-    pub status: String,
-    pub agent_name: Option<String>,
-    pub task_outcome: Option<String>,
-}
-
-#[derive(Debug, Clone, sqlx::FromRow)]
 pub(crate) struct WorkflowRow {
     pub id: String,
     pub request_id: String,
-    pub parent_task_id: String,
     pub parent_agent_run_id: String,
     pub tool_use_id: Option<String>,
     pub workflow_goal: String,
@@ -130,23 +117,10 @@ pub(crate) fn row_to_request(r: RequestRow) -> Result<Request, DbError> {
         cwd: r.cwd,
         sandbox_id: opt_id("requests.sandbox_id", r.sandbox_id.as_deref())?,
         request_prompt: r.request_prompt,
-        root_task_id: opt_id("requests.root_task_id", r.root_task_id.as_deref())?,
         status: parse_enum::<RequestStatus>("requests.status", &r.status)?,
         created_at: UtcDateTime::from_offset(r.created_at),
         updated_at: UtcDateTime::from_offset(r.updated_at),
         finished_at: r.finished_at.map(UtcDateTime::from_offset),
-    })
-}
-
-pub(crate) fn row_to_task(r: TaskRow) -> Result<Task, DbError> {
-    Ok(Task {
-        id: parse_id("tasks.id", &r.id)?,
-        request_id: parse_id("tasks.request_id", &r.request_id)?,
-        role: parse_enum("tasks.role", &r.role)?,
-        instruction: r.instruction,
-        status: parse_enum("tasks.status", &r.status)?,
-        agent_name: r.agent_name,
-        task_outcome: json_col::decode_opt::<TaskOutcome>(r.task_outcome.as_deref())?,
     })
 }
 
@@ -157,7 +131,6 @@ pub(crate) fn row_to_workflow(r: WorkflowRow) -> Result<Workflow, DbError> {
         workflow_goal: r.workflow_goal,
         status: parse_enum("workflows.status", &r.status)?,
         iteration_ids: json_col::decode_default(Some(&r.iteration_ids))?,
-        parent_task_id: parse_id("workflows.parent_task_id", &r.parent_task_id)?,
         parent_agent_run_id: parse_id("workflows.parent_agent_run_id", &r.parent_agent_run_id)?,
         tool_use_id: opt_id("workflows.tool_use_id", r.tool_use_id.as_deref())?,
         created_at: UtcDateTime::from_offset(r.created_at),
@@ -207,7 +180,7 @@ pub(crate) fn row_to_attempt(r: AttemptRow) -> Result<Attempt, DbError> {
         status,
         fail_reason,
         closed_at,
-        execution_tree.planner_task_id.is_some(),
+        execution_tree.planner_agent_run_id.is_some(),
     )?;
     Ok(Attempt {
         id: parse_id("attempts.id", &r.id)?,

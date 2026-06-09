@@ -4,7 +4,7 @@ use eos_types::{
     AgentRunError, AgentRunId, AgentRunOutcome, AgentRunStatus, JsonObject, TaskStatus,
 };
 
-use crate::persistence::finish_task_agent_run;
+use crate::persistence::finish_agent_run;
 use crate::service::AgentRunService;
 
 pub(crate) async fn cancel_agent_run(
@@ -19,8 +19,8 @@ pub(crate) async fn cancel_agent_run(
     }
 
     let payload = cancelled_task_payload(reason);
-    let finish = finish_task_agent_run(
-        &*service.task_agent_run_store,
+    let finish = finish_agent_run(
+        &*service.agent_run_store,
         agent_run_id,
         TaskStatus::Cancelled,
         Some(&payload),

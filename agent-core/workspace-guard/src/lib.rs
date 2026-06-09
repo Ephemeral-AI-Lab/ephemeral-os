@@ -22,7 +22,6 @@ pub const TARGET_CRATES: &[&str] = &[
     "eos-db",
     "eos-llm-client",
     "eos-sandbox-port",
-    "eos-testkit",
 ];
 
 pub const RETIRED_CRATES: &[&str] = &[

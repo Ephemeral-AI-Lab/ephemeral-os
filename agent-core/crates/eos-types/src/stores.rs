@@ -33,41 +33,13 @@ mod model_registry {
     }
 }
 mod request_task {
-    //! Runtime-facing request and task persistence contracts.
+    //! Runtime-facing request persistence contracts.
 
     use async_trait::async_trait;
 
-    use crate::{
-        CoreError, Request, RequestId, RequestStatus, SandboxId, Task, TaskId, TaskOutcome,
-        TaskStatus,
-    };
+    use crate::{CoreError, Request, RequestId, RequestStatus, SandboxId};
 
     use super::Sealed;
-
-    /// Persistence surface for request/task rows.
-    #[async_trait]
-    pub trait TaskStore: Sealed + Send + Sync {
-        /// Insert a fresh task row.
-        async fn insert_task(&self, task: &Task) -> Result<(), CoreError>;
-
-        /// Load a task by id.
-        async fn get(&self, id: &TaskId) -> Result<Option<Task>, CoreError>;
-
-        /// Optimistic-concurrency status flip.
-        async fn set_task_status_if_current(
-            &self,
-            id: &TaskId,
-            expected: TaskStatus,
-            status: TaskStatus,
-            task_outcome: Option<&TaskOutcome>,
-        ) -> Result<Option<Task>, CoreError>;
-
-        /// Bulk-latch task rows to [`TaskStatus::Cancelled`] before runtime teardown.
-        async fn latch_attempt_tasks_cancelled(&self, ids: &[TaskId]) -> Result<(), CoreError>;
-
-        /// All tasks owned by one request, ordered by creation.
-        async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError>;
-    }
 
     /// Persistence surface for top-level requests.
     #[async_trait]
@@ -84,13 +56,6 @@ mod request_task {
         /// Load a request by id.
         async fn get(&self, id: &RequestId) -> Result<Option<Request>, CoreError>;
 
-        /// Set the root task id and return the updated request.
-        async fn set_root_task_id(
-            &self,
-            id: &RequestId,
-            root_task_id: &TaskId,
-        ) -> Result<Request, CoreError>;
-
         /// Finish the request with `status`, stamping `finished_at` server-side.
         async fn finish_request(
             &self,
@@ -103,55 +68,34 @@ mod request_task {
     }
 }
 mod task_agent_run {
-    //! Task-agent-run lineage persistence contract.
+    //! Agent-run lineage persistence contract.
 
     use async_trait::async_trait;
 
     use crate::{
-        AgentName, AgentRun, AgentRunId, AgentRunRecordIndex, CoreError, CreatedTaskAgentRun,
-        JsonObject, ParentAgentRunAnchor, ParentedAgentRunKind, ParentedOutcome, ParentedRun,
-        PlanId, RequestId, RunningRequestAgentRun, TaskExecutionIndex, TaskId, TaskOutcome,
-        TaskStatus, ToolUseId, WorkItemId, WorkflowCoordinates, WorkflowTaskRole,
+        AgentName, AgentRun, AgentRunId, AgentRunRecordIndex, AgentType, CoreError,
+        CreatedAgentRun, JsonObject, RequestId, RunningRequestAgentRun, TaskOutcome, TaskStatus,
+        ToolUseId,
     };
 
     use super::Sealed;
 
-    /// Persistence surface for the merged `task_runs` and `parented_runs` lineage.
+    /// Persistence surface for `agent_runs` lineage.
     #[async_trait]
-    pub trait TaskAgentRunStore: Sealed + Send + Sync {
-        /// Create the root task-agent-run row and bind `Request.root_task_id`.
-        async fn create_root_task_agent_run(
+    pub trait AgentRunStore: Sealed + Send + Sync {
+        /// Create an agent-run row for the supplied spawn target.
+        async fn create_agent_run(
             &self,
+            agent_run_id: &AgentRunId,
             request_id: &RequestId,
-            agent_run_id: &AgentRunId,
             agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError>;
-
-        /// Create a workflow task-agent-run row.
-        #[allow(clippy::too_many_arguments)]
-        async fn create_workflow_task_agent_run(
-            &self,
-            request_id: &RequestId,
-            agent_run_id: &AgentRunId,
-            coords: &WorkflowCoordinates,
-            role: WorkflowTaskRole,
-            plan_id: &PlanId,
-            work_item_id: Option<&WorkItemId>,
-            agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError>;
-
-        /// Create a parent-launched subagent/advisor row with a derived own task id.
-        async fn create_parented_task_agent_run(
-            &self,
-            agent_run_id: &AgentRunId,
-            parent: &ParentAgentRunAnchor,
-            kind: ParentedAgentRunKind,
+            agent_type: AgentType,
+            parent_agent_run_id: Option<&AgentRunId>,
             tool_use_id: Option<&ToolUseId>,
-            agent_name: &AgentName,
-        ) -> Result<CreatedTaskAgentRun, CoreError>;
+        ) -> Result<CreatedAgentRun, CoreError>;
 
-        /// Finish a root/workflow task-agent-run row.
-        async fn finish_task_run(
+        /// Finish an agent-run row.
+        async fn finish_agent_run(
             &self,
             agent_run_id: &AgentRunId,
             status: TaskStatus,
@@ -161,88 +105,36 @@ mod task_agent_run {
             error: Option<&str>,
         ) -> Result<Option<AgentRun>, CoreError>;
 
-        /// Finish a parent-launched subagent/advisor row.
-        async fn finish_parented_run(
-            &self,
-            agent_run_id: &AgentRunId,
-            status: TaskStatus,
-            terminal_payload: Option<&JsonObject>,
-            parented_outcome: Option<&ParentedOutcome>,
-            token_count: i64,
-            error: Option<&str>,
-        ) -> Result<Option<ParentedRun>, CoreError>;
-
         /// Resolve the record-index input for one run id.
         async fn record_index_for_agent_run(
             &self,
             agent_run_id: &AgentRunId,
         ) -> Result<Option<AgentRunRecordIndex>, CoreError>;
 
-        /// Load a root/workflow agent-run row by agent-run id.
+        /// Load an agent-run row by agent-run id.
         async fn get_agent_run(
             &self,
             agent_run_id: &AgentRunId,
         ) -> Result<Option<AgentRun>, CoreError>;
 
-        /// Load a parented agent-run row by agent-run id.
-        async fn get_parented_run(
-            &self,
-            agent_run_id: &AgentRunId,
-        ) -> Result<Option<ParentedRun>, CoreError>;
-
-        /// Load one task-agent-run row by task id.
-        async fn get_task_run(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError>;
-
-        /// Load root/workflow task-agent-run rows for one request.
-        async fn list_task_runs_for_request(
+        /// Load agent-run rows for one request.
+        async fn list_agent_runs_for_request(
             &self,
             request_id: &RequestId,
         ) -> Result<Vec<AgentRun>, CoreError>;
 
-        /// Load running agent runs for one request across root/workflow and
-        /// parent-launched lineage rows.
+        /// Load running agent runs for one request.
         async fn list_running_agent_runs_for_request(
             &self,
             request_id: &RequestId,
         ) -> Result<Vec<RunningRequestAgentRun>, CoreError>;
 
-        /// Load parent-launched child runs for one parent task and kind.
-        async fn list_parented_runs_for_parent_task(
+        /// Load child agent runs for one parent agent run and kind.
+        async fn list_child_agent_runs_for_parent_agent_run(
             &self,
-            parent_task_id: &TaskId,
-            kind: ParentedAgentRunKind,
-        ) -> Result<Vec<ParentedRun>, CoreError>;
-
-        /// Derive the flat read-side child index for one task.
-        async fn task_execution_index(
-            &self,
-            task_id: &TaskId,
-        ) -> Result<Option<TaskExecutionIndex>, CoreError>;
-    }
-
-    /// Build the deterministic parented-run task id from launch facts.
-    ///
-    /// # Errors
-    /// Returns [`CoreError`] when `tool_use_id` is absent or the derived id is not a
-    /// valid [`TaskId`].
-    pub fn parented_task_id(
-        parent_agent_run_id: &AgentRunId,
-        kind: ParentedAgentRunKind,
-        tool_use_id: Option<&ToolUseId>,
-    ) -> Result<TaskId, CoreError> {
-        let tool_use_id = tool_use_id.ok_or_else(|| {
-            CoreError::Store("parented task-agent-run creation requires tool_use_id".to_owned())
-        })?;
-        let segment = match kind {
-            ParentedAgentRunKind::Subagent => "sub",
-            ParentedAgentRunKind::Advisor => "adv",
-        };
-        format!(
-            "{}:{segment}:{}",
-            parent_agent_run_id.as_str(),
-            tool_use_id.as_str()
-        )
-        .parse()
+            parent_agent_run_id: &AgentRunId,
+            agent_type: Option<AgentType>,
+        ) -> Result<Vec<AgentRun>, CoreError>;
     }
 }
 mod workflow {
@@ -252,7 +144,7 @@ mod workflow {
 
     use crate::{
         AgentRunId, Attempt, AttemptBudget, AttemptClosure, AttemptId, CoreError, ExecutionNode,
-        Iteration, IterationCreationReason, IterationId, IterationStatus, RequestId, TaskId,
+        Iteration, IterationCreationReason, IterationId, IterationStatus, RequestId,
         ToolUseId, UtcDateTime, WorkItemId, Workflow, WorkflowId, WorkflowStatus,
     };
 
@@ -265,7 +157,6 @@ mod workflow {
         async fn insert(
             &self,
             request_id: &RequestId,
-            parent_task_id: &TaskId,
             parent_agent_run_id: &AgentRunId,
             tool_use_id: Option<&ToolUseId>,
             workflow_goal: &str,
@@ -288,12 +179,6 @@ mod workflow {
             status: WorkflowStatus,
             closed_at: Option<UtcDateTime>,
         ) -> Result<Workflow, CoreError>;
-
-        /// All workflows launched by one parent task, ordered by creation.
-        async fn list_for_parent_task(
-            &self,
-            parent_task_id: &TaskId,
-        ) -> Result<Vec<Workflow>, CoreError>;
 
         /// All workflows launched by one agent run, ordered by creation.
         async fn list_for_launching_agent_run(
@@ -369,26 +254,36 @@ mod workflow {
         /// Load an attempt by id.
         async fn get(&self, id: &AttemptId) -> Result<Option<Attempt>, CoreError>;
 
-        /// Bind the planner task assigned to this attempt.
-        async fn bind_planner_task(
+        /// Bind the planner agent run assigned to this attempt.
+        async fn bind_planner_agent_run(
             &self,
             id: &AttemptId,
-            planner_task_id: &TaskId,
+            planner_agent_run_id: &AgentRunId,
         ) -> Result<Attempt, CoreError>;
 
-        /// Record the planner-authored execution tree nodes and transition to run.
-        async fn record_plan_nodes(
+        /// Record the planner-authored outcome and execution tree nodes.
+        async fn record_plan_outcome(
             &self,
             id: &AttemptId,
+            planner_outcome: &crate::TaskOutcome,
             nodes: &[ExecutionNode],
         ) -> Result<Attempt, CoreError>;
 
-        /// Bind a worker task to one execution-tree node.
-        async fn bind_worker_task(
+        /// Bind a worker agent run to one execution-tree node.
+        async fn bind_worker_agent_run(
             &self,
             id: &AttemptId,
             work_item_id: &WorkItemId,
-            task_id: &TaskId,
+            agent_run_id: &AgentRunId,
+        ) -> Result<Attempt, CoreError>;
+
+        /// Record a worker outcome on one execution-tree node.
+        async fn record_worker_outcome(
+            &self,
+            id: &AttemptId,
+            work_item_id: &WorkItemId,
+            status: crate::TaskStatus,
+            outcome: &crate::TaskOutcome,
         ) -> Result<Attempt, CoreError>;
 
         /// Close the attempt with a typed terminal closure.
@@ -413,8 +308,8 @@ mod workflow {
 }
 
 pub use model_registry::ModelStore;
-pub use request_task::{RequestStore, TaskStore};
-pub use task_agent_run::{parented_task_id, TaskAgentRunStore};
+pub use request_task::RequestStore;
+pub use task_agent_run::AgentRunStore;
 pub use workflow::{AttemptStore, IterationStore, WorkflowStore};
 
 /// Alias for the error every store method returns.

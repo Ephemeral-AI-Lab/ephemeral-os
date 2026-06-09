@@ -5,7 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_types::{
     AgentLoopLauncher, AgentRegistry, AgentRunApi, AgentRunError, AgentRunId, AgentRunOutcome,
-    SpawnAgentRequest, TaskAgentRunStore,
+    AgentRunStore, SpawnAgentRequest,
 };
 
 use crate::active_agent_runs::ActiveAgentRunRegistry;
@@ -16,7 +16,7 @@ use crate::{cancellation, completion, spawn};
 pub struct AgentRunService {
     pub(crate) agent_registry: Arc<AgentRegistry>,
     pub(crate) loop_launcher: Arc<dyn AgentLoopLauncher>,
-    pub(crate) task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+    pub(crate) agent_run_store: Arc<dyn AgentRunStore>,
     pub(crate) active_agent_runs: ActiveAgentRunRegistry,
 }
 
@@ -32,12 +32,12 @@ impl AgentRunService {
     pub fn new(
         agent_registry: Arc<AgentRegistry>,
         loop_launcher: Arc<dyn AgentLoopLauncher>,
-        task_agent_run_store: Arc<dyn TaskAgentRunStore>,
+        agent_run_store: Arc<dyn AgentRunStore>,
     ) -> Self {
         Self {
             agent_registry,
             loop_launcher,
-            task_agent_run_store,
+            agent_run_store,
             active_agent_runs: ActiveAgentRunRegistry::new(),
         }
     }

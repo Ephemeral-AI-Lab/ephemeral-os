@@ -8,7 +8,7 @@
 //! orchestration behavior.
 //!
 //! The public surface is re-exported flatly, so consumers write
-//! `use eos_types::{TaskId, UtcDateTime, Clock, JsonObject};`.
+//! `use eos_types::{AgentRunId, UtcDateTime, Clock, JsonObject};`.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -35,11 +35,10 @@ pub use agent_loop::{
 pub use contracts::{
     format_record_dir, AgentCoreCancellationApi, AgentRunApi, AgentRunError, AgentRunOutcome,
     AgentRunRecordDir, AgentRunRecordIndex, AgentRunRecordTarget, AgentRunRuntimeSnapshot,
-    AgentRunStatus, CancelError, CreatedTaskAgentRun, OpenDelegatedWorkflow, ParentAgentRunAnchor,
-    ParentedAgentRunKind, SpawnAgentRequest, SpawnAgentTarget, StartWorkflowRequest,
-    StartedWorkflow, SubmissionAck, TaskAgentRunKind, TaskExecutionIndex, TerminalWorkflow,
-    WorkflowApi, WorkflowApiError, WorkflowAttemptSubmissionApi, WorkflowCoordinates,
-    WorkflowTaskRole, WorkflowTerminalStatus,
+    AgentRunStatus, CancelError, CreatedAgentRun, OpenDelegatedWorkflow, SpawnAgentRequest,
+    StartWorkflowRequest, StartedWorkflow, SubmissionAck, TerminalWorkflow, WorkflowApi,
+    WorkflowApiError, WorkflowAttemptSubmissionApi, WorkflowCoordinates, WorkflowTaskRole,
+    WorkflowTerminalStatus,
 };
 pub use error::CoreError;
 pub use frontmatter::parse_markdown_frontmatter;
@@ -53,14 +52,13 @@ pub use state::{
     AdvisorVerdict, AgentRun, Attempt, AttemptBudget, AttemptClosure, AttemptExecutionTree,
     AttemptFailReason, AttemptOutcome, AttemptStage, AttemptState, AttemptStatus,
     BackgroundSessionCounts, DeferredGoal, ExecutionNode, Iteration, IterationCreationReason,
-    IterationOutcome, IterationStatus, ModelRegistration, ParentedOutcome, ParentedRun, PlanId,
-    PlanOutcomeSubmission, PlannerOutcome, Request, RequestStatus, RunningRequestAgentRun,
-    SubmissionStatus, Task, TaskOutcome, TaskRole, TaskStatus, WorkItemId, WorkItemSpec,
-    WorkerOutcome, WorkerOutcomeSubmission, Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
-    TASK_AGENT_ROLES,
+    IterationOutcome, IterationStatus, ModelRegistration, PlanId, PlanOutcomeSubmission,
+    PlannerOutcome, Request, RequestStatus, RunningRequestAgentRun, SubmissionStatus,
+    TaskOutcome, TaskStatus, WorkItemId, WorkItemSpec, WorkerOutcome, WorkerOutcomeSubmission,
+    Workflow, WorkflowOutcome, WorkflowStatus, NO_OUTCOME,
 };
 pub use stores::{
-    parented_task_id, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
-    TaskAgentRunStore, TaskStore, WorkflowStore,
+    AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
+    WorkflowStore,
 };
 pub use time::{Clock, SystemClock, TestClock, UtcDateTime};

@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>54</b><span>items</span></div>
+  <div><b>51</b><span>items</span></div>
   <div><b>20</b><span>fields</span></div>
   <div><b>34</b><span>methods</span></div>
 </section>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-cancellation-rs.html"><span>cancellation.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-completion-rs.html"><span>completion.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-persistence-rs.html"><span>persistence.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>5/10</small></a></li><li><a class="file-link" href="eos-agent-run--src-spawn-rs.html"><span>spawn.rs</span><small>0/6</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="persistence crates/eos-agent-run/src/persistence.rs finish_task_agent_run completion_from_agent_run completion_from_parented_run completion_from_parts is_cancelled_payload decode_task_outcome decode_parented_outcome">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-agent-run.html"><span>active_agent_runs.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-agent-run--src-cancellation-rs.html"><span>cancellation.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-agent-run--src-completion-rs.html"><span>completion.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-agent-run--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-agent-run--src-persistence-rs.html"><span>persistence.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-agent-run--src-service-rs.html"><span>service.rs</span><small>5/10</small></a></li><li><a class="file-link" href="eos-agent-run--src-spawn-rs.html"><span>spawn.rs</span><small>0/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="persistence crates/eos-agent-run/src/persistence.rs finish_agent_run completion_from_agent_run completion_from_parts is_cancelled_payload decode_task_outcome">
   <div class="module-head">
     <div>
       <h2>src/persistence.rs</h2>
@@ -52,22 +52,22 @@
       <span>file owns</span>
       <span>0 types</span>
       <span>0 impls</span>
-      <span>7 fns</span>
+      <span>5 fns</span>
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-finish-task-agent-run-10" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finish_task_agent_run pub(crate) pub(crate) async fn finish_task_agent_run (store : &amp; dyn TaskAgentRunStore , agent_run_id : &amp; AgentRunId , status : TaskStatus , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , AgentRunError &gt; crates/eos-agent-run/src/persistence.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-finish-agent-run-10" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finish_agent_run pub(crate) pub(crate) async fn finish_agent_run (store : &amp; dyn AgentRunStore , agent_run_id : &amp; AgentRunId , status : TaskStatus , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , AgentRunError &gt; crates/eos-agent-run/src/persistence.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>finish_task_agent_run</h3>
+    <h3>finish_agent_run</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-task-agent-run-10">finish_task_agent_run</a> (store : &amp; dyn TaskAgentRunStore , agent_run_id : &amp; AgentRunId , status : TaskStatus , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , AgentRunError &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a> (store : &amp; dyn AgentRunStore , agent_run_id : &amp; AgentRunId , status : TaskStatus , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; () , AgentRunError &gt;</code>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-task-agent-run-10">finish_task_agent_run</a>(
-    store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">TaskAgentRunStore</span>,
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
+    store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>,
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     status: <span class="rs-type">TaskStatus</span>,
     terminal_payload: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
@@ -76,7 +76,7 @@
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">AgentRunError</span>&gt; {
     <span class="rs-kw">let</span> task_outcome = terminal_payload.and_then(decode_task_outcome);
     <span class="rs-kw">if</span> store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-finish-task-run-391">finish_task_run</a>(
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
             agent_run_id,
             status,
             terminal_payload,
@@ -91,25 +91,8 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
 
-    <span class="rs-kw">let</span> parented_outcome = terminal_payload.and_then(decode_parented_outcome);
-    <span class="rs-kw">if</span> store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-finish-parented-run-423">finish_parented_run</a>(
-            agent_run_id,
-            status,
-            terminal_payload,
-            parented_outcome.as_ref(),
-            token_count,
-            error,
-        )
-        .<span class="rs-kw">await</span>
-        .map_err(|err| <span class="rs-type">AgentRunError</span>::<span class="rs-type">Internal</span>(err.to_string()))?
-        .is_some()
-    {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
-    }
-
     <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">Internal</span>(format!(
-        &quot;task-agent-run row not updated <span class="rs-kw">for</span> {}&quot;,
+        &quot;agent-run row not updated <span class="rs-kw">for</span> {}&quot;,
         agent_run_id.as_str()
     )))
 }
@@ -117,21 +100,21 @@
 </details>
 
   <p class="source">crates/eos-agent-run/src/persistence.rs:10</p>
-</article><article id="item-fn-completion-from-agent-run-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn completion_from_agent_run pub(crate) pub(crate) fn completion_from_agent_run (agent_run_id : &amp; AgentRunId , run : &amp; AgentRun ,) -&gt; Option &lt; AgentRunOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
+</article><article id="item-fn-completion-from-agent-run-41" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn completion_from_agent_run pub(crate) pub(crate) fn completion_from_agent_run (agent_run_id : &amp; AgentRunId , run : &amp; AgentRun ,) -&gt; Option &lt; AgentRunOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>completion_from_agent_run</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-58">completion_from_agent_run</a> (agent_run_id : &amp; AgentRunId , run : &amp; AgentRun ,) -&gt; Option &lt; AgentRunOutcome &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-41">completion_from_agent_run</a> (agent_run_id : &amp; AgentRunId , run : &amp; AgentRun ,) -&gt; Option &lt; AgentRunOutcome &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-58">completion_from_agent_run</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-41">completion_from_agent_run</a>(
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     run: &amp;<span class="rs-type">AgentRun</span>,
 ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-54">completion_from_parts</a>(
         agent_run_id,
         run.finished_at,
         run.terminal_payload.as_ref(),
@@ -142,44 +125,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/persistence.rs:58</p>
-</article><article id="item-fn-completion-from-parented-run-71" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn completion_from_parented_run pub(crate) pub(crate) fn completion_from_parented_run (agent_run_id : &amp; AgentRunId , run : &amp; ParentedRun ,) -&gt; Option &lt; AgentRunOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>completion_from_parented_run</h3>
-    <span class="visibility">pub(crate)</span>
-  </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parented-run-71">completion_from_parented_run</a> (agent_run_id : &amp; AgentRunId , run : &amp; ParentedRun ,) -&gt; Option &lt; AgentRunOutcome &gt;</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parented-run-71">completion_from_parented_run</a>(
-    agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    run: &amp;<span class="rs-type">ParentedRun</span>,
-) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
-        agent_run_id,
-        run.finished_at,
-        run.terminal_payload.as_ref(),
-        run.token_count,
-        run.error.as_ref(),
-    )
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-agent-run/src/persistence.rs:71</p>
-</article><article id="item-fn-completion-from-parts-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn completion_from_parts private fn completion_from_parts (agent_run_id : &amp; AgentRunId , finished_at : Option &lt; eos_types :: UtcDateTime &gt; , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; String &gt; ,) -&gt; Option &lt; AgentRunOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
+  <p class="source">crates/eos-agent-run/src/persistence.rs:41</p>
+</article><article id="item-fn-completion-from-parts-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn completion_from_parts private fn completion_from_parts (agent_run_id : &amp; AgentRunId , finished_at : Option &lt; eos_types :: UtcDateTime &gt; , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; String &gt; ,) -&gt; Option &lt; AgentRunOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>completion_from_parts</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a> (agent_run_id : &amp; AgentRunId , finished_at : Option &lt; eos_types :: UtcDateTime &gt; , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; String &gt; ,) -&gt; Option &lt; AgentRunOutcome &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-54">completion_from_parts</a> (agent_run_id : &amp; AgentRunId , finished_at : Option &lt; eos_types :: UtcDateTime &gt; , terminal_payload : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; String &gt; ,) -&gt; Option &lt; AgentRunOutcome &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-54">completion_from_parts</a>(
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     finished_at: <span class="rs-type">Option</span>&lt;eos_types::<span class="rs-type">UtcDateTime</span>&gt;,
     terminal_payload: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
@@ -188,7 +145,7 @@
 ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
     finished_at?;
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = terminal_payload {
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-126">is_cancelled_payload</a>(terminal) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-96">is_cancelled_payload</a>(terminal) {
             <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">AgentRunOutcome</span> {
                 agent_run_id: agent_run_id.clone(),
                 status: <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span>,
@@ -223,18 +180,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/persistence.rs:84</p>
-</article><article id="item-fn-is-cancelled-payload-126" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_cancelled_payload private fn is_cancelled_payload (payload : &amp; JsonObject) -&gt; bool crates/eos-agent-run/src/persistence.rs  ">
+  <p class="source">crates/eos-agent-run/src/persistence.rs:54</p>
+</article><article id="item-fn-is-cancelled-payload-96" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_cancelled_payload private fn is_cancelled_payload (payload : &amp; JsonObject) -&gt; bool crates/eos-agent-run/src/persistence.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_cancelled_payload</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-126">is_cancelled_payload</a> (payload : &amp; JsonObject) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-96">is_cancelled_payload</a> (payload : &amp; JsonObject) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-126">is_cancelled_payload</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-96">is_cancelled_payload</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
     payload
         .get(&quot;fail_reason&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
@@ -243,41 +200,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/persistence.rs:126</p>
-</article><article id="item-fn-decode-task-outcome-133" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_task_outcome private fn decode_task_outcome (payload : &amp; JsonObject) -&gt; Option &lt; TaskOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
+  <p class="source">crates/eos-agent-run/src/persistence.rs:96</p>
+</article><article id="item-fn-decode-task-outcome-103" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_task_outcome private fn decode_task_outcome (payload : &amp; JsonObject) -&gt; Option &lt; TaskOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_task_outcome</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-133">decode_task_outcome</a> (payload : &amp; JsonObject) -&gt; Option &lt; TaskOutcome &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-103">decode_task_outcome</a> (payload : &amp; JsonObject) -&gt; Option &lt; TaskOutcome &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-133">decode_task_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskOutcome</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-103">decode_task_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskOutcome</span>&gt; {
     serde_json::from_value(serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload.clone())).ok()
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-agent-run/src/persistence.rs:133</p>
-</article><article id="item-fn-decode-parented-outcome-137" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_parented_outcome private fn decode_parented_outcome (payload : &amp; JsonObject) -&gt; Option &lt; ParentedOutcome &gt; crates/eos-agent-run/src/persistence.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>decode_parented_outcome</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-parented-outcome-137">decode_parented_outcome</a> (payload : &amp; JsonObject) -&gt; Option &lt; ParentedOutcome &gt;</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-parented-outcome-137">decode_parented_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">ParentedOutcome</span>&gt; {
-    serde_json::from_value(serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload.clone())).ok()
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-agent-run/src/persistence.rs:137</p>
+  <p class="source">crates/eos-agent-run/src/persistence.rs:103</p>
 </article></div>
 </section></div>
 </main>
@@ -289,14 +229,14 @@
   <pre class="file-source"><code><span class="rs-comment">//! Agent-run persistence helpers owned by the runner.</span>
 
 <span class="rs-kw">use</span> eos_types::{
-    <span class="rs-type">AgentRun</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">ParentedOutcome</span>,
-    <span class="rs-type">ParentedRun</span>, <span class="rs-type">TaskAgentRunStore</span>, <span class="rs-type">TaskOutcome</span>, <span class="rs-type">TaskStatus</span>,
+    <span class="rs-type">AgentRun</span>, <span class="rs-type">AgentRunId</span>, <span class="rs-type">AgentRunOutcome</span>, <span class="rs-type">AgentRunStatus</span>, <span class="rs-type">AgentRunStore</span>, <span class="rs-type">JsonObject</span>,
+    <span class="rs-type">TaskOutcome</span>, <span class="rs-type">TaskStatus</span>,
 };
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<span class="rs-type">AgentRunError</span>;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-task-agent-run-10">finish_task_agent_run</a>(
-    store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">TaskAgentRunStore</span>,
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
+    store: &amp;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>,
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     status: <span class="rs-type">TaskStatus</span>,
     terminal_payload: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
@@ -305,7 +245,7 @@
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">AgentRunError</span>&gt; {
     <span class="rs-kw">let</span> task_outcome = terminal_payload.and_then(decode_task_outcome);
     <span class="rs-kw">if</span> store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-finish-task-run-391">finish_task_run</a>(
+        .<a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-finish-agent-run-10">finish_agent_run</a>(
             agent_run_id,
             status,
             terminal_payload,
@@ -320,34 +260,17 @@
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
     }
 
-    <span class="rs-kw">let</span> parented_outcome = terminal_payload.and_then(decode_parented_outcome);
-    <span class="rs-kw">if</span> store
-        .<a class="symbol-link rs-fn" href="eos-agent-run--src-service-rs.html#method-finish-parented-run-423">finish_parented_run</a>(
-            agent_run_id,
-            status,
-            terminal_payload,
-            parented_outcome.as_ref(),
-            token_count,
-            error,
-        )
-        .<span class="rs-kw">await</span>
-        .map_err(|err| <span class="rs-type">AgentRunError</span>::<span class="rs-type">Internal</span>(err.to_string()))?
-        .is_some()
-    {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
-    }
-
     <span class="rs-type">Err</span>(<span class="rs-type">AgentRunError</span>::<span class="rs-type">Internal</span>(format!(
-        &quot;task-agent-run row not updated <span class="rs-kw">for</span> {}&quot;,
+        &quot;agent-run row not updated <span class="rs-kw">for</span> {}&quot;,
         agent_run_id.as_str()
     )))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-58">completion_from_agent_run</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-agent-run-41">completion_from_agent_run</a>(
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     run: &amp;<span class="rs-type">AgentRun</span>,
 ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
+    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-54">completion_from_parts</a>(
         agent_run_id,
         run.finished_at,
         run.terminal_payload.as_ref(),
@@ -356,20 +279,7 @@
     )
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parented-run-71">completion_from_parented_run</a>(
-    agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-    run: &amp;<span class="rs-type">ParentedRun</span>,
-) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
-    <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
-        agent_run_id,
-        run.finished_at,
-        run.terminal_payload.as_ref(),
-        run.token_count,
-        run.error.as_ref(),
-    )
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-84">completion_from_parts</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-completion-from-parts-54">completion_from_parts</a>(
     agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     finished_at: <span class="rs-type">Option</span>&lt;eos_types::<span class="rs-type">UtcDateTime</span>&gt;,
     terminal_payload: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
@@ -378,7 +288,7 @@
 ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunOutcome</span>&gt; {
     finished_at?;
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(terminal) = terminal_payload {
-        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-126">is_cancelled_payload</a>(terminal) {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-96">is_cancelled_payload</a>(terminal) {
             <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">AgentRunOutcome</span> {
                 agent_run_id: agent_run_id.clone(),
                 status: <span class="rs-type">AgentRunStatus</span>::<span class="rs-type">Cancelled</span>,
@@ -411,18 +321,14 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-126">is_cancelled_payload</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-is-cancelled-payload-96">is_cancelled_payload</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
     payload
         .get(&quot;fail_reason&quot;)
         .and_then(serde_json::<span class="rs-type">Value</span>::as_str)
         == <span class="rs-type">Some</span>(&quot;cancelled&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-133">decode_task_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskOutcome</span>&gt; {
-    serde_json::from_value(serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload.clone())).ok()
-}
-
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-parented-outcome-137">decode_parented_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">ParentedOutcome</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-run--src-persistence-rs.html#item-fn-decode-task-outcome-103">decode_task_outcome</a>(payload: &amp;<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskOutcome</span>&gt; {
     serde_json::from_value(serde_json::<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload.clone())).ok()
 }
 </code></pre>

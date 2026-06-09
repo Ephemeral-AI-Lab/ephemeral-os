@@ -3,8 +3,7 @@
 use async_trait::async_trait;
 
 use crate::{
-    AgentRunId, CoreError, PlanOutcomeSubmission, TaskId, ToolUseId, WorkerOutcomeSubmission,
-    WorkflowId,
+    AgentRunId, CoreError, PlanOutcomeSubmission, ToolUseId, WorkerOutcomeSubmission, WorkflowId,
 };
 
 /// The result of applying a terminal submission.
@@ -35,8 +34,6 @@ pub trait WorkflowAttemptSubmissionApi: Send + Sync {
 /// Request to start a delegated workflow.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StartWorkflowRequest {
-    /// Parent task launching the workflow.
-    pub parent_task_id: TaskId,
     /// Agent run that owns the launch.
     pub agent_run_id: AgentRunId,
     /// Tool use that requested the workflow, if available.

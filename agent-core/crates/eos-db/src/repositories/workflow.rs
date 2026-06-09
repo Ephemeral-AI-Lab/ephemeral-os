@@ -5,7 +5,7 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_types::{
-    AgentRunId, CoreError, IterationId, RequestId, Sealed, TaskId, ToolUseId, UtcDateTime,
+    AgentRunId, CoreError, IterationId, RequestId, Sealed, ToolUseId, UtcDateTime,
     Workflow, WorkflowId, WorkflowStatus, WorkflowStore,
 };
 
@@ -31,7 +31,6 @@ impl WorkflowStore for SqlWorkflowStore {
     async fn insert(
         &self,
         request_id: &RequestId,
-        parent_task_id: &TaskId,
         parent_agent_run_id: &AgentRunId,
         tool_use_id: Option<&ToolUseId>,
         workflow_goal: &str,
@@ -39,13 +38,12 @@ impl WorkflowStore for SqlWorkflowStore {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, WorkflowRow>(
             "INSERT INTO workflows \
-             (id, request_id, parent_task_id, parent_agent_run_id, tool_use_id, workflow_goal, \
+             (id, request_id, parent_agent_run_id, tool_use_id, workflow_goal, \
               status, iteration_ids, created_at, updated_at, closed_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 'open', '[]', ?, ?, NULL) RETURNING *",
+             VALUES (?, ?, ?, ?, ?, 'open', '[]', ?, ?, NULL) RETURNING *",
         )
         .bind(WorkflowId::new_v4().as_str())
         .bind(request_id.as_str())
-        .bind(parent_task_id.as_str())
         .bind(parent_agent_run_id.as_str())
         .bind(tool_use_id.map(ToolUseId::as_str))
         .bind(workflow_goal)
@@ -114,23 +112,6 @@ impl WorkflowStore for SqlWorkflowStore {
             id: id.to_string(),
         })?;
         Ok(row_to_workflow(row)?)
-    }
-
-    async fn list_for_parent_task(
-        &self,
-        parent_task_id: &TaskId,
-    ) -> Result<Vec<Workflow>, CoreError> {
-        let rows = sqlx::query_as::<Sqlite, WorkflowRow>(
-            "SELECT * FROM workflows WHERE parent_task_id = ? ORDER BY created_at ASC",
-        )
-        .bind(parent_task_id.as_str())
-        .fetch_all(&self.pool)
-        .await
-        .map_err(DbError::from)?;
-        Ok(rows
-            .into_iter()
-            .map(row_to_workflow)
-            .collect::<Result<Vec<_>, _>>()?)
     }
 
     async fn list_for_launching_agent_run(
