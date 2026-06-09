@@ -182,7 +182,7 @@ It is **not** license to cross these axes:
 
 | Keep distinct | Why it is load-bearing |
 | --- | --- |
-| `TaskOutcome {Root,Planner,Worker}` **vs** `ParentedOutcome {Advisor,Subagent}` | Different **row types** (`Task` vs `ParentedRun`) and role enums (`TaskRole` vs `ParentedAgentRunKind`). Both serialize into the *same* `terminal_payload: Option<JsonObject>` column → surface pressure to merge; resist it. Merging breaks the `TaskRole↔TaskOutcome` 1:1. |
+| `TaskOutcome {Root,Planner,Worker}` **vs** `ParentedOutcome {Advisor,Subagent}` | Different **row types** (`Task`/`AgentRun` vs `ParentedRun`) and role enums (`TaskRole` vs `ParentedAgentRunKind`). `Task` drops the raw terminal field; `AgentRun`/`ParentedRun` keep `terminal_payload` and expose typed mirrors (`task_outcome` / `parented_outcome`) → surface pressure to merge; resist it. Merging breaks the `TaskRole↔TaskOutcome` 1:1. |
 | DAG scheduler: `ready_pending_plan_ids` / `dag_resolution` / `unreachable_pending_ids` / `assert_acyclic` | Pure, sync, **role-agnostic** (reads `task.needs`/`task.status`, never the binary). Workers still form a DAG; this is the correctness heart. Only `validate_plan_shape`'s reducer/dangling checks delete. |
 | `finish_task_run` **vs** `finish_parented_run` | Target **different tables** (`task_runs` vs `parented_runs`) = the same two-family axis. |
 | root inline store-write **vs** worker/plan `WorkflowAttemptSubmissionApi` | Root closes a `Request` and has no attempt; do **not** put a `submit_root` method on the 2-method trait. |
@@ -241,7 +241,7 @@ eos-workflow/src/
 | --- | --- | --- |
 | `task.rs` | `TaskRole {Root,Planner,Generator,Reducer}` + `TASK_AGENT_ROLES[4]` | `{Root,Planner,Worker}` + `[3]` |
 | `task.rs` | `TaskStatus::is_terminal_generator` | `is_terminal` (same body) |
-| `task.rs` | `Task.outcomes: Vec<ExecutionTaskOutcome>` + `terminal_payload: Option<JsonObject>` | drop the Vec; `terminal_payload` only (stays `Option<JsonObject>`) |
+| `task.rs` | `Task.outcomes: Vec<ExecutionTaskOutcome>` + `terminal_payload: Option<JsonObject>` | drop the Vec; `Task` uses `task_outcome: Option<TaskOutcome>` only, while `AgentRun` keeps raw `terminal_payload` plus typed `task_outcome` |
 | `outcomes.rs`→`outcome.rs` | `ExecutionRole`, `ExecutionTaskOutcome`, `TaskOutcomeStatus`, `present_status`, `execution_outcome_for_submission`, `NO_OUTCOME` | **delete all**; add `TaskOutcome {Root,Planner,Worker}` + `ParentedOutcome {Advisor,Subagent}` + `AdvisorVerdict` |
 | `plan.rs`→`work_item.rs` | `PlannerId`/`GeneratorId`/`ReducerId` (macro ×3) | `WorkItemId` (+ derived `planner_task_id`/`worker_task_id`) |
 | `plan.rs` | `PlanDisposition {Complete, Defer}` + 4 methods | delete → `Option<DeferredGoal>` |
@@ -314,7 +314,7 @@ Split by what they cost an implementer:
 | # | Wording | Fix |
 | --- | --- | --- |
 | B6 | **"three files" AC (line 848) vs §3's FIVE context files** (`planner_context`, `worker_context`, `render` **+ `composer` + `scope`**). §12's "three not five" is really an anti-over-split guard for the *recipe/render* files only. | Reword the AC to "the context recipe layer is three render files"; `composer`/`scope` are separate owners. |
-| B7 | **`Task.terminal_payload: TaskOutcome` typing** (§4 line 289, §13 line 730) reads as contradicting the two-family split — the column is a **shared `Option<JsonObject>`** across `Task`/`TaskRun`/**`ParentedRun`** (which holds `ParentedOutcome`). | State the field stays `Option<JsonObject>`; only the *producer/reader* changes. The eos-db `terminal_payload` change is a near-no-op (columns stay TEXT-of-JSON). |
+| B7 | **Generic terminal-payload wording hides the family boundary.** The final contract should not expose `Task.terminal_payload: Option<JsonObject>`, but the raw terminal payload still belongs on agent-run rows. | `Task` removes `terminal_tool_result`/payload and uses `task_outcome: Option<TaskOutcome>`; `AgentRun` keeps `terminal_payload` beside the equivalent typed `task_outcome`; `ParentedRun` keeps `terminal_payload` beside `parented_outcome`. |
 
 **Orphan set the "dissolve `state.rs`/`ids.rs`" steps must re-home** (grounded
 consumers): `project_attempt_outcomes` (`orchestrator.rs:509`),
@@ -364,7 +364,7 @@ agent-core/crates/eos-types/src/
                        SpawnAgentTarget (Workflow arm reshaped)
     workflow.rs        WorkflowApi, WorkflowAttemptSubmissionApi (2 methods)
   state/
-    request_task/task.rs   TaskRole{Root,Planner,Worker}, TaskStatus(is_terminal), Task, TaskRun, ParentedRun
+    request_task/task.rs   TaskRole{Root,Planner,Worker}, TaskStatus(is_terminal), Task, AgentRun, ParentedRun
     tools/submissions.rs   PlanOutcomeSubmission, WorkerOutcomeSubmission, SubmissionStatus
     workflow/
       workflow.rs      Workflow, WorkflowStatus, WorkflowOutcome      (was entity.rs)
@@ -422,48 +422,65 @@ agent-core/crates/eos-agent-run/src/spawn.rs   reshape SpawnAgentTarget::Workflo
 pub enum TaskRole { Root, Planner, Worker }                 // was {Root,Planner,Generator,Reducer}
 pub const TASK_AGENT_ROLES: [TaskRole; 3] = [Root, Planner, Worker];
 impl TaskStatus { pub const fn is_terminal(self) -> bool {/* Done|Failed|Blocked|Cancelled */} }
-pub struct Task {                                           // execution state + direct-parent anchor
+pub struct Task {                                           // PURE execution state — no workflow lineage
     pub id: TaskId, pub request_id: RequestId, pub role: TaskRole,
-    pub instruction: String, pub status: TaskStatus,        // instruction = universal runner input (kept)
-    pub attempt_id: Option<AttemptId>,                      // DIRECT workflow-parent FK (queried; kept)
+    pub instruction: String, pub status: TaskStatus,        // instruction = universal runner input
     pub agent_name: Option<String>,
-    pub terminal_payload: Option<JsonObject>,               // stays Option<JsonObject>; holds a TaskOutcome
-}   // ParentedRun unchanged; its terminal_payload holds a ParentedOutcome (separate family)
-// ▶ RECOMMENDED normalization (review §7, beyond SPEC):
-//   - DROP workflow_id, iteration_id from Task (+ dead indexes ix_tasks_workflow_id/iteration_id):
-//     never filtered by any query; derive via attempt_id → Attempt → Iteration.
-//   - DROP needs from Task: it is PLAN structure (WorkItemSpec.needs), not Task state. The DAG
-//     scheduler becomes plan-driven (ready/dag_resolution take work_items, not &[Task].needs).
-//   - KEEP attempt_id: the one real WHERE predicate + the record-path lineage root.
+    pub task_outcome: Option<TaskOutcome>,                  // full info incl is_pass when terminal
+}
+pub struct AgentRun {                                       // root / planner / worker
+    pub task_id: TaskId, pub agent_run_id: AgentRunId, pub request_id: RequestId,
+    pub role: TaskRole, pub status: TaskStatus, pub agent_name: AgentName,
+    pub terminal_payload: Option<JsonObject>,               // raw terminal tool result
+    pub task_outcome: Option<TaskOutcome>,
+    pub token_count: i64, pub error: Option<String>, pub created_at: UtcDateTime,
+    pub updated_at: UtcDateTime, pub finished_at: Option<UtcDateTime>,
+}
+pub struct ParentedRun {                                    // advisor / subagent
+    pub task_id: TaskId, pub agent_run_id: AgentRunId, pub request_id: RequestId,
+    pub status: TaskStatus,
+    pub parent_agent_run_id: AgentRunId, pub parent_task_id: TaskId,
+    pub kind: ParentedAgentRunKind, pub tool_use_id: Option<ToolUseId>,
+    pub agent_name: AgentName,
+    pub terminal_payload: Option<JsonObject>,               // raw terminal tool result
+    pub parented_outcome: Option<ParentedOutcome>,
+    pub token_count: i64, pub error: Option<String>, pub created_at: UtcDateTime,
+    pub updated_at: UtcDateTime, pub finished_at: Option<UtcDateTime>,
+}
+// ▶ DROP attempt_id, workflow_id, iteration_id, needs, work_item_id from the Task store.
+//   The AttemptExecutionTree is the attempt↔task index (attempt → task_ids + work_item bindings),
+//   so worker tasks are inferred from the tree, NOT from `tasks WHERE attempt_id=?`. Only one query
+//   used attempt_id (latch_attempt_tasks_cancelled, request_task.rs:226) — it now reads task_ids
+//   from the tree. Lineage derives tree → attempt → iteration → workflow. needs is plan structure.
 
 // ── eos-types work_item.rs ──
-pub struct WorkItemId(String);                              // was GeneratorId
+pub struct WorkItemId(String);                              // planner-authored, unique within the plan
+pub struct PlanId(String);                                  // minted by the Attempt (one per attempt)
 pub struct DeferredGoal(String);                            // kept (PlanDisposition deleted)
 pub struct WorkItemSpec { pub id: WorkItemId, pub agent_name: AgentName,
-                          pub work_spec: String, pub needs: Vec<WorkItemId> }
-pub fn planner_task_id(attempt_id: &AttemptId) -> TaskId;             // "{attempt_id}:planner"
-pub fn worker_task_id(attempt_id: &AttemptId, work_item_id: &WorkItemId) -> TaskId;  // "{attempt_id}:{work_item_id}"
-// ▶ ID encoding change: drop the ":gen:"/":red:" role segments — workers are denoted by work_item_id,
-//   attempt-anchored only for global uniqueness (work_item_ids are plan-local: "w1","w2").
-//   DELETE reverse parsers generator_id_from_task_id / reducer_id_from_task_id: data access uses the
-//   stored Task.attempt_id column, never id-string parsing. The WorkflowNodeId param of the old
-//   workflow_task_id() goes with it.
-// ▶ Creation: planner authors work_item_id in submit_plan_outcome (plan = SoT, no worker rows yet);
-//   the worker_task_id is MINTED AT SPAWN by create_workflow_task_agent_run (deterministic
-//   = worker_task_id(attempt_id, work_item_id)), not eagerly materialized — so materialize_plan_tasks'
-//   eager worker-row loop is deleted and the DAG scheduler MUST be plan-driven (reads work_items +
-//   spawned-task statuses, since unspawned workers have no row). AgentLaunch / SpawnAgentTarget::Workflow
-//   carry the existing WorkflowCoordinates{workflow_id,iteration_id,attempt_id} bundle + work_item_id.
+                          pub work_spec: String, pub needs: Vec<WorkItemId> }   // lives in TaskOutcome::Planner JSON
+// ▶ NO worker_task_id()/planner_task_id() derivation, NO "{x}:{y}" encoding, NO reverse parsers,
+//   NO WorkflowNodeId. task_id is OPAQUE, minted by the task store inside spawn_agent for EVERY
+//   agent_type=agent task (root/planner/worker) — uniform. (agent_run_id is the v4; task_id is the
+//   store id.) Role-specific links are explicit COLUMNS, not encoded in the id:
+//     planner row → plan_id (= its attempt's plan_id);   worker row → work_item_id (from the plan).
+//   eos-workflow/src/ids.rs dissolves entirely.
+// ▶ Lookups (no derivation): plan         = planner task by (attempt_id, role=Planner) → TaskOutcome::Planner JSON
+//                            workers       = tasks WHERE attempt_id=? AND role=Worker
+//                            one work item = tasks WHERE attempt_id=? AND role=Worker AND work_item_id=?
+//   DAG scheduler is plan-driven: reads the plan JSON's work_items[] + spawned worker statuses.
 
 // ── eos-types outcome.rs ──  (DELETED: ExecutionRole, ExecutionTaskOutcome, TaskOutcomeStatus,
 //                                       present_status, execution_outcome_for_submission)
 #[serde(tag="kind", rename_all="snake_case")]
-pub enum TaskOutcome {                                       // workflow-task family (Task rows)
-    Root    { outcome: String },
+pub enum TaskOutcome {                       // == {root,planner,worker}_outcome — full info incl pass/fail
+    Root    { is_pass: bool, outcome: String },
     Planner { plan_spec: String, work_items: Vec<WorkItemSpec>,
-              deferred_goal_for_next_iteration: Option<DeferredGoal> },
-    Worker  { outcome: String },
+              deferred_goal_for_next_iteration: Option<DeferredGoal> },   // no is_pass (a returned plan = success)
+    Worker  { is_pass: bool, outcome: String },
 }
+// is_pass now lives ON the outcome (root/worker), reversing SPEC §2 "no status on outcome": the terminal
+// records it and maps it onto TaskStatus (Done/Failed) so the two stay consistent; planner has none.
 #[serde(tag="kind", rename_all="snake_case")]
 pub enum ParentedOutcome {                                  // parented family (ParentedRun) — DO NOT merge
     Advisor  { verdict: AdvisorVerdict, outcome: String },
@@ -471,27 +488,41 @@ pub enum ParentedOutcome {                                  // parented family (
 }
 pub enum AdvisorVerdict { Approve, Reject }                 // promoted from tool-private Verdict
 
-// ── eos-types attempt.rs ──  (SPEC §6 literal)
-pub enum AttemptState {
-    Planning { planner_task_id: Option<TaskId> },           // None→Some guards double-start
-    Running  { planner_task_id: TaskId },                   // no MaterializedPlan field
-    Closed   { closure: AttemptClosure, planner_task_id: Option<TaskId> },
+// ── eos-types attempt.rs ──
+pub struct Attempt { /* … */ pub plan_id: PlanId, pub state: AttemptState,
+                     pub execution_tree: AttemptExecutionTree }     // plan_id minted at creation
+// The materialized execution structure: the attempt↔task index. Replaces tasks.attempt_id, lets worker
+// tasks be inferred directly (no `tasks WHERE attempt_id=?`), and owns the work_item→task bindings.
+pub struct AttemptExecutionTree {
+    pub plan_id: PlanId,
+    pub planner_task_id: Option<TaskId>,    // bound when the planner is spawned
+    pub nodes: Vec<ExecutionNode>,          // one per planned work item (materialized on submit_plan_outcome)
 }
-//  ▶ RECOMMENDED tightening (review §3): id is deterministic, so track only "started":
-//        enum AttemptState { Planning { started: bool }, Running, Closed { closure } }
-//    and demote AttemptStage to a derived `matches!` helper.
+pub struct ExecutionNode {
+    pub work_item_id: WorkItemId,
+    pub needs: Vec<WorkItemId>,             // DAG edges (materialized for scheduling locality)
+    pub task_id: Option<TaskId>,            // bound when this work item's worker is spawned (None = not yet)
+}
+pub enum AttemptState {                                      // no planner_task_id (it lives in the tree)
+    Planning { started: bool },
+    Running,
+    Closed   { closure: AttemptClosure },
+}
 pub enum AttemptClosure {                                    // `outcomes: Vec<…>` REMOVED from each variant
     Passed    { closed_at: UtcDateTime },
     Failed    { reason: AttemptFailReason, closed_at: UtcDateTime },
     Cancelled { reason: String, closed_at: UtcDateTime },
 }
 // Attempt::generator_task_ids()/reducer_task_ids()/materialized_plan() DELETED;
-// enumerate workers via worker_task_id(attempt_id, w.id) over the planner's work_items.
+// enumerate workers by querying tasks (attempt_id, role=Worker); the planned node set is the plan JSON.
 
 // ── eos-types contracts ──
 pub enum WorkflowTaskRole { Planner, Worker }               // was {Planner,Generator,Reducer}
-// WorkflowNodeId DELETED. SpawnAgentTarget::Workflow reshaped:
-pub enum SpawnAgentTarget { /* … */ Workflow { role: WorkflowTaskRole, work_item_id: Option<WorkItemId> } }
+// WorkflowNodeId DELETED. SpawnAgentTarget::Workflow reshaped (task_id is minted by the store, not passed in):
+pub enum SpawnAgentTarget { /* … */
+    Workflow { coords: WorkflowCoordinates, role: WorkflowTaskRole,
+               plan_id: PlanId, work_item_id: Option<WorkItemId> },  // work_item_id: Some=worker, None=planner
+}
 #[async_trait] pub trait WorkflowAttemptSubmissionApi {     // 3 methods → 2
     async fn submit_plan_outcome(&self, s: PlanOutcomeSubmission)   -> Result<SubmissionAck, CoreError>;
     async fn submit_worker_outcome(&self, s: WorkerOutcomeSubmission) -> Result<SubmissionAck, CoreError>;
@@ -523,31 +554,33 @@ pub enum TerminalTool { RootTask, Plan, Worker, Advisor, Subagent }   // 6 → 5
 
 ### Target workflow-store DB schema
 
-**`work_item` is NOT a table.** The plan is the single source of truth and lives as
-typed JSON in the **planner run's `terminal_payload`** (`TaskOutcome::Planner`); each
-work item is *executed* as a **worker `task_runs` row** linked by `work_item_id`.
-Where each piece of a work item lives:
+**The full plan lives in `TaskOutcome::Planner` JSON (approach A — no `work_items` table).**
+The attempt mints `plan_id`; the planner records the full plan as its terminal outcome and
+materializes the `AttemptExecutionTree` in `submit_plan_outcome`. `task_id` is opaque (store-minted);
+the **tree** — not a `tasks.attempt_id` column — maps the attempt to its tasks. Where each piece lives:
 
 | Work-item piece | Home |
 | --- | --- |
-| `work_item_id`, `work_spec`, `needs`, `agent_name` (authored structure) | `task_runs(role='planner').terminal_payload` → `TaskOutcome::Planner.work_items[]` |
-| execution status + deliverable | worker `task_runs(role='worker')` row: `status` + `terminal_payload` (`TaskOutcome::Worker`) |
-| work-item ↔ task link | worker row's `work_item_id` column; `task_id = worker_task_id(attempt_id, work_item_id)` |
+| full plan: `plan_spec` + `work_items[]` (`id`/`agent_name`/`work_spec`/`needs`) | planner run's `terminal_payload` / typed `task_outcome` → `TaskOutcome::Planner` JSON |
+| plan identity | `attempts.plan_id` (minted by the Attempt) |
+| attempt → task index + `work_item → task` bindings + DAG | `attempts.execution_tree` (`AttemptExecutionTree` JSON) |
+| execution status + deliverable | worker `task_runs(role='worker')` row: `status` + `terminal_payload` / typed `task_outcome` (`TaskOutcome::Worker`) |
 
 ```sql
 -- WORKFLOW (lifecycle authority for the whole run)
 CREATE TABLE workflows (
-    id             TEXT PRIMARY KEY,
-    request_id     TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
-    parent_task_id TEXT NOT NULL,
-    launched_by_agent_run_id TEXT NOT NULL,
-    tool_use_id    TEXT,
-    goal           TEXT NOT NULL,
-    status         TEXT NOT NULL,                  -- WorkflowStatus
-    iteration_ids  TEXT NOT NULL DEFAULT '[]',
+    id                  TEXT PRIMARY KEY,
+    request_id          TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+    parent_task_id      TEXT NOT NULL,
+    parent_agent_run_id TEXT NOT NULL,             -- RENAMED from launched_by_agent_run_id
+    tool_use_id         TEXT,
+    workflow_goal       TEXT NOT NULL,             -- RENAMED from goal (matches Workflow.workflow_goal DTO; drops the column→domain remap)
+    status              TEXT NOT NULL,             -- WorkflowStatus
+    iteration_ids       TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT
     -- DROP outcomes  (read-side projection over the latest iteration; §11 symmetry)
 );
+-- index ix_workflows_launched_by_agent_run_id → ix_workflows_parent_agent_run_id
 
 -- ITERATION (vertical / deferred-goal-continuation axis)
 CREATE TABLE iterations (
@@ -555,15 +588,22 @@ CREATE TABLE iterations (
     workflow_id     TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
     sequence_no     INTEGER NOT NULL,
     creation_reason TEXT NOT NULL,
-    goal            TEXT NOT NULL,
+    workflow_goal   TEXT NOT NULL,                 -- ADD: denormalized copy of workflows.workflow_goal (context locality)
+    iteration_goal  TEXT NOT NULL,                 -- this iteration's own goal (was column `goal` → Iteration.iteration_goal)
     attempt_budget  INTEGER NOT NULL,
     status          TEXT NOT NULL,                 -- IterationStatus
     attempt_ids     TEXT NOT NULL DEFAULT '[]',
-    deferred_goal_for_next_iteration TEXT,         -- DeferredGoal (KEEP; rename from deferred_goal)
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
     CONSTRAINT uq_iteration_workflow_sequence UNIQUE (workflow_id, sequence_no)
-    -- DROP outcomes  (read-side projection)
+    -- DROP outcomes (read-side projection); DROP deferred_goal_for_next_iteration
+    --   (single source = the returned attempt's TaskOutcome::Planner.deferred_goal_for_next_iteration)
 );
+-- AGGREGATION OUTCOMES are read-side projections (computed, never stored), recursive:
+--   AttemptOutcome  { status = plan_ok && all workers is_pass; planner_outcome; worker_outcomes[] }
+--   IterationOutcome{ status = returned_attempt.status; deferred_goal ← that planner_outcome; attempts[] }
+--   WorkflowOutcome { status = returned_iteration.status; iterations[] }
+-- These REPLACE the old disposition enums (IterationOutcome::Complete/Continue/Failed, WorkflowOutcome::*);
+-- "continue vs complete" = deferred_goal.is_some(). Stored *Status enums stay for in-flight scheduling.
 
 -- ATTEMPT (horizontal / retry axis)
 CREATE TABLE attempts (
@@ -573,57 +613,42 @@ CREATE TABLE attempts (
     attempt_sequence_no INTEGER NOT NULL,
     stage               TEXT NOT NULL,             -- Plan|Run|Closed (only Plan-vs-Run is non-redundant w/ status)
     status              TEXT NOT NULL,             -- AttemptStatus
-    planner_task_id     TEXT,                      -- KEEP (recording anchor + "planning started" guard)
+    plan_id             TEXT NOT NULL,             -- minted by the Attempt at creation (the plan's identity)
+    execution_tree      TEXT NOT NULL DEFAULT '{}',-- AttemptExecutionTree JSON: {plan_id, planner_task_id?,
+                                                   --   nodes:[{work_item_id, needs, task_id?}]}. Materialized on
+                                                   --   submit_plan_outcome; task_id bound as each worker spawns.
+                                                   --   THE attempt↔task index → tasks/task_runs DROP attempt_id.
     fail_reason         TEXT,
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL, closed_at TEXT,
     CONSTRAINT uq_attempt_iteration_sequence UNIQUE (iteration_id, attempt_sequence_no)
-    -- DROP generator_task_ids, reducer_task_ids   (plan lives in TaskOutcome::Planner)
+    -- DROP planner_task_id                        (lives in execution_tree.planner_task_id)
+    -- DROP generator_task_ids, reducer_task_ids, work_item_ids   (full plan in TaskOutcome::Planner; ids in the tree)
     -- DROP outcomes                               (read-side projection over worker tasks)
     -- DROP deferred_goal                          (lives in iterations.deferred_goal_for_next_iteration)
 );
 
--- WORK ITEM execution rows (planner + workers) live in task_runs:
+-- AGENT-RUN rows (root + planner + workers) — task_id OPAQUE (store-minted at spawn_agent); NO lineage cols:
 CREATE TABLE task_runs (
-    task_id          TEXT PRIMARY KEY,             -- planner "{attempt}:planner"; worker "{attempt}:{work_item_id}"
-    agent_run_id     TEXT NOT NULL UNIQUE,
+    task_id          TEXT PRIMARY KEY,             -- opaque store id (NOT "{attempt}:…"); uniform across roles
+    agent_run_id     TEXT NOT NULL UNIQUE,         -- v4
     request_id       TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
     role             TEXT NOT NULL,                -- 'root' | 'planner' | 'worker'
     status           TEXT NOT NULL,
-    attempt_id       TEXT,                         -- KEEP (direct-parent anchor; the one filtered predicate)
-    work_item_id     TEXT,                         -- ADD: worker's plan denotation (NULL for root/planner)
     agent_name       TEXT NOT NULL,
-    terminal_payload TEXT,                         -- TaskOutcome {Root|Planner|Worker} (JSON)
+    terminal_payload TEXT,                         -- raw terminal tool result
+    task_outcome TEXT,                             -- typed mirror: TaskOutcome {Root|Planner|Worker}
     token_count INTEGER NOT NULL DEFAULT 0, error TEXT,
-    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT,
-    CHECK (
-      (role='root'    AND attempt_id IS NULL     AND work_item_id IS NULL)
-      OR (role='planner' AND attempt_id IS NOT NULL AND work_item_id IS NULL)
-      OR (role='worker'  AND attempt_id IS NOT NULL AND work_item_id IS NOT NULL)
-    )
-    -- DROP workflow_id, iteration_id (+ ix_task_runs_workflow_coordinate) → derive via attempt_id;
-    --   keep the coordinate ONLY if a real reporting query filters task_runs by it.
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT
+    -- DROP attempt_id, workflow_id, iteration_id, work_item_id (+ ix_task_runs_workflow_coordinate):
+    --   the attempt↔task linkage is attempts.execution_tree; lineage derives tree → attempt → iteration → workflow.
+    --   latch_attempt_tasks_cancelled reads task_ids from the tree, then UPDATEs tasks by id.
 );
--- (the schedulable `tasks` table mirrors this for the worker DAG; same role/attempt_id/work_item_id
---  narrowing applies, and its needs/outcomes/workflow_id/iteration_id columns drop per review §7.)
+-- (the schedulable `tasks` table mirrors task identity/status and uses task_outcome;
+--  it does not keep terminal_tool_result/payload or lineage columns.)
 ```
 
-**Optional alternative — a first-class `work_items` table.** Only if the scheduler
-or tooling needs to *query* plan structure relationally rather than parse the
-planner's `terminal_payload`:
-
-```sql
-CREATE TABLE work_items (             -- DEVIATES from SPEC "plan lives only in TaskOutcome::Planner"
-    attempt_id   TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
-    work_item_id TEXT NOT NULL,       -- planner-authored, unique within attempt
-    agent_name   TEXT NOT NULL,
-    work_spec    TEXT NOT NULL,
-    needs        TEXT NOT NULL DEFAULT '[]',   -- JSON array of WorkItemId
-    PRIMARY KEY (attempt_id, work_item_id)
-);
-```
-Trade-off: gains relational queryability + a clean FK target for worker rows;
-costs a second write path that must stay in sync with `TaskOutcome::Planner` and
-breaks the SPEC's single-source-of-truth invariant. **Recommendation: don't** — the
-plan is one immutable JSON row (the planner run's payload), cheap to load and cache;
-keep it as the sole authority.
-```
+**No `work_items` table (approach A).** The full plan is one immutable JSON value in the
+planner run's `TaskOutcome::Planner` (`plan_spec` + `work_items[]`). The `attempts.execution_tree`
+materializes the node ids + `needs` + the `work_item → task_id` bindings (the attempt↔task index).
+The DAG scheduler reads the tree (+ spawned worker statuses); it reads `work_spec`/`agent_name`
+from the plan JSON only when spawning a chosen node.
