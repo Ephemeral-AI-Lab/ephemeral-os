@@ -82,7 +82,6 @@ runner:
     testbed_path_prefix:
       - /opt/miniconda3/envs/testbed/bin
       - /opt/miniconda3/bin
-    git_optional_locks: false
 
 eos_e2e_test:
   docker:
@@ -111,7 +110,6 @@ eos_e2e_test:
   timeouts:
     ready_s: 60
     request_s: 30
-    base_build_s: 180
 
   audit:
     pull_limit: 2000

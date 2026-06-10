@@ -147,7 +147,6 @@ mod tests {
             recycle_after: 50,
             ready_timeout: Duration::from_secs(1),
             request_timeout: Duration::from_secs(1),
-            base_build_timeout: Duration::from_secs(1),
             workspace_root: "/testbed".to_owned(),
             keep_container: true,
             non_kept_container_ttl: Duration::from_secs(60),

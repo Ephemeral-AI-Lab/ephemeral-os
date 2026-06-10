@@ -16,10 +16,11 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 #[cfg(target_os = "linux")]
-pub(crate) use eos_command_ops::CommandBinding as IsolatedCommandHandle;
 #[cfg(target_os = "linux")]
 use eos_isolated_workspace::WorkspaceHandle;
 use eos_isolated_workspace::{ExitOutcome, IsolatedError};
+#[cfg(target_os = "linux")]
+use eos_command_ops::CommandBinding;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
@@ -177,7 +178,7 @@ pub(crate) fn op_test_reset(
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn command_handle_for_args(args: &Value) -> Option<IsolatedCommandHandle> {
+pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandBinding> {
     let caller_id = args
         .get("caller_id")
         .and_then(Value::as_str)
@@ -200,8 +201,8 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<IsolatedCommandHan
 }
 
 #[cfg(target_os = "linux")]
-fn command_handle_from(layer_stack_root: &Path, handle: WorkspaceHandle) -> IsolatedCommandHandle {
-    IsolatedCommandHandle {
+fn command_handle_from(layer_stack_root: &Path, handle: WorkspaceHandle) -> CommandBinding {
+    CommandBinding {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),

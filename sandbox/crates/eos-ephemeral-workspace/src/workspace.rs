@@ -15,7 +15,6 @@ pub struct EphemeralWorkspace {
     workspace_root: PathBuf,
     layer_paths: Vec<PathBuf>,
     dirs: OverlayDirs,
-    keep_on_drop: bool,
 }
 
 /// Everything a runner child needs to mount the overlay.
@@ -51,7 +50,6 @@ impl EphemeralWorkspace {
             workspace_root,
             layer_paths,
             dirs,
-            keep_on_drop: false,
         })
     }
 
@@ -83,17 +81,11 @@ impl EphemeralWorkspace {
         capture_upperdir(&self.dirs.upperdir)
     }
 
-    /// Leak the scratch dirs instead of removing them on drop (diagnostics).
-    pub fn keep_on_drop(&mut self) {
-        self.keep_on_drop = true;
-    }
 }
 
 impl Drop for EphemeralWorkspace {
     fn drop(&mut self) {
-        if !self.keep_on_drop {
-            let _ = std::fs::remove_dir_all(&self.dirs.run_dir);
-        }
+        let _ = std::fs::remove_dir_all(&self.dirs.run_dir);
     }
 }
 

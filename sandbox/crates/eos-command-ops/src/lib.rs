@@ -26,7 +26,4 @@ mod settle;
 pub use binding::CommandBinding;
 #[cfg(target_os = "linux")]
 pub use ops::{CommandOps, ExecTarget};
-pub use outcome::{
-    ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceConflict, WorkspaceTimings,
-};
+pub use outcome::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};

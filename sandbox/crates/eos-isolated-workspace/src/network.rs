@@ -38,6 +38,7 @@ pub const BRIDGE_NAME: &str = "eos-shared0";
 /// Shared bridge CIDR.
 pub(crate) const BRIDGE_CIDR: &str = "10.244.0.0/24";
 /// Bridge gateway address.
+#[cfg(target_os = "linux")]
 pub const GATEWAY: &str = "10.244.0.1";
 /// nftables NAT table name.
 #[cfg(target_os = "linux")]
@@ -55,6 +56,7 @@ pub const RFC1918_NETS: [&str; 3] = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0
 pub(crate) const VETH_PREFIX: &str = HANDLE_PREFIX;
 
 /// Bridge CIDR prefix length (matches `BRIDGE_CIDR`).
+#[cfg(target_os = "linux")]
 pub const BRIDGE_PREFIX_LEN: u8 = 24;
 /// First allocatable host octet (skips `.0` network + `.1` gateway).
 pub(crate) const POOL_FIRST_HOST: u8 = 2;

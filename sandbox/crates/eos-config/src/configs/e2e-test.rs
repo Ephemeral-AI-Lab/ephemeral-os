@@ -71,8 +71,6 @@ pub struct Config {
     pub ready_timeout: Duration,
     /// Per-request socket timeout.
     pub request_timeout: Duration,
-    /// Base-build budget (slow on first warm).
-    pub base_build_timeout: Duration,
     /// Canonical workload workspace root inside the sandbox container.
     pub workspace_root: String,
     /// Skip container teardown for inspection.
@@ -154,7 +152,6 @@ pub enum E2eNodeMode {
 pub struct E2eTimeoutConfig {
     pub ready_s: u64,
     pub request_s: u64,
-    pub base_build_s: u64,
 }
 
 /// E2E audit query defaults.
@@ -232,11 +229,6 @@ impl EosE2eTestConfig {
             1,
             "eos_e2e_test.timeouts.request_s",
         )?;
-        require_u64_at_least(
-            self.timeouts.base_build_s,
-            1,
-            "eos_e2e_test.timeouts.base_build_s",
-        )?;
         require_u64_at_least(self.audit.pull_limit, 1, "eos_e2e_test.audit.pull_limit")?;
         require_concurrency_levels(
             &self.workload.concurrency_levels,
@@ -308,7 +300,6 @@ impl Config {
             recycle_after: e2e.pool.recycle_after,
             ready_timeout: Duration::from_secs(e2e.timeouts.ready_s),
             request_timeout: Duration::from_secs(e2e.timeouts.request_s),
-            base_build_timeout: Duration::from_secs(e2e.timeouts.base_build_s),
             workspace_root: isolated.workspace_root.to_string_lossy().into_owned(),
             keep_container: e2e.pool.keep_container,
             non_kept_container_ttl: Duration::from_secs(e2e.docker.non_kept_container_ttl_s),

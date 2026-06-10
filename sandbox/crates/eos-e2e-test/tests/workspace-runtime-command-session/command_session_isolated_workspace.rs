@@ -18,57 +18,62 @@ fn iws_same_port_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     // Log to /tmp (writable): /eos is read-only by the mount mask, so a
     // `>/eos/scratch/...` redirect makes the server fail before it binds the
     // port (the `&&` short-circuits on the mkdir). The log is throwaway.
     let server_cmd = "python3 -m http.server 39001 >/tmp/eos-e2e-iws-http.log 2>&1";
     let first_enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let first_handle_id = as_str(&first_enter, "workspace_handle_id")?.to_owned();
-    let first = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({
-            "cmd": server_cmd,
-            "yield_time_ms": 100,
-            "timeout_seconds": 120,}),
-    )?;
-    assert_eq!(
-        as_str(&first, "status")?,
-        "running",
-        "isolated command should start: {first}"
-    );
-    let first_id = as_str(&first, "command_session_id")?.to_owned();
-    lease.call(
-        ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": &first_id}),
-    )?;
-    wait_for_isolated_command_session_transcript_recycled(&lease, &first_handle_id, &first_id)?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}))?;
+    let first_body = (|| -> Result<()> {
+        let first = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "cmd": server_cmd,
+                "yield_time_ms": 100,
+                "timeout_seconds": 120,}),
+        )?;
+        ensure!(
+            as_str(&first, "status")? == "running",
+            "isolated command should start: {first}"
+        );
+        let first_id = as_str(&first, "command_session_id")?.to_owned();
+        lease.call(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": &first_id}),
+        )?;
+        wait_for_isolated_command_session_transcript_recycled(&lease, &first_handle_id, &first_id)?;
+        Ok(())
+    })();
+    let first_exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
+    first_body?;
+    first_exit?;
 
     let second_enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let second_handle_id = as_str(&second_enter, "workspace_handle_id")?.to_owned();
-    let second = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({
-            "cmd": server_cmd,
-            "yield_time_ms": 100,
-            "timeout_seconds": 120,}),
-    )?;
-    assert_eq!(
-        as_str(&second, "status")?,
-        "running",
-        "same isolated port should be reusable after exit discard: {second}"
-    );
-    if let Some(id) = second
-        .get("command_session_id")
-        .and_then(serde_json::Value::as_str)
-    {
+    let second_body = (|| -> Result<()> {
+        let second = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "cmd": server_cmd,
+                "yield_time_ms": 100,
+                "timeout_seconds": 120,}),
+        )?;
+        ensure!(
+            as_str(&second, "status")? == "running",
+            "same isolated port should be reusable after exit discard: {second}"
+        );
+        let id = as_str(&second, "command_session_id")?.to_owned();
         lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": id}),
+            json!({"command_session_id": &id}),
         )?;
-        wait_for_isolated_command_session_transcript_recycled(&lease, &second_handle_id, id)?;
-    }
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}))?;
+        wait_for_isolated_command_session_transcript_recycled(&lease, &second_handle_id, &id)?;
+        Ok(())
+    })();
+    let second_exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
+    second_body?;
+    second_exit?;
     Ok(())
 }
 

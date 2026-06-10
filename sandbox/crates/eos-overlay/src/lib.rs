@@ -39,5 +39,4 @@ pub use kernel_mount::{mount_overlay, unmount_overlay, OverlayHandle, OverlayMou
 pub use path_change::capture_upperdir;
 pub use writable_dirs::{
     allocate_overlay_writable_dirs, overlay_writable_root, OverlayWritableDirs,
-    OVERLAY_WRITABLE_ROOT,
 };

@@ -71,20 +71,19 @@ pub use model::{
 };
 
 pub use commit::{
-    configure_auto_squash_max_depth, hash_bytes, hash_current, ChangesetResult, CommitError,
-    CommitStatus, FileResult, Route,
+    configure_auto_squash_max_depth, hash_current, ChangesetResult, CommitError, CommitStatus,
+    FileResult, Route,
 };
 pub use error::LayerStackError;
-pub use metrics::LayerStackStorageMetrics;
 pub use squash::{CheckpointSegment, LayerCheckpointSquasher, SquashPlan, SquashPlanEntry};
 pub use stack::{LayerStack, Lease, MergedView};
-pub use workspace_base::{build_workspace_base, ensure_workspace_base, WORKSPACE_BASE_LAYER_ID};
+pub use workspace_base::{build_workspace_base, ensure_workspace_base};
 pub use workspace_binding::{
     read_workspace_binding, require_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
 
 /// Auto-squash depth target — distinct from the kernel overlayfs layer ceiling.
-pub const AUTO_SQUASH_MAX_DEPTH: usize = 100;
+pub(crate) const AUTO_SQUASH_MAX_DEPTH: usize = 100;
 
 /// Storage layout subdirectory for immutable layer directories.
 pub(crate) const LAYERS_DIR: &str = "layers";

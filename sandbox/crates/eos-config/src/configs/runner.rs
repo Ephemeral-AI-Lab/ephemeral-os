@@ -28,7 +28,6 @@ pub struct RunnerEnvConfig {
     pub restricted_keys: Vec<String>,
     pub default_path: String,
     pub testbed_path_prefix: Vec<String>,
-    pub git_optional_locks: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

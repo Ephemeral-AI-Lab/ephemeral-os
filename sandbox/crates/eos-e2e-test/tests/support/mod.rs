@@ -208,7 +208,7 @@ pub(crate) fn isolated_command_session_transcript_path(
     session_id: &str,
 ) -> String {
     format!(
-        "/eos/scratch/isolated/{workspace_handle_id}/command-sessions/{session_id}/transcript.log"
+        "/eos/scratch/isolated/{workspace_handle_id}/sessions/{session_id}/transcript.log"
     )
 }
 

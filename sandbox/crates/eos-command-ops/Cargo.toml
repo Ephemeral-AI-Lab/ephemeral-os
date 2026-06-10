@@ -8,7 +8,6 @@ license.workspace = true
 [dependencies]
 eos-command-session.workspace = true
 eos-ephemeral-workspace.workspace = true
-eos-isolated-workspace.workspace = true
 eos-layerstack.workspace = true
 eos-namespace.workspace = true
 eos-overlay.workspace = true

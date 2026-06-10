@@ -165,7 +165,6 @@ version = "0.1.0"
 dependencies = [
  "eos-command-session",
  "eos-ephemeral-workspace",
- "eos-isolated-workspace",
  "eos-layerstack",
  "eos-namespace",
  "eos-overlay",
@@ -178,7 +177,6 @@ name = "eos-command-session"
 version = "0.1.0"
 dependencies = [
  "eos-config",
- "libc",
  "nix 0.29.0",
  "rustix 0.38.44",
  "serde",
@@ -263,7 +261,6 @@ dependencies = [
  "netlink-sys",
  "nix 0.29.0",
  "rtnetlink",
- "rustix 0.38.44",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

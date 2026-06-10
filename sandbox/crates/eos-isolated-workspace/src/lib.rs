@@ -22,9 +22,8 @@ pub(crate) mod namespace;
 mod network;
 mod sessions;
 
-pub use caps::{ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX};
+pub use caps::{ResourceCaps, Rfc1918Egress};
 pub use error::IsolatedError;
-pub use network::{BRIDGE_PREFIX_LEN, GATEWAY};
 pub use sessions::{
     ExitOutcome, IsolatedSessions, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
 };

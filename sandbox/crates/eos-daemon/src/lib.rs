@@ -44,10 +44,10 @@ pub(crate) mod transport;
 pub mod wire;
 pub(crate) mod workspace;
 
-pub use dispatch::dispatcher;
+pub(crate) use dispatch::dispatcher;
 pub use dispatcher::{DispatchContext, OpTable};
-pub use error::DaemonError;
-pub use invocation_registry::{InFlightRegistry, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
-pub use runtime::{config, error, invocation_registry};
+pub use invocation_registry::InFlightRegistry;
+pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
+pub(crate) use runtime::{config, error, invocation_registry};
 pub(crate) use runtime::{request_args, response_timings};
 pub use transport::server::{DaemonServer, ServerConfig};

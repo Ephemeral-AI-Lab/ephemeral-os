@@ -13,7 +13,6 @@ thiserror.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 rustix = { workspace = true, features = ["pty", "event"] }
-libc.workspace = true
 nix = { workspace = true, features = ["process", "signal"] }
 time.workspace = true
 

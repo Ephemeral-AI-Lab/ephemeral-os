@@ -16,7 +16,6 @@ eos-namespace.workspace = true
 libc.workspace = true
 netlink-sys.workspace = true
 rtnetlink.workspace = true
-rustix = { workspace = true, features = ["event"] }
 tokio.workspace = true
 futures-util.workspace = true
 

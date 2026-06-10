@@ -240,7 +240,7 @@ fn workspace_error(error: FileOpsError) -> DaemonError {
 /// Build the isolated file backend from the caller's open binding.
 #[cfg(target_os = "linux")]
 fn isolated_backend(
-    binding: &crate::workspace::isolated::IsolatedCommandHandle,
+    binding: &eos_command_ops::CommandBinding,
 ) -> IsolatedBackend {
     IsolatedBackend {
         layer_stack_root: binding.layer_stack_root.clone(),
