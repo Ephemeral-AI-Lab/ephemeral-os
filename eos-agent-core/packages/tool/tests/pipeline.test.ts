@@ -226,7 +226,7 @@ describe("tool pipeline", () => {
     let postRan = false;
     const tool = scriptedTool({
       name: "boom",
-      terminal: true,
+      isTerminal: true,
       execute: () => Promise.reject(new Error("kaboom")),
     });
     const result = await runPipeline(tool, {
@@ -354,7 +354,7 @@ describe("tool pipeline", () => {
     let isolatedSeen: boolean | undefined;
     const tool = scriptedTool({
       name: "submit",
-      terminal: true,
+      isTerminal: true,
       execute: (_input, ctx) => {
         frozen = Object.isFrozen(ctx.meta) && Object.isFrozen(ctx.meta.run);
         isolatedSeen = ctx.meta.run.workspace.is_isolated;

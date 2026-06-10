@@ -17,3 +17,5 @@ anchors plus EOS migration takeaways.
 | `tool-execution-pipeline.md` | Per-tool pipeline stages, batch partitioning + concurrency cap, `StreamingToolExecutor`, sync vs async tool shapes |
 | `tool-hooks.md` | Hook events/definition shapes, runner mechanics (stdin JSON, exit codes, parallelism), PreToolUse permission precedence, PostToolUse output rewrite, async hooks |
 | `background-task-spawn-and-cancellation.md` | Foreground→background promotion, per-type kill paths, signal/exit-code semantics, interrupt-survival matrix, TaskStop |
+| `agent-run-concurrency.md` | Run inventory (main/sync/async/teammate/SDK), QueryGuard single-main-run invariant, queue-vs-steer-vs-abort on new input, spawn lanes + promotion restart, task-notification re-entry, concurrency limits |
+| `subagent-state-management.md` | `createSubagentContext` shared-vs-isolated field table, per-agent AppState views and keyed slices, sidechain transcripts/resume/fork, abort topology, inboxes, cleanup ledger, agentType-keyed memory |

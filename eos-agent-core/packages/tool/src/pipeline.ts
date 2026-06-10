@@ -155,7 +155,7 @@ export function projectContent(content: ToolOutcome["content"]): string {
 }
 
 /**
- * The pipeline's stamping: `is_terminal = definition.terminal && !isError`
+ * The pipeline's stamping: `is_terminal = definition.isTerminal && !isError`
  * (a failed submission can never terminate a run) plus the execute-only
  * clock and accumulated hook warnings.
  */
@@ -174,7 +174,7 @@ function stamp(
   const result: PipelineResult = {
     content: outcome.content,
     is_error: isError,
-    is_terminal: definition.terminal && !isError,
+    is_terminal: definition.isTerminal && !isError,
     tool_start_time: startedAt,
     tool_end_time: endedAt,
   };

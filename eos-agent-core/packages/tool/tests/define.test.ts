@@ -12,9 +12,30 @@ describe("defineTool", () => {
       input: z.object({}),
       execute: () => Promise.resolve({ content: "ok" }),
     });
-    expect(tool.terminal).toBe(false);
+    expect(tool.isTerminal).toBe(false);
+    expect(tool.isBatchExecutionForbidden).toBe(false);
     expect(tool.availableInIsolatedWorkspace).toBe(false);
   });
+
+  it.each([
+    { isTerminal: undefined, flag: undefined, expected: false, rule: "plain tools batch freely" },
+    { isTerminal: true, flag: undefined, expected: true, rule: "terminal implies batch-forbidden" },
+    { isTerminal: true, flag: false, expected: false, rule: "explicit relax wins over terminal" },
+    { isTerminal: undefined, flag: true, expected: true, rule: "non-terminal tools can opt in" },
+  ])(
+    "resolves isBatchExecutionForbidden to $expected when isTerminal=$isTerminal and flag=$flag ($rule)",
+    ({ isTerminal, flag, expected }) => {
+      const tool = defineTool({
+        name: "probe",
+        description: "a probe",
+        input: z.object({}),
+        isTerminal,
+        isBatchExecutionForbidden: flag,
+        execute: () => Promise.resolve({ content: "ok" }),
+      });
+      expect(tool.isBatchExecutionForbidden).toBe(expected);
+    },
+  );
 
   it("derives the wire spec from the zod input schema", () => {
     const tool = defineTool({

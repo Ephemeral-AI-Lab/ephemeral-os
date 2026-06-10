@@ -221,12 +221,12 @@ describe("toolBatchExecutor", () => {
     });
   });
 
-  it("rejects a terminal call batched with siblings, dispatching nothing (§15.1)", async () => {
+  it("rejects a batch-forbidden terminal call batched with siblings, dispatching nothing (§15.1)", async () => {
     let submitted = false;
     let echoed = false;
     const submit = scriptedTool({
       name: "submit",
-      terminal: true,
+      isTerminal: true,
       execute: () => {
         submitted = true;
         return Promise.resolve({ content: { summary: "done" } });
@@ -258,6 +258,88 @@ describe("toolBatchExecutor", () => {
     const solo = await executor.executeBatch([toolUse("tu_s2", "submit")], live(), emit);
     expect(must(solo.at(0))).toMatchObject({ is_error: false, is_terminal: true });
     expect(submitted, "a solo terminal call dispatches normally").toBe(true);
+  });
+
+  it("applies the batch-forbidden policy to non-terminal tools without terminating the run", async () => {
+    let locked = false;
+    const lock = scriptedTool({
+      name: "lock",
+      isBatchExecutionForbidden: true,
+      execute: () => {
+        locked = true;
+        return Promise.resolve({ content: "locked" });
+      },
+    });
+    const echo = scriptedTool({
+      name: "echo",
+      execute: () => Promise.resolve({ content: "ok" }),
+    });
+    const executor = executorOf(scriptedRunState(), [lock, echo]);
+    const { emit } = collector();
+    const results = await executor.executeBatch(
+      [toolUse("tu_l", "lock"), toolUse("tu_e", "echo")],
+      live(),
+      emit,
+    );
+    for (const result of results) {
+      expect(result.is_error, `${result.tool_use_id} is an error`).toBe(true);
+      expect(resultContent(result)).toContain("`lock` must be called alone");
+    }
+    expect(locked, "the flagged tool never ran").toBe(false);
+
+    const solo = await executor.executeBatch([toolUse("tu_l2", "lock")], live(), emit);
+    expect(must(solo.at(0)), "a solo flagged call dispatches, non-terminal").toMatchObject({
+      is_error: false,
+      is_terminal: false,
+    });
+    expect(locked).toBe(true);
+  });
+
+  it("names every batch-forbidden tool once, sorted, in the rejection message", async () => {
+    const never = () => Promise.resolve({ content: "unreachable" });
+    const executor = executorOf(scriptedRunState(), [
+      scriptedTool({ name: "b_lock", isBatchExecutionForbidden: true, execute: never }),
+      scriptedTool({ name: "a_lock", isBatchExecutionForbidden: true, execute: never }),
+    ]);
+    const { emit } = collector();
+    const results = await executor.executeBatch(
+      [toolUse("tu_b", "b_lock"), toolUse("tu_a1", "a_lock"), toolUse("tu_a2", "a_lock")],
+      live(),
+      emit,
+    );
+    expect(results, "every call is rejected").toHaveLength(3);
+    for (const result of results) {
+      expect(result.is_error, `${result.tool_use_id} is an error`).toBe(true);
+      expect(
+        resultContent(result),
+        "flagged names are deduped and sorted",
+      ).toContain("tool `a_lock`, `b_lock` must be called alone");
+    }
+  });
+
+  it("dispatches a terminal call with siblings when the flag is explicitly relaxed", async () => {
+    const submit = scriptedTool({
+      name: "submit",
+      isTerminal: true,
+      isBatchExecutionForbidden: false,
+      execute: () => Promise.resolve({ content: { summary: "done" } }),
+    });
+    const echo = scriptedTool({
+      name: "echo",
+      execute: () => Promise.resolve({ content: "ok" }),
+    });
+    const executor = executorOf(scriptedRunState(), [submit, echo]);
+    const { emit } = collector();
+    const results = await executor.executeBatch(
+      [toolUse("tu_s", "submit"), toolUse("tu_e", "echo")],
+      live(),
+      emit,
+    );
+    expect(
+      must(results.at(0)),
+      "the relaxed terminal call executes and still stamps is_terminal",
+    ).toMatchObject({ is_error: false, is_terminal: true });
+    expect(must(results.at(1))).toMatchObject({ content: "ok", is_error: false });
   });
 
   it("snapshots workspace mode once per batch, even for calls dispatched after a flip (§15.15)", async () => {

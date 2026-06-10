@@ -18,14 +18,16 @@ export function scriptedTool(options: {
   name: string;
   execute: (input: JsonObject, ctx: ToolCallContext) => Promise<ToolOutcome>;
   description?: string;
-  terminal?: boolean;
+  isTerminal?: boolean;
+  isBatchExecutionForbidden?: boolean;
   availableInIsolatedWorkspace?: boolean;
 }): ToolDefinition {
   return defineTool({
     name: options.name,
     description: options.description ?? options.name,
     input: JsonObjectSchema,
-    terminal: options.terminal,
+    isTerminal: options.isTerminal,
+    isBatchExecutionForbidden: options.isBatchExecutionForbidden,
     availableInIsolatedWorkspace: options.availableInIsolatedWorkspace,
     execute: options.execute,
   });

@@ -22,9 +22,9 @@ Knowledge inputs: `knowledge/tool-definition-and-registry.md`,
 Phase 04 introduces the tool framework as a new `@eos/tool` package and grows
 the Phase 03 engine seams it needs:
 
-- a flat Zod-first tool contract (`ToolDefinition`) with exactly two metadata
-  flags (`terminal`, `availableInIsolatedWorkspace`) and fail-closed
-  `defineTool` defaults,
+- a flat Zod-first tool contract (`ToolDefinition`) with exactly three metadata
+  flags (`isTerminal`, `isBatchExecutionForbidden`,
+  `availableInIsolatedWorkspace`) and fail-closed `defineTool` defaults,
 - a per-call execution pipeline (parse -> pre-hooks -> execute -> post-hooks
   -> stamping) plus a batch executor that together absorb the engine's
   Phase 03 tool seam: `tools.ts` and `tool-runner.ts` leave `@eos/engine`,
@@ -59,11 +59,12 @@ Deliberate choices, recorded so later phases do not mistake them for
 omissions:
 
 1. **No intent classification.** The Rust
-   `ReadOnly | WriteAllowed | Lifecycle` taxonomy is not ported. Terminal
-   solo-dispatch hangs off the `terminal` flag alone; lifecycle solo-dispatch
-   is replaced by turn-boundary workspace-mode semantics (decision 4);
-   read/write partitioning stays on the existing dormant
-   `isConcurrencySafe` seam.
+   `ReadOnly | WriteAllowed | Lifecycle` taxonomy is not ported. Solo
+   dispatch hangs off the generic `isBatchExecutionForbidden` flag
+   (defaulting to `isTerminal`); lifecycle solo-dispatch is replaced by
+   turn-boundary workspace-mode semantics (decision 4); read/write
+   partitioning is not ported, and the Phase 03 `isConcurrencySafe` seam
+   is removed.
 2. **Every tool is synchronous from the dispatcher's view.** `execute()`
    resolves promptly for all tools. `run_subagent` and `delegate_workflow`
    start the work, register a background session, and return the native id.
@@ -105,7 +106,7 @@ omissions:
 7. **Tool outcome stays small; call facts are pipeline-owned.** Tools return
    `{ content, isError?, metadata? }`. `is_terminal` and the timing stamps
    are facts about the execution, not claims by the tool: the pipeline
-   stamps `is_terminal = definition.terminal && !isError` (a failed submission
+   stamps `is_terminal = definition.isTerminal && !isError` (a failed submission
    can never terminate a run) and clocks around `execute()` only, so slow
    hooks never masquerade as slow tools.
 8. **`content` is `JsonValue` with one serialization point.** Submission
@@ -260,7 +261,7 @@ Out of scope (named seams in §12):
   file loading, the JSONL transcript writer (Phase 04.5; this phase's hook
   tests write fixture files),
 - persistence (`@eos/db`), observability wiring,
-- `isConcurrencySafe` partitioning, result-size persistence
+- per-call concurrency partitioning, result-size persistence
   (`maxResultSizeChars`), compaction,
 - any edit under `agent-core/`.
 
@@ -271,7 +272,7 @@ Out of scope (named seams in §12):
 | `eos-tool/src/registry.rs` (`ToolExecutor`, `RegisteredTool`, `ToolRegistry`, `ToolRuntime`) | `packages/tool/src/contract.ts`, `define.ts`, `toolset.ts` | Redesigned: flat handler + two flags + per-family service injection |
 | `eos-tool/src/model.rs` (`ToolResult`, `ExecutionMetadata`) | `packages/tool/src/contract.ts` | `ToolOutcome`, `ToolCallMeta` |
 | `eos-engine/src/tool_call/execute.rs` (pipeline, `stamp_terminal`) | `packages/tool/src/pipeline.ts` | Per-call pipeline; terminal stamping |
-| `eos-engine/src/tool_call/batch.rs` (terminal batch policy) + Phase 03 `tool-runner.ts` | `packages/tool/src/executor.ts` | Batch dispatch (cap 8, ordering, abort settling) + terminal-solo; lifecycle policy rejected (§2.4) |
+| `eos-engine/src/tool_call/batch.rs` (terminal batch policy) + Phase 03 `tool-runner.ts` | `packages/tool/src/executor.ts` | Batch dispatch (cap 8, ordering, abort settling) + batch-forbidden solo; lifecycle policy rejected (§2.4) |
 | `eos-tool/src/hooks.rs` + `eos-engine/src/tool_call/hooks.rs` | `packages/tool/src/hooks/` | Redesigned: enum hooks -> external protocol (§2.5) |
 | `eos-engine/src/background/session_runtime.rs` (managers, monitors, statuses) | `packages/engine/src/background/` | Engine-owned generic supervisor; spawn-site capability handles replace per-kind managers/monitors (§2.18) |
 | `eos-engine/src/notifications.rs` | `packages/engine/src/notification-inbox.ts` | Engine-owned generic inbox + `<system_notification>` renderer; rule trait not ported (§2.12) |
@@ -287,7 +288,8 @@ interface ToolDefinition<I> {
   name: ToolName;                          // branded string
   description: string;
   input: z.ZodType<I>;                     // wire spec via z.toJSONSchema()
-  terminal: boolean;                       // submissions only
+  isTerminal: boolean;                     // submissions only
+  isBatchExecutionForbidden: boolean;      // batch policy: must be called alone
   availableInIsolatedWorkspace: boolean;   // sandbox family only
   execute(input: I, ctx: ToolCallContext): Promise<ToolOutcome>;
 }
@@ -299,10 +301,12 @@ interface ToolOutcome {
 }
 ```
 
-`defineTool(def)` centralizes fail-closed defaults: `terminal: false`,
-`availableInIsolatedWorkspace: false`. A forgotten override degrades to
-"banned in isolated mode, non-terminal", never to "allowed everywhere". It
-also derives the `ToolSpec` (`input_schema` from `z.toJSONSchema`).
+`defineTool(def)` centralizes fail-closed defaults: `isTerminal: false`,
+`isBatchExecutionForbidden: isTerminal` (a submission stays solo unless
+explicitly relaxed), `availableInIsolatedWorkspace: false`. A forgotten
+override degrades to "banned in isolated mode, non-terminal", never to
+"allowed everywhere". It also derives the `ToolSpec` (`input_schema` from
+`z.toJSONSchema`).
 
 The per-call ambient record:
 
@@ -409,7 +413,7 @@ pipeline owns per-call semantics:
    t1                                   PostToolUseFailure hooks, return
                                         is_error result with timing
 7. PostToolUse hooks                    success path only; context-only
-8. return enriched output               is_terminal = definition.terminal
+8. return enriched output               is_terminal = definition.isTerminal
                                         && !is_error; tool_start_time = t0;
                                         tool_end_time = t1
 ```
@@ -470,10 +474,11 @@ results without dispatching — the pipeline's step-2 abort check is
 defense in depth, not the primary mechanism), and
 `tool_execution_started`/`completed` emission (the completed event grows
 `is_terminal`, `tool_start_time`, `tool_end_time`, `metadata`; `output`
-stays the string projection). The executor adds the terminal-solo policy
-(the Phase 03 "batch policies" seam): a batch containing a terminal call
-plus any sibling rejects ALL calls with `is_error` results — parity with
-Rust `reject_terminal_batch`; a solo terminal call dispatches normally.
+stays the string projection). The executor adds the batch-execution-forbidden
+policy (the Phase 03 "batch policies" seam): a batch containing a call whose
+definition sets `isBatchExecutionForbidden` (default: its `isTerminal` value)
+plus any sibling rejects ALL calls with `is_error` results — generalizing
+Rust `reject_terminal_batch`; a solo flagged call dispatches normally.
 
 `agent-loop.ts` — the loop spine grows three branches and one invariant:
 
@@ -856,7 +861,7 @@ Deferred (named seams):
 | Awaited session teardown on finish | the loop's `finally` dispose call site (§2.17) |
 | Displayed-side `isMeta` projection for notifications | the `<system_notification>` wrapper is the discriminator |
 | Large-result persistence (`maxResultSizeChars`) | `ToolCallResult.content` is the interception point |
-| `isConcurrencySafe` partitioning | unchanged Phase 03 seam |
+| Per-call concurrency partitioning | a future `defineTool` flag plus dispatcher change; no dormant contract field is kept |
 
 Rejected, not deferred (decisions; no seam kept):
 
@@ -922,7 +927,7 @@ packages/
 │  │  ├─ define.ts           defineTool() defaults + Zod -> ToolSpec
 │  │  ├─ pipeline.ts         bindTool(): the §6 stages
 │  │  ├─ executor.ts         batch dispatch (relocated runner) +
-│  │  │                      terminal-solo; implements ToolExecutor
+│  │  │                      batch-forbidden solo; implements ToolExecutor
 │  │  ├─ toolset.ts          AGENT_TOOLSET + buildToolExecutor()
 │  │  ├─ run-state.ts        AgentRunState: frozen per-run facts +
 │  │  │                      the one mutable workspace cell (§2.19)
@@ -974,7 +979,7 @@ services).
 3. `@eos/tool` contract + `defineTool` + pipeline + batch executor
    (relocated runner logic and tests; hooks stubbed pass-through) ->
    verify: pipeline order, guard, parse, stamping tests plus the relocated
-   runner suite (cap 8, ordering, abort settling, terminal-solo — §15
+   runner suite (cap 8, ordering, abort settling, batch-forbidden solo — §15
    cases 1, 10).
 4. Hook protocol + runner (callback first, then command adapter with real
    spawned scripts) -> verify: §15 cases 10-13.
@@ -992,7 +997,7 @@ All suites in-process; no network, no real sandbox.
 
 | # | Case | Asserts |
 | --- | --- | --- |
-| 1 | Terminal-solo policy | terminal + sibling batch: every call `is_error`, nothing dispatched; solo terminal dispatches |
+| 1 | Batch-forbidden solo policy | flagged call (default: `isTerminal`) + sibling batch: every call `is_error`, nothing dispatched; solo flagged call dispatches |
 | 2 | Terminal exit | terminal result finishes `completed` with `submission` = structured content; `final_message` is the submitting assistant message |
 | 3 | Auto-wait | bare-text turn + live sessions: loop awaits, a published notification resumes it, drained at step 3; a steer resumes it identically (and drains first); no turn consumed while waiting |
 | 4 | Text never terminates | bare-text turn, no steers, no sessions: nothing appended, loop continues; the run ends only via a terminal result or `maxTurns` (`failed`, no `submission`) |

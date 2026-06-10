@@ -49,7 +49,7 @@ export function submissionTool(
     name: row.name,
     description: row.description,
     input: row.input,
-    terminal: true,
+    isTerminal: true,
     execute: (input) => {
       const open = supervisor.openCount();
       if (open > 0) {

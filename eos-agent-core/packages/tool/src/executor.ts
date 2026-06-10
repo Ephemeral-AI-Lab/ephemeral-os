@@ -19,8 +19,9 @@ export interface ToolBatchExecutorInput {
  * workspace mode; `executeBatch` keeps the Phase 03 runner semantics -
  * fully concurrent under a cap of 8, results in `tool_use` order, thrown
  * errors and unknown names mapped to `is_error` results, abort settling
- * with straggler-emit suppression - and adds the terminal-solo policy: a
- * terminal call with any sibling rejects the WHOLE batch undispatched.
+ * with straggler-emit suppression - and adds the batch-execution-forbidden
+ * policy: a batch-forbidden call (e.g. a terminal submission) with any
+ * sibling rejects the WHOLE batch undispatched.
  */
 export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor {
   const { runState, tools } = input;
@@ -43,7 +44,7 @@ export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor {
       // One snapshot per batch: every sibling's meta is built from it, so
       // a mid-batch workspace flip applies at the next turn boundary.
       const run = snapshotRunState(runState);
-      const rejection = terminalBatchRejection(calls, byName);
+      const rejection = forbiddenBatchRejection(calls, byName);
       if (rejection !== undefined) {
         return calls.map((call) => errorResult(call.tool_use_id, rejection));
       }
@@ -92,11 +93,12 @@ export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor {
 }
 
 /**
- * Terminal-solo policy (Rust `reject_terminal_batch` parity): a batch with
- * a terminal call plus any sibling rejects every call; a solo terminal
- * call dispatches normally.
+ * Batch-execution-forbidden policy (generalizes the Rust
+ * `reject_terminal_batch` terminal-solo rule): a batch with a flagged call
+ * plus any sibling rejects every call; a solo flagged call dispatches
+ * normally.
  */
-function terminalBatchRejection(
+function forbiddenBatchRejection(
   calls: ToolUseBlock[],
   byName: Map<string, BoundTool>,
 ): string | undefined {
@@ -104,12 +106,12 @@ function terminalBatchRejection(
   const flagged = [
     ...new Set(
       calls
-        .filter((call) => byName.get(call.name)?.definition.terminal)
+        .filter((call) => byName.get(call.name)?.definition.isBatchExecutionForbidden)
         .map((call) => `\`${call.name}\``),
     ),
   ].sort();
   if (flagged.length === 0) return undefined;
-  return `terminal tool ${flagged.join(", ")} must be called alone; the whole batch was rejected without dispatching`;
+  return `tool ${flagged.join(", ")} must be called alone; the whole batch was rejected without dispatching`;
 }
 
 async function executeCall(

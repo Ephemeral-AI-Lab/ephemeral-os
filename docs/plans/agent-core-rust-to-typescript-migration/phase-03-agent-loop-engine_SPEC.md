@@ -243,7 +243,6 @@ interface ToolOutput {
 
 interface ToolDefinition {
   spec: ToolSpec; // from @eos/contracts; spec.name keys the registry
-  isConcurrencySafe?(input: JsonObject): boolean; // default true; see batch rules
   execute(input: JsonObject, ctx: ToolContext): Promise<ToolOutput>;
 }
 
@@ -264,13 +263,6 @@ Batch rules (`tool-runner.ts`):
   sees the `is_error` result and decides.
 - An unregistered tool name becomes `tool_result { is_error: true,
   content: "tool not found: <name>" }`; the loop continues.
-- `isConcurrencySafe` is recorded on the contract but ignored by this
-  phase's dispatcher (every batch runs fully concurrent; the `true` default
-  preserves exactly these semantics). It exists now because per-call
-  concurrency partitioning (`knowledge/agent-loop-and-components.md`) is a
-  dispatch-semantics change: retrofitting the method later would alter the
-  execution model under every already-written tool. Partitioning itself is
-  a §11 seam.
 - Tool results carry no terminal marker in this phase; the terminal-tool
   phase adds `tool_result.is_terminal` to `@eos/contracts` (additive, per
   the Phase 02 extension policy) together with the loop check that reads it.
@@ -460,7 +452,7 @@ type AgentRunOutcome = {
 | --- | --- | --- |
 | Terminal-tool exit | `executor.rs:163-169`, `batch.rs:54-94` | Terminal-tool phase adds `tool_result.is_terminal` to contracts (additive) plus a check between loop steps 7 and 8 |
 | Lifecycle/terminal batch policies | `batch.rs:54-172` | A future policy hook in `tool-runner.ts` before dispatch |
-| Per-call concurrency partitioning | `knowledge/agent-loop-and-components.md` | `ToolDefinition.isConcurrencySafe` exists (default `true`); a future dispatcher partitions batches on it |
+| Per-call concurrency partitioning | `knowledge/agent-loop-and-components.md` | A future `defineTool` flag plus dispatcher change; no dormant contract field is kept (the Phase 04 `isConcurrencySafe` seam was removed) |
 | Per-tool interrupt behavior (`cancel` vs `block`) | `knowledge/abort-and-interrupt-handling.md` | Genuinely additive optional method, once non-reentrant tools exist |
 | Notifications at turn boundaries | `state.rs:160-187`, `notifications.rs` | Loop step 3 is the drain point; the steer queue gains a priority field then so notifications never preempt user steers (`knowledge/message-steering.md`) |
 | Turn/token budget ceiling | `state.rs:144-148, 199-201` | `maxTurns` option; `usage` already accumulated per turn |

@@ -107,7 +107,7 @@ describe("submission tool family", () => {
     const { supervisor } = setup();
     const tool = submissionTool("worker", supervisor);
     expect(tool.name).toBe("submit_worker_outcome");
-    expect(tool.terminal).toBe(true);
+    expect(tool.isTerminal).toBe(true);
     expect(tool.availableInIsolatedWorkspace).toBe(false);
   });
 

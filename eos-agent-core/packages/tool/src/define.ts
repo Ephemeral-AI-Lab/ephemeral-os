@@ -14,7 +14,9 @@ export interface ToolDefinitionInit<I> {
   description: string;
   input: z.ZodType<I>;
   /** Default false. */
-  terminal?: boolean;
+  isTerminal?: boolean;
+  /** Default `isTerminal`: a submission stays solo unless explicitly relaxed. */
+  isBatchExecutionForbidden?: boolean;
   /** Default false: a forgotten override degrades to "banned in isolated mode". */
   availableInIsolatedWorkspace?: boolean;
   execute: (input: I, ctx: ToolCallContext) => Promise<ToolOutcome>;
@@ -30,7 +32,8 @@ export function defineTool<I>(init: ToolDefinitionInit<I>): ToolDefinition<I> {
     name,
     description: init.description,
     input: init.input,
-    terminal: init.terminal ?? false,
+    isTerminal: init.isTerminal ?? false,
+    isBatchExecutionForbidden: init.isBatchExecutionForbidden ?? init.isTerminal ?? false,
     availableInIsolatedWorkspace: init.availableInIsolatedWorkspace ?? false,
     spec: {
       name,

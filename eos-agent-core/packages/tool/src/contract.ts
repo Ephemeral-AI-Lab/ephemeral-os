@@ -73,7 +73,9 @@ export interface ToolDefinition<I = unknown> {
   /** Input contract; also the wire spec source via `z.toJSONSchema`. */
   readonly input: z.ZodType<I>;
   /** Submissions only: a non-error result finishes the run. */
-  readonly terminal: boolean;
+  readonly isTerminal: boolean;
+  /** Batch policy: this call must be the only one in its batch. */
+  readonly isBatchExecutionForbidden: boolean;
   /** Sandbox family only: callable while the workspace is isolated. */
   readonly availableInIsolatedWorkspace: boolean;
   /** Wire declaration derived once by `defineTool`. */
