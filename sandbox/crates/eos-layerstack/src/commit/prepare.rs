@@ -8,9 +8,9 @@ use std::time::Instant;
 
 use eos_cas::{LayerChange, LayerPath};
 
-use crate::commit_queue::{CommitQueue, CommitTransactionPort, PreparedChangeset};
-use crate::error::OccError;
-use crate::route::{ChangesetResult, PublishDecision, Route};
+use super::error::CommitError;
+use super::outcome::{ChangesetResult, PublishDecision, Route};
+use super::queue::{CommitQueue, CommitTransactionPort, PreparedChangeset};
 
 /// Route/base-hash provider used while preparing OCC changesets.
 ///
@@ -18,84 +18,46 @@ use crate::route::{ChangesetResult, PublishDecision, Route};
 /// this crate must not know daemon workspace bindings. The default provider
 /// routes every non-`.git` path as gated with an unknown base hash, giving unit
 /// tests and custom queues a conservative default.
-pub trait OccRouteProvider: Send + Sync {
+pub trait RouteProvider: Send + Sync {
     /// Is this normalized path gitignored in the operation snapshot?
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when ignore-state lookup fails.
-    fn is_ignored(&self, path: &LayerPath) -> Result<bool, OccError>;
+    /// Returns [`CommitError`] when ignore-state lookup fails.
+    fn is_ignored(&self, path: &LayerPath) -> Result<bool, CommitError>;
 
     /// Content hash of `path` in the operation snapshot, or `None` if absent.
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when snapshot content lookup fails.
-    fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, OccError>;
-}
-
-#[derive(Debug)]
-struct AllGatedRouteProvider;
-
-impl OccRouteProvider for AllGatedRouteProvider {
-    fn is_ignored(&self, _path: &LayerPath) -> Result<bool, OccError> {
-        Ok(false)
-    }
-
-    fn base_hash(&self, _path: &LayerPath) -> Result<Option<String>, OccError> {
-        Ok(None)
-    }
+    /// Returns [`CommitError`] when snapshot content lookup fails.
+    fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, CommitError>;
 }
 
 /// Prepare typed OCC changesets and commit them through the single writer.
 ///
-/// Holds the per-root [`CommitQueue`]. There is exactly one `OccService` per
+/// Holds the per-root [`CommitQueue`]. There is exactly one `CommitService` per
 /// `layer_stack_root` (the MF-1 owner).
-pub struct OccService<T: CommitTransactionPort + 'static> {
+pub struct CommitService<T: CommitTransactionPort + 'static> {
     commit_queue: CommitQueue<T>,
-    route_provider: Arc<dyn OccRouteProvider>,
+    route_provider: Arc<dyn RouteProvider>,
 }
 
-impl<T: CommitTransactionPort + 'static> OccService<T> {
-    /// Build a service and start its owned commit queue.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OccError`] when the owned commit queue cannot be started.
-    pub fn new(commit_queue: CommitQueue<T>) -> Result<Self, OccError> {
-        Self::with_route_provider(commit_queue, Arc::new(AllGatedRouteProvider))
-    }
-
+impl<T: CommitTransactionPort + 'static> CommitService<T> {
     /// Build a service with a daemon-provided route/base-hash provider.
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when the owned commit queue cannot be started.
+    /// Returns [`CommitError`] when the owned commit queue cannot be started.
     pub fn with_route_provider(
         mut commit_queue: CommitQueue<T>,
-        route_provider: Arc<dyn OccRouteProvider>,
-    ) -> Result<Self, OccError> {
+        route_provider: Arc<dyn RouteProvider>,
+    ) -> Result<Self, CommitError> {
         commit_queue.start()?;
         Ok(Self {
             commit_queue,
             route_provider,
         })
-    }
-
-    /// Prepare and commit a changeset through the layer stack.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OccError`] when preparation, queue submission, or the commit
-    /// worker reply fails.
-    pub fn apply_changeset(
-        &self,
-        changes: &[LayerChange],
-        snapshot_version: Option<u64>,
-        atomic: bool,
-    ) -> Result<ChangesetResult, OccError> {
-        let prepared = self.prepare_changeset(changes, snapshot_version, atomic)?;
-        self.apply_prepared_changeset(prepared)
     }
 
     /// Prepare and commit with caller-supplied base hashes.
@@ -106,7 +68,7 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when preparation, queue submission, or the commit
+    /// Returns [`CommitError`] when preparation, queue submission, or the commit
     /// worker reply fails.
     pub fn apply_changeset_with_base_hashes(
         &self,
@@ -114,7 +76,7 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
         snapshot_version: Option<u64>,
         atomic: bool,
         base_hashes: &[(LayerPath, Option<String>)],
-    ) -> Result<ChangesetResult, OccError> {
+    ) -> Result<ChangesetResult, CommitError> {
         let prepared = self.prepare_changeset_with_base_hashes(
             changes,
             snapshot_version,
@@ -124,33 +86,19 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
         self.apply_prepared_changeset(prepared)
     }
 
-    /// Route raw changes into a [`PreparedChangeset`] (Drop/Direct/Gated/Reject).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OccError`] when route or base-hash lookup fails.
-    pub fn prepare_changeset(
-        &self,
-        changes: &[LayerChange],
-        snapshot_version: Option<u64>,
-        atomic: bool,
-    ) -> Result<PreparedChangeset, OccError> {
-        self.prepare_changeset_with_base_hashes(changes, snapshot_version, atomic, &[])
-    }
-
     /// Route raw changes into a [`PreparedChangeset`] with optional base-hash
     /// overrides supplied by the caller.
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when route or base-hash lookup fails.
+    /// Returns [`CommitError`] when route or base-hash lookup fails.
     pub fn prepare_changeset_with_base_hashes(
         &self,
         changes: &[LayerChange],
         snapshot_version: Option<u64>,
         atomic: bool,
         base_hashes: &[(LayerPath, Option<String>)],
-    ) -> Result<PreparedChangeset, OccError> {
+    ) -> Result<PreparedChangeset, CommitError> {
         let mut path_groups = Vec::with_capacity(changes.len());
         let mut publishable = Vec::with_capacity(changes.len());
         for change in changes {
@@ -196,12 +144,12 @@ impl<T: CommitTransactionPort + 'static> OccService<T> {
     fn apply_prepared_changeset(
         &self,
         prepared: PreparedChangeset,
-    ) -> Result<ChangesetResult, OccError> {
+    ) -> Result<ChangesetResult, CommitError> {
         let total_start = Instant::now();
         let snapshot_version = prepared.snapshot_version;
         let receiver = self.commit_queue.submit(prepared)?;
         let commit_start = Instant::now();
-        let result = receiver.recv().map_err(|_| OccError::ReplyDisconnected)??;
+        let result = receiver.recv().map_err(|_| CommitError::ReplyDisconnected)??;
         Ok(finalize_apply_result(
             result,
             snapshot_version,
@@ -250,7 +198,7 @@ fn timing_or_default(timings: &std::collections::BTreeMap<String, f64>, key: &st
     timings.get(key).copied().unwrap_or(0.0)
 }
 
-impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
+impl<T: CommitTransactionPort + 'static> Drop for CommitService<T> {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
     }
@@ -262,10 +210,23 @@ mod tests {
 
     use eos_cas::{LayerChange, LayerPath};
 
+    use super::super::outcome::{CommitStatus, FileResult};
+    use super::super::queue::PublishConflict;
     use super::*;
-    use crate::{CommitQueue, FileResult, OccStatus};
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+    struct AllGatedRouteProvider;
+
+    impl RouteProvider for AllGatedRouteProvider {
+        fn is_ignored(&self, _path: &LayerPath) -> Result<bool, CommitError> {
+            Ok(false)
+        }
+
+        fn base_hash(&self, _path: &LayerPath) -> Result<Option<String>, CommitError> {
+            Ok(None)
+        }
+    }
 
     struct RecordingTransaction;
 
@@ -273,7 +234,7 @@ mod tests {
         fn revalidate_and_publish(
             &self,
             combined: &PreparedChangeset,
-        ) -> Result<ChangesetResult, crate::PublishConflict> {
+        ) -> Result<ChangesetResult, PublishConflict> {
             let mut timings = BTreeMap::new();
             timings.insert("occ.commit.total_s".to_owned(), 0.123);
             Ok(ChangesetResult {
@@ -282,7 +243,7 @@ mod tests {
                     .iter()
                     .map(|group| FileResult {
                         path: group.path.clone(),
-                        status: OccStatus::Committed,
+                        status: CommitStatus::Committed,
                         message: String::new(),
                     })
                     .collect(),
@@ -295,15 +256,16 @@ mod tests {
     #[test]
     fn apply_changeset_adds_public_apply_timing_envelope() -> TestResult {
         let queue = CommitQueue::with_config(RecordingTransaction, 64, 0.0, 3);
-        let service = OccService::new(queue)?;
+        let service = CommitService::with_route_provider(queue, Arc::new(AllGatedRouteProvider))?;
         let path = LayerPath::parse("timed.txt")?;
-        let result = service.apply_changeset(
+        let result = service.apply_changeset_with_base_hashes(
             &[LayerChange::Write {
                 path,
                 content: b"x".to_vec(),
             }],
             Some(1),
             true,
+            &[],
         )?;
 
         assert!(result.success());

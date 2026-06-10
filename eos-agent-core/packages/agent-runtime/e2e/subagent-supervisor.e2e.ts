@@ -12,6 +12,7 @@ import {
   loadConfiguredCodexRuntime,
 } from "./support/codex-runtime.js";
 import {
+  HELPER_BODY,
   SLEEPER_BODY,
   TERSE_BODY,
   finishedRun,
@@ -34,12 +35,6 @@ function llmClientsPath(): string {
   }
   return codex.llmClientsPath;
 }
-
-const HELPER_BODY = [
-  "You are the helper.",
-  "Immediately call submit_subagent_outcome exactly once with summary set to",
-  'exactly "helper finished". Do not call any other tool.',
-].join(" ");
 
 // Budget guard: two multi-turn live runs (~10 small provider calls total);
 // every assertion is structural - registry rows, transcript line kinds,

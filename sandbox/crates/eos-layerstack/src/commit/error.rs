@@ -1,15 +1,15 @@
-//! OCC error type.
+//! Commit-path error type.
 //!
-//! `thiserror` enum per crate (no `Box<dyn Error>` in the public API). Source
+//! `thiserror` enum (no `Box<dyn Error>` in the public API). Source
 //! conversions use `#[from]`; messages are lowercase with no trailing
 //! punctuation.
 
 use eos_cas::CasError;
 
-/// Errors raised by the OCC publish path.
+/// Errors raised by the OCC commit path.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum OccError {
+pub enum CommitError {
     /// The commit queue was closed before the publish could be enqueued.
     #[error("occ commit queue is closed")]
     QueueClosed,
@@ -36,7 +36,7 @@ pub enum OccError {
 
     /// The layer-stack publisher rejected every CAS retry attempt.
     ///
-    /// The publish surfaces a per-path `OccStatus::AbortedVersion` result
+    /// The publish surfaces a per-path `CommitStatus::AbortedVersion` result
     /// rather than looping; this error carries the exhausted attempt count.
     #[error("cas mismatch retry budget exhausted after {attempts} attempts")]
     CasRetryExhausted {
@@ -48,7 +48,11 @@ pub enum OccError {
     #[error("occ route preparation failed: {0}")]
     RoutePreparation(String),
 
-    /// A path/hash from `eos-protocol` failed to parse or validate.
+    /// A path/hash failed to parse or validate.
     #[error(transparent)]
     Cas(#[from] CasError),
+
+    /// The layer-stack storage layer failed underneath the commit path.
+    #[error(transparent)]
+    Storage(#[from] crate::LayerStackError),
 }

@@ -4,7 +4,7 @@
 //! `layer_stack_root`. N disjoint file-API writes are batched into ONE manifest
 //! CAS attempt; on a stale base the publisher returns a conflict and the writer
 //! retries up to [`MAX_OCC_CAS_RETRIES`] times before surfacing
-//! [`OccStatus::AbortedVersion`](crate::OccStatus::AbortedVersion) on every
+//! `CommitStatus::AbortedVersion` on every
 //! path.
 //!
 //! ## MF-1: a SINGLE writer, no second instance
@@ -27,8 +27,9 @@ use std::time::{Duration, Instant};
 
 use eos_cas::LayerChange;
 
-use crate::error::OccError;
-use crate::route::{ChangesetResult, FileResult, OccStatus, PublishDecision, Route};
+use super::error::CommitError;
+use super::usize_to_f64_saturating;
+use super::outcome::{ChangesetResult, CommitStatus, FileResult, PublishDecision, Route};
 
 /// Dedicated single-writer thread name (reproduce exactly).
 pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
@@ -94,7 +95,7 @@ pub struct PublishConflict {
 /// reply channel the submitter awaits.
 struct WorkItem {
     prepared: PreparedChangeset,
-    reply: mpsc::Sender<Result<ChangesetResult, OccError>>,
+    reply: mpsc::Sender<Result<ChangesetResult, CommitError>>,
     enqueued_at: Instant,
 }
 
@@ -165,11 +166,11 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`OccError`] when the queue is closed, has already consumed its
+    /// Returns [`CommitError`] when the queue is closed, has already consumed its
     /// startup state, or the worker thread cannot be spawned.
-    pub fn start(&mut self) -> Result<(), OccError> {
+    pub fn start(&mut self) -> Result<(), CommitError> {
         if self.closed {
-            return Err(OccError::QueueClosed);
+            return Err(CommitError::QueueClosed);
         }
         if self
             .handle
@@ -181,15 +182,15 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         let receiver = self
             .receiver
             .lock()
-            .map_err(|_| OccError::QueueStatePoisoned("receiver slot"))?
+            .map_err(|_| CommitError::QueueStatePoisoned("receiver slot"))?
             .take()
-            .ok_or(OccError::QueueNotStarted)?;
+            .ok_or(CommitError::QueueNotStarted)?;
         let transaction = self
             .transaction
             .lock()
-            .map_err(|_| OccError::QueueStatePoisoned("transaction slot"))?
+            .map_err(|_| CommitError::QueueStatePoisoned("transaction slot"))?
             .take()
-            .ok_or(OccError::QueueNotStarted)?;
+            .ok_or(CommitError::QueueNotStarted)?;
         let worker = CommitWorker {
             receiver,
             transaction,
@@ -202,7 +203,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
             .spawn(move || {
                 worker.run();
             })
-            .map_err(|err| OccError::WorkerStart(err.to_string()))?;
+            .map_err(|err| CommitError::WorkerStart(err.to_string()))?;
         self.handle = Some(handle);
         Ok(())
     }
@@ -211,8 +212,8 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`OccError::WorkerPanicked`] when the worker thread panicked.
-    pub fn close(&mut self) -> Result<(), OccError> {
+    /// Returns [`CommitError::WorkerPanicked`] when the worker thread panicked.
+    pub fn close(&mut self) -> Result<(), CommitError> {
         if self.closed {
             return Ok(());
         }
@@ -222,7 +223,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         }
         let _ = self.sender.send(QueueItem::Stop);
         self.handle.take().map_or(Ok(()), |handle| {
-            handle.join().map_err(|_| OccError::WorkerPanicked)
+            handle.join().map_err(|_| CommitError::WorkerPanicked)
         })
     }
 
@@ -234,21 +235,21 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`OccError::QueueClosed`] if the queue is closed/disconnected and
-    /// [`OccError::QueueNotStarted`] if no live worker is available.
+    /// Returns [`CommitError::QueueClosed`] if the queue is closed/disconnected and
+    /// [`CommitError::QueueNotStarted`] if no live worker is available.
     pub fn submit(
         &self,
         prepared: PreparedChangeset,
-    ) -> Result<mpsc::Receiver<Result<ChangesetResult, OccError>>, OccError> {
+    ) -> Result<mpsc::Receiver<Result<ChangesetResult, CommitError>>, CommitError> {
         if self.closed {
-            return Err(OccError::QueueClosed);
+            return Err(CommitError::QueueClosed);
         }
         if self
             .handle
             .as_ref()
             .is_none_or(std::thread::JoinHandle::is_finished)
         {
-            return Err(OccError::QueueNotStarted);
+            return Err(CommitError::QueueNotStarted);
         }
         let (reply, receiver) = mpsc::channel();
         self.sender
@@ -257,12 +258,12 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
                 reply,
                 enqueued_at: Instant::now(),
             }))
-            .map_err(|_| OccError::QueueClosed)?;
+            .map_err(|_| CommitError::QueueClosed)?;
         Ok(receiver)
     }
 
     /// Commit one disjoint batch with the bounded CAS-retry loop, fanning each
-    /// path's [`FileResult`](crate::FileResult) back to its submitter.
+    /// path's `FileResult` back to its submitter.
     fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
         let commit_start = Instant::now();
         let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
@@ -341,10 +342,6 @@ fn drain_ready(
         }
     }
     false
-}
-
-fn usize_to_f64_saturating(value: usize) -> f64 {
-    u32::try_from(value).map_or(f64::from(u32::MAX), f64::from)
 }
 
 fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {
@@ -435,14 +432,14 @@ fn cas_exhaustion_result(
         .map(|group| {
             let (status, message) = match group.route {
                 Route::Drop => (
-                    OccStatus::Dropped,
+                    CommitStatus::Dropped,
                     group.message.clone().unwrap_or_default(),
                 ),
                 Route::Reject => (
-                    OccStatus::Rejected,
+                    CommitStatus::Rejected,
                     group.message.clone().unwrap_or_default(),
                 ),
-                Route::Direct | Route::Gated => (OccStatus::AbortedVersion, message.clone()),
+                Route::Direct | Route::Gated => (CommitStatus::AbortedVersion, message.clone()),
             };
             FileResult {
                 path: group.path.clone(),
@@ -465,7 +462,6 @@ mod tests {
     use eos_cas::LayerPath;
 
     use super::*;
-    use crate::{FileResult, OccStatus, Route};
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -516,7 +512,7 @@ mod tests {
                     .iter()
                     .map(|group| FileResult {
                         path: group.path.clone(),
-                        status: OccStatus::Committed,
+                        status: CommitStatus::Committed,
                         message: String::new(),
                     })
                     .collect(),
@@ -530,7 +526,7 @@ mod tests {
         let path = LayerPath::parse(path)?;
         Ok(PreparedChangeset {
             snapshot_version: Some(1),
-            path_groups: vec![crate::PublishDecision {
+            path_groups: vec![PublishDecision {
                 path: path.clone(),
                 route: Route::Gated,
                 base_hash: None,
@@ -545,7 +541,7 @@ mod tests {
     }
 
     fn recv_ok(
-        receiver: &mpsc::Receiver<Result<ChangesetResult, OccError>>,
+        receiver: &mpsc::Receiver<Result<ChangesetResult, CommitError>>,
     ) -> TestResult<ChangesetResult> {
         match receiver.recv()? {
             Ok(result) => Ok(result),
@@ -634,7 +630,7 @@ mod tests {
         queue.close()?;
 
         assert!(!result.success());
-        assert_eq!(result.files[0].status, OccStatus::AbortedVersion);
+        assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
         Ok(())
     }
 }

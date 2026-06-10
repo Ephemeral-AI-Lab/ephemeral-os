@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { assistantText, type JsonObject, type Message } from "@eos/contracts";
@@ -20,11 +20,25 @@ export const TERSE_BODY = [
   "Make at most one tool call per assistant turn and write no prose.",
 ].join(" ");
 
+/** Like `TERSE_BODY` but without the one-call rule, for batch scenarios. */
+export const PARALLEL_BODY = [
+  "You are a terse test agent.",
+  "Follow the user's numbered instructions exactly and in order.",
+  "Write no prose.",
+].join(" ");
+
 /** A subagent that parks on the mocked `wait` tool until it is cancelled. */
 export const SLEEPER_BODY = [
   "You are the sleeper.",
   'Immediately call wait with {"ms": 120000}.',
   'After it returns, call submit_subagent_outcome with summary "slept".',
+].join(" ");
+
+/** A subagent that settles immediately with a fixed summary. */
+export const HELPER_BODY = [
+  "You are the helper.",
+  "Immediately call submit_subagent_outcome exactly once with summary set to",
+  'exactly "helper finished". Do not call any other tool.',
 ].join(" ");
 
 // --- mocked tools ------------------------------------------------------------
@@ -101,6 +115,46 @@ export function waitTool(): WaitTool {
   };
 }
 
+export interface ProbeWindow {
+  /** Epoch ms; brackets the mocked execution body. */
+  start: number;
+  end: number;
+}
+
+export interface ProbeTool {
+  definition: ToolDefinition;
+  /** One window per completed execution, in settle order. */
+  windows(): readonly ProbeWindow[];
+}
+
+/**
+ * A slow deterministic tool whose recorded execution windows expose batch
+ * behavior: overlapping windows prove concurrent dispatch, an empty list
+ * proves a call was rejected undispatched. `exclusive` sets
+ * `isBatchExecutionForbidden` for the policy scenarios.
+ */
+export function probeTool(
+  name: string,
+  delayMs: number,
+  options: { exclusive?: boolean } = {},
+): ProbeTool {
+  const windows: ProbeWindow[] = [];
+  return {
+    definition: scriptedTool({
+      name,
+      description: `Run the ${name} probe (takes ~${String(delayMs)}ms, no arguments) and return { probe }.`,
+      isBatchExecutionForbidden: options.exclusive,
+      execute: async () => {
+        const start = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        windows.push({ start, end: Date.now() });
+        return { content: { probe: name } };
+      },
+    }),
+    windows: () => windows,
+  };
+}
+
 /**
  * A terminal stand-in for engine-direct runs. A real `summary` schema (not
  * the permissive scripted-tool object) so the live model sees the field in
@@ -124,6 +178,8 @@ export interface RuntimeFixtureOptions {
   llmClientsPath: string;
   profiles: readonly ProfileSpec[];
   baseTools?: ToolDefinition[];
+  /** `HookConfigEntry[]` JSON, written to the fixture's `hooks.json`. */
+  hookEntries?: unknown;
 }
 
 export interface RuntimeFixture {
@@ -131,18 +187,22 @@ export interface RuntimeFixture {
   dataDir: string;
 }
 
-/** Temp profiles + data dir over the configured llm clients; no hooks. */
+/** Temp profiles + data dir over the configured llm clients. */
 export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
   const root = tempDir("eos-agent-runtime-e2e-");
   const profilesDir = join(root, "profiles");
   mkdirSync(profilesDir, { recursive: true });
   for (const spec of options.profiles) writeProfile(profilesDir, spec);
+  const hookConfigPath = join(root, "hooks.json");
+  if (options.hookEntries !== undefined) {
+    writeFileSync(hookConfigPath, JSON.stringify(options.hookEntries));
+  }
   const dataDir = join(root, "data");
   const runtime = createAgentRuntime({
     agentProfilesDir: profilesDir,
     llmClientsPath: options.llmClientsPath,
     baseTools: options.baseTools,
-    hookConfigPath: join(root, "hooks.json"),
+    hookConfigPath,
     dataDir,
   });
   return { runtime, dataDir };
@@ -191,6 +251,15 @@ export async function finishedRun(
 export function userMessageIndex(llm: readonly Message[], needle: string): number {
   return llm.findIndex(
     (message) => message.role === "user" && assistantText(message).includes(needle),
+  );
+}
+
+/** Every drained `session_settled` notification message, in arrival order. */
+export function sessionSettledMessages(llm: readonly Message[]): Message[] {
+  return llm.filter(
+    (message) =>
+      message.role === "user" &&
+      assistantText(message).includes('"session_settled"'),
   );
 }
 

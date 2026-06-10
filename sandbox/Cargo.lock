@@ -189,7 +189,6 @@ dependencies = [
  "eos-cas",
  "eos-config",
  "eos-layerstack",
- "eos-occ",
  "eos-overlay",
  "eos-plugin",
  "eos-workspace-runtime",
@@ -221,6 +220,7 @@ name = "eos-layerstack"
 version = "0.1.0"
 dependencies = [
  "eos-cas",
+ "ignore",
  "rustix 0.38.44",
  "serde",
  "serde_json",
@@ -239,19 +239,6 @@ dependencies = [
  "nix 0.29.0",
  "rustix 0.38.44",
  "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-occ"
-version = "0.1.0"
-dependencies = [
- "eos-cas",
- "eos-layerstack",
- "ignore",
- "serde",
- "serde_json",
- "sha2",
  "thiserror 2.0.18",
 ]
 

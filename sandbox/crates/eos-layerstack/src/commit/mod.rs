@@ -1,39 +1,44 @@
-//! Layer-stack-bound OCC adapters.
+//! Optimistic-concurrency commit: the single-writer publish gate per root.
 //!
-//! This optional module binds the route-agnostic OCC engine to concrete
-//! `eos-layerstack` storage for daemon publish paths. It owns the two pieces of
-//! OCC machinery that need both OCC decisions and the active layer stack:
+//! Invariant (MF-1): the commit path owns the publish DECISION gate — N
+//! disjoint file-API writes batch into ONE manifest CAS attempt; each
+//! normalized path routes to exactly one of [`Route::Drop`] (`.git`),
+//! [`Route::Direct`] (gitignored), [`Route::Gated`] (tracked, base-hash
+//! checked), or [`Route::Reject`] (disallowed). A stale base surfaces
+//! [`CommitStatus::AbortedVersion`] after the bounded CAS retry. EXACTLY ONE
+//! `occ-commit-queue` writer per `layer_stack_root` serializes all publishes:
+//! any second commit entry point (e.g. the PPC self-managed plugin callback)
+//! MUST route through this same single writer, never a second
+//! [`CommitQueue`] instance — [`crate::service`] owns that per-root registry.
 //!
-//! * [`LayerStackCommitTransaction`] — the [`crate::CommitTransactionPort`]
-//!   impl that revalidates a prepared changeset against the active manifest and
-//!   publishes a new layer (with auto-squash) via `LayerStack`.
-//! * [`LayerStackRouteProvider`] — the [`crate::OccRouteProvider`] impl plus
-//!   the gitignore engine and [`occ_route_metrics`] telemetry.
-//!
-//! The OCC single-writer cache (`OccService` per root) stays daemon-owned; this
-//! module is *reuse only* and gains no dependency toward the daemon. Errors are
-//! `eos-layerstack`/`eos-occ` native — there is no `DaemonError` edge here.
+//! Everything here except the outcome vocabulary and the hash helpers is
+//! crate-internal machinery behind the [`crate::service`] facade.
 
-mod publish;
-mod route;
+pub mod error;
+pub mod outcome;
+pub mod prepare;
+pub mod queue;
+pub mod transaction;
 
 use std::path::Path;
 
 use eos_cas::{LayerChange, LayerPath};
-use eos_layerstack::{LayerStackError, Manifest, MergedView};
 use sha2::{Digest, Sha256};
 
-pub use publish::{configure_auto_squash_max_depth, LayerStackCommitTransaction};
-pub use route::{
-    insert_occ_route_timings, occ_route_metrics, LayerStackRouteProvider, OccRouteMetrics,
-};
+use crate::{LayerStackError, Manifest, MergedView};
+
+pub use error::CommitError;
+pub use outcome::{ChangesetResult, CommitStatus, FileResult, Route};
+pub use prepare::CommitService;
+pub use queue::CommitQueue;
+pub use transaction::{configure_auto_squash_max_depth, CommitTransaction};
 
 /// Per-path base-hash overrides for a snapshot's changeset.
 ///
 /// Builds a [`MergedView`] over `root` and, for each non-`OpaqueDir` change,
-/// hashes the bytes visible at `manifest` via [`hash_current`] so OCC publish
-/// can gate on the base the writer observed. `OpaqueDir` (and absent) paths map
-/// to `None`. Errors are native [`LayerStackError`] — no daemon edge.
+/// hashes the bytes visible at `manifest` via [`hash_current`] so the commit
+/// gate validates against the base the writer observed. `OpaqueDir` (and
+/// absent) paths map to `None`.
 pub fn base_hashes_for_snapshot(
     root: &Path,
     manifest: &Manifest,
@@ -58,7 +63,7 @@ pub fn base_hashes_for_snapshot(
 /// SHA-256 of `content`, lowercase hex, when `exists` is true.
 ///
 /// Returns `None` for an absent path so an absent base and an empty-but-present
-/// file stay distinguishable in OCC base-hash gating.
+/// file stay distinguishable in base-hash gating.
 #[must_use]
 pub fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
     if !exists {
@@ -86,11 +91,11 @@ fn hex_lower(bytes: &[u8]) -> String {
     out
 }
 
-fn usize_to_f64_saturating(value: usize) -> f64 {
+pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
     u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
 
-fn i64_to_f64_saturating(value: i64) -> f64 {
+pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
     u64::try_from(value).map_or(0.0, |value| {
         u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
     })

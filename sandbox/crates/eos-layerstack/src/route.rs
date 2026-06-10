@@ -5,55 +5,55 @@ use ignore::Match;
 use serde_json::{json, Value};
 
 use eos_cas::{LayerChange, LayerPath};
-use eos_layerstack::{LayerStack, LayerStackError};
 
-use crate::{OccError, OccRouteProvider};
-
-use super::{hash_current, usize_to_f64_saturating};
+use crate::commit::error::CommitError;
+use crate::commit::prepare::RouteProvider;
+use crate::commit::{hash_current, usize_to_f64_saturating};
+use crate::{LayerStack, LayerStackError};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct OccRouteMetrics {
+pub struct RouteMetrics {
     pub gated_path_count: usize,
     pub direct_path_count: usize,
 }
 
-/// [`OccRouteProvider`] impl that resolves DIRECT-vs-GATED routing and
+/// [`RouteProvider`] impl that resolves DIRECT-vs-GATED routing and
 /// base hashes from the active merged manifest of `root`.
 #[derive(Clone)]
-pub struct LayerStackRouteProvider {
+pub struct StackRouteProvider {
     /// The layer-stack root whose merged manifest is consulted per call.
     pub root: PathBuf,
 }
 
-impl OccRouteProvider for LayerStackRouteProvider {
-    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, OccError> {
+impl RouteProvider for StackRouteProvider {
+    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, CommitError> {
         // Per-call re-read of the active merged manifest: opening a fresh
         // `LayerStack` here is load-bearing, so a `.gitignore` edit committed
         // between ops is observed by the next route decision.
         let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
         path_is_ignored(&stack, path.as_str())
-            .map_err(|err| OccError::RoutePreparation(err.to_string()))
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))
     }
 
-    fn base_hash(&self, path: &LayerPath) -> std::result::Result<Option<String>, OccError> {
+    fn base_hash(&self, path: &LayerPath) -> std::result::Result<Option<String>, CommitError> {
         let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
         let (bytes, exists) = stack
             .read_bytes(path.as_str())
-            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
         Ok(hash_current(bytes.as_deref(), exists))
     }
 }
 
 /// Telemetry-only DIRECT/GATED tally over `changes`, sharing the route decision
-/// with [`LayerStackRouteProvider::is_ignored`].
-pub fn occ_route_metrics(
+/// with [`StackRouteProvider::is_ignored`].
+pub fn route_metrics(
     root: &Path,
     changes: &[LayerChange],
-) -> Result<OccRouteMetrics, LayerStackError> {
+) -> Result<RouteMetrics, LayerStackError> {
     let stack = LayerStack::open(root.to_path_buf())?;
-    let mut metrics = OccRouteMetrics::default();
+    let mut metrics = RouteMetrics::default();
     for change in changes {
         let path = change.path().as_str();
         if path == ".git" || path.starts_with(".git/") {
@@ -68,9 +68,9 @@ pub fn occ_route_metrics(
     Ok(metrics)
 }
 
-pub fn insert_occ_route_timings(
+pub fn insert_route_timings(
     timings: &mut serde_json::Map<String, Value>,
-    metrics: OccRouteMetrics,
+    metrics: RouteMetrics,
     route_s: f64,
     occ_s: f64,
 ) {
@@ -107,8 +107,8 @@ pub fn insert_occ_route_timings(
     }
 }
 
-/// This is the one shared routine behind both `LayerStackRouteProvider::is_ignored`
-/// (DIRECT vs GATED) and `occ_route_metrics` (telemetry). It preserves the
+/// This is the one shared routine behind both `StackRouteProvider::is_ignored`
+/// (DIRECT vs GATED) and `route_metrics` (telemetry). It preserves the
 /// daemon's gitignore contract: per-directory `.gitignore` read from the merged
 /// snapshot, deeper-wins inheritance, and the directory-exclusion seal (an
 /// excluded ancestor dir seals its whole subtree; a deeper `!` re-include cannot
@@ -227,3 +227,6 @@ fn join_rel(prefix: &str, child: &str) -> String {
         format!("{prefix}/{child}")
     }
 }
+
+#[cfg(test)]
+mod tests;

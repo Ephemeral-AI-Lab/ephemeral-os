@@ -16,14 +16,21 @@
 //!   below a lease head folds into a checkpoint, but the underlying directory
 //!   stays on disk for that lease's frozen reads until release GCs it.
 //!
+//! # The write path lives here too
+//!
+//! The optimistic-concurrency commit gate (the [`commit`] machinery: routing,
+//! base-hash validation, the per-root single-writer queue) and the per-root
+//! [`service`] facade are part of this crate — a front door to the layer stack
+//! is layer-stack responsibility. The [`route`] module owns the gitignore
+//! admission oracle backing DIRECT-vs-GATED decisions.
+//!
 //! # The no-publish guarantee is enforced by the dependency graph
 //!
-//! The isolated runtime path captures writes for audit but can NEVER publish —
-//! guaranteed structurally because it does not depend on `eos-occ` (a build-time
-//! edge, not a convention). The snapshot/lease read surface ([`LayerStack`] +
-//! [`MergedView`] + [`Lease`]) is owned here; the publish-side transaction is
-//! daemon-owned. Lower crates that need a narrow read port define and inject it
-//! at their own boundary rather than importing this crate.
+//! Workspace crates (the ephemeral/isolated overlay providers) never depend on
+//! this crate: they receive frozen `layer_paths` and return captured changes,
+//! so the isolated path can NEVER publish — a build-time edge, not a
+//! convention. Publish capability exists only in callers that link this crate
+//! and route through [`service`].
 //!
 //! # Build-time / threading guarantee
 //!
@@ -33,13 +40,18 @@
 //! is documented in [`storage_lock`].
 #![forbid(unsafe_code)]
 
+mod commit;
 pub mod error;
 pub(crate) mod fsutil;
 pub(crate) mod lease;
 mod metrics;
+mod route;
+pub mod service;
 pub mod squash;
 pub mod stack;
 pub mod storage_lock;
+#[cfg(test)]
+mod test_fixture;
 pub mod workspace_base;
 pub mod workspace_binding;
 
@@ -50,6 +62,10 @@ pub use eos_cas::{
     Manifest,
 };
 
+pub use commit::{
+    configure_auto_squash_max_depth, hash_bytes, hash_current, ChangesetResult, CommitError,
+    CommitStatus, FileResult, Route,
+};
 pub use error::LayerStackError;
 pub use metrics::LayerStackStorageMetrics;
 pub use squash::{CheckpointSegment, LayerCheckpointSquasher, SquashPlan, SquashPlanEntry};

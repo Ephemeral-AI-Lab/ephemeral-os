@@ -2,7 +2,7 @@
 //!
 //! A changeset is split into disjoint normalized paths; each path is routed by
 //! [`Route`] to exactly one of four destinations and, after the publish
-//! transaction, lands a per-path [`OccStatus`]. The `str` values of both enums
+//! transaction, lands a per-path [`CommitStatus`]. The `str` values of both enums
 //! are part of the wire contract, so the `serde` rename strings below are
 //! load-bearing.
 
@@ -37,7 +37,7 @@ pub enum Route {
 /// outcome surfaced when the CAS retry budget is exhausted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
-pub enum OccStatus {
+pub enum CommitStatus {
     /// Validated and staged (atomic batch not yet finalized).
     #[serde(rename = "accepted")]
     Accepted,
@@ -61,7 +61,7 @@ pub enum OccStatus {
     Failed,
 }
 
-impl OccStatus {
+impl CommitStatus {
     /// Stable wire string for this path status.
     #[must_use]
     pub const fn wire_str(self) -> &'static str {
@@ -114,7 +114,7 @@ pub struct FileResult {
     /// The normalized path this result describes.
     pub path: LayerPath,
     /// Terminal status.
-    pub status: OccStatus,
+    pub status: CommitStatus,
     /// Diagnostic message (empty by default).
     pub message: String,
 }

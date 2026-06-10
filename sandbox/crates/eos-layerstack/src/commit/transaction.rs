@@ -3,13 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use crate::{
-    ChangesetResult, CommitTransactionPort, FileResult, OccStatus, PreparedChangeset,
-    PublishConflict, Route,
-};
 use eos_cas::{LayerChange, LayerPath, Manifest};
-use eos_layerstack::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 
+use crate::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
+
+use super::outcome::{ChangesetResult, CommitStatus, FileResult, Route};
+use super::queue::{CommitTransactionPort, PreparedChangeset, PublishConflict};
 use super::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
 
 static AUTO_SQUASH_MAX_DEPTH_CONFIG: AtomicUsize = AtomicUsize::new(AUTO_SQUASH_MAX_DEPTH);
@@ -27,12 +26,12 @@ fn auto_squash_max_depth() -> usize {
 /// against the active manifest and publishes a new layer (with auto-squash) via
 /// `LayerStack` for `root`.
 #[derive(Clone)]
-pub struct LayerStackCommitTransaction {
+pub struct CommitTransaction {
     /// The layer-stack root this transaction publishes into.
     pub root: PathBuf,
 }
 
-impl CommitTransactionPort for LayerStackCommitTransaction {
+impl CommitTransactionPort for CommitTransaction {
     fn revalidate_and_publish(
         &self,
         combined: &PreparedChangeset,
@@ -88,7 +87,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
                     },
                 ))
             }
-            Err(eos_layerstack::LayerStackError::ManifestConflict { found, .. }) => {
+            Err(crate::LayerStackError::ManifestConflict { found, .. }) => {
                 Err(PublishConflict {
                     observed_version: manifest_version_u64_optional(found),
                 })
@@ -113,7 +112,7 @@ impl CommitTransactionPort for LayerStackCommitTransaction {
 
 fn failed_revalidate_result(
     combined: &PreparedChangeset,
-    err: &eos_layerstack::LayerStackError,
+    err: &crate::LayerStackError,
     total_start: Instant,
 ) -> ChangesetResult {
     let timings = commit_timings(combined, 0.0, 0.0, total_start.elapsed().as_secs_f64());
@@ -132,7 +131,7 @@ fn atomic_validation_drop_result(
             .map(|file| {
                 if file.status.is_published() {
                     FileResult {
-                        status: OccStatus::Dropped,
+                        status: CommitStatus::Dropped,
                         message: "not published because atomic changeset validation failed"
                             .to_owned(),
                         ..file
@@ -253,7 +252,7 @@ fn committed_changeset_result(
             .map(|file| {
                 if file.status.is_published() {
                     FileResult {
-                        status: OccStatus::Committed,
+                        status: CommitStatus::Committed,
                         ..file
                     }
                 } else {
@@ -286,7 +285,7 @@ fn validate_prepared(
         .map(|group| match group.route {
             Route::Drop => FileResult {
                 path: group.path.clone(),
-                status: OccStatus::Dropped,
+                status: CommitStatus::Dropped,
                 message: group
                     .message
                     .clone()
@@ -294,7 +293,7 @@ fn validate_prepared(
             },
             Route::Reject => FileResult {
                 path: group.path.clone(),
-                status: OccStatus::Rejected,
+                status: CommitStatus::Rejected,
                 message: group
                     .message
                     .clone()
@@ -316,7 +315,7 @@ fn validate_prepared(
 fn validate_direct_group(path: &LayerPath) -> FileResult {
     FileResult {
         path: path.clone(),
-        status: OccStatus::Accepted,
+        status: CommitStatus::Accepted,
         message: String::new(),
     }
 }
@@ -338,7 +337,7 @@ fn validate_gated_group(
             if parent_absent {
                 return FileResult {
                     path: path.clone(),
-                    status: OccStatus::Accepted,
+                    status: CommitStatus::Accepted,
                     message: String::new(),
                 };
             }
@@ -348,18 +347,18 @@ fn validate_gated_group(
         Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists).as_deref() == base_hash => {
             FileResult {
                 path: path.clone(),
-                status: OccStatus::Accepted,
+                status: CommitStatus::Accepted,
                 message: String::new(),
             }
         }
         Ok(_) => FileResult {
             path: path.clone(),
-            status: OccStatus::AbortedVersion,
+            status: CommitStatus::AbortedVersion,
             message: "content changed".to_owned(),
         },
         Err(err) => FileResult {
             path: path.clone(),
-            status: OccStatus::Failed,
+            status: CommitStatus::Failed,
             message: err.to_string(),
         },
     }
@@ -386,13 +385,13 @@ fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -
     })
 }
 
-const fn is_validation_failure(status: OccStatus) -> bool {
+const fn is_validation_failure(status: CommitStatus) -> bool {
     matches!(
         status,
-        OccStatus::AbortedOverlap
-            | OccStatus::AbortedVersion
-            | OccStatus::Failed
-            | OccStatus::Rejected
+        CommitStatus::AbortedOverlap
+            | CommitStatus::AbortedVersion
+            | CommitStatus::Failed
+            | CommitStatus::Rejected
     )
 }
 
@@ -407,7 +406,7 @@ fn failed_changeset_with_timings(
             .iter()
             .map(|group| FileResult {
                 path: group.path.clone(),
-                status: OccStatus::Failed,
+                status: CommitStatus::Failed,
                 message: message.to_owned(),
             })
             .collect(),
@@ -468,3 +467,6 @@ fn commit_timings(
 fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
 }
+
+#[cfg(test)]
+mod tests;
