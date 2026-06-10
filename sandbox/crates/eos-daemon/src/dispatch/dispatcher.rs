@@ -19,15 +19,8 @@ use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
-use eos_cas::{LayerChange, LayerPath};
-#[cfg(test)]
 use eos_layerstack::LayerStack;
 
-#[cfg(test)]
-use crate::occ::{
-    base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
-    LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
-};
 use crate::audit::events::emit_dispatch_audit;
 #[cfg(test)]
 use crate::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
@@ -41,11 +34,6 @@ use super::registry::BUILTIN_OPS;
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
-};
-#[cfg(test)]
-use eos_occ::{
-    CommitQueue, CommitTransactionPort, OccRouteProvider, OccService, OccStatus, PreparedChangeset,
-    Route,
 };
 
 /// A synchronous op handler: decoded args -> response value.

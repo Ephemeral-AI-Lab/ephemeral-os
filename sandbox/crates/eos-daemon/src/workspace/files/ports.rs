@@ -13,7 +13,7 @@ use eos_cas::{LayerRef, Manifest};
 #[cfg(target_os = "linux")]
 use eos_layerstack::MergedView;
 use eos_layerstack::{require_workspace_binding, LayerStack, WorkspaceBinding};
-use eos_occ::ChangesetResult;
+use eos_layerstack::ChangesetResult;
 #[cfg(target_os = "linux")]
 use eos_workspace_runtime::contract::usize_to_f64_saturating;
 use eos_workspace_runtime::contract::{
@@ -23,7 +23,8 @@ use eos_workspace_runtime::contract::{
 };
 use serde_json::json;
 
-use crate::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
+use eos_layerstack::hash_current;
+use eos_layerstack::service::{commit_direct, manifest_version_u64};
 use crate::response_timings::{resource_timings, timing_map};
 
 fn api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
@@ -108,7 +109,7 @@ impl WorkspaceMutationSink for EphemeralFilePorts {
             .transpose()
             .map_err(api_error)?;
         let occ_start = Instant::now();
-        let result = apply_occ_changeset(
+        let result = commit_direct(
             &self.root,
             snapshot_version,
             &[LayerChange::Write {

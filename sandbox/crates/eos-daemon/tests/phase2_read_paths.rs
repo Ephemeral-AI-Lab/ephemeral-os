@@ -9,7 +9,6 @@ use eos_daemon::wire::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
 use eos_layerstack as _;
-use eos_occ as _;
 use eos_overlay as _;
 use eos_plugin as _;
 use eos_workspace_runtime as _;

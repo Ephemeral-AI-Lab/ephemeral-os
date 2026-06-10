@@ -116,7 +116,7 @@ pub(super) fn dispatch_oneshot_overlay_route(
 
 struct PluginOverlayRunOutcome {
     runner: RunResult,
-    changeset: eos_occ::ChangesetResult,
+    changeset: eos_layerstack::ChangesetResult,
     plugin_result: Option<Value>,
     path_kinds: Vec<(String, String)>,
     capture_s: f64,

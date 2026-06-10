@@ -15,7 +15,7 @@
 //!    non-await sections.
 //! 2. **One OCC writer per root.** Write-capable handlers run inside their
 //!    per-request dispatch task and route to the dispatcher-owned per-root
-//!    `OccService` cache. The server never holds a mutex guard across an await
+//!    `eos_layerstack::service` writer cache. The server never holds a mutex guard across an await
 //!    point while doing that dispatch.
 //!
 //! Shutdown is driven by a [`tokio_util::sync::CancellationToken`]: a SIGTERM /
@@ -106,7 +106,7 @@ impl DaemonServer {
         crate::workspace::run::configure_command_sessions(&daemon_config.command_sessions);
         crate::workspace::isolated::configure_isolated_workspace(isolated_config);
         crate::plugins::configure_plugin_runtime(&daemon_config.plugin);
-        crate::occ::configure_layer_stack(&daemon_config.layer_stack);
+        eos_layerstack::configure_auto_squash_max_depth(daemon_config.layer_stack.auto_squash_max_depth);
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),

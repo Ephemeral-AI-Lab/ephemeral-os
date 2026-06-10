@@ -1,46 +1,11 @@
 //! Overlay publish conversion helpers.
 
-use std::path::Path;
-
-use eos_cas::{LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
-use eos_occ::{ChangesetResult, FileResult, OccStatus};
-use eos_workspace_runtime::contract::SnapshotLease;
+use eos_cas::LayerPath;
+use eos_layerstack::{ChangesetResult, CommitStatus, FileResult};
 use eos_workspace_runtime::ephemeral::{EphemeralWorkspaceError, PublishOutcome};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-
-pub(super) fn manifest_from_snapshot(
-    root: &Path,
-    snapshot: &SnapshotLease,
-) -> Result<Manifest, EphemeralWorkspaceError> {
-    let layers = snapshot
-        .layer_paths
-        .iter()
-        .enumerate()
-        .map(|(index, path)| {
-            let relative = match path.strip_prefix(root) {
-                Ok(relative) => relative,
-                Err(_) if path.is_relative() => path,
-                Err(_) => {
-                    return Err(EphemeralWorkspaceError::PublishFailed {
-                        reason: format!(
-                            "snapshot layer path {} is outside {}",
-                            path.display(),
-                            root.display()
-                        ),
-                    });
-                }
-            };
-            Ok(LayerRef {
-                layer_id: format!("snapshot-{index}"),
-                path: relative.to_string_lossy().into_owned(),
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Manifest::new(snapshot.manifest_version, layers, MANIFEST_SCHEMA_VERSION)
-        .map_err(super::publish_failed)
-}
 
 pub(super) fn overlay_daemon_error(context: &str, err: &eos_overlay::OverlayError) -> DaemonError {
     DaemonError::OverlayPipeline(format!("{context}: {err}"))
@@ -119,7 +84,7 @@ fn file_result_from_value(value: &Value) -> Result<FileResult, DaemonError> {
         .get("status")
         .cloned()
         .ok_or_else(|| DaemonError::OverlayPipeline("publish file result missing status".into()))?;
-    let status = serde_json::from_value::<OccStatus>(status_value)
+    let status = serde_json::from_value::<CommitStatus>(status_value)
         .map_err(|error| DaemonError::InvalidEnvelope(error.to_string()))?;
     Ok(FileResult {
         path: LayerPath::parse(path).map_err(eos_layerstack::LayerStackError::from)?,
@@ -131,7 +96,3 @@ fn file_result_from_value(value: &Value) -> Result<FileResult, DaemonError> {
             .to_owned(),
     })
 }
-
-#[cfg(test)]
-#[path = "../../tests/unit/overlay_convert/mod.rs"]
-mod tests;

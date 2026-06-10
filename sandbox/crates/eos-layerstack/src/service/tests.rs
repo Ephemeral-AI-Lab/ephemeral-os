@@ -5,7 +5,7 @@ use crate::commit::{CommitQueue, CommitService, CommitTransaction};
 use crate::route::StackRouteProvider;
 use crate::test_fixture::{unique_suffix, TestResult};
 
-use super::{normalize_root_key, RootService, ServiceCache, SERVICE_CACHE_MAX};
+use super::{normalize_root_key, snapshot_manifest, RootService, ServiceCache, SERVICE_CACHE_MAX};
 
 fn root_service(root: &Path) -> TestResult<RootService> {
     let transaction = CommitTransaction {
@@ -18,6 +18,33 @@ fn root_service(root: &Path) -> TestResult<RootService> {
         CommitQueue::new(transaction),
         provider,
     )?))
+}
+
+#[test]
+fn snapshot_manifest_converts_absolute_layer_paths_to_relative() -> TestResult {
+    let root = std::path::PathBuf::from("/stack");
+    let manifest =
+        snapshot_manifest(&root, 7, &[root.join("layers/a"), root.join("layers/b")])?;
+
+    assert_eq!(manifest.version, 7);
+    assert_eq!(manifest.layers[0].path, "layers/a");
+    assert_eq!(manifest.layers[1].path, "layers/b");
+    Ok(())
+}
+
+#[test]
+fn snapshot_manifest_rejects_absolute_layer_paths_outside_root() {
+    let error = snapshot_manifest(
+        &std::path::PathBuf::from("/stack"),
+        7,
+        &[std::path::PathBuf::from("/other/layers/a")],
+    )
+    .expect_err("outside-root path should fail");
+
+    assert!(
+        error.to_string().contains("outside /stack"),
+        "unexpected error: {error}"
+    );
 }
 
 #[test]

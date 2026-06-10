@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 04.6 Agent Runtime E2E
 
-Status: Expansion draft (baseline E2E-01..11 completed; E2E-12..60 target)
+Status: Expansion draft (baseline E2E-01..11 completed; E2E-35..38 observed; remaining E2E-12..60 target)
 Date: 2026-06-11
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -137,7 +137,8 @@ packages/agent-runtime/e2e/
 │  │                          writer (claims stay valid; the 401 happens live)
 │  ├─ fixtures.ts             TERSE_BODY/SLEEPER_BODY prompts; mocked tools
 │                             (lookup_codeword, echo_n, wait, finish_task,
-│                             batch_lock, hook_probe); runtime
+│                             batch_lock, hook_probe); nested sleeper
+│                             profiles; runtime
 │                             fixture (temp profiles + dataDir over the real
 │                             llm_clients.json, optional hooks); polling +
 │                             provider-history assertion helpers
@@ -151,7 +152,7 @@ packages/agent-runtime/e2e/
 ├─ tool-limits.e2e.ts         E2E-12..16
 ├─ batch-policy.e2e.ts        E2E-17..22
 ├─ hooks-notifications.e2e.ts E2E-23..34
-├─ subagent-scale.e2e.ts      E2E-35..40
+├─ subagent-fanout.e2e.ts     E2E-35..40
 ├─ cancellation.e2e.ts        E2E-41..48
 ├─ recursive-cancel.e2e.ts    E2E-49..56
 └─ cancellation-isolation.e2e.ts E2E-57..60
@@ -208,12 +209,32 @@ coverage that must be implemented before this expansion can be called done.
 | E2E-32 | `hooks-notifications` :: steer priority beats notification at the same boundary | 3-steering, 8 | a steer and notification are queued while the run is parked; loop drains steer messages before system notifications; `outcome.llm` ordering proves user steer priority; final submission follows the steer instruction | 04 §7, 03 §9 |
 | E2E-33 | `hooks-notifications` :: notification rendering cannot spoof tag boundaries | 8 | notification payload includes `<system_notification>`-like text; rendered message escapes `<` inside JSON; provider-visible text has one outer notification tag; model extracts the intended payload value only | 04 §7 `systemNotificationMessage` |
 | E2E-34 | `hooks-notifications` :: notification drain enables guarded submission | 2, 4-submission, 8 | submission is blocked while a session is settled-but-undelivered; draining the notification fires delivery bookkeeping; immediate resubmit succeeds; transcript records the blocked result before the final terminal result | 04 §9, 04 §15.16 |
-| E2E-35 | `subagent-scale` :: fan out three subagents and read every transcript | 2, 3-wake, 4-agent, 6 | main run starts three child runs; each row has `parent` = caller and `agent_kind: "subagent"`; all three `session_settled` notifications drain; parent reads each child transcript and submits sorted child ids/summaries | 04.5 §13.5, 04 §9 |
-| E2E-36 | `subagent-scale` :: child reaches maximum turn limit and parent recovers | 1, 2, 6 | subagent profile has a tiny `max_turns`; child fails with `max_turns`; settlement notification reports failed child outcome; parent reads the child transcript, names the failure, and still submits | 03 §14.11, 04.5 §5/§13.5 |
-| E2E-37 | `subagent-scale` :: caller interrupt cascades to multiple live subagents | 2, 3-interrupt, 6 | parent spawns multiple sleepers then is interrupted; every child transcript finishes `cancelled` with `interrupt_reason: "caller_disposed"`; registry rows reach `finished`; no orphaned live sessions remain | 04.5 §8/§13.7 |
-| E2E-38 | `subagent-scale` :: model cancels one subagent while another completes | 2, 4-background, 6 | parent starts two child runs; model calls `cancel_background_session` for one id and waits for the other to settle; cancelled child records `model_cancelled`; completed child has a submission; parent submits both statuses | 04.5 §8, 04 §15.9 |
-| E2E-39 | `subagent-scale` :: subagent cannot start a main profile through the agent tool | 2, 4-agent | a child run attempts `run_subagent` against a main-only profile; tool result is `is_error: true` and names the invalid profile/kind boundary; parent remains alive and can submit a guarded failure summary | 04.5 §4, runtime test "rejects starting a main profile from inside a run" |
-| E2E-40 | `subagent-scale` :: transcript offset reads scale across child runs | 2, 4-agent, 6 | parent reads each child transcript with offset windows; offsets advance monotonically; reread from previous offset returns only increments; final reads include each child's `run_finished` and no duplicate lines | 04.5 §6/§13.9 |
+| E2E-35 | `subagent-fanout` :: fans out two subagents in one batch and submits only after both settle | 2, 3-wake, 4-agent, 6, 8 | main run emits two `run_subagent` calls in one assistant turn; launch tool results return both child ids before any child completion notification; both rows have `parent` = caller and `agent_kind: "subagent"`; both child transcripts end `completed`; exactly one `session_settled` notification per child reaches the parent before submission | 04.5 §13.5, 04 §9 |
+| E2E-36 | `subagent-fanout` :: child reaches maximum turn limit and parent recovers | 1, 2, 6, 8 | subagent profile has a tiny `max_turns`; child fails with `max_turns`; settlement notification reports failed child outcome and summary; parent remains alive and still submits | 03 §14.11, 04.5 §5/§13.5 |
+| E2E-37 | `subagent-fanout` :: nested subagent completion stays in the owning inbox | 2, 3-wake, 4-agent, 8 | main starts relay; relay starts leaf; parent links form main -> relay -> leaf; relay receives the leaf settlement and submits; main receives exactly the relay settlement and never sees the grandchild's notification | 04.5 §2.1/§13.5, 04 §9 |
+| E2E-38 | `subagent-fanout` :: model cancels one background subagent while another completes | 2, 4-background, 6, 8 | parent starts a helper and a sleeper in one batch; `list_background_sessions` exposes the open child rows; model calls `cancel_background_session` for the sleeper; cancelled child records `model_cancelled`, helper completes, and both settlement notifications reach the parent before submission | 04.5 §8, 04 §15.9 |
+| E2E-39 | `subagent-fanout` :: subagent cannot start a main profile through the agent tool | 2, 4-agent | a child run attempts `run_subagent` against a main-only profile; tool result is `is_error: true` and names the invalid profile/kind boundary; parent remains alive and can submit a guarded failure summary | 04.5 §4, runtime test "rejects starting a main profile from inside a run" |
+| E2E-40 | `subagent-fanout` :: transcript offset reads scale across child runs | 2, 4-agent, 6 | parent reads each child transcript with offset windows; offsets advance monotonically; reread from previous offset returns only increments; final reads include each child's `run_finished` and no duplicate lines | 04.5 §6/§13.9 |
+| E2E-41 | `cancellation` :: caller aborts before the first provider turn commits | 1, 3-interrupt, 9 | outcome is `cancelled` with the supplied reason; no assistant or tool_result lines are written; transcript still ends with exactly one `run_finished`; registry reaches `finished`; `steer()` after the abort returns `false` | 03 §8/§14.6, 04.5 §2.10 |
+| E2E-42 | `cancellation` :: caller aborts during the live provider stream before any tool use is complete | 1, 3-interrupt, 5, 9 | provider request is aborted through the run signal; outcome classifies as `cancelled`, not `provider_error`; `outcome.llm` has no unanswered `tool_use`; `run_finished` is last even if the SSE stream closes with an abort-shaped error | 02.5 §6.3-5, 03 §7/§14.6 |
+| E2E-43 | `cancellation` :: double interrupt preserves the first cancellation reason | 1, 3-interrupt, 9 | two `handle.interrupt(...)` calls race while the run is live; the transcript and outcome carry only the first reason; exactly one `run_finished` event is emitted; no second cancellation notification or transcript tail appears | 03 §14.6, 04.5 §8 |
+| E2E-44 | `cancellation` :: interrupt after a nonterminal tool result but before the next provider call | 1, 3-interrupt, 4-mocked, 9 | the tool_result is present and answered; the next loop-top check exits as `cancelled` before another `turn_started`; provider history remains restart-valid; transcript has no partial second assistant turn | 03 §7/§14.7, 04 §15.21 |
+| E2E-45 | `cancellation` :: interrupt wakes a run parked on auto-wait with a live background session | 2, 3-wake, 9 | parent has emitted a bare assistant text turn and is waiting on `waitForWake`; interrupt wakes the race; parent finishes `cancelled`; its `finally` disposes the live session; no extra provider call is made after the park | 04 §15.3, 04 §2.17, 04.5 §8 |
+| E2E-46 | `cancellation` :: cancelling an unknown background session is tool-level recoverable | 2, 4-background, 9 | bad `{ type, id }` returns an error tool_result; the live model sees the error, lists sessions, chooses the valid id, cancels it, and submits; no run-level failure is recorded | 04 §15.9, 04.5 §8 |
+| E2E-47 | `cancellation` :: explicit cancel after the child naturally settled is a no-op the model can recover from | 2, 4-background, 9 | child has terminal status but its settlement is undelivered; `cancel_background_session` returns the already-terminal/unknown no-op result rather than throwing; no duplicate `session_settled` is published; parent drains the original settlement and submits | 04 §9, 04 §15.16 |
+| E2E-48 | `cancellation` :: register-after-dispose latch cancels late handles | 2, 9 | parent aborts while `run_subagent` has started a child but before the tool continuation registers the handle; the latched supervisor immediately calls the incoming handle's cancel; no row is registered or published into the dead parent; child is cancelled as `caller_disposed` | 04 §9 dispose latch, 04.5 §8 |
+| E2E-49 | `recursive-cancel` :: parent interrupt cancels child while the child has a running background task | 2, 4-agent, 9, 10 | main spawns child A; A spawns sleeper B and parks; interrupting main cancels A through main's session handle; A's own `finally` disposes B; transcripts show main `operator_stop`, A `caller_disposed`, B `caller_disposed`; no live rows remain in any supervisor | 04.5 §2.1/§8, 04 §2.17/§9 |
+| E2E-50 | `recursive-cancel` :: model cancels child while the child has a running background task | 2, 4-background, 4-agent, 9, 10 | main calls `cancel_background_session` for A; A transcript records `model_cancelled`; A's disposal still cancels B as `caller_disposed`; main receives one cancelled settlement for A and can read both transcripts before submitting | 04.5 §8, 04 §9 |
+| E2E-51 | `recursive-cancel` :: child failure disposes its own running background task | 2, 4-agent, 9, 10 | A fails after starting B; A's session settles `failed` to main; B is cancelled by A's exit path as `caller_disposed`; main drains a failed `session_settled`, verifies the B transcript, and submits a failure summary | 04 §9 rejection/failure mapping, 04.5 §13.9 |
+| E2E-52 | `recursive-cancel` :: child cannot submit while its own background task is open | 2, 4-submission, 10 | A starts B and attempts `submit_subagent_outcome`; A gets the submission guard error, cancels or waits for B, then submits; main sees A complete only after A's own `openCount()` reaches zero | 04 §15.16, 04.5 §13.5 |
+| E2E-53 | `recursive-cancel` :: grandchild settled-undelivered when child is cancelled | 2, 3-wake, 9, 10 | B has terminal status in A's supervisor but A has not drained the notification; cancelling A does not recancel B or publish into A after death; B remains naturally completed in its transcript, while A is cancelled per trigger reason | 04 §9 delivered/evicted lifecycle, 04.5 §8 |
+| E2E-54 | `recursive-cancel` :: three-deep cancellation chain unwinds by ownership | 2, 9, 10 | main -> A -> B -> C all have live sleeper descendants; cancelling main reaches only A directly; B and C are cancelled by their own callers' disposal; every transcript has one `run_finished`, every descendant reason is `caller_disposed`, and parent links form the expected chain | 04.5 §2.1/§2.6/§8 |
+| E2E-55 | `recursive-cancel` :: late grandchild registration after ancestor cancellation is latched | 2, 9, 10 | main cancellation lands while A's tool continuation is between starting B and registering it; A's already-latched supervisor cancels B immediately; B cannot leak as an untracked live run and no notification is published to A | 04 §9 dispose latch |
+| E2E-56 | `recursive-cancel` :: cancelling one nested branch does not cancel a sibling branch | 2, 4-background, 9, 10 | main starts A and S as sibling sessions; A has running child B; model cancels A only; A/B end cancelled, S remains running and blocks submit until separately settled/cancelled; sibling isolation is visible in `list_background_sessions` | 04.5 §2.1, 04 §9 |
+| E2E-57 | `cancellation-isolation` :: two live main runs isolate cancellation and background sessions | 1, 2, 9, 10 | run A and run B concurrently, each with a sleeper subagent; cancel A; A's child is `caller_disposed`; B's child remains running and B can still complete; transcripts and registries do not cross-contaminate ids or notifications | 04.5 §2.1/§2.3, 04 §9 |
+| E2E-58 | `cancellation-isolation` :: one run cancels many background sessions on disposal | 2, 9, 10 | parent starts N sleeper subagents under a small fixed N; parent interrupt causes all N child transcripts to finish `caller_disposed`; teardown is bounded by the file's timeout; no unhandled rejections from any handle | 04 §9 dispose, 04.5 §8 |
+| E2E-59 | `cancellation-isolation` :: repeated start/cancel cycles leave no stale sessions | 2, 9 | repeat a small loop of start sleeper -> cancel -> drain -> submit/restart in one temp dataDir; run ids stay unique; `list_background_sessions` is empty after each cycle; transcripts stay separate | 04.5 §2.3/§13.9 |
+| E2E-60 | `cancellation-isolation` :: clean skip path applies to every scaled shard | harness | with missing credentials, cancellation/background/recursive/scale files all skip through `loadConfiguredCodexRuntime()` with the loader reason; no target shard performs a network call before the skip | 02.5 §6.3, 04.6 decision 2 |
 
 Run inventory per scenario: E2E-01..04 one main run each (E2E-04 fails at
 the first provider call); E2E-05/06/09 one main + one subagent run; E2E-07/08
@@ -221,9 +242,12 @@ one main run; E2E-10/11 engine-direct handles (E2E-11 starts two).
 Expanded rows: E2E-12..22 are one main run each except E2E-13 may be
 engine-direct for precise abort timing; E2E-23..34 are one main run each
 or engine-direct inbox probes for E2E-31/33; E2E-35..40 create 2-4 child
-runs each. Each expanded file must carry an explicit provider-call budget
-and should keep expensive fanout rows opt-in when running the whole live
-battery on laptops.
+runs each; E2E-41..48 are cancellation timing rows; E2E-49..56 create
+nested subagent chains with live descendant background sessions; E2E-57..60
+cover process isolation, fanout cleanup, repeatability, and shard skip
+behavior. Each expanded file must carry an explicit provider-call budget and
+should keep expensive fanout rows opt-in when running the whole live battery
+on laptops.
 
 ## 6. Edge-Case Disposition (mined from the migration specs)
 
@@ -236,6 +260,8 @@ Phase 04.5 integration suite.
 | Exactly one `assistant_message_complete` per provider call | 02 §4.5 | E2E-10 (live), unit goldens |
 | Abort classified by `signal.aborted`, never error type | 02.5 §6.3-5 | E2E-07/11 composed; `llm-client/e2e` contract |
 | Auth failure taxonomy (`authentication` -> run `provider_error`) | 02, 02.5 §6.3-6 | E2E-04 composed; `llm-client/e2e` contract |
+| Caller abort before provider output and during provider streaming | 02.5 §6.3-5, 03 §14.6 | E2E-41/42 expanded target; E2E-07/11 remain mid-tool baseline |
+| Double interrupt first reason wins | 03 §14.6, 04.5 §8 | E2E-43 expanded target |
 | Retry only before visible output; retry-after; idle watchdog | 02 §4.6/§4.7 | Unit only - needs provider-fault injection |
 | Malformed streamed tool-arg JSON -> `{}` input | 02 §4.4 | Unit only - not forcible live |
 | `run_finished` always last; single-consumer stream | 03 §8 | E2E-10 (engine), E2E-01 (runtime handle) |
@@ -252,6 +278,7 @@ Phase 04.5 integration suite.
 | `max_tokens` truncation surfaced as `stop_reason` | 03 §14.14 | Not coverable on codex (wire omits `max_output_tokens`) |
 | Bare text never terminates; terminal tool is the only completion | 04 decision 20 | E2E-03 (tool turn + budget), E2E-09 (text turn parks instead of finishing) |
 | Auto-wait parks instead of burning calls; settle/steer wakes | 04 §15.3 | E2E-05 (notification wake), E2E-09 (steer wake, bounded `turns`), E2E-29/30 expanded target |
+| Interrupt wakes auto-wait with live background work | 04 §15.3, 04.5 §8 | E2E-45 expanded target |
 | Submission guard: running or undelivered session blocks submit | 04 §15.16 | E2E-06, E2E-34 expanded target, with live-model recovery |
 | Supervisor settle -> notify -> drain marks delivered -> evict | 04 §9 | E2E-05/06 baseline; E2E-29/34 expanded target |
 | Terminal-solo / batch-forbidden policy | 04 §15.1 | E2E-19 default terminal, E2E-20 nonterminal flag, E2E-21 names, E2E-22 explicit relaxation |
@@ -262,13 +289,20 @@ Phase 04.5 integration suite.
 | Notification key coalescing and drained tags | 04 §7 `NotificationInbox` | E2E-31 expanded target |
 | Notification/steer same-boundary priority | 04 §7, 03 §9 | E2E-32 expanded target |
 | Notification rendering escapes spoofed tags | 04 §7 `systemNotificationMessage` | E2E-33 expanded target |
-| Dispose latch + `caller_disposed` cascade | 04.5 §8, §13.7 | E2E-37 expanded target; §13 remains deterministic baseline |
+| Dispose latch + `caller_disposed` cascade | 04.5 §8, §13.7 | E2E-37/45/48 expanded target; §13 remains deterministic baseline |
+| Unknown and already-terminal background cancel recovery | 04 §15.9, 04 §9 | E2E-46/47 expanded target |
+| Recursive cancellation while descendant background work is running | 04.5 §8, 04 §9 | E2E-49/50/54 expanded target |
+| Child failure or child submission guard with descendant background work | 04 §15.16, 04 §9 | E2E-51/52 expanded target |
+| Grandchild settled-undelivered when parent branch is cancelled | 04 §9 | E2E-53 expanded target |
+| Late descendant registration after ancestor cancellation | 04 §9 dispose latch | E2E-55 expanded target |
+| Nested branch cancellation leaves sibling branch alive | 04.5 §2.1, 04 §9 | E2E-56/57 expanded target |
+| Fanout disposal and repeated cancel cycles leave no stale sessions | 04 §9, 04.5 §13.9 | E2E-58/59 expanded target |
 | Multi-subagent fanout and transcript reads | 04.5 §13.5/§13.9 | E2E-35/40 expanded target |
 | Subagent child `max_turns` failure recovery | 03 §14.11, 04.5 §5 | E2E-36 expanded target |
 | Mixed subagent cancel/complete statuses | 04.5 §8, 04 §15.9 | E2E-38 expanded target |
 | Subagent profile/kind boundary | 04.5 §4 | E2E-39 expanded target, runtime unit baseline |
 | Transcript flush gates reads; finished after flush | 04.5 §13.9 | E2E-05 (child read sees `run_finished`), E2E-01/04 (registry `finished` after flush, even on failure), E2E-40 expanded target |
-| `model_cancelled` vs `caller_disposed` reason recording | 04.5 §8 | E2E-06/09 (`model_cancelled`); E2E-37/38 expanded target covers both reasons together |
+| `model_cancelled` vs `caller_disposed` reason recording | 04.5 §8 | E2E-06/09 (`model_cancelled`); E2E-37/38/49/50 expanded target covers both reasons together |
 | Notification/steer user messages in the transcript file | 04.5 §6 | Known gap until the broadcaster phase gives the writer a live source; E2E-25/29/32/34 assert `outcome.llm` ordering and inbox delivery instead |
 | Codex token expiry mid-run / refresh-on-read | 04.5 §10 | Deferred seam, untested |
 
@@ -281,7 +315,10 @@ pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e   
 pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/tool-limits.e2e.ts
 pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/batch-policy.e2e.ts
 pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/hooks-notifications.e2e.ts
-pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/subagent-scale.e2e.ts
+pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/subagent-fanout.e2e.ts
+pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/cancellation.e2e.ts
+pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/recursive-cancel.e2e.ts
+pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e/cancellation-isolation.e2e.ts
 EOS_LLM_CLIENTS_PATH=/nonexistent pnpm exec vitest run --config vitest.e2e.config.ts packages/agent-runtime/e2e   # skip path
 ```
 
@@ -293,9 +330,17 @@ Baseline observed 2026-06-11 on this machine (`gpt-5.5`, medium effort):
   unit tests green (e2e files excluded from the unit runner),
 - `git diff --stat -- agent-core` empty.
 
+Expanded shard observed 2026-06-11 on this machine:
+
+- `subagent-fanout.e2e.ts`: 1 file, 4/4 passed, 46.87s wall clock,
+- `EOS_LLM_CLIENTS_PATH=/nonexistent` clean-skips the shard: 4 skipped in
+  320ms,
+- `pnpm run check` clean (282 unit tests), and `git diff --check` clean.
+
 Expanded-target verification still required:
 
-- implement E2E-12..40 in the files named by §4,
+- implement the remaining E2E-12..60 target rows not yet backed by matching
+  live tests,
 - run each expanded shard live and record file/test counts plus wall clock,
 - run the absent-credential skip path over the expanded suite,
 - run `pnpm run check` to prove unit/lint/typecheck remains unaffected,
@@ -318,9 +363,11 @@ The expanded Phase 04.6 coverage is accepted when:
   comments per file,
 - the suite passes live against the configured `codex_coding_plan` entry
   and clean-skips (with the loader's reason) when credentials are absent,
-- E2E-12..40 cover maximum tool-call pressure, max-turn exhaustion,
+- E2E-12..60 cover maximum tool-call pressure, max-turn exhaustion,
   batch calls, `isBatchExecutionForbidden`, hook verification,
-  notification triggers, and subagent scale as named in the matrix,
+  notification triggers, subagent scale, cancellation timing, recursive
+  cancellation with live descendant background sessions, and isolation
+  cleanup as named in the matrix,
 - no `src/` file in any package changed; `pnpm run check` is unaffected;
   the Rust `agent-core/` tree is byte-for-byte unchanged,
 - and the migration `index.md` separates the original 11-row completion

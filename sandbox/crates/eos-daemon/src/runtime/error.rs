@@ -50,7 +50,7 @@ pub enum DaemonError {
 
     /// The OCC publish path failed.
     #[error(transparent)]
-    Occ(#[from] eos_occ::OccError),
+    Commit(#[from] eos_layerstack::CommitError),
 
     /// The daemon-owned overlay pipeline / dispatch failed.
     #[error("overlay pipeline failure: {0}")]

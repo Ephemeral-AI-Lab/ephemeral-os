@@ -18,15 +18,15 @@
 //!
 //! Op handlers live with their feature modules — [`audit`], [`checkpoint`],
 //! [`control`], [`plugins`], and [`workspace`] — and [`dispatch::registry`] is
-//! the single table binding wire op names to those handlers. [`occ`] and
-//! [`overlay`] are the shared substrate seams over the sibling crates.
-//! Write-capable shared-workspace operations route through the same per-root
-//! OCC service cache and single writer used by the live dispatcher.
+//! the single table binding wire op names to those handlers. [`overlay`] is
+//! the shared substrate seam over the sibling crates. Write-capable
+//! shared-workspace operations route through `eos_layerstack::service`, the
+//! per-root single writer shared with the live dispatcher.
 //!
 //! # The single-writer / no-lock-across-await discipline (§5)
 //!
-//! The live OCC single-writer path is the dispatcher-owned per-root
-//! `OccService` cache, not a second daemon queue. The async server runs request
+//! The live commit single-writer path is `eos_layerstack::service`'s per-root
+//! writer cache, not a second daemon queue. The async server runs request
 //! dispatch in a spawned task and keeps synchronous mutex guards out of await
 //! points. Shutdown is a [`tokio_util::sync::CancellationToken`]; cancellation
 //! tears down the full child process group for spawned background work.
@@ -37,7 +37,6 @@ pub(crate) mod audit;
 pub(crate) mod checkpoint;
 pub(crate) mod control;
 pub(crate) mod dispatch;
-pub(crate) mod occ;
 pub(crate) mod overlay;
 pub(crate) mod plugins;
 pub(crate) mod runtime;

@@ -19,7 +19,7 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::occ::occ_service_cache_snapshot;
+use eos_layerstack::service::cache_snapshot;
 use crate::request_args::{binding_to_value, require_string, timings_to_value_map};
 
 pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
@@ -45,7 +45,7 @@ pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
         "workspace_bound": binding.is_some(),
         "workspace_root": binding.as_ref().map_or("", |binding| binding.workspace_root.as_str()),
         "base_root_hash": binding.as_ref().map_or("", |binding| binding.base_root_hash.as_str()),
-        "occ_runtime_service_cache": occ_service_cache_snapshot(),
+        "occ_runtime_service_cache": cache_snapshot(),
     }))
 }
 
