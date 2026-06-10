@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
+use crate::contract::ids::InvocationId;
 use crate::ephemeral::error::EphemeralWorkspaceError;
-use crate::ephemeral::types::{EphemeralRunDirs, InvocationId};
+use crate::ephemeral::types::EphemeralRunDirs;
 
 /// Allocates fresh writable directories for one operation.
 #[derive(Debug, Clone, PartialEq, Eq)]

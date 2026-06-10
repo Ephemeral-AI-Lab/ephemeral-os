@@ -1,4 +1,4 @@
-import type { Message } from "@eos/contracts";
+import type { JsonValue, Message } from "@eos/contracts";
 import type { StopReason, UsageSnapshot } from "@eos/llm-client";
 
 import type { DisplayedMessage } from "./conversation.js";
@@ -13,7 +13,14 @@ export interface AgentRunFailure {
 
 /** The status arm of `AgentRunOutcome`; assembled at each loop exit. */
 export type AgentRunStatus =
-  | { status: "completed"; final_message: Message; stop_reason?: StopReason }
+  | {
+      status: "completed";
+      /** The assistant message that carried the terminal tool call. */
+      final_message: Message;
+      stop_reason?: StopReason;
+      /** The terminal tool result's structured content. */
+      submission?: JsonValue;
+    }
   | { status: "cancelled"; reason: string }
   | { status: "failed"; failure: AgentRunFailure };
 
@@ -60,6 +67,7 @@ export class RunHandle implements AgentRunHandle {
   readonly #stream = new EventStream();
   readonly #controller = new AbortController();
   #steers: Message[] = [];
+  readonly #steerWakers = new Set<() => void>();
   #finished = false;
   #cancelReason: string | undefined;
   #resolveOutcome!: (outcome: AgentRunOutcome) => void;
@@ -92,6 +100,7 @@ export class RunHandle implements AgentRunHandle {
     }
     if (this.#finished) return false;
     this.#steers.push(message);
+    for (const wake of [...this.#steerWakers]) wake();
     return true;
   }
 
@@ -110,6 +119,24 @@ export class RunHandle implements AgentRunHandle {
 
   hasPendingSteers(): boolean {
     return this.#steers.length > 0;
+  }
+
+  /**
+   * Level-triggered wait backing the loop's auto-wait race: resolves
+   * immediately if steers are pending, on the next arrival, or on abort -
+   * so a user can redirect or interrupt a run parked on slow sessions.
+   */
+  waitForSteer(signal: AbortSignal): Promise<void> {
+    if (this.#steers.length > 0 || signal.aborted) return Promise.resolve();
+    return new Promise((resolve) => {
+      const wake = (): void => {
+        this.#steerWakers.delete(wake);
+        signal.removeEventListener("abort", wake);
+        resolve();
+      };
+      this.#steerWakers.add(wake);
+      signal.addEventListener("abort", wake);
+    });
   }
 
   readonly emit = (event: AgentEvent): void => {

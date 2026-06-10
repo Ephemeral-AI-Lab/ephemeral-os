@@ -100,7 +100,30 @@ importers:
 
   packages/runtime: {}
 
-  packages/testkit: {}
+  packages/testkit:
+    dependencies:
+      '@eos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@eos/tool':
+        specifier: workspace:*
+        version: link:../tool
+
+  packages/tool:
+    dependencies:
+      '@eos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@eos/engine':
+        specifier: workspace:*
+        version: link:../engine
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@eos/testkit':
+        specifier: workspace:*
+        version: link:../testkit
 
 packages:
 

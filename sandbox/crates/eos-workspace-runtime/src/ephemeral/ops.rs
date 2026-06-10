@@ -52,5 +52,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "../../tests/ephemeral/ops_unit.rs"]
 mod tests;

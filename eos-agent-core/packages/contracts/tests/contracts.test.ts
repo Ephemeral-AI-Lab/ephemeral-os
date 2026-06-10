@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AgentKindSchema,
   ContentBlockSchema,
   DEFAULT_MAX_TOKENS,
   MessageRoleSchema,
   MessageSchema,
+  ToolCallResultSchema,
   ToolSpecSchema,
   ToolUseIdSchema,
+  agentRunIdFrom,
   assistantText,
   fromUserText,
+  mintAgentRunId,
   reasoningText,
+  sandboxIdFrom,
   toolUseIdFrom,
   toolUses,
   type Message,
@@ -107,6 +112,58 @@ describe("tool use ids", () => {
     expect(toolUseIdFrom("toolu_01")).toBe("toolu_01");
     expect(() => toolUseIdFrom("")).toThrow();
     expect(ToolUseIdSchema.safeParse("").success).toBe(false);
+  });
+});
+
+describe("agent run and sandbox ids", () => {
+  it("mints dashed uuidv4 run ids and adopts existing ones", () => {
+    const minted = mintAgentRunId();
+    expect(minted).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(agentRunIdFrom(minted)).toBe(minted);
+    expect(() => agentRunIdFrom("")).toThrow();
+  });
+
+  it("adopts sandbox ids without offering a mint", () => {
+    expect(sandboxIdFrom("sb_1")).toBe("sb_1");
+    expect(() => sandboxIdFrom("")).toThrow();
+  });
+});
+
+describe("agent kinds", () => {
+  it("accepts the five kinds and rejects strangers", () => {
+    for (const kind of ["main", "planner", "worker", "advisor", "subagent"]) {
+      expect(AgentKindSchema.safeParse(kind).success, kind).toBe(true);
+    }
+    expect(AgentKindSchema.safeParse("root").success).toBe(false);
+  });
+});
+
+describe("tool call results", () => {
+  it("round-trips structured content and keeps is_error required", () => {
+    const result = ToolCallResultSchema.parse({
+      tool_use_id: "toolu_1",
+      content: { summary: "done", payload: { ok: true } },
+      is_error: false,
+      is_terminal: true,
+      tool_start_time: 1,
+      tool_end_time: 2,
+      metadata: { hook_warnings: ["w"] },
+    });
+    expect(ToolCallResultSchema.parse(JSON.parse(JSON.stringify(result)))).toEqual(
+      result,
+    );
+    expect(
+      ToolCallResultSchema.safeParse({
+        tool_use_id: "toolu_1",
+        content: "x",
+        is_terminal: false,
+        tool_start_time: 1,
+        tool_end_time: 2,
+      }).success,
+      "is_error has no default; the executor must normalize it",
+    ).toBe(false);
   });
 });
 

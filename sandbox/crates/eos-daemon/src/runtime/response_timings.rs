@@ -292,5 +292,5 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
 }
 
 #[cfg(test)]
-#[path = "../../tests/response_timings/mod.rs"]
+#[path = "../../tests/unit/response_timings/mod.rs"]
 mod tests;

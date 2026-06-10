@@ -6,7 +6,7 @@
 //! [`crate::wire::ErrorKind`]. There is NO `ping` op — liveness is
 //! `api.v1.heartbeat`, readiness is `api.runtime.ready`.
 //!
-//! Built-in handlers are described in [`crate::ops::registry`]. Dynamic plugin
+//! Built-in handlers are described in [`crate::dispatch::registry`]. Dynamic plugin
 //! handlers are intentionally deferred: after a built-in miss, the dispatcher
 //! asks the plugin service registry whether the op was installed at runtime.
 
@@ -24,7 +24,7 @@ use eos_cas::{LayerChange, LayerPath};
 use eos_layerstack::LayerStack;
 
 #[cfg(test)]
-use crate::adapters::occ::{
+use crate::occ::{
     base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
     LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
 };
@@ -35,8 +35,9 @@ use crate::config::{AuditConfig, FileLimitsConfig};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 #[cfg(test)]
-use crate::ops::audit::{op_audit_pull, op_audit_snapshot};
-use crate::ops::{plugins, registry::BUILTIN_OPS};
+use crate::audit::ops::{op_audit_pull, op_audit_snapshot};
+use crate::plugins;
+use super::registry::BUILTIN_OPS;
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
@@ -322,5 +323,5 @@ pub(crate) fn daemon_uptime_s() -> f64 {
 }
 
 #[cfg(test)]
-#[path = "../../tests/dispatcher/mod.rs"]
+#[path = "../../tests/unit/dispatcher/mod.rs"]
 mod tests;

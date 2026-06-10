@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
+use crate::contract::{CallerId, WorkspaceHandleId};
 use crate::isolated::audit::AuditSink;
 use crate::isolated::error::IsolatedError;
 use serde_json::{json, Value};
@@ -10,10 +11,7 @@ use super::resources::{
     close_handle_fds, directory_file_bytes, monotonic_seconds, mountinfo_reference_count,
     next_handle_id,
 };
-use super::{
-    CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
-    WorkspaceHandleId,
-};
+use super::{IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle};
 
 impl<S, R, A> IsolatedSession<S, R, A>
 where

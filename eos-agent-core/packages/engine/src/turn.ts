@@ -18,7 +18,8 @@ export interface TurnConfig {
   systemPrompt?: string;
   maxTokens: number;
   reasoningEffort?: ReasoningEffort;
-  toolSpecs: ToolSpec[];
+  /** Evaluated per turn: the executor filters specs by workspace mode. */
+  toolSpecs: () => ToolSpec[];
 }
 
 /** One successfully completed assistant turn. */
@@ -66,7 +67,7 @@ export async function runAssistantTurn(
     messages: [...conversation.llmMessages()],
     system_prompt: cfg.systemPrompt,
     max_tokens: cfg.maxTokens,
-    tools: cfg.toolSpecs,
+    tools: cfg.toolSpecs(),
     reasoning_effort: cfg.reasoningEffort,
   };
   let text = "";

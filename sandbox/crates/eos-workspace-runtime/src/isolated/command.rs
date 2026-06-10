@@ -294,5 +294,4 @@ fn namespace_fd(map: &HashMap<String, i32>, name: &str) -> Value {
 }
 
 #[cfg(test)]
-#[path = "../../tests/isolated/command_unit.rs"]
 mod tests;

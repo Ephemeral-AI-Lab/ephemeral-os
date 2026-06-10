@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use crate::contract::ids::{CallerId, InvocationId};
+use crate::contract::ids::{CallerId, InvocationId};
 use crate::contract::SnapshotLease;
 
 /// Root of the LayerStack workspace whose snapshot is used by the operation.

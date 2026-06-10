@@ -231,7 +231,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-ns-child"
+name = "eos-namespace"
 version = "0.1.0"
 dependencies = [
  "eos-cas",
@@ -326,7 +326,7 @@ dependencies = [
  "eos-cas",
  "eos-config",
  "eos-daemon",
- "eos-ns-child",
+ "eos-namespace",
  "eos-overlay",
  "serde_json",
  "tokio",

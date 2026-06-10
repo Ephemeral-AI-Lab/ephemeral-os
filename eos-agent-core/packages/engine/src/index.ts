@@ -2,26 +2,36 @@ import { DEFAULT_MAX_TOKENS, type Message } from "@eos/contracts";
 import type { LlmClient, ReasoningEffort } from "@eos/llm-client";
 
 import { runAgentLoop } from "./agent-loop.js";
+import type { BackgroundSupervisor } from "./background/supervisor.js";
 import { Conversation } from "./conversation.js";
+import type { NotificationInbox } from "./notification-inbox.js";
 import { RunHandle, type AgentRunHandle } from "./run-handle.js";
-import type { ToolRegistry } from "./tools.js";
+import type { ToolExecutor } from "./tool-executor.js";
 
+export type {
+  SessionHandle,
+  SessionOutcome,
+  SessionRef,
+  SessionRow,
+  SessionStatus,
+} from "./background/session.js";
+export { BackgroundSupervisor } from "./background/supervisor.js";
 export type {
   DisplayedMessage,
   PartialReason,
+  ToolResultBlock,
 } from "./conversation.js";
 export type { AgentEvent } from "./events.js";
+export {
+  NotificationInbox,
+  systemNotificationMessage,
+} from "./notification-inbox.js";
 export type {
   AgentRunFailure,
   AgentRunHandle,
   AgentRunOutcome,
 } from "./run-handle.js";
-export type {
-  ToolContext,
-  ToolDefinition,
-  ToolOutput,
-  ToolRegistry,
-} from "./tools.js";
+export type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 
 /** Loop-turn budget when the caller does not pass `maxTurns`. */
 const DEFAULT_MAX_TURNS = 32;
@@ -30,8 +40,8 @@ const DEFAULT_MAX_TURNS = 32;
 export interface StartAgentRunInput {
   /** Already-configured provider client (DI boundary). */
   llmClient: LlmClient;
-  /** Tools offered to the model (DI boundary); may be empty. */
-  tools: ToolRegistry;
+  /** The one injected tool port (DI boundary); specs re-read per turn. */
+  tools: ToolExecutor;
   model: string;
   /** A request field, never a message. */
   systemPrompt?: string;
@@ -44,6 +54,17 @@ export interface StartAgentRunInput {
   maxTurns?: number;
   /** Optional parent scope; an external abort ≡ `interrupt()`. */
   signal?: AbortSignal;
+  /**
+   * Drained at loop boundaries below steers. Pass the same instance the
+   * publishers (supervisor, hook pipeline) hold.
+   */
+  notifications?: NotificationInbox;
+  /**
+   * Session lifecycle = loop lifecycle: backs the auto-wait gate and is
+   * disposed on every finish. A supervisor implies `notifications` (it
+   * publishes settlements there).
+   */
+  background?: BackgroundSupervisor;
 }
 
 /**
@@ -61,13 +82,15 @@ export function startAgentRun(input: StartAgentRunInput): AgentRunHandle {
     conversation: new Conversation(input.initialMessages),
     tools: input.tools,
     maxTurns: input.maxTurns ?? DEFAULT_MAX_TURNS,
+    notifications: input.notifications,
+    background: input.background,
     turnConfig: {
       client: input.llmClient,
       model: input.model,
       systemPrompt: input.systemPrompt,
       maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
       reasoningEffort: input.reasoningEffort,
-      toolSpecs: [...input.tools.values()].map((tool) => tool.spec),
+      toolSpecs: () => input.tools.specs(),
     },
   });
   return handle;

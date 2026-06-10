@@ -299,5 +299,4 @@ const NFTA_BITWISE_MASK: u16 = 4;
 const NFTA_BITWISE_XOR: u16 = 5;
 
 #[cfg(test)]
-#[path = "../../../../tests/isolated/network_netfilter_unit.rs"]
 mod tests;

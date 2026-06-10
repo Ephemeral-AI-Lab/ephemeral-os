@@ -46,5 +46,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "../../tests/command_session/wait_unit.rs"]
 mod tests;

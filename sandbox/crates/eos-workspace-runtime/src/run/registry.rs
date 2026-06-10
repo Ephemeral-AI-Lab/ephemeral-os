@@ -256,5 +256,4 @@ pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 #[cfg(test)]
-#[path = "../../tests/run/registry_unit.rs"]
 mod tests;

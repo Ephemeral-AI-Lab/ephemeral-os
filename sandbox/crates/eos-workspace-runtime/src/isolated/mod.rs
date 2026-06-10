@@ -44,7 +44,4 @@ pub use command::{
 pub use error::IsolatedError;
 pub use network::{BRIDGE_PREFIX_LEN, GATEWAY};
 pub use ops::IsolatedWorkspaceOps;
-pub use session::{
-    CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
-    WorkspaceHandleId,
-};
+pub use session::{IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle};

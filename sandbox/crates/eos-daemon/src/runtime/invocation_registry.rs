@@ -243,5 +243,5 @@ fn terminate_process_group(process_group_id: Option<i32>) {
 }
 
 #[cfg(test)]
-#[path = "../../tests/invocation_registry/mod.rs"]
+#[path = "../../tests/unit/invocation_registry/mod.rs"]
 mod tests;

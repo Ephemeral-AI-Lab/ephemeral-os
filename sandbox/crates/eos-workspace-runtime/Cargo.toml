@@ -24,13 +24,5 @@ netlink-sys.workspace = true
 rtnetlink.workspace = true
 tokio.workspace = true
 
-[[test]]
-name = "command_session_output"
-path = "tests/command_session/output.rs"
-
-[[test]]
-name = "isolated_session"
-path = "tests/isolated/session.rs"
-
 [lints]
 workspace = true

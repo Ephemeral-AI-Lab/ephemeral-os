@@ -34,7 +34,7 @@ function setup(turns: ScriptedTurn[]): {
     model: "mock-model",
     systemPrompt: "be terse",
     maxTokens: 256,
-    toolSpecs: [{ name: "echo", description: "echo", input_schema: {} }],
+    toolSpecs: () => [{ name: "echo", description: "echo", input_schema: {} }],
   };
   const conversation = new Conversation([userText("hi")]);
   const emitted: AgentEvent[] = [];
@@ -63,7 +63,7 @@ describe("runAssistantTurn", () => {
       messages: [userText("hi")],
       system_prompt: "be terse",
       max_tokens: 256,
-      tools: cfg.toolSpecs,
+      tools: cfg.toolSpecs(),
       reasoning_effort: undefined,
     });
   });

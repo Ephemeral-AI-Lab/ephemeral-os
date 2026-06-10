@@ -10,16 +10,17 @@
 use std::path::PathBuf;
 
 use crate::contract::{
-    u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest,
-    PrepareCommandRequest, PreparedCommandWorkspace, SnapshotLease, WorkspaceApiError,
-    WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    u64_to_f64_saturating, usize_to_f64_saturating, CallerId, ChangedPathKinds,
+    FinalizeCommandRequest, InvocationId, PrepareCommandRequest, PreparedCommandWorkspace,
+    SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode,
+    WorkspaceTimings,
 };
 use serde_json::{json, Value};
 
 use crate::ephemeral::{
-    finalize_publishable_workspace, path_changes_to_wire, CallerId, EphemeralDirAllocator,
-    EphemeralRunDirs, EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, InvocationId,
-    LayerStackRoot, PublishOutcome, TreeResourceStats, WorkspacePublisherPort,
+    finalize_publishable_workspace, path_changes_to_wire, EphemeralDirAllocator, EphemeralRunDirs,
+    EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, LayerStackRoot, PublishOutcome,
+    TreeResourceStats, WorkspacePublisherPort,
 };
 
 /// Daemon-supplied facts needed to prepare a publishable command workspace.
@@ -327,5 +328,4 @@ fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64)
 }
 
 #[cfg(test)]
-#[path = "../../tests/ephemeral/command_unit.rs"]
 mod tests;

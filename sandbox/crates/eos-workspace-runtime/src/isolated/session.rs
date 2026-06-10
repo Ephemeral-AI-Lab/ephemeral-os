@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::contract::{CallerId, WorkspaceHandleId};
 use crate::isolated::audit::AuditSink;
 use crate::isolated::caps::ResourceCaps;
 use crate::isolated::error::IsolatedError;
@@ -32,10 +33,9 @@ mod persistence;
 mod ports;
 mod resources;
 #[cfg(test)]
-#[path = "../../tests/isolated/session_unit.rs"]
 mod tests;
 
-pub use handle::{CallerId, WorkspaceHandle, WorkspaceHandleId};
+pub use handle::WorkspaceHandle;
 pub use ports::{LayerStackSnapshotPort, NamespaceRuntimePort};
 
 /// Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, GC.

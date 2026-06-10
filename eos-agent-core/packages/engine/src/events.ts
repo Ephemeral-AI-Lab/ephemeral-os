@@ -28,8 +28,14 @@ export type AgentEvent =
       type: "tool_execution_completed";
       tool_use_id: ToolUseId;
       name: string;
+      /** String projection of the result content. */
       output: string;
       is_error: boolean;
+      is_terminal: boolean;
+      /** Epoch ms; brackets `execute()` only, never hook time. */
+      tool_start_time: number;
+      tool_end_time: number;
+      metadata?: JsonObject;
     }
   | {
       /** Terminal event; the iterable completes after it. */

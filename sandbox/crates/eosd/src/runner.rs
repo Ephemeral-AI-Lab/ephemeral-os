@@ -9,9 +9,10 @@ use anyhow::{anyhow, Context, Result};
 /// Execute one tool call inside a namespace (fresh-ns or setns), reading the
 /// resolved `RunRequest` payload and emitting the `RunResult` JSON.
 ///
-/// This is a thin call into `eos-ns-child`'s runner module: read the request payload from stdin
-/// or `--request <path>`, construct the overlay mount adapter, call `run`, and
-/// write compact JSON to stdout or `--output <path>`.
+/// This is a thin call into `eos-namespace`'s runner module: read the request
+/// payload from stdin or `--request <path>`, load the runner config, dispatch
+/// the selected [`RunnerCliMode`], and write the compact `RunResult` JSON to
+/// stdout or `--output <path>`.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     let request_json = read_payload(config.request_path.as_ref())?;
@@ -19,78 +20,80 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
-    if config.remount_overlay {
-        remount_overlay_from_request(&request).context("ns-runner remount overlay failed")?;
-        let result = eos_cas::RunResult {
+    let result = match config.mode {
+        RunnerCliMode::RemountOverlay => {
+            remount_overlay_from_request(&request).context("ns-runner remount overlay failed")?;
+            ok_result()
+        }
+        RunnerCliMode::MountOverlay => {
+            eos_namespace::runner::setns::setns_overlay_mount(&request, &runner_config)
+                .context("ns-runner setns overlay mount failed")?;
+            ok_result()
+        }
+        RunnerCliMode::ConfigureDns => eos_cas::RunResult {
             exit_code: 0,
-            tool_result: serde_json::json!({"success": true, "status": "ok"}),
-        };
-        let output =
-            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-        write_payload(&mut output_target, &output)?;
-        return Ok(());
-    }
-    if config.mount_overlay {
-        eos_ns_child::runner::setns::setns_overlay_mount(&request, &runner_config)
-            .context("ns-runner setns overlay mount failed")?;
-        let result = eos_cas::RunResult {
-            exit_code: 0,
-            tool_result: serde_json::json!({"success": true, "status": "ok"}),
-        };
-        let output =
-            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-        write_payload(&mut output_target, &output)?;
-        return Ok(());
-    }
-    if config.configure_dns {
-        let tool_result = eos_ns_child::runner::setns::configure_dns(&request)
-            .context("ns-runner configure dns failed")?;
-        let result = eos_cas::RunResult {
-            exit_code: 0,
-            tool_result,
-        };
-        let output =
-            serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-        write_payload(&mut output_target, &output)?;
-        return Ok(());
-    }
-    let result = eos_ns_child::runner::run(&request, &runner_config).context("ns-runner failed")?;
+            tool_result: eos_namespace::runner::setns::configure_dns(&request)
+                .context("ns-runner configure dns failed")?,
+        },
+        RunnerCliMode::Run => {
+            eos_namespace::runner::run(&request, &runner_config).context("ns-runner failed")?
+        }
+    };
     let output = serde_json::to_vec(&result).context("failed to encode ns-runner result JSON")?;
-    write_payload(&mut output_target, &output)?;
-    Ok(())
+    write_payload(&mut output_target, &output)
 }
 
-fn load_runner_config() -> Result<eos_ns_child::runner::config::RunnerConfig> {
+fn ok_result() -> eos_cas::RunResult {
+    eos_cas::RunResult {
+        exit_code: 0,
+        tool_result: serde_json::json!({"success": true, "status": "ok"}),
+    }
+}
+
+fn load_runner_config() -> Result<eos_namespace::runner::config::RunnerConfig> {
     let config = eos_config::load_prd()
         .context("load sandbox/config/prd.yml")?
-        .section::<eos_ns_child::runner::config::RunnerConfig>("runner")
+        .section::<eos_namespace::runner::config::RunnerConfig>("runner")
         .context("deserialize runner config section")?;
     config.validate().context("validate runner config")?;
     Ok(config)
 }
 
+/// Which ns-runner operation the CLI flags selected; default is a tool call.
+enum RunnerCliMode {
+    Run,
+    MountOverlay,
+    RemountOverlay,
+    ConfigureDns,
+}
+
 struct RunnerCliConfig {
     request_path: Option<PathBuf>,
     output_path: Option<PathBuf>,
-    mount_overlay: bool,
-    remount_overlay: bool,
-    configure_dns: bool,
+    mode: RunnerCliMode,
 }
 
 impl RunnerCliConfig {
     fn parse(args: std::env::Args) -> Result<Self> {
         let mut request_path = None;
         let mut output_path = None;
-        let mut mount_overlay = false;
-        let mut remount_overlay = false;
-        let mut configure_dns = false;
+        let mut mode = None;
+        let mut set_mode = |selected: RunnerCliMode| {
+            if mode.is_some() {
+                return Err(anyhow!(
+                    "ns-runner accepts only one of --mount-overlay, --remount-overlay, or --configure-dns"
+                ));
+            }
+            mode = Some(selected);
+            Ok(())
+        };
         let mut positional = Vec::new();
         let mut args = args;
         while let Some(arg) = args.next() {
             match arg.as_str() {
-                "--mount-overlay" => mount_overlay = true,
-                "--remount-overlay" => remount_overlay = true,
-                "--configure-dns" => configure_dns = true,
+                "--mount-overlay" => set_mode(RunnerCliMode::MountOverlay)?,
+                "--remount-overlay" => set_mode(RunnerCliMode::RemountOverlay)?,
+                "--configure-dns" => set_mode(RunnerCliMode::ConfigureDns)?,
                 "--request" => {
                     request_path = Some(PathBuf::from(
                         args.next()
@@ -122,19 +125,10 @@ impl RunnerCliConfig {
                 "ns-runner accepts at most one positional request path"
             ));
         }
-        let special_modes =
-            u8::from(mount_overlay) + u8::from(remount_overlay) + u8::from(configure_dns);
-        if special_modes > 1 {
-            return Err(anyhow!(
-                "ns-runner accepts only one of --mount-overlay, --remount-overlay, or --configure-dns"
-            ));
-        }
         Ok(Self {
             request_path,
             output_path,
-            mount_overlay,
-            remount_overlay,
-            configure_dns,
+            mode: mode.unwrap_or(RunnerCliMode::Run),
         })
     }
 }

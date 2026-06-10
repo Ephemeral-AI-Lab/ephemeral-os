@@ -348,5 +348,5 @@ fn snapshot_block(state: &RingState, boot_epoch_id: i64) -> Value {
 }
 
 #[cfg(test)]
-#[path = "../../tests/audit_buffer/mod.rs"]
+#[path = "../../tests/unit/audit_buffer/mod.rs"]
 mod tests;

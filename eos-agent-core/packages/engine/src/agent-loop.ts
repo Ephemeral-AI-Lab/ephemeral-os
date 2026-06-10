@@ -1,19 +1,24 @@
-import { toolUses } from "@eos/contracts";
+import { toolUses, type ToolCallResult } from "@eos/contracts";
 import { ProviderError, type UsageSnapshot } from "@eos/llm-client";
 
-import type { Conversation } from "./conversation.js";
+import type { BackgroundSupervisor } from "./background/supervisor.js";
+import type { Conversation, ToolResultBlock } from "./conversation.js";
+import type { NotificationInbox } from "./notification-inbox.js";
 import type { AgentRunFailure, AgentRunStatus, RunHandle } from "./run-handle.js";
-import { runToolBatch } from "./tool-runner.js";
-import type { ToolRegistry } from "./tools.js";
+import type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 import { addUsage, runAssistantTurn, type TurnConfig } from "./turn.js";
 
 /** Everything one run's loop needs; assembled by `startAgentRun`. */
 export interface AgentLoopContext {
   handle: RunHandle;
   conversation: Conversation;
-  tools: ToolRegistry;
+  tools: ToolExecutor;
   turnConfig: TurnConfig;
   maxTurns: number;
+  /** Drained at the loop boundary, one priority below steers. */
+  notifications?: NotificationInbox;
+  /** Auto-wait gate and dispose-on-finish; sessions are loop lifecycle. */
+  background?: BackgroundSupervisor;
 }
 
 /**
@@ -21,6 +26,10 @@ export interface AgentLoopContext {
  * tool dispatch live in their own modules. Never throws: every exit
  * classifies into exactly one `finish`, committed in the same synchronous
  * block as its decision so a late steer is never accepted-but-dropped.
+ *
+ * Run completion is exclusively a terminal tool result; bare text never
+ * terminates (`maxTurns` backstops spin), and the engine appends no
+ * reminder on a text turn — that nudge is a future notification rule.
  */
 export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
   const { handle, conversation } = ctx;
@@ -46,7 +55,11 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
         finish({ status: "failed", failure: { kind: "max_turns", message } });
         return;
       }
+      // Steers first: user input outranks system notices.
       for (const steered of handle.drainSteers()) conversation.appendUser(steered);
+      for (const note of ctx.notifications?.drain() ?? []) {
+        conversation.appendUser(note);
+      }
       handle.emit({ type: "turn_started", turn: turns + 1 });
       const turn = await runAssistantTurn(ctx.turnConfig, conversation, handle.signal, handle.emit);
       conversation.appendAssistant(turn.message);
@@ -54,12 +67,32 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       usage = addUsage(usage, turn.usage);
       const calls = toolUses(turn.message);
       if (calls.length === 0) {
-        if (handle.hasPendingSteers()) continue;
-        finish({ status: "completed", final_message: turn.message, stop_reason: turn.stop_reason });
+        // Auto-wait: a no-tool-use turn with live sessions parks on the
+        // next notification OR steer instead of burning provider calls.
+        // Waiting consumes no turn; an abort wakes the race and the
+        // loop-top check classifies it.
+        if (!handle.hasPendingSteers() && (ctx.background?.liveCount() ?? 0) > 0) {
+          await waitForWake(ctx);
+        }
+        continue;
+      }
+      const results = normalizeBatch(
+        calls,
+        await ctx.tools.executeBatch(calls, handle.signal, handle.emit),
+      );
+      conversation.appendToolResults(results.map(projectToolResult));
+      const terminal = results.find((result) => result.is_terminal);
+      if (terminal) {
+        // The submission outranks late redirection: steers accepted
+        // mid-batch die with the run.
+        finish({
+          status: "completed",
+          final_message: turn.message,
+          stop_reason: turn.stop_reason,
+          submission: terminal.content,
+        });
         return;
       }
-      const results = await runToolBatch(calls, ctx.tools, handle.signal, handle.emit);
-      conversation.appendToolResults(results);
       if (isAborted(handle.signal)) {
         finish({ status: "cancelled", reason: handle.cancelReason });
         return;
@@ -72,7 +105,55 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       const failure: AgentRunFailure = { kind: "internal", message: "agent loop exited without finishing" };
       finish({ status: "failed", failure });
     }
+    // Sessions are loop lifecycle: every finish tears them down.
+    // Fire-and-forget — run_finished never waits on teardown.
+    void ctx.background?.dispose("run finished");
   }
+}
+
+/** Race the inbox against the steer queue; both waits resolve on abort. */
+async function waitForWake(ctx: AgentLoopContext): Promise<void> {
+  const waits = [ctx.handle.waitForSteer(ctx.handle.signal)];
+  if (ctx.notifications) waits.push(ctx.notifications.waitForNext(ctx.handle.signal));
+  await Promise.race(waits);
+}
+
+/**
+ * The engine-owned invariant (Phase 03 §7): every `tool_use_id` is
+ * answered, in `tool_use` order, regardless of executor behavior. A
+ * missing result becomes a synthetic error; no event is emitted for it.
+ */
+function normalizeBatch(
+  calls: ToolUseBlock[],
+  results: ToolCallResult[],
+): ToolCallResult[] {
+  const byId = new Map(results.map((result) => [result.tool_use_id, result]));
+  return calls.map((call) => {
+    const settled = byId.get(call.tool_use_id);
+    if (settled) return settled;
+    const at = Date.now();
+    return {
+      tool_use_id: call.tool_use_id,
+      content: "interrupted",
+      is_error: true,
+      is_terminal: false,
+      tool_start_time: at,
+      tool_end_time: at,
+    };
+  });
+}
+
+/** The ONE serialization point: non-string content is stringified here. */
+function projectToolResult(result: ToolCallResult): ToolResultBlock {
+  return {
+    type: "tool_result",
+    tool_use_id: result.tool_use_id,
+    content:
+      typeof result.content === "string"
+        ? result.content
+        : JSON.stringify(result.content),
+    is_error: result.is_error,
+  };
 }
 
 function classifyLoopError(error: unknown, handle: RunHandle): AgentRunStatus {

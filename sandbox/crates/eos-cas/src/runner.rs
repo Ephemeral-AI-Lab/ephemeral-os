@@ -1,8 +1,8 @@
 //! Owned request/result types for the namespace runner.
 //!
-//! These model the JSON payloads the Rust helpers exchange over stdin/stdout
-//! and the namespace request/result files — the tool-call payload, the fresh-ns
-//! request file, and the setns stdin payload. The verb-specific `args`
+//! These model the JSON payloads the daemon and the ns-runner child exchange
+//! over stdin/stdout and the namespace request/result files — the tool-call
+//! payload, the fresh-ns request file, and the setns stdin payload. The verb-specific `args`
 //! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim
 //! to the in-namespace tool primitive); the typed per-verb args/results are the
 //! daemon's concern (decoded into `eos-workspace-runtime` contract and
@@ -10,7 +10,7 @@
 //!
 //! These DTOs live in `eos-cas` (the shared in-box model crate) so the tokio
 //! daemon, which builds requests and parses results, and the single-threaded
-//! `eos-ns-child` runner, which executes them, share one contract without the
+//! `eos-namespace` runner, which executes them, share one contract without the
 //! daemon depending on the syscall crate.
 
 use std::os::unix::io::RawFd;

@@ -6,7 +6,7 @@
 //! by the 18 golden cases in `contract/fixtures/cas/cases.json` (AV-1c
 //! byte-identity bar) per `docs/contract/02-cas-byte-identity.md`. It also owns
 //! the daemon↔ns-runner wire DTOs ([`runner`]), shared by the tokio daemon and
-//! the single-threaded `eos-ns-child` so neither depends on the other. It
+//! the single-threaded `eos-namespace` so neither depends on the other. It
 //! depends on nothing internal, and host-side crates never depend on it.
 #![forbid(unsafe_code)]
 

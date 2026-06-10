@@ -24,7 +24,7 @@ Priority order when rules conflict: **correctness (byte-identity) > the contract
   future port so a reader can jump from the Rust deferred edge to the exact Python source it will
   replace. Use `todo!("PORT: ...")` only for an unwired future port scaffold, never in an
   implemented Phase 3/3T/3.5 runtime path.
-- **`#![forbid(unsafe_code)]` in every crate that has no syscalls.** Only `eos-ns-child`
+- **`#![forbid(unsafe_code)]` in every crate that has no syscalls.** Only `eos-namespace`
   and `eos-overlay` may contain `unsafe` (raw mount/ns syscalls). Those crates use
   `#![deny(unsafe_op_in_unsafe_fn)]` and **every** `unsafe` block carries a `// SAFETY: …` comment
   (`doc-safety-section`, `lint-unsafe-doc`); the workspace denies
@@ -130,9 +130,9 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   - `eos-occ` → overlay, protocol  (daemon injects layerstack transaction and route providers)
   - `eos-isolated` → overlay  — **NOT occ**; daemon injects layer-stack ports and spawns holder/runner children
   - `eos-plugin` → protocol  — **NOT occ/overlay/layerstack**
-  - `eos-ns-child` → overlay, protocol, config  (the two single-threaded ns children: `holder` + `runner`; the daemon↔runner wire DTOs live in protocol so the daemon never depends on this syscall crate)
+  - `eos-namespace` → overlay, protocol, config  (the two single-threaded namespace children: `holder` + `runner`; the daemon↔runner wire DTOs live in protocol so the daemon never depends on this syscall crate)
   - `eos-daemon` → protocol, layerstack, overlay, occ, isolated, plugin; implements + injects the inverted port traits; primary tokio control plane
-  - `eosd` → daemon, ns-child, overlay, protocol
+  - `eosd` → daemon, namespace, overlay, protocol
   - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates define only
   the narrow ports they actually consume (for example `OccRouteProvider` in `eos-occ` and
@@ -145,7 +145,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 ## 5. Async and syscall boundaries — `async-*`
 
 - `tokio` is justified in `eos-daemon` and `eosd`; `eos-isolated` has Linux-target `tokio`
-  only for rtnetlink/netlink helpers. `eos-ns-child` (both the holder and runner children)
+  only for rtnetlink/netlink helpers. `eos-namespace` (both the holder and runner children)
   remains **single-threaded, syscall-only, NO tokio** (kernel requires a single-threaded caller
   for `unshare(CLONE_NEWUSER)` / `setns` into a userns — this is a correctness requirement, not a
   style choice).

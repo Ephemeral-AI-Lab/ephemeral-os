@@ -2,7 +2,7 @@
 //!
 //! This is the intermediate host layer that sits *between* the daemon control
 //! plane and the storage leaves (`eos-layerstack`, `eos-overlay`):
-//! [`adapters`](crate::adapters) → this module → leaves. It owns the parts of
+//! [`ops`] → this module → leaves. It owns the parts of
 //! `commit_to_git` that are pure host glue — pathspec policy,
 //! overlay-or-projection worktree preparation, and the git staging/commit
 //! subprocess pipeline — none of which belong in the OCC single writer or the
@@ -16,6 +16,7 @@
 //! `Value` shape. The adapter re-maps the outcome to the protocol response.
 
 mod commit;
+pub(crate) mod ops;
 
 use std::collections::BTreeMap;
 use std::path::Path;
