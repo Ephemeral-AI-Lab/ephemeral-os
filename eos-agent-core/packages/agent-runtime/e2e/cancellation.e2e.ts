@@ -488,6 +488,7 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
     "treats a cancel after the child settled and was delivered as a recoverable no-op (E2E-47)",
     { timeout: 300_000 },
     async () => {
+      const wait = waitTool();
       const { runtime, dataDir } = runtimeFixture({
         llmClientsPath: llmClientsPath(),
         profiles: [
@@ -495,7 +496,7 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
             name: "courier",
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
-            allowed: ["run_subagent", "cancel_background_session"],
+            allowed: ["run_subagent", "wait", "cancel_background_session"],
             maxTurns: 8,
             body: [
               TERSE_BODY,
@@ -511,6 +512,7 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
             body: HELPER_BODY,
           },
         ],
+        baseTools: [wait.definition],
       });
       const run = runtime.startRun({
         agentName: "courier",
@@ -518,9 +520,10 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
           userMessage(
             [
               '1. Call run_subagent with agent_name "helper" and prompt "report in".',
-              "2. Wait for the session_settled notification for that run; do not poll with other tools.",
-              "3. After the notification arrives, call cancel_background_session with type \"subagent\" and id set to the run_id from step 1. It will report the session is gone; that is expected.",
-              '4. Call submit_main_outcome with summary "late cancel handled".',
+              '2. Call wait with {"ms": 5000} to give the helper time to finish.',
+              "3. Wait for the session_settled notification for that run; do not poll with other tools.",
+              "4. After the notification arrives, call cancel_background_session with type \"subagent\" and id set to the run_id from step 1. It will report the session is gone; that is expected.",
+              '5. Call submit_main_outcome with summary "late cancel handled".',
             ].join("\n"),
           ),
         ],

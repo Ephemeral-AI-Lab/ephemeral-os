@@ -58,7 +58,7 @@ describe.skipIf(!codex.available)("tool-call batches over live codex (e2e)", () 
         initialMessages: [
           userMessage(
             [
-              "1. In one single assistant turn, call probe_alpha and probe_beta together - two tool calls in the same response.",
+              "1. Your first assistant response must contain exactly two tool calls in the same response: probe_alpha and probe_beta. Do not wait for the first result before issuing the second call.",
               '2. After both results arrive, call submit_main_outcome with summary "batched".',
             ].join("\n"),
           ),

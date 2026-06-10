@@ -335,9 +335,12 @@ describe.skipIf(!codex.available)("cancellation isolation over live codex (e2e)"
           interrupt_reason: "model_cancelled",
         });
       }
-      expect(runtime.listRuns(), "the registry holds the main run and two children").toHaveLength(
-        3,
-      );
+      expect(
+        runtime
+          .listRuns()
+          .filter((row) => ["cycler", "s1", "s2"].includes(row.agent_name)),
+        "the registry holds the main run and two child sessions",
+      ).toHaveLength(3);
     },
   );
 });

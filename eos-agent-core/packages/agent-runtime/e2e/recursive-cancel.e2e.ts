@@ -322,10 +322,10 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
             maxTurns: 8,
             body: [
               "You are eager.",
-              SUBAGENT_TERSE,
+              "Make exactly one tool call per assistant turn, write no prose, and never return an empty assistant message.",
               "Follow exactly:",
               '1. Call run_subagent with agent_name "sleeper" and prompt "hold".',
-              '2. Call submit_subagent_outcome with summary "too early". It will fail with an error because a session is open; that is expected.',
+              '2. Immediately after the run_subagent result, call submit_subagent_outcome with summary "too early". Do not wait for the sleeper and do not call any other tool first. It will fail with an error because a session is open; that is expected.',
               '3. Call cancel_background_session with type "subagent" and id set to the run_id from step 1.',
               '4. Call submit_subagent_outcome with summary "eager done".',
             ].join(" "),

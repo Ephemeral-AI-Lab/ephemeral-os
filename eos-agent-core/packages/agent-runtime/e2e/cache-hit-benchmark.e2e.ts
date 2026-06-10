@@ -4,9 +4,6 @@ import { dirname, join } from "node:path";
 import type { JsonObject } from "@eos/contracts";
 import type {
   LlmClient,
-  LlmRequest,
-  LlmStreamEvent,
-  LlmStreamOptions,
   UsageSnapshot,
 } from "@eos/llm-client";
 import { defineTool, type ToolDefinition } from "@eos/tool";
@@ -34,8 +31,8 @@ import {
 } from "./support/codex-runtime.js";
 import { finishedRun } from "./support/fixtures.js";
 
-const PROBE_STEPS = 5;
-const TOOL_DELAY_MS = Number(process.env.EOS_CACHE_BENCH_TOOL_DELAY_MS ?? "750");
+const DEFAULT_TOOL_CALL_COUNTS = [10, 25, 50, 100] as const;
+const TOOL_DELAY_MS = Number(process.env.EOS_CACHE_BENCH_TOOL_DELAY_MS ?? "0");
 const FINISH_TOOL = "finish_cache_benchmark";
 const EXPECTED_SUMMARY = "cache bench done";
 
@@ -52,38 +49,14 @@ function codexBinding(): LlmClientBinding {
   return codex.binding;
 }
 
-class VolatilePrefixClient implements LlmClient {
-  #calls = 0;
-
-  constructor(private readonly inner: LlmClient) {}
-
-  streamMessage(
-    request: LlmRequest,
-    options?: LlmStreamOptions,
-  ): AsyncIterable<LlmStreamEvent> {
-    this.#calls += 1;
-    return this.inner.streamMessage(
-      {
-        ...request,
-        system_prompt: [
-          `volatile-cache-bust-call: ${String(this.#calls)}`,
-          `volatile-cache-bust-time: ${new Date().toISOString()}`,
-          request.system_prompt ?? "",
-        ].join("\n"),
-      },
-      options,
-    );
-  }
-}
-
 interface BenchmarkRuntime {
   runtime: AgentRuntime;
-  dataDir: string;
 }
 
 interface BenchmarkMetrics {
   label: string;
   runId: string;
+  toolCalls: number;
   turns: number;
   turnRates: number[];
   aggregateRate: number;
@@ -107,44 +80,46 @@ function singleClientRegistry(
 function benchmarkRuntime(
   label: string,
   binding: LlmClientBinding,
-  client: LlmClient,
+  toolCalls: number,
 ): BenchmarkRuntime {
   const root = tempDir(`eos-cache-bench-${label}-`);
   const profilesDir = join(root, "profiles");
   mkdirSync(profilesDir, { recursive: true });
-  writeProfile(profilesDir, benchmarkProfile(label));
+  writeProfile(profilesDir, benchmarkProfile(label, toolCalls));
   const hooksPath = join(root, "hooks.json");
   writeFileSync(hooksPath, "[]\n");
   const dataDir = join(root, "data");
   const runtime = createAgentRuntime({
     agentProfilesDir: profilesDir,
-    llmClients: singleClientRegistry(binding, client),
-    baseTools: [cacheProbeTool(), finishBenchmarkTool()],
+    llmClients: singleClientRegistry(binding, binding.client),
+    baseTools: [cacheProbeTool(probeStepsFor(toolCalls)), finishBenchmarkTool()],
     hookConfigPath: hooksPath,
     dataDir,
   });
-  return { runtime, dataDir };
+  return { runtime };
 }
 
-function benchmarkProfile(name: string): ProfileSpec {
+function benchmarkProfile(name: string, toolCalls: number): ProfileSpec {
   return {
     name,
     kind: "main",
     llmClientId: CODEX_CLIENT_ID,
     allowed: ["cache_probe"],
     terminal: FINISH_TOOL,
-    maxTurns: PROBE_STEPS + 3,
-    body: benchmarkSystemPrompt(),
+    maxTurns: toolCalls + 2,
+    body: benchmarkSystemPrompt(toolCalls),
   };
 }
 
-function benchmarkSystemPrompt(): string {
+function benchmarkSystemPrompt(toolCalls: number): string {
+  const probeSteps = probeStepsFor(toolCalls);
   return [
     "You are the EOS cache benchmark agent.",
     "Follow the current user message and the latest tool result exactly.",
     "Make exactly one tool call per assistant turn. Write no prose.",
     'First call cache_probe with {"step":1}.',
-    `If cache_probe returns continue:true, call cache_probe with the returned next_step on the next turn.`,
+    `There will be ${String(probeSteps)} cache_probe calls and one final ${FINISH_TOOL} call.`,
+    "If cache_probe returns continue:true, call cache_probe with the returned next_step on the next turn.",
     `If cache_probe returns continue:false, call ${FINISH_TOOL} with summary exactly "${EXPECTED_SUMMARY}" on the next turn.`,
     "Stable cache anchor follows. It is intentionally long and immutable; never quote it.",
     stableAnchor(),
@@ -158,16 +133,16 @@ function stableAnchor(): string {
   }).join("\n");
 }
 
-function cacheProbeTool(): ToolDefinition {
+function cacheProbeTool(probeSteps: number): ToolDefinition {
   return defineTool({
     name: "cache_probe",
     description:
       "Return the next cache benchmark instruction. Input: { step: number }.",
-    input: z.object({ step: z.number().int().min(1).max(PROBE_STEPS) }),
+    input: z.object({ step: z.number().int().min(1).max(probeSteps) }),
     execute: async (input) => {
       await new Promise((resolve) => setTimeout(resolve, TOOL_DELAY_MS));
       let content: JsonObject;
-      if (input.step < PROBE_STEPS) {
+      if (input.step < probeSteps) {
         const nextStep = input.step + 1;
         content = {
           continue: true,
@@ -197,11 +172,11 @@ function finishBenchmarkTool(): ToolDefinition {
 }
 
 async function runBenchmarkCase(
-  label: string,
+  toolCalls: number,
   binding: LlmClientBinding,
-  client: LlmClient,
 ): Promise<BenchmarkMetrics> {
-  const { runtime } = benchmarkRuntime(label, binding, client);
+  const label = `cache_${String(toolCalls)}_tool_calls`;
+  const { runtime } = benchmarkRuntime(label, binding, toolCalls);
   const run = runtime.startRun({
     agentName: label,
     initialMessages: [
@@ -226,16 +201,16 @@ async function runBenchmarkCase(
   const results = readResultLines(join(runDir, "result.jsonl"));
   const result = must(results.at(0));
   const completedTurns = events.filter((line) => line.type === "turn_completed");
-  expect(completedTurns.length, `${label} turn count`).toBeGreaterThanOrEqual(
-    PROBE_STEPS,
-  );
+  expect(completedTurns.length, `${label} turn count`).toBe(toolCalls);
   expect(result.run_id).toBe(run.runId);
   expect(result.status).toBe("completed");
+  expect(result.turns, `${label} result turn count`).toBe(toolCalls);
   expect(result.cache_hit_rate).toBeCloseTo(cacheHitRate(result.usage), 10);
 
   const metrics: BenchmarkMetrics = {
     label,
     runId: run.runId,
+    toolCalls,
     turns: completedTurns.length,
     turnRates: completedTurns.map((line) => line.cache_hit_rate),
     aggregateRate: result.cache_hit_rate,
@@ -243,6 +218,27 @@ async function runBenchmarkCase(
   };
   logMetrics(metrics);
   return metrics;
+}
+
+function probeStepsFor(toolCalls: number): number {
+  if (!Number.isInteger(toolCalls) || toolCalls < 2) {
+    throw new Error(`cache benchmark tool call count must be an integer >= 2, got ${String(toolCalls)}`);
+  }
+  return toolCalls - 1;
+}
+
+function benchmarkToolCallCounts(
+  env: NodeJS.ProcessEnv = process.env,
+): number[] {
+  const raw = env.EOS_CACHE_BENCH_TOOL_CALLS;
+  if (raw === undefined) return [...DEFAULT_TOOL_CALL_COUNTS];
+  const counts = raw.split(",").map((part) => Number.parseInt(part.trim(), 10));
+  if (counts.some((count) => !Number.isInteger(count) || count < 2)) {
+    throw new Error(
+      `EOS_CACHE_BENCH_TOOL_CALLS must be comma-separated integers >= 2, got ${raw}`,
+    );
+  }
+  return counts;
 }
 
 function summaryOf(submission: unknown): unknown {
@@ -264,13 +260,17 @@ function cacheHitRate(usage: UsageSnapshot): number {
 }
 
 function logMetrics(metrics: BenchmarkMetrics): void {
+  const zeroRateTurns = metrics.turnRates.filter((rate) => rate === 0).length;
   console.log(
     [
       `[cache-bench] ${metrics.label}`,
       `run=${metrics.runId}`,
+      `tool_calls=${String(metrics.toolCalls)}`,
       `turns=${String(metrics.turns)}`,
       `aggregate=${formatRate(metrics.aggregateRate)}`,
-      `turns=[${metrics.turnRates.map(formatRate).join(", ")}]`,
+      `zero_turns=${String(zeroRateTurns)}`,
+      `first_turns=[${metrics.turnRates.slice(0, 5).map(formatRate).join(", ")}]`,
+      `last_turns=[${metrics.turnRates.slice(-5).map(formatRate).join(", ")}]`,
       `input=${String(metrics.usage.input_tokens)}`,
       `cache_read=${String(metrics.usage.cache_read_input_tokens ?? 0)}`,
       `cache_creation=${String(metrics.usage.cache_creation_input_tokens ?? 0)}`,
@@ -285,25 +285,26 @@ function formatRate(value: number): string {
 
 describe.skipIf(!codex.available)("cache hit benchmark over live codex (e2e)", () => {
   it(
-    "measures stable-prefix cache hits against a cache-busted baseline",
-    { timeout: 300_000 },
+    "measures stable-prefix cache hits over configured tool-call counts",
+    { timeout: 1_200_000 },
     async () => {
       const binding = codexBinding();
-      const stable = await runBenchmarkCase("cache_stable", binding, binding.client);
-      const volatile = await runBenchmarkCase(
-        "cache_volatile",
-        binding,
-        new VolatilePrefixClient(binding.client),
-      );
+      const results: BenchmarkMetrics[] = [];
+      for (const toolCalls of benchmarkToolCallCounts()) {
+        const stable = await runBenchmarkCase(toolCalls, binding);
+        results.push(stable);
 
-      expect(stable.aggregateRate, "stable aggregate cache rate is bounded").toBeGreaterThanOrEqual(0);
-      expect(stable.aggregateRate, "stable aggregate cache rate is bounded").toBeLessThanOrEqual(1);
-      expect(volatile.aggregateRate, "volatile aggregate cache rate is bounded").toBeGreaterThanOrEqual(0);
-      expect(volatile.aggregateRate, "volatile aggregate cache rate is bounded").toBeLessThanOrEqual(1);
+        expect(stable.aggregateRate, "stable aggregate cache rate is bounded").toBeGreaterThanOrEqual(0);
+        expect(stable.aggregateRate, "stable aggregate cache rate is bounded").toBeLessThanOrEqual(1);
+        expect(
+          stable.usage.cache_read_input_tokens ?? 0,
+          "the provider reported at least one cached prompt token",
+        ).toBeGreaterThan(0);
+      }
       console.log(
-        `[cache-bench] stable_minus_volatile=${formatRate(
-          stable.aggregateRate - volatile.aggregateRate,
-        )}`,
+        `[cache-bench] summary ${results
+          .map((metrics) => `${String(metrics.toolCalls)}=${formatRate(metrics.aggregateRate)}`)
+          .join(" ")}`,
       );
     },
   );
