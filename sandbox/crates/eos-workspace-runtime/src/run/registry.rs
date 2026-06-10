@@ -7,8 +7,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::command_session::session::CommandSession;
-use crate::command_session::{
+use eos_command_session::session::CommandSession;
+use eos_command_session::{
     CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSessionCompletion,
 };
 use crate::ephemeral::EphemeralWorkspace;

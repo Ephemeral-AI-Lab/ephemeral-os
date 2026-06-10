@@ -426,8 +426,8 @@ impl DaemonServer {
 }
 fn default_file_limits() -> FileLimitsConfig {
     FileLimitsConfig {
-        max_read_bytes: eos_cas::models::MAX_READ_BYTES,
-        max_write_bytes: eos_cas::models::MAX_FILE_BYTES,
+        max_read_bytes: eos_config::configs::daemon::MAX_READ_BYTES,
+        max_write_bytes: eos_config::configs::daemon::MAX_FILE_BYTES,
     }
 }
 

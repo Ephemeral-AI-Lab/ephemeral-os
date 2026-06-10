@@ -1,7 +1,7 @@
 use serde_json::json;
 
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::command_session::{
+use eos_command_session::{
     CollectCompleted, CommandResponse, CommandSessionCompletion, ReadCommandProgress,
 };
 
@@ -54,7 +54,7 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
     let manager = WorkspaceRunManager::new(
-        eos_workspace_runtime::command_session::CommandSessionConfig::default(),
+        eos_command_session::CommandSessionConfig::default(),
         std::sync::Arc::new(NoopRunHostPorts),
     );
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));

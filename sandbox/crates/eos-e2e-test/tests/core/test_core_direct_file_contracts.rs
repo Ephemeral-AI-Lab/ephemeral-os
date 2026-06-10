@@ -2,7 +2,7 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use anyhow::{Context, Result};
-use eos_cas::models::{MAX_FILE_BYTES, MAX_READ_BYTES};
+use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_daemon::wire::ops;
 use eos_e2e_test::audit::section;
 use eos_e2e_test::client::error_kind;

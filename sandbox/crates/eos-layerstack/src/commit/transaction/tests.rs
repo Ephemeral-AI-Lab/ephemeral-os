@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use eos_cas::LayerChange;
+use crate::model::LayerChange;
 
 use crate::commit::outcome::{CommitStatus, PublishDecision, Route};
 use crate::commit::queue::{CommitTransactionPort, PreparedChangeset};

@@ -8,8 +8,8 @@ use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use eos_cas::LayerChange;
-use eos_cas::{RunRequest, RunResult};
+use eos_layerstack::LayerChange;
+use eos_namespace::protocol::{RunRequest, RunResult};
 use eos_overlay::overlay_writable_root;
 use eos_workspace_runtime::contract::{InvocationId, SnapshotLease};
 use eos_workspace_runtime::ephemeral::{

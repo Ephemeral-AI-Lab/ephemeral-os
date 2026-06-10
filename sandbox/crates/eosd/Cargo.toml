@@ -10,7 +10,6 @@ name = "eosd"
 path = "src/main.rs"
 
 [dependencies]
-eos-cas.workspace = true
 eos-config.workspace = true
 eos-daemon.workspace = true
 eos-namespace.workspace = true

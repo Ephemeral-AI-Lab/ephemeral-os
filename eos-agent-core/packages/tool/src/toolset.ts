@@ -3,7 +3,7 @@ import type { ToolExecutor } from "@eos/engine";
 import type { ToolDefinition } from "./contract.js";
 import { toolBatchExecutor } from "./executor.js";
 import { HookEngine } from "./hooks/runner.js";
-import { bindTool } from "./pipeline.js";
+import { bindTool, type HookPayloadFacts } from "./pipeline.js";
 import type { AgentRunState } from "./run-state.js";
 
 /**
@@ -17,6 +17,8 @@ export interface BuildToolExecutorInput {
   definitions: ToolDefinition[];
   /** Operator hooks; absent means no hooks, not built-in ones. */
   hookEngine?: HookEngine;
+  /** Per-call hook payload snapshots supplied by the runtime. */
+  hookPayloadFacts?: () => HookPayloadFacts;
 }
 
 /**
@@ -31,6 +33,11 @@ export function buildToolExecutor(input: BuildToolExecutorInput): ToolExecutor {
   const tools = input.definitions
     .slice()
     .sort((a, b) => (a.name < b.name ? -1 : 1))
-    .map((definition) => bindTool(definition, { hooks }));
+    .map((definition) =>
+      bindTool(definition, {
+        hooks,
+        hookPayloadFacts: input.hookPayloadFacts,
+      }),
+    );
   return toolBatchExecutor({ runState: input.runState, tools });
 }

@@ -17,6 +17,7 @@ export {
   HookEventSchema,
   HookOutputSchema,
   type HookCommand,
+  type HookBackgroundSession,
   type HookConfigEntry,
   type HookEvent,
   type HookOutput,
@@ -25,6 +26,16 @@ export {
 export { HookEngine } from "./hooks/runner.js";
 export { type AgentRunState } from "./run-state.js";
 export { buildToolExecutor, type BuildToolExecutorInput } from "./toolset.js";
+export {
+  ADVISOR_AGENT_NAME,
+  AGENT_TOOL_NAMES,
+  agentTools,
+  type AgentRunCalls,
+  type AgentToolTranscriptRead,
+  type AgentToolUserMessage,
+  type StartAgentToolRunParams,
+  type StartedAgentToolRun,
+} from "./tools/agent/index.js";
 export {
   BACKGROUND_TOOL_NAMES,
   backgroundTools,

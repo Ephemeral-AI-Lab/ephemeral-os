@@ -36,8 +36,8 @@ use eos_overlay::OverlayHandle;
 
 use super::error::RunnerError;
 #[cfg(target_os = "linux")]
-use eos_cas::RunnerVerb;
-use eos_cas::{RunRequest, RunResult};
+use crate::protocol::RunnerVerb;
+use crate::protocol::{RunRequest, RunResult};
 
 #[cfg(target_os = "linux")]
 mod child;
@@ -189,7 +189,7 @@ fn execute_plugin_service(
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
-    if timed_out || !matches!(request.mode, eos_cas::RunMode::SetNs) {
+    if timed_out || !matches!(request.mode, crate::protocol::RunMode::SetNs) {
         let _ = kill_process_group(child_pid, Signal::Kill);
     }
     let status = if timed_out {

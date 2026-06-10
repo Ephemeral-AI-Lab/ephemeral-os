@@ -40,11 +40,19 @@
 //! is documented in [`storage_lock`].
 #![forbid(unsafe_code)]
 
+// Integration-test dev-dependencies (golden CAS fixtures) used only by
+// `tests/`; keep `unused_crate_dependencies` usable under `--all-targets`.
+#[cfg(test)]
+use base64 as _;
+#[cfg(test)]
+use proptest as _;
+
 mod commit;
 pub mod error;
 pub(crate) mod fsutil;
 pub(crate) mod lease;
 mod metrics;
+pub mod model;
 mod route;
 pub mod service;
 pub mod squash;
@@ -55,11 +63,11 @@ mod test_fixture;
 pub mod workspace_base;
 pub mod workspace_binding;
 
-// CAS types are owned by eos-protocol; re-export so downstream crates use ONE
-// set of hashes/types and never redefine them.
-pub use eos_cas::{
-    aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef,
-    Manifest,
+// The manifest/layer data model and its byte-identity hashes are owned here;
+// re-export so downstream crates use ONE set of hashes/types.
+pub use model::{
+    aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
+    LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
 pub use commit::{

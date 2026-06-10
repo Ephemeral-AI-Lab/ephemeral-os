@@ -8,7 +8,11 @@ import type {
   ToolDefinition,
   ToolOutcome,
 } from "./contract.js";
-import type { HookEvent, HookPayload } from "./hooks/protocol.js";
+import type {
+  HookBackgroundSession,
+  HookEvent,
+  HookPayload,
+} from "./hooks/protocol.js";
 import type { HookEngine, HookRunSummary } from "./hooks/runner.js";
 
 /**
@@ -20,6 +24,11 @@ export type PipelineResult = Omit<ToolCallResult, "tool_use_id">;
 /** Run-level dependencies closed over at executor build. */
 export interface BindToolDeps {
   hooks: HookEngine;
+  hookPayloadFacts?: () => HookPayloadFacts;
+}
+
+export interface HookPayloadFacts {
+  background_sessions?: readonly HookBackgroundSession[];
 }
 
 /** One definition bound through the pipeline; dispatched by the executor. */
@@ -91,6 +100,7 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       tool_input: wireInput,
       tool_use_id: meta.tool_use_id,
       run: meta.run,
+      ...deps.hookPayloadFacts?.(),
       ...extra,
     });
 

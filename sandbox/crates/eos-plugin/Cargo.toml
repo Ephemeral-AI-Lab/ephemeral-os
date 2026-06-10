@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-eos-cas.workspace = true
+eos-namespace.workspace = true
 # Errors + small JSON arg objects only. NOT eos-layerstack — the no-publish/no-second-writer
 # guard (06-crate-map §A) keeps that internal edge absent; PPC payload bodies stay
 # opaque `String`, reusing eos_protocol's envelope encode/decode for framing.

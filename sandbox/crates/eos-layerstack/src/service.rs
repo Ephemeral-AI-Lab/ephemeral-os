@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use eos_cas::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use crate::model::{LayerChange, LayerPath, LayerRef, MANIFEST_SCHEMA_VERSION, Manifest};
 use serde_json::{json, Value};
 
 use crate::commit::{

@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use eos_cas::{LayerChange, LayerPath};
+use crate::model::{LayerChange, LayerPath};
 
 use super::error::CommitError;
 use super::outcome::{ChangesetResult, PublishDecision, Route};
@@ -208,7 +208,7 @@ impl<T: CommitTransactionPort + 'static> Drop for CommitService<T> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use eos_cas::{LayerChange, LayerPath};
+    use crate::model::{LayerChange, LayerPath};
 
     use super::super::outcome::{CommitStatus, FileResult};
     use super::super::queue::PublishConflict;

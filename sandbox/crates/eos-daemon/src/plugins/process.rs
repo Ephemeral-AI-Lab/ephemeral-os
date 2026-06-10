@@ -14,9 +14,9 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 #[cfg(all(target_os = "linux", not(test)))]
-use eos_cas::Intent;
+use eos_namespace::protocol::Intent;
 #[cfg(all(target_os = "linux", not(test)))]
-use eos_cas::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
+use eos_namespace::protocol::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use eos_plugin::host::route::PluginProcessSpec;
 #[cfg(all(target_os = "linux", not(test)))]
 use eos_plugin::host::route::ENV_PLUGIN_WORKSPACE_MOUNTED;

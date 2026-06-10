@@ -16,6 +16,7 @@ import {
   SLEEPER_BODY,
   TERSE_BODY,
   finishedRun,
+  noOpenBackgroundSessionsHookEntries,
   runtimeFixture,
   submissionOf,
   toolResultsIn,
@@ -153,6 +154,7 @@ describe.skipIf(!codex.available)("background supervisor and agent tools over li
           },
         ],
         baseTools: [wait.definition],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const boss = runtime.startRun({
         agentName: "boss",

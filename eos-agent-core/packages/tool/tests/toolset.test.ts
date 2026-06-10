@@ -57,7 +57,7 @@ describe("toolset assembly", () => {
   it("dispatches through the assembled pipeline: a solo submission terminates (§15.19)", async () => {
     const executor = buildToolExecutor({
       runState: scriptedRunState("main"),
-      definitions: terminalToolDefinitions(supervisor()).filter(
+      definitions: terminalToolDefinitions().filter(
         (definition) => definition.name === "submit_main_outcome",
       ),
     });
@@ -75,7 +75,7 @@ describe("toolset assembly", () => {
   });
 
   it("inventories one terminal definition per submission name, statically named", () => {
-    const definitions = terminalToolDefinitions(supervisor());
+    const definitions = terminalToolDefinitions();
     expect(definitions.map((definition) => definition.name as string)).toEqual([
       ...TERMINAL_TOOL_NAMES,
     ]);

@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_cas::Intent;
-use eos_cas::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+use eos_namespace::protocol::Intent;
+use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_plugin::ServiceMode;
 use eos_workspace_runtime::contract::{

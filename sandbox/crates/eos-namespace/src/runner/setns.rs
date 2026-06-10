@@ -30,8 +30,8 @@ use eos_overlay::OverlayHandle;
 
 use super::error::RunnerError;
 #[cfg(any(test, target_os = "linux"))]
-use eos_cas::NsFds;
-use eos_cas::{RunRequest, RunResult};
+use crate::protocol::NsFds;
+use crate::protocol::{RunRequest, RunResult};
 
 #[cfg(target_os = "linux")]
 const RESOLV_CONF: &str = "/etc/resolv.conf";
@@ -328,8 +328,8 @@ fn setns_fd(name: &str, fd: RawFd, nstype: libc::c_int) -> Result<(), RunnerErro
 #[cfg(test)]
 mod tests {
     use super::{first_nameserver, needs_fallback_dns, overlay_layer_paths, require_ns_fds};
-    use eos_cas::Intent;
-    use eos_cas::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+    use crate::protocol::Intent;
+    use crate::protocol::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
     use std::path::Path;
 
     #[test]

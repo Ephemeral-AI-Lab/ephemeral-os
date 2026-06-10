@@ -1,92 +1,56 @@
-import {
-  AgentKindSchema,
-  JsonObjectSchema,
-  type AgentKind,
-  type JsonObject,
-} from "@eos/contracts";
-import type { BackgroundSupervisor } from "@eos/engine";
-import { z } from "zod";
+import type { AgentKind } from "@eos/contracts";
 
 import type { ToolDefinition } from "../../contract.js";
-import { defineTool } from "../../define.js";
+import { submitAdvisorOutcomeTool } from "./submit_advisor_outcome.js";
+import { submitMainAgentOutcomeTool } from "./submit_main_agent_outcome.js";
+import { submitPlannerOutcomeTool } from "./submit_planner_outcome.js";
+import { submitSubagentOutcomeTool } from "./submit_subagent_outcome.js";
+import { submitWorkerOutcomeTool } from "./submit_worker_outcome.js";
 
-const SharedOutcomeSchema = z.object({
-  /** One-paragraph result the parent reads first. */
-  summary: z.string().min(1),
-  /** Structured result payload; rides the run outcome as `submission`. */
-  payload: JsonObjectSchema.optional(),
-});
-type SubmissionInput = z.infer<typeof SharedOutcomeSchema>;
-
-interface SubmissionRow {
-  name: string;
-  description: string;
-  /** Per-kind payload schemas are a later seam; all share one this phase. */
-  input: z.ZodType<SubmissionInput>;
-}
-
-const submissionRow = (kind: AgentKind): SubmissionRow => ({
-  name: `submit_${kind}_outcome`,
-  description: `Submit the final outcome of this ${kind} run. Terminal: a successful call ends the run.`,
-  input: SharedOutcomeSchema,
-});
-
-/** The five submission tools are ONE parameterized definition over this table. */
-const SUBMISSIONS: Record<AgentKind, SubmissionRow> = {
-  main: submissionRow("main"),
-  planner: submissionRow("planner"),
-  worker: submissionRow("worker"),
-  advisor: submissionRow("advisor"),
-  subagent: submissionRow("subagent"),
-};
+export { submitAdvisorOutcomeTool } from "./submit_advisor_outcome.js";
+export { submitMainAgentOutcomeTool } from "./submit_main_agent_outcome.js";
+export { submitPlannerOutcomeTool } from "./submit_planner_outcome.js";
+export { submitSubagentOutcomeTool } from "./submit_subagent_outcome.js";
+export { submitWorkerOutcomeTool } from "./submit_worker_outcome.js";
 
 /** The terminal name universe: static, so profile validation needs no supervisor. */
-export const TERMINAL_TOOL_NAMES: readonly string[] = AgentKindSchema.options.map(
-  (kind) => SUBMISSIONS[kind].name,
-);
+export const TERMINAL_TOOL_NAMES = [
+  "submit_main_outcome",
+  "submit_planner_outcome",
+  "submit_worker_outcome",
+  "submit_advisor_outcome",
+  "submit_subagent_outcome",
+] as const;
 
 /**
  * The full terminal inventory, one definition per name. Not keyed by
  * `AgentKind`: the profile selects exactly one entry by `terminal_tool`.
  */
-export function terminalToolDefinitions(
-  supervisor: BackgroundSupervisor,
-): ToolDefinition[] {
-  return AgentKindSchema.options.map((kind) => submissionTool(kind, supervisor));
+export function terminalToolDefinitions(): ToolDefinition[] {
+  return [
+    submitMainAgentOutcomeTool(),
+    submitPlannerOutcomeTool(),
+    submitWorkerOutcomeTool(),
+    submitAdvisorOutcomeTool(),
+    submitSubagentOutcomeTool(),
+  ];
 }
 
 /**
- * The terminal tool for one agent kind. Guards "no open sessions before
- * submission" in plain code (not a hook): the model cannot submit past a
- * running session or a settlement it has not seen yet.
+ * The terminal tool for one agent kind. Background-session submission policy
+ * is configured as a PreToolUse hook, not baked into terminal tools.
  */
-export function submissionTool(
-  kind: AgentKind,
-  supervisor: BackgroundSupervisor,
-): ToolDefinition {
-  const row = SUBMISSIONS[kind];
-  return defineTool({
-    name: row.name,
-    description: row.description,
-    input: row.input,
-    isTerminal: true,
-    execute: (input) => {
-      const open = supervisor.openCount();
-      if (open > 0) {
-        const names = supervisor
-          .list()
-          .map((session) => `${session.type}:${session.id} (${session.status})`)
-          .join(", ");
-        return Promise.resolve({
-          content: `cannot submit while ${String(open)} background session(s) are open (running or undelivered): ${names}. Cancel them or wait for their completion notices.`,
-          isError: true,
-        });
-      }
-      const content: JsonObject = { summary: input.summary };
-      if (input.payload !== undefined) content.payload = input.payload;
-      // The terminal result's content IS the submission: it rides the
-      // result into `outcome.submission` - no separate sink port.
-      return Promise.resolve({ content });
-    },
-  });
+export function submissionTool(kind: AgentKind): ToolDefinition {
+  switch (kind) {
+    case "main":
+      return submitMainAgentOutcomeTool();
+    case "planner":
+      return submitPlannerOutcomeTool();
+    case "worker":
+      return submitWorkerOutcomeTool();
+    case "advisor":
+      return submitAdvisorOutcomeTool();
+    case "subagent":
+      return submitSubagentOutcomeTool();
+  }
 }

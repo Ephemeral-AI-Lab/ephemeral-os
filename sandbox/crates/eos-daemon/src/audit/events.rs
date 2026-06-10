@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Instant;
 
-use eos_cas::manifest_root_hash;
+use eos_layerstack::manifest_root_hash;
 use eos_layerstack::LayerStack;
 
 use crate::audit::schema::{

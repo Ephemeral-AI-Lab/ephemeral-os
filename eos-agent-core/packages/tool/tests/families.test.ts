@@ -105,30 +105,30 @@ describe("background tool family", () => {
 
 describe("submission tool family", () => {
   it("is terminal by construction, one definition per kind", () => {
-    const { supervisor } = setup();
-    const tool = submissionTool("worker", supervisor);
+    const tool = submissionTool("worker");
     expect(tool.name).toBe("submit_worker_outcome");
     expect(tool.isTerminal).toBe(true);
     expect(tool.availableInIsolatedWorkspace).toBe(false);
   });
 
-  it("blocks submission while sessions are running OR settled-but-undelivered, naming them (§15.16)", async () => {
+  it("returns the parsed outcome object as the terminal content", async () => {
+    const submit = submissionTool("planner");
+    const outcome = await submit.execute({ summary: "plan ready" }, ctx());
+    expect(outcome.content).toEqual({ summary: "plan ready" });
+  });
+
+  it("does not own background-session submission policy", async () => {
     const { inbox, supervisor } = setup();
-    const submit = submissionTool("main", supervisor);
+    const submit = submissionTool("main");
     const session = register(supervisor, "command", "c1");
 
     const whileRunning = await submit.execute({ summary: "all done" }, ctx());
-    expect(whileRunning.isError).toBe(true);
-    expect(whileRunning.content).toContain("command:c1 (running)");
+    expect(whileRunning.isError ?? false).toBe(false);
 
     session.settle({ status: "completed", summary: "ok" });
     await tick();
     const whileUndelivered = await submit.execute({ summary: "all done" }, ctx());
-    expect(
-      whileUndelivered.isError,
-      "a settlement the model has not seen still blocks",
-    ).toBe(true);
-    expect(whileUndelivered.content).toContain("command:c1 (completed)");
+    expect(whileUndelivered.isError ?? false).toBe(false);
 
     inbox.drain();
     const afterDelivery = await submit.execute(
@@ -140,12 +140,10 @@ describe("submission tool family", () => {
       summary: "all done",
       payload: { commits: 2 },
     });
-  });
-
-  it("returns the parsed outcome object as the terminal content", async () => {
-    const { supervisor } = setup();
-    const submit = submissionTool("planner", supervisor);
-    const outcome = await submit.execute({ summary: "plan ready" }, ctx());
-    expect(outcome.content).toEqual({ summary: "plan ready" });
+    expect(afterDelivery.isError ?? false).toBe(false);
+    expect(afterDelivery.content).toEqual({
+      summary: "all done",
+      payload: { commits: 2 },
+    });
   });
 });

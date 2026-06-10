@@ -1,6 +1,6 @@
 //! Overlay publish conversion helpers.
 
-use eos_cas::LayerPath;
+use eos_layerstack::LayerPath;
 use eos_layerstack::{ChangesetResult, CommitStatus, FileResult};
 use eos_workspace_runtime::ephemeral::{EphemeralWorkspaceError, PublishOutcome};
 use serde_json::{json, Value};

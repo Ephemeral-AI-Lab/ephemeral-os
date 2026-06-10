@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use eos_cas::LayerPath;
+use crate::model::LayerPath;
 use serde::{Deserialize, Serialize};
 
 /// Where a single normalized path is routed during preparation.

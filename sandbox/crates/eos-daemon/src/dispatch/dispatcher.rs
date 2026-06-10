@@ -100,7 +100,7 @@ impl<'ctx> DispatchContext<'ctx> {
     }
 
     /// Per-file read/write byte caps, when runtime config was threaded. File ops
-    /// fall back to the `eos_cas::models` defaults when this is `None`.
+    /// fall back to the `eos_config` defaults when this is `None`.
     pub(crate) const fn file_limits(&self) -> Option<FileLimitsConfig> {
         self.file_limits
     }

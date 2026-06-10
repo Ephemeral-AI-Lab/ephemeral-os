@@ -15,7 +15,7 @@ use crate::contract::{
     SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode,
     WorkspaceTimings,
 };
-use eos_cas::{Intent, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use eos_namespace::protocol::{Intent, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::ephemeral::{

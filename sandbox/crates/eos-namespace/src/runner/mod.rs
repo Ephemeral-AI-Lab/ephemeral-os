@@ -31,11 +31,11 @@
 //! on the macOS dev host. Raw syscall sites carry focused `// SAFETY:` notes, and
 //! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline enforced.
 //!
-//! Internal deps: `eos-cas` (the daemon↔runner wire DTOs [`RunRequest`] /
-//! [`RunResult`] and the verb [`Intent`](eos_cas::Intent)); `eos-overlay`
+//! Internal deps: [`crate::protocol`] (the daemon↔runner wire DTOs [`RunRequest`] /
+//! [`RunResult`] and the verb [`Intent`](crate::protocol::Intent)); `eos-overlay`
 //! (kernel overlay mount and upper-dir capture primitives).
 
-use eos_cas::{RunMode, RunRequest, RunResult};
+use crate::protocol::{RunMode, RunRequest, RunResult};
 
 pub mod error;
 mod fresh_ns;

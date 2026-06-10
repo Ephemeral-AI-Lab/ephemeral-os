@@ -13,9 +13,9 @@ fn sample_completion(id: &str) -> CommandSessionCompletion {
 fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
     use std::path::PathBuf;
 
-    use crate::command_session::session::CommandSessionSpec;
     use crate::contract::{CallerId, InvocationId, SnapshotLease};
     use crate::ephemeral::{EphemeralRunDirs, LayerStackRoot};
+    use eos_command_session::session::CommandSessionSpec;
 
     let session = CommandSession::new(CommandSessionSpec {
         id: id.to_owned(),

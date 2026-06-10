@@ -1,4 +1,4 @@
-use eos_cas::LayerChange;
+use eos_overlay::LayerChange;
 
 use crate::contract::SnapshotLease;
 use crate::ephemeral::error::EphemeralWorkspaceError;

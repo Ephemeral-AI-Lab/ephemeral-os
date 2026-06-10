@@ -25,7 +25,7 @@ use std::collections::HashSet;
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
 
-use eos_cas::LayerChange;
+use crate::model::LayerChange;
 
 use super::error::CommitError;
 use super::usize_to_f64_saturating;
@@ -459,7 +459,7 @@ fn cas_exhaustion_result(
 mod tests {
     use std::sync::{Arc, Mutex};
 
-    use eos_cas::LayerPath;
+    use crate::model::LayerPath;
 
     use super::*;
 
@@ -532,7 +532,7 @@ mod tests {
                 base_hash: None,
                 message: None,
             }],
-            changes: vec![eos_cas::LayerChange::Write {
+            changes: vec![crate::model::LayerChange::Write {
                 path,
                 content: b"x".to_vec(),
             }],

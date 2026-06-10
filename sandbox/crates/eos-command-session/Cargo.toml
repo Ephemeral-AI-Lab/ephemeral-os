@@ -1,0 +1,21 @@
+[package]
+name = "eos-command-session"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-config.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { workspace = true, features = ["pty", "event"] }
+libc.workspace = true
+nix = { workspace = true, features = ["process", "signal"] }
+time.workspace = true
+
+[lints]
+workspace = true

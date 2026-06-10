@@ -216,7 +216,7 @@ const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
         tests: &["contract"],
     },
     ConformanceSuite {
-        package: "eos-cas",
+        package: "eos-layerstack",
         tests: &["cas_fixtures"],
     },
     // Host side: request-fixture encoding + router/visibility coverage.

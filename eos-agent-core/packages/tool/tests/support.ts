@@ -8,7 +8,11 @@ import { scriptedRunState } from "@eos/testkit";
 
 import { HookEngine } from "../src/hooks/runner.js";
 import type { HookConfigEntry, HookOutput } from "../src/hooks/protocol.js";
-import { bindTool, type PipelineResult } from "../src/pipeline.js";
+import {
+  bindTool,
+  type HookPayloadFacts,
+  type PipelineResult,
+} from "../src/pipeline.js";
 import { snapshotRunState, type AgentRunState } from "../src/run-state.js";
 import type { ToolDefinition } from "../src/contract.js";
 
@@ -25,6 +29,7 @@ export const live = (): AbortSignal => new AbortController().signal;
 export interface RunPipelineOptions {
   input?: JsonObject;
   entries?: HookConfigEntry[];
+  hookPayloadFacts?: () => HookPayloadFacts;
   runState?: AgentRunState;
   signal?: AbortSignal;
 }
@@ -36,6 +41,7 @@ export function runPipeline(
 ): Promise<PipelineResult> {
   const bound = bindTool(definition, {
     hooks: new HookEngine(options.entries ?? []),
+    hookPayloadFacts: options.hookPayloadFacts,
   });
   const runState = options.runState ?? scriptedRunState();
   return bound.run(

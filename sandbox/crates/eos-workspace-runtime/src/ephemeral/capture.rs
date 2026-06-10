@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use eos_cas::LayerChange;
+use eos_overlay::LayerChange;
 
 use crate::ephemeral::error::EphemeralWorkspaceError;
 use crate::ephemeral::timings::TreeResourceStats;

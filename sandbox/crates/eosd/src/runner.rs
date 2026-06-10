@@ -16,7 +16,7 @@ use anyhow::{anyhow, Context, Result};
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config = RunnerCliConfig::parse(args)?;
     let request_json = read_payload(config.request_path.as_ref())?;
-    let request: eos_cas::RunRequest =
+    let request: eos_namespace::protocol::RunRequest =
         serde_json::from_str(&request_json).context("failed to decode ns-runner request JSON")?;
     let runner_config = load_runner_config()?;
     let mut output_target = OutputTarget::open(config.output_path.as_ref())?;
@@ -30,7 +30,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
                 .context("ns-runner setns overlay mount failed")?;
             ok_result()
         }
-        RunnerCliMode::ConfigureDns => eos_cas::RunResult {
+        RunnerCliMode::ConfigureDns => eos_namespace::protocol::RunResult {
             exit_code: 0,
             tool_result: eos_namespace::runner::setns::configure_dns(&request)
                 .context("ns-runner configure dns failed")?,
@@ -43,8 +43,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     write_payload(&mut output_target, &output)
 }
 
-fn ok_result() -> eos_cas::RunResult {
-    eos_cas::RunResult {
+fn ok_result() -> eos_namespace::protocol::RunResult {
+    eos_namespace::protocol::RunResult {
         exit_code: 0,
         tool_result: serde_json::json!({"success": true, "status": "ok"}),
     }
@@ -133,7 +133,7 @@ impl RunnerCliConfig {
     }
 }
 
-fn remount_overlay_from_request(request: &eos_cas::RunRequest) -> Result<()> {
+fn remount_overlay_from_request(request: &eos_namespace::protocol::RunRequest) -> Result<()> {
     let upperdir = request
         .upperdir
         .clone()

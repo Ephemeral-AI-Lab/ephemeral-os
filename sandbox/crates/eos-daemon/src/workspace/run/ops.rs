@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use eos_layerstack::require_workspace_binding;
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::command_session::{
+use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };

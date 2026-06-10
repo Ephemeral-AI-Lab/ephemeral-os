@@ -6,7 +6,8 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-eos-cas.workspace = true
+eos-command-session.workspace = true
+eos-namespace.workspace = true
 eos-config.workspace = true
 eos-layerstack.workspace = true
 eos-overlay.workspace = true

@@ -22,7 +22,7 @@ pub mod transaction;
 
 use std::path::Path;
 
-use eos_cas::{LayerChange, LayerPath};
+use crate::model::{LayerChange, LayerPath};
 use sha2::{Digest, Sha256};
 
 use crate::{LayerStackError, Manifest, MergedView};

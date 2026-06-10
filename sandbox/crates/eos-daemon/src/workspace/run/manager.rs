@@ -7,9 +7,9 @@ use std::sync::{OnceLock, RwLock};
 use std::time::Instant;
 
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
+use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::command_session::{CommandResponse, CommandSessionCompletion};
+use eos_command_session::{CommandResponse, CommandSessionCompletion};
 #[cfg(target_os = "linux")]
 use eos_workspace_runtime::run::WorkspaceRunManager;
 #[cfg(target_os = "linux")]

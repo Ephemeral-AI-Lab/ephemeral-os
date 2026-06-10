@@ -25,7 +25,8 @@ Phase 05 lands the workflow family reserved by Phase 04 decision 21: a new
 `@eos/workflow` package (entities, markdown context projection, lifecycle
 orchestration, launch scheduling), the first real content in `@eos/db`
 (workflow tables behind `better-sqlite3` + `Kysely`), the workflow tool
-family in `@eos/tool` (`delegate_workflow`, `query_workflow`), per-kind
+family in `@eos/tool` (`delegate_workflow`, `read_workflow_context`,
+`query_workflow_context`), per-kind
 payload schemas on the planner/worker submission tools (the seam reserved in
 `tools/submission/index.ts`), and the `@eos/agent-runtime` wiring that makes
 a delegated workflow one background session of the delegating run.
@@ -39,8 +40,8 @@ delegate_workflow
 
 The database owns workflow state. Context artifacts (`spec.md` / `brief.md`
 per entity) are deterministic projections rendered from a fresh aggregate -
-this phase renders them virtually (at agent launch and inside
-`query_workflow`), with the physical file projector left as a named seam
+this phase renders them virtually (at agent launch and inside the
+context read tools), with the physical file projector left as a named seam
 (§2.2). Planner and worker agent runs are launched automatically by the
 scheduler; their terminal submissions ride the run outcome back to the
 scheduler, which mutates the aggregate, re-renders context, and launches
@@ -67,11 +68,12 @@ omissions:
 2. **Projection is virtual first; the physical writer is a seam.** The
    companion's invariant 3 (rendering never reads projected files) makes
    the files a pure cache: nothing consumes them except agents, and agents
-   receive context either injected at launch or through `query_workflow`.
-   Both render from a fresh DB-loaded aggregate on demand, so this phase
-   writes no `spec.md`/`brief.md` files - eliminating write amplification,
-   stale-file races, and atomic-rename concerns. The companion §5 folder
-   layout survives as the *addressing scheme*: `query_workflow` resolves
+   receive context either injected at launch or through the §2.17 read
+   tools. Both render from a fresh DB-loaded aggregate on demand, so this
+   phase writes no `spec.md`/`brief.md` files - eliminating write
+   amplification, stale-file races, and atomic-rename concerns. The
+   companion §5 folder layout survives as the *addressing scheme*:
+   `read_workflow_context` resolves
    `workflow_<id>/iteration_<id>/.../brief.md` paths against the aggregate.
    A physical `WorkflowContextProjector` (for sandboxed workers that read
    real files, or debugging) is deferred (§11) and reuses the same
@@ -141,8 +143,8 @@ omissions:
     `Cancelled -> cancelled`); `cancel` is the workflow API. The
     workflow's internal planner/worker runs are *not* sessions of the
     caller - the caller sees one session, one `session_settled`
-    notification, and pulls detail through `query_workflow` (Phase 04
-    decision 14). Auto-wait, the `openCount()` submission guard, and
+    notification, and pulls detail through the context read tools (Phase
+    04 decision 14). Auto-wait, the `openCount()` submission guard, and
     `list_background_sessions` all apply to workflows with zero engine
     change.
 11. **Workflows die with the delegating run.** Child runs are launched
@@ -196,26 +198,42 @@ omissions:
     implements the port as a bound `startRun` adapter. Workflow package
     tests script the port directly: the whole lifecycle suite runs
     without an engine.
-17. **`query_workflow` is the read tool.** Phase 04 decision 14's
-    symmetry (spawn / read / shared cancel) lands as
-    `query_workflow(workflow_id, path?)`: render the addressed projection
-    from a fresh aggregate (default `brief.md` at the workflow root).
-    Notifications stay `{ ref, status, summary }`; full state never sits
-    in conversation history. Search (`search_workflow_context`) is
-    deferred (§11).
+17. **Two read tools: paged retrieval and deduplicated search.** Phase 04
+    decision 14's symmetry (spawn / read / shared cancel) lands as the
+    companion §11 pair. `read_workflow_context(workflow_id, path?,
+    offset?, revision?)` renders the addressed projection from a fresh
+    aggregate (default `brief.md` at the workflow root) and returns a
+    byte slice in the transcript-reader shape (`total_bytes`,
+    `next_offset`); a continuation read passes back the stamped
+    `revision`, and a mismatch refuses the splice with a restart notice
+    instead of paging across two different renders - optimistic
+    concurrency on reads, no history kept.
+    `query_workflow_context(workflow_id, keywords, scope?)` is the
+    grep/glob analog over a tree with no files: keywords match the path
+    universe (computed from structure alone, no rendering) and the
+    *entity-local fields only* (`goal`, `plan_spec`, summaries,
+    `work_item_spec`, `worker_outcome`, `fail_reason`) - never the
+    composed projections, where one fact appears at up to four paths.
+    Each hit reports the owning entity's `spec.md` path, the field, and
+    a bounded snippet; caps are explicit in the output, never silent.
+    Both results are revision-stamped (§2.19); both tools are read-only;
+    notifications stay `{ ref, status, summary }` and full state never
+    sits in conversation history. Renders memoize per workflow keyed by
+    `(revision, path)` - determinism makes the cache exact, and a
+    same-revision read continuation is byte-identical by construction.
 18. **Tools receive narrow bound functions, not the service.** Mirroring
     Phase 04.5 §5, `workflowTools` takes
-    `{ delegate, cancel, query }` bound functions plus the per-run
+    `{ delegate, cancel, read, search }` bound functions plus the per-run
     supervisor. No `WorkflowService` object crosses into `@eos/tool`, and
     the dependency graph stays acyclic with the runtime as the only
     package that holds both sides.
 19. **Every projection is a revision-stamped snapshot.** `workflows`
     carries a monotonic `revision`, incremented in every mutation
     transaction. Every rendered projection - launch evidence and
-    `query_workflow` output alike - opens with a stamp line
+    `read_workflow_context` output alike - opens with a stamp line
     (`Context: workflow <id> @ revision <n>`), so an agent holding
     launch-time context can tell it is reading a snapshot and compare it
-    against a live `query_workflow` read. Staleness stays possible (the
+    against a live `read_workflow_context` read. Staleness stays possible (the
     dependency semantics make it safe - `needs` are terminal before
     launch); ambiguity about which view the model holds does not. The
     stamp is an aggregate field, so renderers stay pure.
@@ -227,7 +245,7 @@ omissions:
     which is exactly the working set: a retry planner needs the failed
     attempts of its own iteration (kept), and a deferred-goal planner
     needs to know prior iterations closed, not how. Prior-iteration
-    detail stays one `query_workflow` read away. This amends the
+    detail stays one `read_workflow_context` read away. This amends the
     companion's content-plus-reference rule at those positions (§3).
 
 ## 3. Companion Spec Amendments
@@ -247,7 +265,7 @@ not listed here is implemented as written there.
 | §10 physical projector re-rendering the whole tree after every mutation | virtual projection this phase; physical projector + dirty-ancestor-path rendering deferred | §2.2, §11 |
 | §4 `Iteration.max_try` default 3 | `max_attempts` default 2 (Rust `AttemptBudget` parity); `delegate_workflow` may override | §6 |
 | §6 per-entity `render_spec()/render_brief()` methods | same contract as pure functions + combinators | §2.13, §2.15 |
-| §11 `read_workflow_context` / `search_workflow_context` | `query_workflow` (decision-14 naming); search deferred | §2.17, §11 |
+| §11 `read_workflow_context(workflow_id, path, line_range?)` / `search_workflow_context(workflow_id, query, scope?)` | `read_workflow_context` pages by byte offset with revision pinning (transcript-reader parity) instead of `line_range`; search lands as `query_workflow_context(workflow_id, keywords, scope?)` over entity-local fields, not composed projections | §2.17 |
 | §8 terminal briefs always render local content before their reference | prior (non-current) iterations inside `workflow/brief.md` collapse to status + reference only; their own files still render in full | §2.20 |
 | (no stamping) | every rendered projection opens with a workflow revision stamp | §2.19 |
 
@@ -256,7 +274,7 @@ not listed here is implemented as written there.
 In scope:
 
 - `@eos/contracts` additions: workflow entity IDs, `WorkflowEntityRunStatus`,
-  planner/worker submission payload schemas,
+  planner/worker submission payload schemas, context page/search DTOs,
 - `@eos/db` first real content: `better-sqlite3` + `Kysely` database
   factory, the workflow schema migration, `WorkflowStore` (transactional
   mutations + aggregate loader + launch queue),
@@ -265,7 +283,8 @@ In scope:
   functions, the per-workflow scheduler cell, `WorkflowService`
   (`delegate` / `cancel` / `query`), `AgentLaunchPort`,
 - `@eos/tool` owned changes: the workflow family
-  (`tools/workflow/`: `delegate_workflow`, `query_workflow`), per-kind
+  (`tools/workflow/`: `delegate_workflow`, `read_workflow_context`,
+  `query_workflow_context`), per-kind
   input schemas for `submit_planner_outcome` / `submit_worker_outcome`
   (the reserved seam), `cancel_background_session` type union gaining
   `"workflow"`,
@@ -291,7 +310,7 @@ Out of scope (named seams in §11):
 | `eos-workflow/src/workflow_run.rs`, `iteration_run.rs`, `attempt/attempt_run.rs`, `attempt/planner_run.rs`, `attempt/work_items_run.rs` | `packages/workflow/src/lifecycle.ts`, `scheduler.ts` | Redesigned: run/coordinator classes -> orchestration functions + one per-workflow cell; `advance()` -> reconcile jobs on the serial queue |
 | `eos-workflow/src/context/render.rs`, `planner_context.rs`, `worker_context.rs` (XML `AgentContext`) | `packages/workflow/src/render/`, `context.ts` | Redesigned: XML sections -> companion-spec markdown brief/spec projections; launch context becomes ordered user messages |
 | `eos-workflow/src/attempt/active_attempt_runs.rs`, `attempt_submission.rs` | (not ported) | Replaced by scheduler-held `handle.outcome` consumption (§2.7) |
-| `eos-tool/src/tools/workflow.rs` (`delegate_workflow`) | `packages/tool/src/tools/workflow/` | `delegate_workflow` + `query_workflow` over bound functions; one-open-workflow guard (§2.12) |
+| `eos-tool/src/tools/workflow.rs` (`delegate_workflow`) | `packages/tool/src/tools/workflow/` | `delegate_workflow` + `read_workflow_context` + `query_workflow_context` over bound functions; one-open-workflow guard (§2.12) |
 | `eos-tool/src/tools/submission/submit_plan_outcome.rs`, `submit_worker_outcome.rs` | `packages/tool/src/tools/submission/` | Per-kind payload schemas fill the reserved seam; in-run Zod validation replaces `validate_plan_structure` |
 | `eos-types/src/state/workflow/*`, `contracts/workflow.rs`, `state/tools/submissions.rs` | `packages/contracts/src/workflow.ts` | IDs, status enum, payload DTOs; `WorkflowApi`/`WorkflowAttemptSubmissionApi` traits collapse into the service + outcome consumption |
 | `eos-db/src/repositories/{workflow,iteration,attempt}.rs`, `migrations/0001_initial.sql` (workflow tables) | `packages/db/src/` | Kysely schema; plans/work_items normalized out of `execution_tree` JSON (§2.5); launch queue table added (§2.8) |
@@ -412,7 +431,8 @@ planner launch:
   1. workflow brief + current iteration brief        (evidence)
   2. directive: iteration goal, max_attempts; on retry, the failed
      attempt's spec path with an explicit instruction to read it via
-     query_workflow before planning; "submit via submit_planner_outcome"
+     read_workflow_context before planning; "submit via
+     submit_planner_outcome"
 
 worker launch:
   1. current attempt brief + dependency work-item briefs   (evidence)
@@ -424,10 +444,17 @@ brief compresses a failed attempt to one-line summaries, models
 under-escalate when injected context looks complete, and the failure
 detail is exactly what the next plan depends on.
 
-`query_workflow` resolves a companion-§5 relative path
+`read_workflow_context` resolves a companion-§5 relative path
 (`iteration_<id>/attempt_<id>/plan_<id>/spec.md`, default root
-`brief.md`) against a fresh `loadAggregate` and returns that one rendered
-projection; unknown paths return an error result naming the valid children.
+`brief.md`) against a fresh `loadAggregate`, renders that one projection
+(memoized per `(revision, path)`, §2.17), and returns the requested byte
+slice with `total_bytes`/`next_offset`; a continuation read whose pinned
+`revision` no longer matches returns a restart notice instead of splicing
+two renders. Unknown paths return an error result naming the valid
+children at the deepest resolved segment. `query_workflow_context`
+matches keywords against the path universe and the entity-local fields
+(§2.17), returning `{ path, status, field, snippet }` hits with explicit
+truncation - always the deepest owning file, never a rollup duplicate.
 
 ## 8. Lifecycle Orchestration and Scheduler (`@eos/workflow`)
 
@@ -459,7 +486,8 @@ interface WorkflowCell {
   liveRuns: Map<AgentRunId, LaunchedAgent>;  // cancel cascade walks this
   queue: Promise<void>;                      // serial reconcile chain (§2.9)
   terminal: PromiseWithResolvers<WorkflowTerminal>;
-}
+  renders: Map<string, string>;              // `${revision}:${path}` memo
+}                                            // (§2.17); cleared on bump
 
 interface WorkflowTerminal {
   status: "Success" | "Failed" | "Cancelled";
@@ -506,7 +534,26 @@ interface WorkflowService {
   delegate(input: { goal: string; max_attempts?: number },
            parentRunId: AgentRunId): Promise<DelegatedWorkflow>;
   cancel(id: WorkflowId, reason: string): Promise<void>;
-  query(id: WorkflowId, path?: string): Promise<string>;
+  read(id: WorkflowId, params: { path?: string; offset?: number;
+                                 revision?: number }): Promise<ContextPage>;
+  search(id: WorkflowId, params: { keywords: readonly string[];
+                                   scope?: string }): Promise<ContextSearch>;
+}
+
+// Both DTOs live in @eos/contracts beside the payload schemas; reads
+// against terminal workflows keep working after the cell is dropped
+// (the memo is an optimization, loadAggregate is the contract).
+interface ContextPage {
+  revision: number; path: string; total_bytes: number;
+  offset: number; content: string; next_offset?: number;
+}
+
+interface ContextSearch {
+  revision: number;
+  files: readonly { path: string; status: WorkflowEntityRunStatus }[];
+  matches: readonly { path: string; status: WorkflowEntityRunStatus;
+                      field: string; snippet: string }[];
+  truncated?: string;                  // "32 more matches; refine or scope"
 }
 
 interface DelegatedWorkflow {
@@ -535,7 +582,10 @@ function workflowTools(
     delegate(input: DelegateWorkflowInput,
              parent: AgentRunId): Promise<DelegatedWorkflow>;
     cancel(id: WorkflowId, reason: string): Promise<void>;
-    query(id: WorkflowId, path?: string): Promise<string>;
+    read(id: WorkflowId, params: { path?: string; offset?: number;
+                                   revision?: number }): Promise<ContextPage>;
+    search(id: WorkflowId, params: { keywords: readonly string[];
+                                     scope?: string }): Promise<ContextSearch>;
   },
   supervisor: BackgroundSupervisor,
 ): ToolDefinition[];
@@ -573,9 +623,11 @@ notification, auto-wait parks an idle caller, the submission guard blocks
 the caller past an unseen settlement, and `dispose` on caller finish
 cancels through the handle (§2.10-2.11).
 
-`query_workflow` (input `{ workflow_id, path? }`) returns the rendered
-projection (§7). `cancel_background_session`'s `type` refinement gains
-`"workflow"` (the Phase 04 §2.3 narrowing, tool-side only).
+`read_workflow_context` (input `{ workflow_id, path?, offset?,
+revision? }`) returns one paged projection; `query_workflow_context`
+(input `{ workflow_id, keywords, scope? }`) returns deduplicated
+entity-local hits (§7). `cancel_background_session`'s `type` refinement
+gains `"workflow"` (the Phase 04 §2.3 narrowing, tool-side only).
 
 `tools/submission/`: `submit_planner_outcome` and `submit_worker_outcome`
 replace the shared `{ summary, payload? }` input with
@@ -610,12 +662,13 @@ const availableDefinitions = [
 ```
 
 `WORKFLOW_TOOL_NAMES` joins the static name universe, so profile
-validation covers `delegate_workflow`/`query_workflow` at startup; a
+validation covers `delegate_workflow`, `read_workflow_context`, and
+`query_workflow_context` at startup; a
 profile listing them in a runtime configured without `workflowDb` fails at
 `createAgentRuntime`, never mid-run. Planner and worker profiles are
 ordinary Phase 04.5 profiles (`agent_kind: planner|worker`,
 `terminal_tool: submit_planner_outcome|submit_worker_outcome`,
-`allowed_tools` typically including `query_workflow`); the scheduler
+`allowed_tools` typically including both context read tools); the scheduler
 launches them by the `agent_name` recorded on the entity. Rollup quality
 is profile policy, not framework: every ancestor brief is built from
 planner/worker `summary` fields, so shipped profiles should keep the
@@ -635,7 +688,6 @@ use the fixed reason `workflow_cancelled`; child transcripts record it as
 | Physical context files (`spec.md`/`brief.md` on disk) for sandboxed workers and debugging | renderers are pure `(aggregate, depth) -> string`; a `WorkflowContextProjector` is one walk calling them; dirty-ancestor-path rendering and content-hash skip apply there |
 | Restart recovery | `launch_queue` rows and entity `agent_run_id` stamps are durable; replay-on-boot + terminal re-attachment need a runtime registry of workflow cells |
 | Detached workflows outliving the caller | `DelegatedWorkflow` is the only handle shape; a runtime-owned registry (not supervisor registration) is the alternative ownership model |
-| Workflow context search | `query_workflow` is the single read entry; search is a second tool over the same aggregate |
 | Progress notifications (per-iteration transitions) | `inbox.publish` with `key = "workflow:<id>"` collapses stale progress by design; publishing site would be the reconcile job |
 | Workflow depth budget for sub-delegation | `parent_run_id` chains exist on `workflows`; a depth count is one recursive query in `delegate` |
 | Summary length caps | `max()` refinements on the payload schema `summary` fields |
@@ -650,7 +702,8 @@ use the fixed reason `workflow_cancelled`; child transcripts record it as
 - `packages/db/`: first real content - `createDatabase`, the workflow
   migration, `WorkflowStore`. Dependencies `better-sqlite3` + `kysely`
   (Phase 00 baseline, already in the root manifest).
-- `packages/contracts/`: `workflow.ts` (IDs, status, payload schemas).
+- `packages/contracts/`: `workflow.ts` (IDs, status, payload schemas,
+  context page/search DTOs).
 - `packages/tool/`: `tools/workflow/` family, per-kind submission input
   schemas, `cancel_background_session` type union gains `"workflow"`.
 - `packages/agent-runtime/`: `workflowDb` dependency, launch-port adapter,
@@ -702,7 +755,7 @@ root on top).
 | 2 | `@eos/db`: database factory, migration, `WorkflowStore` | §14 case 2 round-trips on `:memory:` | Planned |
 | 3 | Renderers + combinators | §14 case 3 (the companion acceptance criteria as `it.each` tables) | Planned |
 | 4 | Lifecycle functions + scheduler cell over a scripted `AgentLaunchPort` | §14 cases 4-9 with no engine in the suite | Planned |
-| 5 | `WorkflowService` (delegate / cancel / query) | §14 cases 8-10 | Planned |
+| 5 | `WorkflowService` (delegate / cancel / read / search) | §14 cases 8-10 | Planned |
 | 6 | `@eos/tool` owned changes: workflow family, per-kind submission schemas, type union | §14 cases 5, 11; existing submission suite updated for the two narrowed schemas | Planned |
 | 7 | Runtime wiring: `workflowDb`, launch adapter, per-run assembly, profile name universe | §14 case 12 end-to-end over `MockLlmClient` | Planned |
 | 8 | Workspace wiring | `pnpm run check` green; `git diff --stat -- agent-core` empty | Planned |
@@ -726,8 +779,8 @@ only one that drives real `startRun` loops, over `MockLlmClient` scripts.
 | 8 | Death synthesis | a planner settlement of `failed`, `cancelled`, or `completed`-without-submission synthesizes a failed submission through the same retry path; no entity stays `Running` |
 | 9 | Reconcile serialization | two worker settlements enqueued in the same tick reconcile strictly serially (instrumented store sees no interleaved transactions); the terminal resolves exactly once, after the closing commit |
 | 10 | Cancel cascade | `cancel` interrupts live child runs, awaits them, marks all non-terminal entities `Cancelled`, resolves the terminal `Cancelled`; a late natural settlement after cancel is a no-op (idempotent transitions) |
-| 11 | Tool family | `delegate_workflow` registers the session before returning and rejects a second open delegation; `query_workflow` renders fresh state by path and errors on unknown paths naming valid children; `submit_planner_outcome` rejects duplicate local ids, dangling `needs`, and cycles in-run; `cancel_background_session` accepts `type: "workflow"` |
-| 12 | Runtime end-to-end | a scripted main run delegates; scripted planner and worker profiles run through real engine loops; the caller idles -> auto-wait; `session_settled` arrives and is drained; the caller reads `query_workflow` then submits; caller interrupt mid-workflow cascades `workflow_cancelled` into child transcripts and the session settles `cancelled` |
+| 11 | Tool family | `delegate_workflow` registers the session before returning and rejects a second open delegation; `read_workflow_context` renders fresh state by path, pages by byte offset with stable `total_bytes`/`next_offset`, refuses a stale-revision continuation with a restart notice, and errors on unknown paths naming valid children; `query_workflow_context` returns one hit per fact at the deepest owning path (never a rollup duplicate), matches the path universe without rendering, honors `scope`, and reports truncation explicitly; `submit_planner_outcome` rejects duplicate local ids, dangling `needs`, and cycles in-run; `cancel_background_session` accepts `type: "workflow"` |
+| 12 | Runtime end-to-end | a scripted main run delegates; scripted planner and worker profiles run through real engine loops; the caller idles -> auto-wait; `session_settled` arrives and is drained; the caller locates the outcome with `query_workflow_context`, pages it with `read_workflow_context`, then submits; caller interrupt mid-workflow cascades `workflow_cancelled` into child transcripts and the session settles `cancelled` |
 
 Commands:
 
@@ -768,8 +821,9 @@ Phase 05 is accepted when:
   closes - all under the per-workflow serial reconcile queue,
 - rendering satisfies the companion §12 criteria (as amended, including
   the §2.19 revision stamp and the §2.20 current-iteration-only workflow
-  rollup) from pure depth-parametric renderers, with `query_workflow` and
-  launch context as the two consumers and no projected files written,
+  rollup) from pure depth-parametric renderers, with the context
+  read/search tools and launch context as the consumers and no projected
+  files written,
 - a delegated workflow is exactly one supervisor session of the delegating
   run: settlement notification, auto-wait, the submission guard, model
   cancellation, and the caller disposal cascade all work through the one

@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use eos_cas::{LayerRef, Manifest};
+use crate::model::{LayerRef, Manifest};
 
 use crate::error::LayerStackError;
 

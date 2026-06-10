@@ -113,7 +113,7 @@ pub fn require_workspace_binding(
 }
 
 fn normalize_layer_path(path: &str) -> Result<String, LayerStackError> {
-    eos_cas::LayerPath::parse(path)
+    crate::model::LayerPath::parse(path)
         .map(|path| path.as_str().to_owned())
         .map_err(LayerStackError::from)
 }

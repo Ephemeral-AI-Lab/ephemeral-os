@@ -158,6 +158,56 @@ describe("tool pipeline", () => {
     expect(failureHookRan, "a deny is not an execute failure").toBe(false);
   });
 
+  it("passes runtime background-session snapshots to pre-hooks", async () => {
+    let executed = false;
+    let seen: string[] = [];
+    const tool = scriptedTool({
+      name: "submit_main_outcome",
+      isTerminal: true,
+      execute: () => {
+        executed = true;
+        return Promise.resolve({ content: { summary: "done" } });
+      },
+    });
+    const result = await runPipeline(tool, {
+      input: { summary: "done" },
+      hookPayloadFacts: () => ({
+        background_sessions: [
+          {
+            type: "subagent",
+            id: "run_child",
+            status: "running",
+            started_at: "2026-06-11T00:00:00.000Z",
+          },
+        ],
+      }),
+      entries: [
+        {
+          event: "PreToolUse",
+          matcher: "submit_main_outcome",
+          hooks: [
+            {
+              type: "callback",
+              run: (payload) => {
+                seen = (payload.background_sessions ?? []).map(
+                  (session) => `${session.type}:${session.id} (${session.status})`,
+                );
+                return Promise.resolve({
+                  decision: "deny",
+                  reason: `cannot submit while ${String(seen.length)} background session(s) are open: ${seen.join(", ")}`,
+                });
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.is_error).toBe(true);
+    expect(result.content).toContain("subagent:run_child (running)");
+    expect(seen).toEqual(["subagent:run_child (running)"]);
+    expect(executed).toBe(false);
+  });
+
   it("applies a single updatedInput re-validated through the same schema (§15.12)", async () => {
     const received: number[] = [];
     const tool = defineTool({

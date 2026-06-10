@@ -86,6 +86,14 @@ pub struct FileLimitsConfig {
     pub max_write_bytes: usize,
 }
 
+/// Default `read_file` cap; the fallback when `daemon.files.max_read_bytes`
+/// is not threaded through runtime config.
+pub const MAX_READ_BYTES: usize = 16 * 1024 * 1024;
+/// Default per-file `write_file` / `edit_file` cap; the fallback for
+/// `daemon.files.max_write_bytes`. Kept below the 16 MiB request frame so a
+/// single file payload fits one envelope.
+pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
+
 impl DaemonConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///

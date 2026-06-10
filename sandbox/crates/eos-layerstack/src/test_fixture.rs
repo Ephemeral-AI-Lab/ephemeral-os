@@ -18,8 +18,8 @@ pub(crate) fn unique_suffix() -> String {
     )
 }
 
-pub(crate) fn lp(path: &str) -> TestResult<eos_cas::LayerPath> {
-    Ok(eos_cas::LayerPath::parse(path)?)
+pub(crate) fn lp(path: &str) -> TestResult<crate::model::LayerPath> {
+    Ok(crate::model::LayerPath::parse(path)?)
 }
 
 pub(crate) struct Fixture {

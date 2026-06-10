@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use eos_cas::LayerChange;
+use eos_overlay::LayerChange;
 
 use super::*;
 use crate::ephemeral::{EphemeralRunDirs, PathChange};

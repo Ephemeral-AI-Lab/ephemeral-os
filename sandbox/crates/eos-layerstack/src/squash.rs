@@ -9,7 +9,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use eos_cas::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use crate::model::{LayerRef, MANIFEST_SCHEMA_VERSION, Manifest};
 
 use crate::error::LayerStackError;
 use crate::fsutil::{check_layer_path, resolve_layer_path};

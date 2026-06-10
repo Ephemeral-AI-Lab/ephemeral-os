@@ -4,7 +4,7 @@
 //! conversions use `#[from]`; messages are lowercase with no trailing
 //! punctuation.
 
-use eos_cas::CasError;
+use crate::model::CasError;
 
 /// Errors raised by the OCC commit path.
 #[derive(Debug, thiserror::Error)]

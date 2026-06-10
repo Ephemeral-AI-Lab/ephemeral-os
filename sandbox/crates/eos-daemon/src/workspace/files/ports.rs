@@ -7,9 +7,9 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eos_cas::{LayerChange, LayerPath};
+use eos_layerstack::{LayerChange, LayerPath};
 #[cfg(target_os = "linux")]
-use eos_cas::{LayerRef, Manifest};
+use eos_layerstack::{LayerRef, Manifest};
 #[cfg(target_os = "linux")]
 use eos_layerstack::MergedView;
 use eos_layerstack::{require_workspace_binding, LayerStack, WorkspaceBinding};

@@ -15,9 +15,8 @@ use crate::contract::{
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
     WorkspaceTimings,
 };
-use eos_cas::{
-    Fd, Intent, LayerChange, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
-};
+use eos_namespace::protocol::{Fd, Intent, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use eos_overlay::LayerChange;
 use serde_json::{json, Value};
 
 /// Daemon-supplied facts needed to prepare an isolated command workspace.

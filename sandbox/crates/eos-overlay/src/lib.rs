@@ -8,10 +8,11 @@
 //! mount itself is built with the RAW new-mount API
 //! (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) — NOT the `mount(8)` binary.
 //!
-//! This is a one-way leaf below occ: overlay has NO `eos-occ` dependency, so the
-//! `occ → overlay` edge is acyclic. The `OverlayPathChange ->
-//! eos_cas::LayerChange` conversion lives here precisely because occ
-//! consumes it one-way.
+//! Overlay produces the layer stack's change vocabulary one-way: the
+//! `OverlayPathChange -> LayerChange` conversion lives here, and the only
+//! `eos-layerstack` edge is those model types — overlay never reads or writes
+//! the stack itself. Workspace crates consume the re-exported vocabulary from
+//! here without linking the storage engine's write surface directly.
 //!
 //! # Build-time guarantee / platform
 //!
@@ -28,6 +29,10 @@ pub mod error;
 pub mod kernel_mount;
 pub mod path_change;
 pub mod writable_dirs;
+
+// The capture vocabulary, re-exported so overlay consumers (the workspace
+// crates) never import the storage engine directly.
+pub use eos_layerstack::{LayerChange, LayerPath};
 
 pub use error::{OverlayError, Result};
 pub use kernel_mount::{mount_overlay, unmount_overlay, OverlayHandle, OverlayMount};

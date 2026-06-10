@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-eos-cas.workspace = true
+serde.workspace = true
 eos-config.workspace = true
 eos-overlay.workspace = true
 serde_json.workspace = true

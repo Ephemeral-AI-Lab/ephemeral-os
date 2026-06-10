@@ -19,11 +19,11 @@
 //! - [`runner`]: created once per tool call. Either unshares a fresh
 //!   user+mount namespace and mounts the workspace overlay, or `setns`es into
 //!   the holder's pinned namespaces, then execs the tool and reports a
-//!   [`RunResult`](eos_cas::RunResult).
+//!   [`RunResult`](crate::protocol::RunResult).
 //!
 //! The two children share this charter but no code: the holder produces the
 //! pinned namespaces, the daemon brokers the FDs, and the runner consumes
-//! them. The daemon↔runner wire DTOs live in `eos-cas` so the daemon does not
+//! them. The daemon↔runner wire DTOs live in [`protocol`] so the daemon does not
 //! depend on this syscall crate.
 //!
 //! Linux-only syscall bodies are gated behind `#[cfg(target_os = "linux")]`;
@@ -33,5 +33,6 @@
 //! enforced.
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod protocol;
 pub mod holder;
 pub mod runner;

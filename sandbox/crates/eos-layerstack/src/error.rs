@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use eos_cas::CasError;
+use crate::model::CasError;
 
 /// Errors raised by the durable layer-stack storage layer.
 #[derive(Debug, Error)]

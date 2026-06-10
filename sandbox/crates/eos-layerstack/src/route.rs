@@ -4,7 +4,7 @@ use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use serde_json::{json, Value};
 
-use eos_cas::{LayerChange, LayerPath};
+use crate::model::{LayerChange, LayerPath};
 
 use crate::commit::error::CommitError;
 use crate::commit::prepare::RouteProvider;

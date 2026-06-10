@@ -17,12 +17,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use crate::command_session::process::{spawn_current_exe_ns_runner, KillReason};
-use crate::command_session::session::{
+use eos_command_session::process::{spawn_current_exe_ns_runner, KillReason};
+use eos_command_session::session::{
     CommandSession, CommandSessionSpec, ReapedCommand, RunningCommandSessionParts,
 };
-use crate::command_session::wait::{wait_for_yield, WaitOutcome};
-use crate::command_session::{
+use eos_command_session::wait::{wait_for_yield, WaitOutcome};
+use eos_command_session::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
@@ -88,7 +88,13 @@ impl WorkspaceRunManager {
             ));
         }
         let id = self.registry.next_id();
-        let prepare_request = request.prepare_request(id.clone());
+        let prepare_request = crate::contract::PrepareCommandRequest {
+            caller_id: request.caller_id.clone(),
+            command_session_id: id.clone(),
+            invocation_id: request.invocation_id.clone(),
+            cmd: request.cmd.clone(),
+            timeout_seconds: request.timeout_seconds,
+        };
         let yield_time_ms = request.yield_time_ms;
         let spec = CommandSessionSpec {
             id,
@@ -474,7 +480,7 @@ impl WorkspaceRunManager {
             }
         };
         let response = match outcome {
-            Ok(outcome) => CommandResponse::from_workspace_outcome(outcome),
+            Ok(outcome) => command_response_from_outcome(outcome),
             Err(error) => CommandResponse::error(error.to_string()),
         };
         run.session().persist_final(&response);
@@ -563,4 +569,29 @@ fn is_teardown_control(chars: &str) -> bool {
 
 fn contains_teardown_control(chars: &str) -> bool {
     chars.contains('\u{3}') || chars.contains('\u{4}')
+}
+
+/// Shape a settled [`WorkspaceCommandOutcome`] into the substrate's
+/// [`CommandResponse`], folding workspace policy fields into `metadata`.
+pub(crate) fn command_response_from_outcome(
+    outcome: crate::contract::WorkspaceCommandOutcome,
+) -> CommandResponse {
+    CommandResponse {
+        status: outcome.status,
+        exit_code: outcome.exit_code,
+        stdout: outcome.stdout,
+        stderr: outcome.stderr,
+        command_session_id: outcome.command_session_id,
+        workspace_mode: Some(outcome.mode.as_str().to_owned()),
+        metadata: serde_json::json!({
+            "success": outcome.success,
+            "changed_paths": outcome.changed_paths,
+            "changed_path_kinds": outcome.changed_path_kinds,
+            "mutation_source": outcome.mutation_source,
+            "conflict": outcome.conflict,
+            "conflict_reason": outcome.conflict_reason,
+            "timings": outcome.timings,
+            "metadata": outcome.metadata,
+        }),
+    }
 }

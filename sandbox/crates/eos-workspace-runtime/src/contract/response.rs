@@ -72,3 +72,9 @@ impl WorkspaceApiError {
         Self::new("invalid_request", message)
     }
 }
+
+impl From<WorkspaceApiError> for eos_command_session::CommandSessionError {
+    fn from(error: WorkspaceApiError) -> Self {
+        Self::Workspace(error.to_string())
+    }
+}

@@ -6,7 +6,7 @@ use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_cas::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use crate::model::{LayerRef, MANIFEST_SCHEMA_VERSION, Manifest};
 use sha2::{Digest, Sha256};
 
 use crate::error::LayerStackError;

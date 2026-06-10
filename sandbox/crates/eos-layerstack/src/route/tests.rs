@@ -1,4 +1,4 @@
-use eos_cas::LayerChange;
+use crate::model::LayerChange;
 
 use crate::commit::prepare::RouteProvider;
 use crate::test_fixture::{lp, Fixture, TestResult};

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use eos_cas::{LayerChange, LayerPath, Manifest};
+use crate::model::{LayerChange, LayerPath, Manifest};
 
 use crate::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 

@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { assistantText, type JsonObject, type Message } from "@eos/contracts";
 import type { AgentRunOutcome } from "@eos/engine";
 import { scriptedTool } from "@eos/testkit";
-import { defineTool, type ToolDefinition } from "@eos/tool";
+import { defineTool, type HookConfigEntry, type ToolDefinition } from "@eos/tool";
 import { z } from "zod";
 
 import type { RunSummary } from "../../src/run-registry.js";
@@ -33,6 +34,30 @@ export const SLEEPER_BODY = [
   'Immediately call wait with {"ms": 120000}.',
   'After it returns, call submit_subagent_outcome with summary "slept".',
 ].join(" ");
+
+const TERMINAL_SUBMISSION_TOOL_NAMES = [
+  "submit_main_outcome",
+  "submit_planner_outcome",
+  "submit_worker_outcome",
+  "submit_advisor_outcome",
+  "submit_subagent_outcome",
+] as const;
+
+export function noOpenBackgroundSessionsHookPath(): string {
+  return join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../../../.eos-agents/hooks/no-open-background-sessions.cjs",
+  );
+}
+
+export function noOpenBackgroundSessionsHookEntries(): HookConfigEntry[] {
+  const command = `node ${JSON.stringify(noOpenBackgroundSessionsHookPath())}`;
+  return TERMINAL_SUBMISSION_TOOL_NAMES.map((matcher) => ({
+    event: "PreToolUse",
+    matcher,
+    hooks: [{ type: "command", command }],
+  }));
+}
 
 /** A subagent that settles immediately with a fixed summary. */
 export const HELPER_BODY = [

@@ -10,10 +10,20 @@ export const HookEventSchema = z.enum([
 ]);
 export type HookEvent = z.infer<typeof HookEventSchema>;
 
+export interface HookBackgroundSession {
+  type: string;
+  id: string;
+  status: "running" | "completed" | "failed" | "cancelled";
+  /** ISO-8601 registration time. */
+  started_at: string;
+  summary?: string;
+  description?: string;
+}
+
 /**
  * What a hook receives (JSON over stdin for command hooks). snake_case:
- * crosses the process boundary. State inference happens through
- * `run.transcript_path`; hooks never receive live objects or ports.
+ * crosses the process boundary. Hooks receive snapshots only, never live
+ * objects or ports.
  */
 export interface HookPayload {
   event: HookEvent;
@@ -21,6 +31,8 @@ export interface HookPayload {
   tool_input: JsonObject;
   tool_use_id: ToolUseId;
   run: AgentRunSnapshot;
+  /** Running plus settled-but-undelivered sessions for this run. */
+  background_sessions?: readonly HookBackgroundSession[];
   /** PostToolUse only (string projection of the outcome content). */
   tool_response?: string;
   /** PostToolUseFailure only. */

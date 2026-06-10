@@ -12,14 +12,17 @@ import {
 } from "@eos/engine";
 import {
   BACKGROUND_TOOL_NAMES,
+  AGENT_TOOL_NAMES,
   HookEngine,
   TERMINAL_TOOL_NAMES,
+  agentTools,
   backgroundTools,
   buildToolExecutor,
   terminalToolDefinitions,
   type AgentRunState,
   type ToolDefinition,
 } from "@eos/tool";
+import type { HookBackgroundSession } from "@eos/tool";
 
 import {
   loadAgentProfileRegistry,
@@ -27,7 +30,6 @@ import {
   type AgentProfileRegistry,
   type KnownToolNames,
 } from "./agent-profile-registry.js";
-import { AGENT_TOOL_NAMES, agentTools } from "./agent-tools.js";
 import { loadHookConfig } from "./hook-config.js";
 import {
   loadLlmClientRegistry,
@@ -197,13 +199,20 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
         supervisor,
       ),
       ...backgroundTools(supervisor),
-      ...terminalToolDefinitions(supervisor),
+      ...terminalToolDefinitions(),
     ];
     const definitions = selectProfileDefinitions(profile, availableDefinitions);
 
     // No inbox parameter (decision 11): hook context rides result metadata
     // and the engine publishes it; tools and the executor never see the inbox.
-    const tools = buildToolExecutor({ runState, definitions, hookEngine: ctx.hookEngine });
+    const tools = buildToolExecutor({
+      runState,
+      definitions,
+      hookEngine: ctx.hookEngine,
+      hookPayloadFacts: () => ({
+        background_sessions: supervisor.list().map(backgroundSessionForHook),
+      }),
+    });
 
     const handle = startAgentRun({
       llmClient: llm.client,
@@ -253,4 +262,23 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     startRun: (params) => startRun(params),
     listRuns: () => registry.list(),
   };
+}
+
+function backgroundSessionForHook(row: {
+  type: string;
+  id: string;
+  status: HookBackgroundSession["status"];
+  started_at: string;
+  summary?: string;
+  description?: string;
+}): HookBackgroundSession {
+  const session: HookBackgroundSession = {
+    type: row.type,
+    id: row.id,
+    status: row.status,
+    started_at: row.started_at,
+  };
+  if (row.summary !== undefined) session.summary = row.summary;
+  if (row.description !== undefined) session.description = row.description;
+  return session;
 }

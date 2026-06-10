@@ -111,7 +111,7 @@ describe.skipIf(!codex.available)("tool-call batches over live codex (e2e)", () 
     "rejects a whole batch holding a batch-forbidden tool undispatched, then allows it solo",
     { timeout: 180_000 },
     async () => {
-      const exclusive = probeTool("exclusive_probe", 100, { exclusive: true });
+      const beta = probeTool("probe_beta", 100, { exclusive: true });
       const alpha = probeTool("probe_alpha", 100);
       const { runtime } = runtimeFixture({
         llmClientsPath: llmClientsPath(),
@@ -120,20 +120,23 @@ describe.skipIf(!codex.available)("tool-call batches over live codex (e2e)", () 
             name: "mixer",
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
-            allowed: ["exclusive_probe", "probe_alpha"],
+            allowed: ["probe_alpha", "probe_beta"],
             maxTurns: 8,
-            body: PARALLEL_BODY,
+            body: [
+              PARALLEL_BODY,
+              "When asked for multiple tool calls in one assistant turn, call every named tool in that same response; do not skip a named tool to avoid an expected error.",
+            ].join(" "),
           },
         ],
-        baseTools: [exclusive.definition, alpha.definition],
+        baseTools: [alpha.definition, beta.definition],
       });
       const run = runtime.startRun({
         agentName: "mixer",
         initialMessages: [
           userMessage(
             [
-              "1. In one single assistant turn, call exclusive_probe and probe_alpha together - two tool calls in the same response. Both will fail with a policy error; that is expected.",
-              "2. Then call exclusive_probe alone, with no other tool call in that turn.",
+              "1. In one single assistant turn, call probe_alpha and probe_beta together - two tool calls in the same response. Both will fail with a policy error; that is expected.",
+              "2. Then call probe_beta alone, with no other tool call in that turn.",
               '3. Then call submit_main_outcome with summary "solo ok".',
             ].join("\n"),
           ),
@@ -151,7 +154,7 @@ describe.skipIf(!codex.available)("tool-call batches over live codex (e2e)", () 
         "every call of the mixed batch carries the policy rejection",
       ).toBeGreaterThanOrEqual(2);
       expect(
-        exclusive.windows(),
+        beta.windows(),
         "the flagged tool dispatched exactly once: solo, never in the batch",
       ).toHaveLength(1);
       expect(
