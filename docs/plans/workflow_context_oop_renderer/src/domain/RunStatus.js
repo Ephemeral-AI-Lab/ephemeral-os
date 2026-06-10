@@ -1,17 +1,21 @@
-export const RunStatus = Object.freeze({
+window.WorkflowContextOop = window.WorkflowContextOop || {};
+
+window.WorkflowContextOop.RunStatus = Object.freeze({
   NotStarted: "NotStarted",
   Running: "Running",
   Success: "Success",
   Failed: "Failed",
 });
 
-export function statusClass(status) {
-  if (status === RunStatus.Running) return "running";
-  if (status === RunStatus.Success) return "success";
-  if (status === RunStatus.Failed) return "failed";
+window.WorkflowContextOop.statusClass = function statusClass(status) {
+  const runStatus = window.WorkflowContextOop.RunStatus;
+  if (status === runStatus.Running) return "running";
+  if (status === runStatus.Success) return "success";
+  if (status === runStatus.Failed) return "failed";
   return "not-started";
-}
+};
 
-export function isTerminalStatus(status) {
-  return status === RunStatus.Success || status === RunStatus.Failed;
-}
+window.WorkflowContextOop.isTerminalStatus = function isTerminalStatus(status) {
+  const runStatus = window.WorkflowContextOop.RunStatus;
+  return status === runStatus.Success || status === runStatus.Failed;
+};

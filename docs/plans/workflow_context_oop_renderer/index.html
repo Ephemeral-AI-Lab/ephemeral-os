@@ -192,12 +192,11 @@
 
   main {
     display: grid;
-    grid-template-columns: minmax(320px, 410px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     padding: 16px;
   }
 
-  .left,
   .right,
   .stack {
     min-width: 0;
@@ -229,6 +228,25 @@
     padding: 14px;
   }
 
+  .tool-surface {
+    display: grid;
+    grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .action-zone {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .files {
     display: grid;
     grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
@@ -238,7 +256,7 @@
 
   .file-tree,
   .file-view {
-    max-height: calc(100vh - 198px);
+    max-height: calc(100vh - 258px);
     overflow: auto;
     border: 1px solid var(--line);
     border-radius: 6px;
@@ -357,6 +375,7 @@
 
   @media (max-width: 1120px) {
     main,
+    .tool-surface,
     .files {
       grid-template-columns: 1fr;
     }
@@ -387,97 +406,36 @@
 <header>
   <div>
     <h1>OOP Workflow Context Renderer</h1>
-    <div class="subhead">One JS module per class: Workflow, Iteration, Attempt, Plan, WorkItem, Store, Projector, and UI views.</div>
+    <div class="subhead">One JS module per class: Workflow, Iteration, Attempt, Plan, WorkItem, WorkflowOrchestrator, IterationOrchestrator, AttemptOrchestrator, Store, Projector, and UI views.</div>
   </div>
-  <div class="status-strip" id="statusStrip"></div>
+  <div class="status-strip">
+    <span class="pill" id="versionPill">version 0</span>
+    <div class="status-strip" id="statusStrip"></div>
+  </div>
 </header>
 
 <main>
-  <section class="left">
+  <section class="right">
     <section class="panel">
       <div class="panel-head">
-        <h2>Lifecycle</h2>
-        <span class="pill" id="versionPill">version 0</span>
+        <h2>Agent Tool Calls</h2>
+        <span class="pill" id="selectedEntityPill">no workflow</span>
       </div>
-      <div class="panel-body stack">
+      <div class="panel-body tool-surface">
         <label>
           workflow_goal
           <textarea id="workflowGoal"></textarea>
         </label>
-        <div class="row">
-          <button type="button" class="primary" id="delegateWorkflow">Delegate workflow</button>
-          <button type="button" id="seedDemo">Seed demo</button>
-          <button type="button" class="ghost" id="resetEmpty">Reset empty</button>
-        </div>
-        <div class="row">
-          <button type="button" id="launchPlanner">Launch planner</button>
-          <button type="button" id="launchWorker">Launch next worker</button>
-        </div>
-        <div class="error" id="flowError"></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>submit_plan_outcome</h2>
-        <span class="pill running" id="activeAttemptPill">none</span>
-      </div>
-      <div class="panel-body stack">
-        <label>
-          plan_spec
-          <textarea id="planSpec"></textarea>
-        </label>
-        <label>
-          planner_summary
-          <textarea id="plannerSummary"></textarea>
-        </label>
-        <label>
-          deferred_goal_for_next_iteration
-          <textarea id="deferredGoal"></textarea>
-        </label>
-        <label>
-          work_items JSON
-          <textarea id="workItemsJson"></textarea>
-        </label>
-        <button type="button" class="primary" id="submitPlan">Submit planner outcome</button>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>submit_worker_outcome</h2>
-        <span class="pill" id="activeWorkerPill">none</span>
-      </div>
-      <div class="panel-body stack">
-        <label>
-          worker
-          <select id="workerSelect"></select>
-        </label>
-        <label>
-          worker_summary
-          <textarea id="workerSummary"></textarea>
-        </label>
-        <label>
-          worker_outcome
-          <textarea id="workerOutcome"></textarea>
-        </label>
-        <div class="row">
-          <button type="button" class="primary" id="submitWorkerSuccess">Submit success</button>
-          <button type="button" class="danger" id="submitWorkerFailure">Submit failure</button>
+        <div class="action-zone">
+          <div class="action-buttons">
+            <button type="button" class="primary" id="delegateWorkflow">delegate_workflow</button>
+          </div>
+          <div id="selectedEntityActions"></div>
+          <div class="error" id="flowError"></div>
         </div>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>DB Events</h2>
-        <span class="pill" id="eventCount">0 events</span>
-      </div>
-      <div class="panel-body db-log" id="dbLog"></div>
-    </section>
-  </section>
-
-  <section class="right">
     <section class="panel">
       <div class="panel-head">
         <h2>Projected Files</h2>
@@ -493,9 +451,36 @@
         </div>
       </div>
     </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>DB Events</h2>
+        <span class="pill" id="eventCount">0 events</span>
+      </div>
+      <div class="panel-body db-log" id="dbLog"></div>
+    </section>
   </section>
 </main>
 
-<script type="module" src="./src/main.js"></script>
+<script src="./src/domain/RunStatus.js"></script>
+<script src="./src/domain/Markdown.js"></script>
+<script src="./src/domain/WorkflowEntityBase.js"></script>
+<script src="./src/domain/Workflow.js"></script>
+<script src="./src/domain/Iteration.js"></script>
+<script src="./src/domain/Attempt.js"></script>
+<script src="./src/domain/Plan.js"></script>
+<script src="./src/domain/WorkItem.js"></script>
+<script src="./src/sample/SampleData.js"></script>
+<script src="./src/domain/WorkflowFactory.js"></script>
+<script src="./src/domain/AttemptAgentLaunchScheduler.js"></script>
+<script src="./src/domain/AttemptOrchestrator.js"></script>
+<script src="./src/domain/IterationOrchestrator.js"></script>
+<script src="./src/domain/WorkflowOrchestrator.js"></script>
+<script src="./src/store/InMemoryWorkflowStore.js"></script>
+<script src="./src/projection/WorkflowProjector.js"></script>
+<script src="./src/ui/FileTreeView.js"></script>
+<script src="./src/ui/FileViewer.js"></script>
+<script src="./src/ui/LifecycleActionsView.js"></script>
+<script src="./src/ui/WorkflowApp.js"></script>
+<script src="./src/main.js"></script>
 </body>
 </html>

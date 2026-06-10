@@ -104,7 +104,7 @@
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
 
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-228">created_from_index</a>(&amp;<span class="rs-type">AgentRunRecordIndex</span> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-231">created_from_index</a>(&amp;<span class="rs-type">AgentRunRecordIndex</span> {
             request_id: request_id.clone(),
             agent_run_id: agent_run_id.clone(),
         }))
@@ -124,7 +124,7 @@
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> terminal = terminal_payload.map(json_col::encode).transpose()?;
         <span class="rs-kw">let</span> outcome = submission_outcome.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> agent_runs <span class="rs-type">SET</span> status = ?, terminal_payload = <span class="rs-type">COALESCE</span>(?, terminal_payload), \
              submission_outcome = <span class="rs-type">COALESCE</span>(?, submission_outcome), token_count = ?, error = ?, \
              updated_at = ?, finished_at = ? <span class="rs-type">WHERE</span> agent_run_id = ? <span class="rs-type">RETURNING</span> *&quot;,
@@ -149,23 +149,26 @@
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> request_id, agent_run_id <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> agent_run_id = ?&quot;,
         )
         .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
-        row.map(row_to_record_index).transpose().map_err(<span class="rs-type">Into</span>::into)
+        row.as_ref()
+            .map(row_to_record_index)
+            .transpose()
+            .map_err(<span class="rs-type">Into</span>::into)
     }
 </code></pre>
-</details></td></tr><tr id="method-get-agent-run-115"><td>method</td><td>get_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-115">get_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-get-agent-run-118"><td>method</td><td>get_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-118">get_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-115">get_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-118">get_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> agent_run_id = ?&quot;,
         )
         .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
@@ -175,13 +178,13 @@
         row.map(row_to_agent_run).transpose().map_err(<span class="rs-type">Into</span>::into)
     }
 </code></pre>
-</details></td></tr><tr id="method-list-agent-runs-for-request-129"><td>method</td><td>list_agent_runs_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-129">list_agent_runs_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; Vec &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-list-agent-runs-for-request-132"><td>method</td><td>list_agent_runs_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-132">list_agent_runs_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; Vec &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-129">list_agent_runs_for_request</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-132">list_agent_runs_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> request_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
         )
         .bind(request_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
@@ -194,13 +197,13 @@
             .map_err(<span class="rs-type">Into</span>::into)
     }
 </code></pre>
-</details></td></tr><tr id="method-list-running-agent-runs-for-request-146"><td>method</td><td>list_running_agent_runs_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-146">list_running_agent_runs_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; Vec &lt; RunningRequestAgentRun &gt; , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-list-running-agent-runs-for-request-149"><td>method</td><td>list_running_agent_runs_for_request</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-149">list_running_agent_runs_for_request</a> (&amp; self , request_id : &amp; RequestId ,) -&gt; Result &lt; Vec &lt; RunningRequestAgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-146">list_running_agent_runs_for_request</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-149">list_running_agent_runs_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">RunningRequestAgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> request_id, agent_run_id, status <span class="rs-type">FROM</span> agent_runs \
              <span class="rs-type">WHERE</span> request_id = ? <span class="rs-type">AND</span> status = &#x27;running&#x27; <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> agent_run_id <span class="rs-type">ASC</span>&quot;,
         )
@@ -214,16 +217,16 @@
             .map_err(<span class="rs-type">Into</span>::into)
     }
 </code></pre>
-</details></td></tr><tr id="method-list-child-agent-runs-for-parent-agent-run-164"><td>method</td><td>list_child_agent_runs_for_parent_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-164">list_child_agent_runs_for_parent_agent_run</a> (&amp; self , parent_agent_run_id : &amp; AgentRunId , agent_type : Option &lt; AgentType &gt; ,) -&gt; Result &lt; Vec &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-list-child-agent-runs-for-parent-agent-run-167"><td>method</td><td>list_child_agent_runs_for_parent_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-167">list_child_agent_runs_for_parent_agent_run</a> (&amp; self , parent_agent_run_id : &amp; AgentRunId , agent_type : Option &lt; AgentType &gt; ,) -&gt; Result &lt; Vec &lt; AgentRun &gt; , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-164">list_child_agent_runs_for_parent_agent_run</a>(
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-167">list_child_agent_runs_for_parent_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         agent_type: <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentType</span>&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> rows =
             <span class="rs-kw">match</span> agent_type {
-                <span class="rs-type">Some</span>(agent_type) =&gt; sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+                <span class="rs-type">Some</span>(agent_type) =&gt; sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
                     &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> parent_agent_run_id = ? <span class="rs-type">AND</span> agent_type = ? \
                      <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
                 )
@@ -232,7 +235,7 @@
                 .fetch_all(&amp;<span class="rs-self">self</span>.pool)
                 .<span class="rs-kw">await</span>,
                 <span class="rs-type">None</span> =&gt; {
-                    sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+                    sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
                         &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> parent_agent_run_id = ? \
                      <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
                     )
@@ -251,50 +254,50 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-db/src/repositories/agent_run.rs:17</p>
-</article><article id="item-struct-AgentRunRow-197" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRow private struct AgentRunRow crates/eos-db/src/repositories/agent_run.rs agent_run_id String request_id String agent_type String status String agent_name String parent_agent_run_id Option &lt; String &gt; tool_use_id Option &lt; String &gt; terminal_payload Option &lt; String &gt; submission_outcome Option &lt; String &gt; token_count i64 error Option &lt; String &gt; created_at OffsetDateTime updated_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
+</article><article id="item-struct-AgentRunRow-200" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRow private struct AgentRunRow crates/eos-db/src/repositories/agent_run.rs agent_run_id String request_id String agent_type String status String agent_name String parent_agent_run_id Option &lt; String &gt; tool_use_id Option &lt; String &gt; terminal_payload Option &lt; String &gt; submission_outcome Option &lt; String &gt; token_count i64 error Option &lt; String &gt; created_at OffsetDateTime updated_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunRow</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: sqlx::FromRow</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>String</code></td></tr><tr><td>private</td><td>request_id</td><td><code>String</code></td></tr><tr><td>private</td><td>agent_type</td><td><code>String</code></td></tr><tr><td>private</td><td>status</td><td><code>String</code></td></tr><tr><td>private</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>private</td><td>parent_agent_run_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>tool_use_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>terminal_payload</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>submission_outcome</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>token_count</td><td><code>i64</code></td></tr><tr><td>private</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>private</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>private</td><td>finished_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:197</p>
-</article><article id="item-struct-AgentRunRecordIndexRow-215" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRecordIndexRow private struct AgentRunRecordIndexRow crates/eos-db/src/repositories/agent_run.rs request_id String agent_run_id String ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:200</p>
+</article><article id="item-struct-AgentRunRecordIndexRow-218" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRecordIndexRow private struct AgentRunRecordIndexRow crates/eos-db/src/repositories/agent_run.rs request_id String agent_run_id String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunRecordIndexRow</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: sqlx::FromRow</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>request_id</td><td><code>String</code></td></tr><tr><td>private</td><td>agent_run_id</td><td><code>String</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:215</p>
-</article><article id="item-struct-RunningRequestAgentRunRow-221" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunningRequestAgentRunRow private struct RunningRequestAgentRunRow crates/eos-db/src/repositories/agent_run.rs request_id String agent_run_id String status String ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:218</p>
+</article><article id="item-struct-RunningRequestAgentRunRow-224" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunningRequestAgentRunRow private struct RunningRequestAgentRunRow crates/eos-db/src/repositories/agent_run.rs request_id String agent_run_id String status String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RunningRequestAgentRunRow</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: sqlx::FromRow</span><span>dto</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>request_id</td><td><code>String</code></td></tr><tr><td>private</td><td>agent_run_id</td><td><code>String</code></td></tr><tr><td>private</td><td>status</td><td><code>String</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:221</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-created-from-index-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn created_from_index private fn created_from_index (index : &amp; AgentRunRecordIndex) -&gt; CreatedAgentRun crates/eos-db/src/repositories/agent_run.rs  ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:224</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-created-from-index-231" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn created_from_index private fn created_from_index (index : &amp; AgentRunRecordIndex) -&gt; CreatedAgentRun crates/eos-db/src/repositories/agent_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>created_from_index</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-228">created_from_index</a> (index : &amp; AgentRunRecordIndex) -&gt; CreatedAgentRun</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-231">created_from_index</a> (index : &amp; AgentRunRecordIndex) -&gt; CreatedAgentRun</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-228">created_from_index</a>(index: &amp;<span class="rs-type">AgentRunRecordIndex</span>) -&gt; <span class="rs-type">CreatedAgentRun</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-231">created_from_index</a>(index: &amp;<span class="rs-type">AgentRunRecordIndex</span>) -&gt; <span class="rs-type">CreatedAgentRun</span> {
     <span class="rs-type">CreatedAgentRun</span> {
         agent_run_id: index.agent_run_id.clone(),
         record_target: <span class="rs-type">AgentRunRecordTarget</span> {
@@ -307,18 +310,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:228</p>
-</article><article id="item-fn-row-to-record-index-239" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_record_index private fn row_to_record_index (row : AgentRunRecordIndexRow) -&gt; Result &lt; AgentRunRecordIndex , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:231</p>
+</article><article id="item-fn-row-to-record-index-242" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_record_index private fn row_to_record_index (row : &amp; AgentRunRecordIndexRow) -&gt; Result &lt; AgentRunRecordIndex , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>row_to_record_index</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-239">row_to_record_index</a> (row : <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a>) -&gt; Result &lt; AgentRunRecordIndex , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-242">row_to_record_index</a> (row : &amp; <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a>) -&gt; Result &lt; AgentRunRecordIndex , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-239">row_to_record_index</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-242">row_to_record_index</a>(row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunRecordIndex</span> {
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.request_id&quot;, &amp;row.request_id)?,
         agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.agent_run_id&quot;, &amp;row.agent_run_id)?,
@@ -327,19 +330,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:239</p>
-</article><article id="item-fn-row-to-running-request-agent-run-246" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_running_request_agent_run private fn row_to_running_request_agent_run (row : &amp; RunningRequestAgentRunRow ,) -&gt; Result &lt; RunningRequestAgentRun , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:242</p>
+</article><article id="item-fn-row-to-running-request-agent-run-249" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_running_request_agent_run private fn row_to_running_request_agent_run (row : &amp; RunningRequestAgentRunRow ,) -&gt; Result &lt; RunningRequestAgentRun , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>row_to_running_request_agent_run</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-246">row_to_running_request_agent_run</a> (row : &amp; <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a> ,) -&gt; Result &lt; RunningRequestAgentRun , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-249">row_to_running_request_agent_run</a> (row : &amp; <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a> ,) -&gt; Result &lt; RunningRequestAgentRun , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-246">row_to_running_request_agent_run</a>(
-    row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a>,
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-249">row_to_running_request_agent_run</a>(
+    row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunningRequestAgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">RunningRequestAgentRun</span> {
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;running_request_agent_runs.request_id&quot;, &amp;row.request_id)?,
@@ -350,18 +353,18 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:246</p>
-</article><article id="item-fn-row-to-agent-run-256" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_agent_run private fn row_to_agent_run (row : AgentRunRow) -&gt; Result &lt; AgentRun , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:249</p>
+</article><article id="item-fn-row-to-agent-run-259" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn row_to_agent_run private fn row_to_agent_run (row : AgentRunRow) -&gt; Result &lt; AgentRun , DbError &gt; crates/eos-db/src/repositories/agent_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>row_to_agent_run</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-256">row_to_agent_run</a> (row : <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>) -&gt; Result &lt; AgentRun , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-259">row_to_agent_run</a> (row : <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>) -&gt; Result &lt; AgentRun , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-256">row_to_agent_run</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-259">row_to_agent_run</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRun</span> {
         agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.agent_run_id&quot;, &amp;row.agent_run_id)?,
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.request_id&quot;, &amp;row.request_id)?,
@@ -371,11 +374,11 @@
             field: &quot;agent_runs.agent_name&quot;,
             value: row.agent_name.clone(),
         })?,
-        parent_agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-281">opt_parsed_id</a>(
+        parent_agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-284">opt_parsed_id</a>(
             &quot;agent_runs.parent_agent_run_id&quot;,
             row.parent_agent_run_id.as_deref(),
         )?,
-        tool_use_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-281">opt_parsed_id</a>(&quot;agent_runs.tool_use_id&quot;, row.tool_use_id.as_deref())?,
+        tool_use_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-284">opt_parsed_id</a>(&quot;agent_runs.tool_use_id&quot;, row.tool_use_id.as_deref())?,
         terminal_payload: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(row.terminal_payload.as_deref())?,
         submission_outcome: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(row.submission_outcome.as_deref())?,
         token_count: row.token_count,
@@ -388,14 +391,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:256</p>
-</article><article id="item-fn-opt-parsed-id-281" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn opt_parsed_id private fn opt_parsed_id &lt; T &gt; (field : &amp; 'static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; , crates/eos-db/src/repositories/agent_run.rs  ">
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:259</p>
+</article><article id="item-fn-opt-parsed-id-284" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn opt_parsed_id private fn opt_parsed_id &lt; T &gt; (field : &amp; 'static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; , crates/eos-db/src/repositories/agent_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>opt_parsed_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-281">opt_parsed_id</a> &lt; T &gt; (field : &amp; &#x27;static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; ,</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-284">opt_parsed_id</a> &lt; T &gt; (field : &amp; &#x27;static str , raw : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt; where T : std :: str :: FromStr &lt; Err = CoreError &gt; ,</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -408,7 +411,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/repositories/agent_run.rs:281</p>
+  <p class="source">crates/eos-db/src/repositories/agent_run.rs:284</p>
 </article></div>
 </section></div>
 </main>
@@ -480,7 +483,7 @@
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
 
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-228">created_from_index</a>(&amp;<span class="rs-type">AgentRunRecordIndex</span> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-231">created_from_index</a>(&amp;<span class="rs-type">AgentRunRecordIndex</span> {
             request_id: request_id.clone(),
             agent_run_id: agent_run_id.clone(),
         }))
@@ -498,7 +501,7 @@
         <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
         <span class="rs-kw">let</span> terminal = terminal_payload.map(json_col::encode).transpose()?;
         <span class="rs-kw">let</span> outcome = submission_outcome.map(json_col::encode).transpose()?;
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">UPDATE</span> agent_runs <span class="rs-type">SET</span> status = ?, terminal_payload = <span class="rs-type">COALESCE</span>(?, terminal_payload), \
              submission_outcome = <span class="rs-type">COALESCE</span>(?, submission_outcome), token_count = ?, error = ?, \
              updated_at = ?, finished_at = ? <span class="rs-type">WHERE</span> agent_run_id = ? <span class="rs-type">RETURNING</span> *&quot;,
@@ -521,21 +524,24 @@
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> request_id, agent_run_id <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> agent_run_id = ?&quot;,
         )
         .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
         .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
         .<span class="rs-kw">await</span>
         .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
-        row.map(row_to_record_index).transpose().map_err(<span class="rs-type">Into</span>::into)
+        row.as_ref()
+            .map(row_to_record_index)
+            .transpose()
+            .map_err(<span class="rs-type">Into</span>::into)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-115">get_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-get-agent-run-118">get_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> agent_run_id = ?&quot;,
         )
         .bind(agent_run_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
@@ -545,11 +551,11 @@
         row.map(row_to_agent_run).transpose().map_err(<span class="rs-type">Into</span>::into)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-129">list_agent_runs_for_request</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-agent-runs-for-request-132">list_agent_runs_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> request_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
         )
         .bind(request_id.<a class="symbol-link rs-fn" href="eos-db.html#method-as-str-49">as_str</a>())
@@ -562,11 +568,11 @@
             .map_err(<span class="rs-type">Into</span>::into)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-146">list_running_agent_runs_for_request</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-running-agent-runs-for-request-149">list_running_agent_runs_for_request</a>(
         &amp;<span class="rs-self">self</span>,
         request_id: &amp;<span class="rs-type">RequestId</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">RunningRequestAgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
-        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a>&gt;(
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a>&gt;(
             &quot;<span class="rs-type">SELECT</span> request_id, agent_run_id, status <span class="rs-type">FROM</span> agent_runs \
              <span class="rs-type">WHERE</span> request_id = ? <span class="rs-type">AND</span> status = &#x27;running&#x27; <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> agent_run_id <span class="rs-type">ASC</span>&quot;,
         )
@@ -580,14 +586,14 @@
             .map_err(<span class="rs-type">Into</span>::into)
     }
 
-    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-164">list_child_agent_runs_for_parent_agent_run</a>(
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-list-child-agent-runs-for-parent-agent-run-167">list_child_agent_runs_for_parent_agent_run</a>(
         &amp;<span class="rs-self">self</span>,
         parent_agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         agent_type: <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentType</span>&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">AgentRun</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
         <span class="rs-kw">let</span> rows =
             <span class="rs-kw">match</span> agent_type {
-                <span class="rs-type">Some</span>(agent_type) =&gt; sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+                <span class="rs-type">Some</span>(agent_type) =&gt; sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
                     &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> parent_agent_run_id = ? <span class="rs-type">AND</span> agent_type = ? \
                      <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
                 )
@@ -596,7 +602,7 @@
                 .fetch_all(&amp;<span class="rs-self">self</span>.pool)
                 .<span class="rs-kw">await</span>,
                 <span class="rs-type">None</span> =&gt; {
-                    sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>&gt;(
+                    sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>&gt;(
                         &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> agent_runs <span class="rs-type">WHERE</span> parent_agent_run_id = ? \
                      <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> created_at <span class="rs-type">ASC</span>, agent_run_id <span class="rs-type">ASC</span>&quot;,
                     )
@@ -614,7 +620,7 @@
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, sqlx::<span class="rs-type">FromRow</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a> {
     agent_run_id: <span class="rs-type">String</span>,
     request_id: <span class="rs-type">String</span>,
     agent_type: <span class="rs-type">String</span>,
@@ -632,19 +638,19 @@
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, sqlx::<span class="rs-type">FromRow</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a> {
     request_id: <span class="rs-type">String</span>,
     agent_run_id: <span class="rs-type">String</span>,
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, sqlx::<span class="rs-type">FromRow</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a> {
     request_id: <span class="rs-type">String</span>,
     agent_run_id: <span class="rs-type">String</span>,
     status: <span class="rs-type">String</span>,
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-228">created_from_index</a>(index: &amp;<span class="rs-type">AgentRunRecordIndex</span>) -&gt; <span class="rs-type">CreatedAgentRun</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-created-from-index-231">created_from_index</a>(index: &amp;<span class="rs-type">AgentRunRecordIndex</span>) -&gt; <span class="rs-type">CreatedAgentRun</span> {
     <span class="rs-type">CreatedAgentRun</span> {
         agent_run_id: index.agent_run_id.clone(),
         record_target: <span class="rs-type">AgentRunRecordTarget</span> {
@@ -655,15 +661,15 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-239">row_to_record_index</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-215">AgentRunRecordIndexRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-record-index-242">row_to_record_index</a>(row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRecordIndexRow-218">AgentRunRecordIndexRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRunRecordIndex</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRunRecordIndex</span> {
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.request_id&quot;, &amp;row.request_id)?,
         agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.agent_run_id&quot;, &amp;row.agent_run_id)?,
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-246">row_to_running_request_agent_run</a>(
-    row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-221">RunningRequestAgentRunRow</a>,
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-running-request-agent-run-249">row_to_running_request_agent_run</a>(
+    row: &amp;<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-RunningRequestAgentRunRow-224">RunningRequestAgentRunRow</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunningRequestAgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">RunningRequestAgentRun</span> {
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;running_request_agent_runs.request_id&quot;, &amp;row.request_id)?,
@@ -672,7 +678,7 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-256">row_to_agent_run</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-197">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-row-to-agent-run-259">row_to_agent_run</a>(row: <a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-AgentRunRow-200">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRun</span> {
         agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.agent_run_id&quot;, &amp;row.agent_run_id)?,
         request_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-77">parse_id</a>(&quot;agent_runs.request_id&quot;, &amp;row.request_id)?,
@@ -682,11 +688,11 @@
             field: &quot;agent_runs.agent_name&quot;,
             value: row.agent_name.clone(),
         })?,
-        parent_agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-281">opt_parsed_id</a>(
+        parent_agent_run_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-284">opt_parsed_id</a>(
             &quot;agent_runs.parent_agent_run_id&quot;,
             row.parent_agent_run_id.as_deref(),
         )?,
-        tool_use_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-281">opt_parsed_id</a>(&quot;agent_runs.tool_use_id&quot;, row.tool_use_id.as_deref())?,
+        tool_use_id: <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#item-fn-opt-parsed-id-284">opt_parsed_id</a>(&quot;agent_runs.tool_use_id&quot;, row.tool_use_id.as_deref())?,
         terminal_payload: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(row.terminal_payload.as_deref())?,
         submission_outcome: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(row.submission_outcome.as_deref())?,
         token_count: row.token_count,

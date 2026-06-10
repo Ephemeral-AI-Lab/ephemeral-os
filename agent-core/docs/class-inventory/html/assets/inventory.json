@@ -760,11 +760,11 @@
       "path": "crates/eos-agent-run",
       "stats": {
         "modules": 7,
-        "items": 49,
+        "items": 48,
         "structs": 8,
         "enums": 0,
         "traits": 0,
-        "functions": 28,
+        "functions": 27,
         "impls": 13,
         "fields": 20,
         "methods": 28
@@ -1793,42 +1793,42 @@
                   "signature": "async fn finish_agent_run (& self , agent_run_id : & AgentRunId , status : ExecutionStatus , terminal_payload : Option < & JsonObject > , submission_outcome : Option < & SubmissionOutcome > , token_count : i64 , error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 349
+                  "line": 354
                 },
                 {
                   "name": "record_index_for_agent_run",
                   "signature": "async fn record_index_for_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRunRecordIndex > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 390
+                  "line": 395
                 },
                 {
                   "name": "get_agent_run",
                   "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 397
+                  "line": 402
                 },
                 {
                   "name": "list_agent_runs_for_request",
                   "signature": "async fn list_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 404
+                  "line": 409
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 415
+                  "line": 420
                 },
                 {
                   "name": "list_child_agent_runs_for_parent_agent_run",
                   "signature": "async fn list_child_agent_runs_for_parent_agent_run (& self , parent_agent_run_id : & AgentRunId , agent_type : Option < AgentType > ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 430
+                  "line": 435
                 }
               ],
               "impl_target": "FakeAgentRunStore",
@@ -1857,23 +1857,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 444
-            },
-            {
-              "kind": "fn",
-              "name": "agent_run_from_index",
-              "visibility": "private",
-              "signature": "fn agent_run_from_index (index : & AgentRunRecordIndex , agent_type : AgentType , agent_name : AgentName , parent_agent_run_id : Option < AgentRunId > , tool_use_id : Option < ToolUseId > , status : ExecutionStatus , terminal_payload : Option < & JsonObject > , submission_outcome : Option < & SubmissionOutcome > , token_count : i64 , error : Option < & str > ,) -> AgentRun",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-agent-run/src/service.rs",
-              "module": "service::tests",
-              "line": 455
+              "line": 449
             },
             {
               "kind": "fn",
@@ -1889,7 +1873,7 @@
               "tags": [],
               "file": "crates/eos-agent-run/src/service.rs",
               "module": "service::tests",
-              "line": 485
+              "line": 460
             }
           ]
         },
@@ -3316,28 +3300,28 @@
                   "signature": "async fn get_agent_run (& self , agent_run_id : & AgentRunId ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 115
+                  "line": 118
                 },
                 {
                   "name": "list_agent_runs_for_request",
                   "signature": "async fn list_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 129
+                  "line": 132
                 },
                 {
                   "name": "list_running_agent_runs_for_request",
                   "signature": "async fn list_running_agent_runs_for_request (& self , request_id : & RequestId ,) -> Result < Vec < RunningRequestAgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 146
+                  "line": 149
                 },
                 {
                   "name": "list_child_agent_runs_for_parent_agent_run",
                   "signature": "async fn list_child_agent_runs_for_parent_agent_run (& self , parent_agent_run_id : & AgentRunId , agent_type : Option < AgentType > ,) -> Result < Vec < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 164
+                  "line": 167
                 }
               ],
               "impl_target": "SqlAgentRunStore",
@@ -3441,7 +3425,7 @@
               ],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 197
+              "line": 200
             },
             {
               "kind": "struct",
@@ -3472,7 +3456,7 @@
               ],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 215
+              "line": 218
             },
             {
               "kind": "struct",
@@ -3509,7 +3493,7 @@
               ],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 221
+              "line": 224
             },
             {
               "kind": "fn",
@@ -3525,13 +3509,13 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 228
+              "line": 231
             },
             {
               "kind": "fn",
               "name": "row_to_record_index",
               "visibility": "private",
-              "signature": "fn row_to_record_index (row : AgentRunRecordIndexRow) -> Result < AgentRunRecordIndex , DbError >",
+              "signature": "fn row_to_record_index (row : & AgentRunRecordIndexRow) -> Result < AgentRunRecordIndex , DbError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -3541,7 +3525,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 239
+              "line": 242
             },
             {
               "kind": "fn",
@@ -3557,7 +3541,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 246
+              "line": 249
             },
             {
               "kind": "fn",
@@ -3573,7 +3557,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 256
+              "line": 259
             },
             {
               "kind": "fn",
@@ -3589,7 +3573,7 @@
               "tags": [],
               "file": "crates/eos-db/src/repositories/agent_run.rs",
               "module": "repositories::agent_run",
-              "line": 281
+              "line": 284
             }
           ]
         },
@@ -4693,7 +4677,7 @@
                   "signature": "fn default () -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 27
+                  "line": 24
                 }
               ],
               "impl_target": "EngineRuntimeConfig",
@@ -4705,7 +4689,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/config.rs",
               "module": "agent_loop::config",
-              "line": 26
+              "line": 23
             },
             {
               "kind": "impl",
@@ -4720,28 +4704,28 @@
                   "signature": "pub fn load_from_dir (config_dir : impl AsRef < Path >) -> Result < Self , ConfigError >",
                   "kind": "associated-fn",
                   "docs": "Load the `runtime` section from `config_dir/prd.yml < config_dir/local.yml`.\n\nMissing files are skipped; the merged document must contain a `runtime`\nsection matching [`EngineRuntimeConfig`].\n\n# Errors\nReturns [`ConfigError`] when a present file cannot be read or parsed, the\nmerged document has no `runtime` section, or validation fails.",
-                  "line": 35
+                  "line": 32
                 },
                 {
                   "name": "load_from_paths",
                   "signature": "pub fn load_from_paths (paths : & [PathBuf]) -> Result < Self , ConfigError >",
                   "kind": "associated-fn",
                   "docs": "Load the `runtime` section from an explicit ordered list of YAML files.\n\nFiles are merged left to right: mappings recurse, while scalars and\narrays replace the previous value.\n\n# Errors\nReturns [`ConfigError`] when a present file cannot be read or parsed, the\nmerged document has no `runtime` section, or validation fails.",
-                  "line": 48
+                  "line": 45
                 },
                 {
                   "name": "background_completion_poll_interval",
                   "signature": "pub fn background_completion_poll_interval (& self) -> Duration",
                   "kind": "method",
                   "docs": "Return the background completion poll interval as a [`Duration`].",
-                  "line": 78
+                  "line": 75
                 },
                 {
                   "name": "validate",
                   "signature": "pub fn validate (& self) -> Result < () , ConfigError >",
                   "kind": "method",
                   "docs": "Enforce numeric range constraints.\n\n# Errors\nReturns [`ConfigError::OutOfRange`] when the background completion poll\ninterval is zero.",
-                  "line": 84
+                  "line": 81
                 }
               ],
               "impl_target": "EngineRuntimeConfig",
@@ -4752,7 +4736,7 @@
               ],
               "file": "crates/eos-engine/src/agent_loop/config.rs",
               "module": "agent_loop::config",
-              "line": 34
+              "line": 31
             },
             {
               "kind": "fn",
@@ -4768,7 +4752,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/config.rs",
               "module": "agent_loop::config",
-              "line": 100
+              "line": 97
             },
             {
               "kind": "fn",
@@ -4784,7 +4768,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/config.rs",
               "module": "agent_loop::config",
-              "line": 104
+              "line": 101
             },
             {
               "kind": "fn",
@@ -4800,7 +4784,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/agent_loop/config.rs",
               "module": "agent_loop::config",
-              "line": 113
+              "line": 110
             }
           ]
         },

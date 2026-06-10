@@ -65,22 +65,22 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a></code>
   <p class="docstring">Runtime tunables for engine-owned loop behavior.</p>
   <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>background_completion_poll_interval_ms</td><td><code>u64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-background-completion-poll-interval-78"><td>method</td><td>background_completion_poll_interval</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-78">background_completion_poll_interval</a> (&amp; self) -&gt; Duration</code><p class="docstring">Return the background completion poll interval as a [`Duration`].</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>background_completion_poll_interval_ms</td><td><code>u64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-background-completion-poll-interval-75"><td>method</td><td>background_completion_poll_interval</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-75">background_completion_poll_interval</a> (&amp; self) -&gt; Duration</code><p class="docstring">Return the background completion poll interval as a [`Duration`].</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Return the background completion poll interval as a [`Duration`].</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-78">background_completion_poll_interval</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Duration</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-75">background_completion_poll_interval</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Duration</span> {
         <span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.background_completion_poll_interval_ms)
     }
 </code></pre>
-</details></td></tr><tr id="method-validate-84"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; () , ConfigError &gt;</code><p class="docstring">Enforce numeric range constraints.<br># Errors<br>Returns [`ConfigError::OutOfRange`] when the background completion poll<br>interval is zero.</p><details class="function-source">
+</details></td></tr><tr id="method-validate-81"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; () , ConfigError &gt;</code><p class="docstring">Enforce numeric range constraints.<br># Errors<br>Returns [`ConfigError::OutOfRange`] when the background completion poll<br>interval is zero.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Enforce numeric range constraints.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError::OutOfRange`] when the background completion poll</span>
     <span class="rs-comment">/// interval is zero.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.background_completion_poll_interval_ms &lt; 1 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">ConfigError</span>::<span class="rs-type">OutOfRange</span> {
                 field: &quot;runtime.background_completion_poll_interval_ms&quot;.to_owned(),
@@ -90,7 +90,7 @@
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
-</details></td></tr><tr id="method-load-from-dir-35"><td>associated-fn</td><td>load_from_dir</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-35">load_from_dir</a> (config_dir : impl AsRef &lt; Path &gt;) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Self , ConfigError &gt;</code><p class="docstring">Load the `runtime` section from `config_dir/prd.yml &lt; config_dir/local.yml`.<br>Missing files are skipped; the merged document must contain a `runtime`<br>section matching [`EngineRuntimeConfig`].<br># Errors<br>Returns [`ConfigError`] when a present file cannot be read or parsed, the<br>merged document has no `runtime` section, or validation fails.</p><details class="function-source">
+</details></td></tr><tr id="method-load-from-dir-32"><td>associated-fn</td><td>load_from_dir</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-32">load_from_dir</a> (config_dir : impl AsRef &lt; Path &gt;) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Self , ConfigError &gt;</code><p class="docstring">Load the `runtime` section from `config_dir/prd.yml &lt; config_dir/local.yml`.<br>Missing files are skipped; the merged document must contain a `runtime`<br>section matching [`EngineRuntimeConfig`].<br># Errors<br>Returns [`ConfigError`] when a present file cannot be read or parsed, the<br>merged document has no `runtime` section, or validation fails.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Load the `runtime` section from `config_dir/prd.yml &lt; config_dir/local.yml`.</span>
     <span class="rs-comment">///</span>
@@ -100,12 +100,12 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError`] when a present file cannot be read or parsed, the</span>
     <span class="rs-comment">/// merged document has no `runtime` section, or validation fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-35">load_from_dir</a>(config_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-32">load_from_dir</a>(config_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">let</span> config_dir = config_dir.as_ref();
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-48">load_from_paths</a>(&amp;[config_dir.join(&quot;prd.yml&quot;), config_dir.join(&quot;local.yml&quot;)])
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-45">load_from_paths</a>(&amp;[config_dir.join(&quot;prd.yml&quot;), config_dir.join(&quot;local.yml&quot;)])
     }
 </code></pre>
-</details></td></tr><tr id="method-load-from-paths-48"><td>associated-fn</td><td>load_from_paths</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-48">load_from_paths</a> (paths : &amp; [PathBuf]) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Self , ConfigError &gt;</code><p class="docstring">Load the `runtime` section from an explicit ordered list of YAML files.<br>Files are merged left to right: mappings recurse, while scalars and<br>arrays replace the previous value.<br># Errors<br>Returns [`ConfigError`] when a present file cannot be read or parsed, the<br>merged document has no `runtime` section, or validation fails.</p><details class="function-source">
+</details></td></tr><tr id="method-load-from-paths-45"><td>associated-fn</td><td>load_from_paths</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-45">load_from_paths</a> (paths : &amp; [PathBuf]) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Self , ConfigError &gt;</code><p class="docstring">Load the `runtime` section from an explicit ordered list of YAML files.<br>Files are merged left to right: mappings recurse, while scalars and<br>arrays replace the previous value.<br># Errors<br>Returns [`ConfigError`] when a present file cannot be read or parsed, the<br>merged document has no `runtime` section, or validation fails.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Load the `runtime` section from an explicit ordered list of YAML files.</span>
     <span class="rs-comment">///</span>
@@ -115,11 +115,11 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError`] when a present file cannot be read or parsed, the</span>
     <span class="rs-comment">/// merged document has no `runtime` section, or validation fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-48">load_from_paths</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-45">load_from_paths</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> merged = <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(serde_yaml::<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>());
         <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-104">read_yaml</a>(path)? {
-                <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-101">read_yaml</a>(path)? {
+                <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
             }
         }
 
@@ -133,13 +133,13 @@
             })?;
         <span class="rs-kw">let</span> config: <span class="rs-self">Self</span> =
             serde_yaml::from_value(runtime.clone()).map_err(<span class="rs-type">ConfigError</span>::<span class="rs-type">ParseYaml</span>)?;
-        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>()?;
         <span class="rs-type">Ok</span>(config)
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a></code></summary><table><tbody><tr id="method-default-27"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-default-27">default</a> () -&gt; Self</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a></code></summary><table><tbody><tr id="method-default-24"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#method-default-24">default</a> () -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-27">default</a>() -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-24">default</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             background_completion_poll_interval_ms: <span class="rs-type">DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS</span>,
         }
@@ -148,34 +148,34 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-engine/src/agent_loop/config.rs:13</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-default-background-completion-poll-interval-ms-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_background_completion_poll_interval_ms private const fn default_background_completion_poll_interval_ms () -&gt; u64 crates/eos-engine/src/agent_loop/config.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-default-background-completion-poll-interval-ms-97" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_background_completion_poll_interval_ms private const fn default_background_completion_poll_interval_ms () -&gt; u64 crates/eos-engine/src/agent_loop/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_background_completion_poll_interval_ms</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-100">default_background_completion_poll_interval_ms</a> () -&gt; u64</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-97">default_background_completion_poll_interval_ms</a> () -&gt; u64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-100">default_background_completion_poll_interval_ms</a>() -&gt; u64 {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-97">default_background_completion_poll_interval_ms</a>() -&gt; u64 {
     <span class="rs-type">DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS</span>
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-engine/src/agent_loop/config.rs:100</p>
-</article><article id="item-fn-read-yaml-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_yaml private fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt; crates/eos-engine/src/agent_loop/config.rs  ">
+  <p class="source">crates/eos-engine/src/agent_loop/config.rs:97</p>
+</article><article id="item-fn-read-yaml-101" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_yaml private fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt; crates/eos-engine/src/agent_loop/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_yaml</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-104">read_yaml</a> (path : &amp; Path) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; Value &gt; , ConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-101">read_yaml</a> (path : &amp; Path) -&gt; <a class="symbol-link" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a> &lt; Option &lt; Value &gt; , ConfigError &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-104">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <span class="rs-type">ConfigError</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-101">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <span class="rs-type">ConfigError</span>&gt; {
     <span class="rs-kw">if</span> !path.exists() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     }
@@ -186,23 +186,23 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-engine/src/agent_loop/config.rs:104</p>
-</article><article id="item-fn-deep-merge-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deep_merge private fn deep_merge (base : &amp; mut Value , overlay : Value) crates/eos-engine/src/agent_loop/config.rs  ">
+  <p class="source">crates/eos-engine/src/agent_loop/config.rs:101</p>
+</article><article id="item-fn-deep-merge-110" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deep_merge private fn deep_merge (base : &amp; mut Value , overlay : Value) crates/eos-engine/src/agent_loop/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>deep_merge</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a> (base : &amp; mut Value , overlay : Value)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a> (base : &amp; mut Value , overlay : Value)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
     <span class="rs-kw">match</span> (base, overlay) {
         (<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(base_map), <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(overlay_map)) =&gt; {
             <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> overlay_map {
                 <span class="rs-kw">match</span> base_map.get_mut(&amp;key) {
-                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(existing, value),
+                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(existing, value),
                     <span class="rs-type">None</span> =&gt; {
                         base_map.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(key, value);
                     }
@@ -215,7 +215,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-engine/src/agent_loop/config.rs:113</p>
+  <p class="source">crates/eos-engine/src/agent_loop/config.rs:110</p>
 </article></div>
 </section></div>
 </main>
@@ -242,15 +242,12 @@
 #[non_exhaustive]
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a> {
     <span class="rs-comment">/// Poll interval shared by command, workflow, and subagent completion monitors.</span>
-    #[serde(
-        default = &quot;default_background_completion_poll_interval_ms&quot;,
-        alias = &quot;command_session_completion_poll_interval_ms&quot;
-    )]
+    #[serde(default = &quot;default_background_completion_poll_interval_ms&quot;)]
     <span class="rs-kw">pub</span> background_completion_poll_interval_ms: u64,
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-27">default</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-default-24">default</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             background_completion_poll_interval_ms: <span class="rs-type">DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS</span>,
         }
@@ -266,9 +263,9 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError`] when a present file cannot be read or parsed, the</span>
     <span class="rs-comment">/// merged document has no `runtime` section, or validation fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-35">load_from_dir</a>(config_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-dir-32">load_from_dir</a>(config_dir: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">let</span> config_dir = config_dir.as_ref();
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-48">load_from_paths</a>(&amp;[config_dir.join(&quot;prd.yml&quot;), config_dir.join(&quot;local.yml&quot;)])
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-45">load_from_paths</a>(&amp;[config_dir.join(&quot;prd.yml&quot;), config_dir.join(&quot;local.yml&quot;)])
     }
 
     <span class="rs-comment">/// Load the `runtime` section from an explicit ordered list of YAML files.</span>
@@ -279,11 +276,11 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError`] when a present file cannot be read or parsed, the</span>
     <span class="rs-comment">/// merged document has no `runtime` section, or validation fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-48">load_from_paths</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-load-from-paths-45">load_from_paths</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> merged = <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(serde_yaml::<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>());
         <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
-            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-104">read_yaml</a>(path)? {
-                <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-101">read_yaml</a>(path)? {
+                <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
             }
         }
 
@@ -297,13 +294,13 @@
             })?;
         <span class="rs-kw">let</span> config: <span class="rs-self">Self</span> =
             serde_yaml::from_value(runtime.clone()).map_err(<span class="rs-type">ConfigError</span>::<span class="rs-type">ParseYaml</span>)?;
-        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>()?;
         <span class="rs-type">Ok</span>(config)
     }
 
     <span class="rs-comment">/// Return the background completion poll interval as a [`Duration`].</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-78">background_completion_poll_interval</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Duration</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-75">background_completion_poll_interval</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Duration</span> {
         <span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.background_completion_poll_interval_ms)
     }
 
@@ -312,7 +309,7 @@
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns [`ConfigError::OutOfRange`] when the background completion poll</span>
     <span class="rs-comment">/// interval is zero.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ConfigError</span>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;(), <span class="rs-type">ConfigError</span>&gt; {
         <span class="rs-kw">if</span> <span class="rs-self">self</span>.background_completion_poll_interval_ms &lt; 1 {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">ConfigError</span>::<span class="rs-type">OutOfRange</span> {
                 field: &quot;runtime.background_completion_poll_interval_ms&quot;.to_owned(),
@@ -323,11 +320,11 @@
     }
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-100">default_background_completion_poll_interval_ms</a>() -&gt; u64 {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-default-background-completion-poll-interval-ms-97">default_background_completion_poll_interval_ms</a>() -&gt; u64 {
     <span class="rs-type">DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS</span>
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-104">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <span class="rs-type">ConfigError</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-read-yaml-101">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <span class="rs-type">ConfigError</span>&gt; {
     <span class="rs-kw">if</span> !path.exists() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
     }
@@ -336,12 +333,12 @@
     <span class="rs-type">Ok</span>((!doc.is_null()).then_some(doc))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
     <span class="rs-kw">match</span> (base, overlay) {
         (<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(base_map), <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(overlay_map)) =&gt; {
             <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> overlay_map {
                 <span class="rs-kw">match</span> base_map.get_mut(&amp;key) {
-                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-113">deep_merge</a>(existing, value),
+                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#item-fn-deep-merge-110">deep_merge</a>(existing, value),
                     <span class="rs-type">None</span> =&gt; {
                         base_map.<a class="symbol-link rs-fn" href="eos-engine--src-background-command-session-rs.html#method-insert-267">insert</a>(key, value);
                     }

@@ -7,11 +7,14 @@ Owner: eos-workflow / eos-tool / eos-engine / eos-db
 Scope:
 - workflow context entity model
 - `spec.md` / `brief.md` projection rendering
+- workflow, iteration, and attempt lifecycle orchestration
+- automatic attempt agent launch scheduling
 - context-file write flow after planner and worker submissions
 - generated filesystem layout for workflow, iteration, attempt, plan, and work item context
 
 Companion artifact:
 - `docs/plans/workflow_context_projection_renderer.html`
+- `docs/plans/workflow_context_oop_renderer/index.html`
 
 ## 1. Intent
 
@@ -78,6 +81,19 @@ collect them into a tail references section.
 15. When a parent file inlines a child `brief.md`, the child reference remains
     in that original child position. References are never collected and moved to
     a tail section.
+16. `WorkflowOrchestrator`, `IterationOrchestrator`, and `AttemptOrchestrator`
+    own lifecycle transitions. Entity renderers do not mutate state.
+17. `Plan` and `WorkItem` are passive execution records. They do not notify
+    parents directly; tool handlers resolve their parent attempt and call the
+    attempt/workflow orchestration chain.
+18. User-facing flow does not require manual `launch_agent` calls. A scheduler
+    launches the planner or ready workers automatically when their state becomes
+    launchable.
+19. A created attempt owns a plan immediately. The plan starts as `NotStarted`
+    and is queued for planner launch by the attempt launch scheduler.
+20. Scheduler queue entries must use a workflow-unique attempt locator such as
+    `attempt.folder_path`, not only `attempt_id`, because local attempt IDs may
+    repeat under different iterations.
 
 ## 3. Status Model
 
@@ -127,6 +143,7 @@ struct Iteration {
     base: WorkflowEntityBase<IterationId>,
     workflow_id: WorkflowId,
     goal: String,
+    max_try: u32,
     attempts: Vec<Attempt>,
 }
 
@@ -170,6 +187,10 @@ projection writes, and context lookup cheap and unambiguous:
 | `Attempt` | `workflow_id`, `iteration_id` |
 | `Plan` | `workflow_id`, `iteration_id`, `attempt_id` |
 | `WorkItem` | `workflow_id`, `iteration_id`, `attempt_id`, `plan_id` |
+
+`Iteration.max_try` is the retry budget for that iteration. The default should
+be `3` unless `delegate_workflow` or a workflow policy supplies a different
+value.
 
 ## 5. Folder Layout
 
@@ -236,7 +257,108 @@ the first implementation. The aggregate object already contains enough child
 state to render the projection. A small file projector may exist, but it only
 writes strings returned by entity renderers.
 
-## 7. Render Pseudocode
+## 7. Lifecycle Orchestration Contract
+
+Lifecycle behavior is split by workflow layer:
+
+```rust
+struct WorkflowOrchestrator {
+    iteration_orchestrator: IterationOrchestrator,
+}
+
+struct IterationOrchestrator {
+    attempt_orchestrator: AttemptOrchestrator,
+}
+
+struct AttemptOrchestrator {
+    launch_scheduler: AttemptAgentLaunchScheduler,
+}
+
+struct AttemptAgentLaunchScheduler {
+    queue: Vec<AttemptAgentLaunchTask>,
+}
+```
+
+The dispatch direction is intentionally top-down:
+
+```text
+delegate_workflow
+  -> WorkflowOrchestrator::delegate_workflow
+  -> WorkflowOrchestrator::launch_iteration
+  -> IterationOrchestrator::launch_attempt
+  -> AttemptOrchestrator::launch_attempt
+  -> AttemptAgentLaunchScheduler::enqueue_plan
+```
+
+Outcome submissions flow upward after the local mutation:
+
+```text
+submit_planner_outcome(plan_id, ...)
+  -> resolve plan -> attempt scope
+  -> AttemptOrchestrator::materialize_work_items
+  -> AttemptAgentLaunchScheduler::enqueue_ready_work_items
+
+submit_worker_outcome(work_item_id, ...)
+  -> resolve work_item -> attempt scope
+  -> AttemptOrchestrator::submit_worker_outcome
+  -> WorkflowOrchestrator::reconcile_attempt_result
+      -> IterationOrchestrator::reconcile_attempt_result
+      -> maybe create retry attempt
+      -> maybe close iteration
+      -> maybe create deferred next iteration
+      -> maybe close workflow
+  -> AttemptAgentLaunchScheduler::schedule_ready_agents
+```
+
+`Plan` and `WorkItem` never mutate parent state themselves. A tool call handler
+must resolve the selected plan or work item back to:
+
+```text
+{ workflow, iteration, attempt, plan? / work_item? }
+```
+
+Then the handler calls the corresponding orchestrator method. This keeps entity
+objects simple and makes tool behavior explicit.
+
+### 7.1 Responsibilities
+
+| Object | Owns |
+| --- | --- |
+| `WorkflowOrchestrator` | workflow init, first iteration launch, next iteration launch from `deferred_goal_for_next_iteration`, final workflow success/failure |
+| `IterationOrchestrator` | attempt launch, retry attempt creation, `max_try` exhaustion, iteration success/failure |
+| `AttemptOrchestrator` | attempt creation, plan creation, planner outcome materialization, ready-work-item detection, worker outcome mutation, attempt success/failure |
+| `AttemptAgentLaunchScheduler` | automatic planner/worker launch queue, transition of launchable `Plan` / `WorkItem` records from `NotStarted` to `Running` |
+
+### 7.2 Scheduler Tasks
+
+```rust
+enum AttemptAgentLaunchTask {
+    Planner {
+        attempt_path: ContextFolderPath,
+        plan_id: PlanId,
+    },
+    Worker {
+        attempt_path: ContextFolderPath,
+        work_item_id: WorkItemId,
+    },
+}
+```
+
+Use `attempt_path`, or another workflow-unique attempt locator, rather than only
+`attempt_id`. The same attempt ID can appear under multiple iterations, for
+example:
+
+```text
+workflow_wf_context_projection/iteration_it_initial/attempt_att_initial
+workflow_wf_context_projection/iteration_it_2/attempt_att_initial
+```
+
+The scheduler is the only component that performs automatic agent launch. The
+UI and external tools should not expose manual `launch_agent` steps for this
+workflow. They submit outcomes; the scheduler turns ready records into running
+agent runs.
+
+## 8. Render Pseudocode
 
 Helpers:
 
@@ -271,7 +393,7 @@ fn nest(markdown: String) -> String {
 }
 ```
 
-### 7.1 Workflow
+### 8.1 Workflow
 
 `workflow/spec.md`:
 
@@ -311,7 +433,7 @@ fn Workflow::render_brief(&self) -> String {
 }
 ```
 
-### 7.2 Iteration
+### 8.2 Iteration
 
 `iteration/spec.md`:
 
@@ -320,6 +442,8 @@ fn Iteration::render_spec(&self) -> String {
     md.line(status_line(self.base.status));
     md.h1("Iteration Goal");
     md.text(&self.goal);
+    md.h1("Max Try");
+    md.text(self.max_try.to_string());
 
     for attempt in &self.attempts {
         md.h1(format!("Attempt {}", attempt.base.id));
@@ -349,7 +473,7 @@ fn Iteration::render_brief(&self) -> String {
 }
 ```
 
-### 7.3 Attempt
+### 8.3 Attempt
 
 `attempt/spec.md`:
 
@@ -420,7 +544,7 @@ fn Attempt::leaf_work_items(&self) -> Vec<&WorkItem> {
 }
 ```
 
-### 7.4 Plan
+### 8.4 Plan
 
 `plan/spec.md`:
 
@@ -458,7 +582,7 @@ fn Plan::render_brief(&self) -> String {
 }
 ```
 
-### 7.5 Work Item
+### 8.5 Work Item
 
 `work_item/spec.md`:
 
@@ -492,15 +616,16 @@ fn WorkItem::render_brief(&self) -> String {
 }
 ```
 
-## 8. Mutation And Projection Flow
+## 9. Mutation And Projection Flow
 
-### 8.1 `delegate_workflow`
+Every mutating tool follows the same high-level pipeline:
 
 ```text
 begin DB transaction
-  create Workflow(status = Running, workflow_goal)
-  create Iteration(status = Running, goal = workflow_goal)
-  create Attempt(status = NotStarted)
+  apply tool/orchestrator mutation to workflow aggregate
+  drain AttemptAgentLaunchScheduler:
+    NotStarted plan queued for planner -> Plan.status = Running
+    ready NotStarted work item queued for worker -> WorkItem.status = Running
 commit version N
 
 load Workflow aggregate from DB at version N
@@ -508,81 +633,70 @@ render all spec.md and brief.md projections
 write projections to context filesystem
 ```
 
-### 8.2 Planner Launch
+In production, the scheduler's launch side effect should use a durable launch
+queue or outbox. The projection should still observe the logical launch state:
+planner or worker records become `Running` automatically once the scheduler
+claims them.
+
+### 9.1 `delegate_workflow`
 
 ```text
 begin DB transaction
-  create Plan(status = Running, attempt_id)
-  set Attempt.status = Running
+  WorkflowOrchestrator::delegate_workflow:
+    create Workflow(status = Running, workflow_goal)
+    WorkflowOrchestrator::launch_iteration:
+      create Iteration(status = Running, goal = workflow_goal, max_try)
+      IterationOrchestrator::launch_attempt:
+        AttemptOrchestrator::launch_attempt:
+          create Attempt(status = NotStarted)
+          create Plan(status = NotStarted)
+          enqueue planner launch for attempt.folder_path + plan_id
+
+  AttemptAgentLaunchScheduler::schedule_ready_agents:
+    set Plan.status = Running
+    set Attempt.status = Running
+    dispatch planner agent
 commit version N
 
 load Workflow aggregate from DB at version N
-render all projections
-write projections
+render all spec.md and brief.md projections
+write projections to context filesystem
 ```
 
-### 8.3 `submit_plan_outcome`
+There is no user-facing `launch_agent("planner")` step. The scheduler performs
+that transition immediately after the attempt is created.
+
+### 9.2 `submit_planner_outcome`
+
+`submit_planner_outcome` is accepted only for a running plan. The plan itself
+does not notify the attempt. The tool handler resolves the plan to its parent
+scope and calls `AttemptOrchestrator::materialize_work_items`.
 
 ```text
 begin DB transaction
-  update Plan:
-    status = Success
-    plan_spec = input.plan_spec
-    planner_summary = input.summary
-    deferred_goal_for_next_iteration = input.deferred_goal_for_next_iteration
+  resolve plan_id -> { workflow, iteration, attempt, plan }
 
-  create WorkItem[]:
-    status = NotStarted
-    plan_id = plan.id
-    work_item_spec = input.work_item_spec
-    needs = input.needs
+  AttemptOrchestrator::materialize_work_items:
+    update Plan:
+      status = Success
+      plan_spec = input.plan_spec
+      planner_summary = input.summary
+      deferred_goal_for_next_iteration = input.deferred_goal_for_next_iteration
 
-  keep Attempt.status = Running
-commit version N
+    create WorkItem[]:
+      status = NotStarted
+      plan_id = plan.id
+      work_item_spec = input.work_item_spec
+      needs = input.needs
 
-load Workflow aggregate from DB at version N
-render all projections
-write projections
-```
-
-### 8.4 Worker Launch
-
-```text
-begin DB transaction
-  set selected WorkItem.status = Running
-commit version N
-
-load Workflow aggregate from DB at version N
-render all projections
-write projections
-```
-
-### 8.5 `submit_worker_outcome`
-
-```text
-begin DB transaction
-  update WorkItem:
-    status = Success or Failed
-    worker_summary = input.summary
-    worker_outcome = input.outcome
-
-  if any WorkItem.status == Failed:
-    set Attempt.status = Failed
-    create retry Attempt(status = NotStarted)
-
-  else if all WorkItems.status == Success:
-    set Attempt.status = Success
-    set Iteration.status = Success
-
-    if Plan.deferred_goal_for_next_iteration exists:
-      create next Iteration(status = Running, goal = deferred_goal)
-      create next Attempt(status = NotStarted)
-      keep Workflow.status = Running
-    else:
-      set Workflow.status = Success
-
-  else:
     keep Attempt.status = Running
+    enqueue every WorkItem whose needs are all Success or empty
+
+  AttemptAgentLaunchScheduler::schedule_ready_agents:
+    for each ready queued work item:
+      set WorkItem.status = Running
+      dispatch worker agent
+
 commit version N
 
 load Workflow aggregate from DB at version N
@@ -590,7 +704,98 @@ render all projections
 write projections
 ```
 
-## 9. Physical Projection Writer
+There is no user-facing `launch_agent("worker")` step. Ready workers are
+launched automatically after planner outcome materialization and after later
+worker successes unblock dependencies.
+
+### 9.3 `submit_worker_outcome` success
+
+`submit_worker_outcome` is accepted only for a running work item. The work item
+itself does not notify the attempt. The tool handler resolves the work item to
+its parent scope and calls `AttemptOrchestrator::submit_worker_outcome`, then
+calls `WorkflowOrchestrator::reconcile_attempt_result`.
+
+```text
+begin DB transaction
+  resolve work_item_id -> { workflow, iteration, attempt, work_item }
+
+  AttemptOrchestrator::submit_worker_outcome:
+    update WorkItem:
+      status = Success
+      worker_summary = input.summary
+      worker_outcome = input.outcome
+
+    if all WorkItems.status == Success:
+      set Attempt.status = Success
+    else:
+      keep Attempt.status = Running
+      enqueue newly-ready WorkItems whose dependencies are now Success
+
+  WorkflowOrchestrator::reconcile_attempt_result:
+    if Attempt.status == Success:
+      IterationOrchestrator::reconcile_attempt_result:
+        set Iteration.status = Success
+
+      if this is the last iteration and Plan.deferred_goal_for_next_iteration exists:
+        WorkflowOrchestrator::launch_iteration:
+          create next Iteration(status = Running, goal = deferred_goal, max_try)
+          create next Attempt(status = NotStarted)
+          create next Plan(status = NotStarted)
+          enqueue planner launch
+        keep Workflow.status = Running
+
+      else if this is the last iteration and no deferred goal exists:
+        set Workflow.status = Success
+
+  AttemptAgentLaunchScheduler::schedule_ready_agents:
+    launch any newly-ready workers
+    launch next-iteration planner if a deferred iteration was created
+
+commit version N
+
+load Workflow aggregate from DB at version N
+render all projections
+write projections
+```
+
+### 9.4 `submit_worker_outcome` failure
+
+```text
+begin DB transaction
+  resolve work_item_id -> { workflow, iteration, attempt, work_item }
+
+  AttemptOrchestrator::submit_worker_outcome:
+    update WorkItem:
+      status = Failed
+      worker_summary = input.summary
+      worker_outcome = input.outcome
+
+    set Attempt.status = Failed
+
+  WorkflowOrchestrator::reconcile_attempt_result:
+    IterationOrchestrator::reconcile_attempt_result:
+      if iteration.attempts.len < iteration.max_try:
+        create retry Attempt(status = NotStarted)
+        create retry Plan(status = NotStarted)
+        enqueue planner launch
+        keep Iteration.status = Running
+        keep Workflow.status = Running
+
+      else:
+        set Iteration.status = Failed
+        set Workflow.status = Failed
+
+  AttemptAgentLaunchScheduler::schedule_ready_agents:
+    launch retry planner if a retry attempt was created
+
+commit version N
+
+load Workflow aggregate from DB at version N
+render all projections
+write projections
+```
+
+## 10. Physical Projection Writer
 
 The projection writer should stay boring:
 
@@ -633,7 +838,7 @@ Writes should use a temp file plus atomic rename. The first implementation can
 re-render the whole workflow after each mutation. Dirty-subtree projection can
 come later if size becomes a real bottleneck.
 
-## 10. Context Loading Policy
+## 11. Context Loading Policy
 
 The file projections support context loading; they do not define the full policy.
 A conservative default is:
@@ -656,21 +861,36 @@ read_workflow_context(workflow_id, path, line_range?)
 search_workflow_context(workflow_id, query, scope?)
 ```
 
-## 11. Acceptance Criteria
+## 12. Acceptance Criteria
 
-- `delegate_workflow` initializes workflow, first iteration, and first attempt.
-- Planner launch creates a running plan under the active attempt.
-- `submit_plan_outcome` updates the plan and creates not-started work items.
+- `delegate_workflow` initializes workflow, first iteration, first attempt, and
+  first plan.
+- `delegate_workflow` enqueues and automatically launches the first planner;
+  the first plan becomes `Running` without a user-facing `launch_agent` step.
+- `submit_planner_outcome` updates the running plan and creates not-started work
+  items.
+- `submit_planner_outcome` schedules every root work item whose dependencies are
+  empty or already successful.
 - Not-started plan/work item briefs render only `Status: NotStarted`.
-- Worker launch marks a work item running and reprojects context files.
+- The scheduler marks ready work items `Running` automatically; there is no
+  user-facing worker launch button or tool step.
 - `submit_worker_outcome` updates work item summary/outcome and reprojects from a
   fresh workflow aggregate.
 - Failed work item submission closes the current attempt as failed and creates a
-  retry attempt.
+  retry attempt when `iteration.attempts.len < iteration.max_try`.
+- Retry attempt creation also creates a not-started retry plan and scheduler
+  launch makes that plan running automatically.
+- Failed work item submission closes the iteration and workflow as failed when
+  `max_try` is exhausted.
 - Successful completion of all work items closes the attempt and iteration.
-- Deferred goal creates the next iteration and not-started attempt.
+- A worker success that unblocks dependent work items causes the scheduler to
+  launch those newly-ready workers automatically.
+- Deferred goal creates the next iteration, next attempt, and next plan; the
+  scheduler launches that next planner automatically.
 - No deferred goal on the final successful iteration closes the workflow as
   success.
+- Scheduler queue entries use a workflow-unique attempt locator such as
+  `attempt.folder_path`, not only `attempt_id`.
 - `attempt/spec.md` renders plan spec plus all work item briefs.
 - `attempt/brief.md` renders plan brief plus leaf work item briefs only.
 - `workflow/brief.md` does not render `workflow_goal`.

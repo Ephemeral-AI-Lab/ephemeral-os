@@ -126,10 +126,10 @@
         config: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a>,
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, eos_types::<span class="rs-type">ConfigError</span>&gt; {
-        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>()?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(
             command_service,
-            config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-78">background_completion_poll_interval</a>(),
+            config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-75">background_completion_poll_interval</a>(),
             workflow_service,
         ))
     }
@@ -378,10 +378,10 @@
         config: &amp;<a class="symbol-link rs-type" href="eos-engine--src-agent-loop-config-rs.html#item-struct-EngineRuntimeConfig-13">EngineRuntimeConfig</a>,
         workflow_service: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowApi</span>&gt;,
     ) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-run-output-error-rs.html#item-type-Result-1">Result</a>&lt;<span class="rs-self">Self</span>, eos_types::<span class="rs-type">ConfigError</span>&gt; {
-        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-84">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-validate-81">validate</a>()?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-contracts-rs.html#method-new-108">new</a>(
             command_service,
-            config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-78">background_completion_poll_interval</a>(),
+            config.<a class="symbol-link rs-fn" href="eos-engine--src-agent-loop-config-rs.html#method-background-completion-poll-interval-75">background_completion_poll_interval</a>(),
             workflow_service,
         ))
     }
