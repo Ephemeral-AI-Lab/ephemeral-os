@@ -11,8 +11,9 @@ use eos_overlay::{
     allocate_overlay_writable_dirs, mount_overlay, overlay_writable_root, OverlayError,
     OverlayHandle, OverlayMount,
 };
+use eos_workspace_runtime::contract::usize_to_f64_saturating;
 
-use crate::{CheckpointError, CommitOutcome, CommitRequest};
+use super::{CheckpointError, CommitOutcome, CommitRequest};
 
 /// Run the checkpoint commit pipeline for a single request.
 ///
@@ -377,8 +378,4 @@ fn command_stderr(output: &Output) -> String {
 
 fn record_elapsed(timings: &mut BTreeMap<String, f64>, key: &str, start: Instant) {
     timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
-}
-
-fn usize_to_f64_saturating(value: usize) -> f64 {
-    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }

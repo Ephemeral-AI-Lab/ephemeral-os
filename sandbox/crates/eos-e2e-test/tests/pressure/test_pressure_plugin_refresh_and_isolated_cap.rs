@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_daemon::wire::ops;
+use eos_e2e_test::client::error_kind;
 use eos_e2e_test::unique_suffix;
 use serde_json::{json, Value};
 
@@ -338,10 +339,6 @@ fn open_count_for(listing: &Value, callers: &[String]) -> usize {
                 .count()
         })
         .unwrap_or_default()
-}
-
-fn error_kind(response: &Value) -> Option<&str> {
-    response.get("error")?.get("kind")?.as_str()
 }
 
 fn ensure_generic_service_package(

@@ -172,16 +172,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-checkpoint"
-version = "0.1.0"
-dependencies = [
- "eos-layerstack",
- "eos-overlay",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
 name = "eos-config"
 version = "0.1.0"
 dependencies = [
@@ -197,7 +187,6 @@ name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
  "eos-cas",
- "eos-checkpoint",
  "eos-config",
  "eos-layerstack",
  "eos-occ",

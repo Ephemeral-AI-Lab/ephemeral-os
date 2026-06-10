@@ -34,6 +34,7 @@
 
 pub(crate) mod adapters;
 pub(crate) mod audit;
+pub(crate) mod checkpoint;
 pub(crate) mod dispatch;
 pub(crate) mod ops;
 pub(crate) mod runtime;

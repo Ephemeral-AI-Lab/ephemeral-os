@@ -39,15 +39,15 @@ the Phase 03 engine seams it needs:
   while sessions are live,
 - a pluggable hook protocol (PreToolUse / PostToolUse / PostToolUseFailure)
   with a JS-script `command` adapter and an in-process `callback` adapter,
-- four tool families: sandbox, submission, workflow, background. The
-  agent family (`run_subagent`, `ask_advisor`,
-  `read_agent_run_transcript`) ships with its runtime in Phase 04.5
-  (decision 21).
+- two tool families: submission and background — the only families that
+  need no external service (both close over the engine-owned
+  supervisor). The sandbox, agent, and workflow families ship with
+  their backing services in Phase 04.5+ (decision 21).
 
-Each tool family is constructed with exactly its own service (`SandboxPort`,
-`WorkflowPort`); real implementations are Phase 04.5 (`@eos/agent-runtime`)
-and later sandbox-host work. This phase verifies everything against fakes
-in `@eos/testkit` ("happy" sandbox).
+A tool family that wraps a service is constructed with exactly that
+service; none of those services exist yet, so none of those families are
+built here. This phase verifies the framework against scripted tool
+definitions and test session handles.
 
 This phase is additive plus a bounded engine restructure at the tool
 boundary. The Rust engine remains the live implementation; nothing under
@@ -83,13 +83,16 @@ omissions:
    siblings still queued behind the concurrency cap. The next turn's tool
    specs are filtered by `availableInIsolatedWorkspace` and a call-time
    pipeline guard denies stale calls. No batch policy is needed for mode
-   tools.
+   tools. (The mode tools themselves are sandbox family, decision 21;
+   the snapshot, the specs filter, and the guard are this phase's
+   framework code, tested by flipping the cell directly.)
 5. **No built-in hooks.** Hooks are purely an operator extension surface.
    Framework invariants are plain code at their structural sites: the
    isolated-mode ban is a pipeline guard; "no open sessions before
    submission" (running or undelivered, §9) lives inside the submission
-   tool factory; "at most one open
-   workflow" lives inside `delegate_workflow`. The Rust hook enums
+   tool factory; "at most one open workflow" will live inside
+   `delegate_workflow` when the workflow family lands (decision 21).
+   The Rust hook enums
    (`BlockInIsolatedMode`, `RequireNoBackgroundSessions`, destructive-shell
    guards) are not ported as hooks.
 6. **Hooks cannot rewrite tool output, and there is no `ask` decision.**
@@ -140,9 +143,9 @@ omissions:
     hook context today; trigger rules and agent-to-agent messages later,
     with no inbox change). The `BackgroundSupervisor` is generic over
     `{ type: string, id: string }` refs and publishes its own
-    `session_settled` notifications; the narrow
-    `"subagent" | "workflow" | "command"` union is a tool-side
-    refinement. There is no tool-side notifications module: the
+    `session_settled` notifications; session-type narrowing is a
+    tool-side refinement (an open string this phase — the enum arrives
+    with the spawning families, decision 21). There is no tool-side notifications module: the
     `<system_notification>` renderer is one engine helper
     (`systemNotificationMessage`). The Rust `NotificationRule` trait is
     not ported and none of its rules survive as engine branches: the
@@ -212,15 +215,20 @@ omissions:
     the model-facing nudge ("keep working, submit the terminal tool") is
     a future agent-package notification rule firing on text return
     through the §12 seam, not an engine branch.
-21. **The agent family ships with its runtime.** `AgentRunPort` and the
-    agent tools (`run_subagent`, `ask_advisor`,
-    `read_agent_run_transcript`) are Phase 04.5, defined next to the
-    `@eos/agent-runtime` code that implements them — building them here
-    would mean designing the port against nothing but its own fake. This
-    phase loses no coverage: the spawn -> register -> settle -> notify
-    -> read pattern is fully exercised by `exec_command` and
-    `delegate_workflow`, and the supervisor is generic (§2.18), so the
-    agent family adds tools later without touching the engine or the
+21. **Tool families that wrap an external service ship with it.** The
+    sandbox family (`read`, `multi_read`, `write`, `edit`, the command
+    tools, the workspace-mode tools) + `SandboxPort` ship with the
+    sandbox-host work; `AgentRunPort` + the agent tools (`run_subagent`,
+    `ask_advisor`, `read_agent_run_transcript`) with `@eos/agent-runtime`
+    (Phase 04.5); `WorkflowPort` + the workflow tools
+    (`delegate_workflow`, `query_workflow`) with the workflow API.
+    Building any of them now would mean designing the port against
+    nothing but its own fake. This phase loses no coverage: the
+    pipeline, executor, hooks, and toolset assembly are exercised by
+    scripted definitions; the register -> settle -> notify pattern by
+    the engine's supervisor suite over test capability handles; the
+    isolated-mode machinery by flipping `workspace.isIsolated` in-test.
+    Each family adds tools later without touching the engine or the
     executor.
 
 ## 3. Scope
@@ -228,25 +236,27 @@ omissions:
 In scope:
 
 - `@eos/tool` package: contract, `defineTool`, pipeline, batch executor,
-  hook protocol and runner, executor assembly, and the four tool families
-  (one folder per family, one file per tool),
+  hook protocol and runner, executor assembly, and the two service-free
+  tool families, submission and background (one folder per family, one
+  file per tool),
 - engine restructure: `tools.ts` and `tool-runner.ts` removed, one
   `ToolExecutor` port added, batch-result normalization, terminal-only
   exit (decision 20), the engine-owned `NotificationInbox` and
   `BackgroundSupervisor` (generic mailbox + generic session lifecycle
   with dispose-on-finish), and the auto-wait branch; loop tests ported
   to a scripted executor,
-- `@eos/contracts` additions: `AgentKind`, `AgentRunId`, `WorkflowRunId`,
-  `CommandId`, `SandboxId`, `ToolCallResult`,
-- `@eos/testkit` first real content: happy `SandboxPort`, fake
-  `WorkflowPort`, transcript fixture helper,
+- `@eos/contracts` additions: `AgentKind`, `AgentRunId`, `SandboxId`,
+  `ToolCallResult`,
+- `@eos/testkit` first real content: transcript fixture helper, scripted
+  tool-definition and session-handle helpers,
 - tests per §15.
 
 Out of scope (named seams in §12):
 
-- the agent tool family and `AgentRunPort` (Phase 04.5, decision 21),
-- real `SandboxPort` over the sandbox host, real `WorkflowPort`
-  (Phase 04.5 and later), the composition root, hook config
+- the sandbox, agent, and workflow tool families with their ports
+  (`SandboxPort`, `AgentRunPort`, `WorkflowPort`) — Phase 04.5+ and
+  sandbox-host work (decision 21),
+- the composition root, hook config
   file loading, the JSONL transcript writer (Phase 04.5; this phase's hook
   tests write fixture files),
 - persistence (`@eos/db`), observability wiring,
@@ -265,7 +275,7 @@ Out of scope (named seams in §12):
 | `eos-tool/src/hooks.rs` + `eos-engine/src/tool_call/hooks.rs` | `packages/tool/src/hooks/` | Redesigned: enum hooks -> external protocol (§2.5) |
 | `eos-engine/src/background/session_runtime.rs` (managers, monitors, statuses) | `packages/engine/src/background/` | Engine-owned generic supervisor; spawn-site capability handles replace per-kind managers/monitors (§2.18) |
 | `eos-engine/src/notifications.rs` | `packages/engine/src/notification-inbox.ts` | Engine-owned generic inbox + `<system_notification>` renderer; rule trait not ported (§2.12) |
-| `eos-tool/src/tools/{sandbox,command,workflow}.rs` + submission tools | `packages/tool/src/tools/` | Four families this phase; `subagent.rs` follows in Phase 04.5 (decision 21) |
+| `eos-tool/src/tools/` submission + background portions | `packages/tool/src/tools/` | Two families this phase; the sandbox, command, subagent, and workflow tool modules follow with their services (decision 21) |
 
 ## 5. Tool Contract (`contract.ts`, `define.ts`, family modules)
 
@@ -328,53 +338,20 @@ interface ToolCallContext {
 }
 ```
 
-Each service port is declared in its owning family folder
+Each service port will be declared in its owning family folder
 (`tools/<family>/port.ts`) and injected at factory construction by the
-composition root (Phase 04.5). DI sits at real resource boundaries only:
+composition root — DI sits at real resource boundaries only. No port
+exists this phase (decision 21); two rules bind the ones that arrive:
 
-```ts
-interface SandboxPort {
-  readonly id: SandboxId;                  // runtime/sandbox-assigned
-  readFile(path: string, opts?: { offset?: number; limit?: number },
-           signal?: AbortSignal): Promise<string>;
-  writeFile(path: string, content: string,
-            signal?: AbortSignal): Promise<void>;
-  editFile(path: string, oldString: string, newString: string,
-           replaceAll: boolean, signal?: AbortSignal): Promise<void>;
-  startCommandSession(command: string, opts?: { timeout_ms?: number }):
-    Promise<{ id: CommandId }>;          // returns promptly; no held wait
-  /** Bounded wait: resolves when the command exits or after timeout_ms,
-      whichever is first. The sandbox owns command state, so repeated
-      waits are idempotent; the impl may long-poll server-side or poll
-      internally — transport's choice. */
-  waitCommand(id: CommandId, timeout_ms: number, signal?: AbortSignal):
-    Promise<{ running: true } | { running: false; exit: CommandExit }>;
-  writeStdin(id: CommandId, data: string, end: boolean,
-             signal?: AbortSignal): Promise<void>;
-  readCommandTranscript(id: CommandId, offset?: number,
-                        signal?: AbortSignal):
-    Promise<{ content: string; new_offset: number; running: boolean }>;
-  killCommand(id: CommandId, reason: string): Promise<void>;
-  enterIsolatedWorkspace(signal?: AbortSignal): Promise<void>;
-  exitIsolatedWorkspace(signal?: AbortSignal): Promise<{ summary: string }>;
-}
-
-interface WorkflowPort {
-  delegate(req: { workflow: string; args?: JsonObject }):
-    Promise<{ workflow_run_id: WorkflowRunId; settled: Promise<WorkflowSettled> }>;
-  query(id: WorkflowRunId, signal?: AbortSignal): Promise<JsonObject>;
-}
-```
-
-Signal rule, applied uniformly across the ports (including Phase 04.5's
-`AgentRunPort`): methods that observe or apply a bounded effect take the
-call's `signal`, so a cancelled run can abandon in-flight wire I/O
-instead of merely ignoring its result. Methods that create detachable
-work (`startCommandSession`, `delegate`, later `spawnSubagent`) and
-methods that tear it down (`killCommand`) deliberately take none —
-detached work is cancelled through its `SessionHandle`, and teardown
-must still succeed after the run's signal has already aborted
-(`dispose`, §9).
+- Signal rule: methods that observe or apply a bounded effect take the
+  call's `signal`, so a cancelled run can abandon in-flight wire I/O
+  instead of merely ignoring its result. Methods that create detachable
+  work (`startCommandSession`, `spawnSubagent`, `delegate`) and methods
+  that tear it down (`killCommand`) deliberately take none — detached
+  work is cancelled through its `SessionHandle`, and teardown must still
+  succeed after the run's signal has already aborted (`dispose`, §9).
+- Ownership rule: a family factory takes exactly its own port (§2.15);
+  no port appears in any shared record.
 
 `AgentRunState` (`run-state.ts`) is the per-run metadata record (§2.19),
 assembled once by the composition root:
@@ -386,10 +363,11 @@ interface AgentRunState {
   readonly parent?: AgentRunId;
   readonly sandbox_id: SandboxId;
   readonly transcript_path: string;
-  workspace: { isIsolated: boolean };   // the ONE mutable cell; written
-                                        // only by the two mode tools,
-                                        // after the SandboxPort call
-                                        // succeeds
+  workspace: { isIsolated: boolean };   // the ONE mutable cell; its
+                                        // writers are the sandbox
+                                        // family's mode tools
+                                        // (decision 21) — this phase
+                                        // only tests flip it
 }
 ```
 
@@ -732,55 +710,25 @@ Lifecycle rules:
   proved zero open sessions, so it is a no-op there.
 
 What each spawn site passes as its `SessionHandle` (no driver classes —
-the capabilities close over the right port at the call site, §2.18):
+the capabilities close over the right port at the call site, §2.18).
+Every spawn site is deferred with its family (decision 21); the shapes
+are recorded here so the supervisor contract stays sufficient:
 
-| Spawn site | `settled` | `cancel(reason)` |
-| --- | --- | --- |
-| `delegate_workflow` | `settled` from `WorkflowPort.delegate` | workflow API cancel |
-| `exec_command` | a `waitCommand` poll loop started at promotion — the bounded yield-window wait has already returned, and the sandbox owns command state, so re-waiting on `command_id` is idempotent | `SandboxPort.killCommand` |
+- `exec_command` (sandbox family): `settled` is a bounded `waitCommand`
+  poll loop started at promotion, `cancel` is `killCommand`. The
+  yield-window wait and the background watch reuse one primitive, so
+  exactly one waiter addresses the sandbox at any moment; an abort
+  during the yield window still registers, keeping the already-running
+  command reachable by `dispose` (or cancelled on the spot by the
+  latch); the watch loop takes no run signal — it must keep observing
+  through teardown so the kill's exit settles the session.
+- `run_subagent` / `delegate_workflow`: `settled` from the child run's /
+  workflow's outcome; cancel via the child run's interrupt / the
+  workflow API.
 
-Phase 04.5's `run_subagent` follows the same shape (decision 21):
-`settled` from the child run's outcome, cancel via the child run's
-interrupt — no supervisor or engine change.
-
-`exec_command` promotion (the hybrid). The yield-window wait and the
-background watch use the same `waitCommand` primitive; exactly one waiter
-addresses the sandbox at any moment — the background poll starts only
-after the foreground wait has returned:
-
-```
-sandbox.startCommandSession(cmd) -> { id }
-r = sandbox.waitCommand(id, clamp(yield_time_ms, 1, 30_000), ctx.signal)
-                                                            // default 1_000
-  exited within window  -> return transcript output synchronously
-  still running / abort -> supervisor.register({type:'command', id},
-                             toolUseId, {
-                               settled: watchCommand(sandbox, id),
-                               cancel: (r) => sandbox.killCommand(id, r),
-                             })
-                           return { command_id, status: 'running',
-                                    transcript: partial output }
-
-watchCommand(sandbox, id)        // sandbox-family helper: the background
-  loop:                          // poll the user-visible "monitor"
-    r = await sandbox.waitCommand(id, BACKGROUND_WAIT_MS)   // e.g. 10_000
-    if (!r.running) return toSessionOutcome(r.exit)
-```
-
-`watchCommand` deliberately takes no run signal: it must keep observing
-through teardown so that `cancel` -> `killCommand` -> the next bounded
-wait reports the exit (the late settle is then dropped by the status
-machine as usual).
-
-The abort arm exists because the command is already running in the
-sandbox: registering makes it reachable by `dispose` (or by the §9 latch,
-which cancels it on the spot if dispose already ran). The executor's
-synthetic "interrupted" result then supersedes the return value; the
-registration is the side effect that matters.
-
-`command_stdin` and `read_command_transcript` address sessions by
-`command_id` through `SandboxPort` directly, independent of the supervisor —
-they work identically for still-yielding and backgrounded sessions.
+This phase registers sessions only from tests — capability handles built
+directly over resolvable promises. No engine or supervisor change is
+needed when the real spawn sites arrive.
 
 ## 10. System Notifications (one generic inbox)
 
@@ -817,26 +765,20 @@ projection is a §12 seam.
 ## 11. Tool Families, Schemas, Toolsets (`tools/`, `toolset.ts`)
 
 Contracts additions: `AgentKind = "main" | "planner" | "worker" | "advisor"
-| "subagent"` (Zod enum) and branded ids `AgentRunId` (mint + adopt),
-`WorkflowRunId` (adopt-only), `CommandId` (adopt-only; the sandbox
-assigns), `SandboxId` (adopt-only; the runtime/sandbox assigns).
+| "subagent"` (Zod enum) and branded ids `AgentRunId` (mint + adopt) and
+`SandboxId` (adopt-only; the runtime/sandbox assigns). `CommandId` and
+`WorkflowRunId` arrive with their families (decision 21).
 
 | Tool | Input schema (Zod sketch) | Flags / notes |
 | --- | --- | --- |
-| `read` | `{ path, offset?, limit? }` | isolated-ok |
-| `multi_read` | `{ paths: string[] (1..32) }` | isolated-ok |
-| `write` | `{ path, content }` | isolated-ok |
-| `edit` | `{ path, old_string, new_string, replace_all? }` | isolated-ok |
-| `exec_command` | `{ command, yield_time_ms? (1..30_000, default 1_000), timeout_ms? }` | isolated-ok; §9 promotion |
-| `command_stdin` | `{ command_id, data, end? }` | isolated-ok |
-| `read_command_transcript` | `{ command_id, offset? }` | isolated-ok |
-| `enter_isolated_workspace` | `{}` | isolated-ok=false (no nesting) |
-| `exit_isolated_workspace` | `{}` | isolated-ok; flips mode back |
 | `submit_<kind>_outcome` ×5 | `{ summary: string, payload?: JsonObject }` | `terminal: true`; guard: `openCount() > 0` -> error (running + undelivered, §9) |
-| `delegate_workflow` | `{ workflow, args? }` | returns `{ workflow_run_id }`; guard: one open workflow |
-| `query_workflow` | `{ workflow_run_id }` | |
 | `list_background_sessions` | `{}` | rows `{ type, id, status, started_at, summary? }` (running + undelivered-terminal) |
-| `cancel_background_session` | `{ type: "subagent"\|"workflow"\|"command", id, reason? }` | unknown ref -> error result; already-terminal -> noted, no-op |
+| `cancel_background_session` | `{ type: string (non-empty), id, reason? }` | unknown ref -> error result; already-terminal -> noted, no-op; `type` narrows to an enum as the spawning families land (decision 21) |
+
+The sandbox-family tool schemas (`read`, `multi_read`, `write`, `edit`,
+`exec_command` with its yield window, `command_stdin`,
+`read_command_transcript`, the two workspace-mode tools) are deferred
+with `SandboxPort` (decision 21).
 
 Submission factory: one `makeSubmissionTool(kind)` over a
 `Record<AgentKind, { name, description }>` table; all five share the
@@ -849,16 +791,18 @@ that object is what arrives at `outcome.submission` (§7).
 
 | Kind | Toolset |
 | --- | --- |
-| main | all sandbox + all agent (Phase 04.5) + workflow + background + `submit_main_outcome` |
+| main | all sandbox + all agent + all workflow + background + `submit_main_outcome` |
 | worker | all sandbox + background + `submit_worker_outcome` |
 | subagent | all sandbox + background + `submit_subagent_outcome` |
 | planner | `read`, `multi_read` + `submit_planner_outcome` |
 | advisor | `read`, `multi_read` + `submit_advisor_outcome` |
 
-The agent block in the main row is recorded here as the product target
-but activates only in Phase 04.5, when `agentTools(agents, supervisor)`
-arrives with its port (decision 21) — the assembly already skips
-families whose port is absent.
+The table is the recorded product target. Every block naming a
+service-wrapping family (sandbox, agent, workflow — decision 21)
+activates only when that family's factory arrives with its port; the
+assembly already skips row names with no constructed definition, so this
+phase each kind resolves to its submission tool plus, where the row
+names them, the background pair.
 
 Construction and registration are separate layers, and **ports stop at
 construction**. Each tool file exports a factory taking exactly the
@@ -867,13 +811,12 @@ service(s) that tool uses (`readTool(sandbox)`,
 the per-family aggregate of those per-tool factories (§2.15):
 
 ```ts
-sandboxTools(sandbox: SandboxPort, supervisor: BackgroundSupervisor,
-             workspace: AgentRunState["workspace"])   // mode tools flip it
-workflowTools(workflows: WorkflowPort, supervisor: BackgroundSupervisor)
 backgroundTools(supervisor: BackgroundSupervisor)
 submissionTool(kind: AgentKind, supervisor: BackgroundSupervisor)
 // each returns ToolDefinition[] — services are fully absorbed here;
-// Phase 04.5 adds agentTools(agents, supervisor) the same way
+// the deferred families add sandboxTools(sandbox, supervisor,
+// workspace), agentTools(agents, supervisor), and
+// workflowTools(workflows, supervisor) the same way (decision 21)
 ```
 
 Registration never sees a port. The composition root calls the factories
@@ -884,9 +827,9 @@ buildToolExecutor({ runState, definitions, inbox, hookEngine })
 ```
 
 It consults `AGENT_TOOLSET` for `runState.kind` and intersects that row
-with the supplied definitions: a row name with no definition — workflow
-tools when no `WorkflowPort` was configured, the agent family until
-Phase 04.5 constructs it (decision 21) — is simply skipped, and a
+with the supplied definitions: a row name with no definition — the
+sandbox, agent, and workflow families until their phases construct them
+(decision 21) — is simply skipped, and a
 definition outside the row is excluded. Every kept definition is bound
 through the §6 pipeline; the result is the engine `ToolExecutor`: a
 deterministic sorted registry (prompt-cache stability), per-turn `specs()`
@@ -901,15 +844,13 @@ Deferred (named seams):
 
 | Deferred behavior | Seam left by this phase |
 | --- | --- |
-| Real `SandboxPort` over the sandbox host | `SandboxPort` interface; happy fake is the only impl |
-| The agent tool family — `AgentRunPort` + `run_subagent`, `ask_advisor`, `read_agent_run_transcript` (decision 21) | `AGENT_TOOLSET` already names the tools; the assembly's port-presence rule includes the family when 04.5 supplies `agents` |
-| Real `WorkflowPort`, composition root, hook config loading, JSONL transcript writer | Phase 04.5 (`@eos/agent-runtime`) |
+| The sandbox, agent, and workflow tool families with their ports (`SandboxPort` incl. `waitCommand` bounded-wait command sessions; `AgentRunPort`; `WorkflowPort`) and ids (`CommandId`, `WorkflowRunId`), plus the `exec_command` yield/promotion design (decision 21) | `AGENT_TOOLSET` already names the tools; §9 records the spawn-site shapes; the assembly's row-intersection rule includes each family once its phase constructs the definitions |
+| Composition root, hook config loading, JSONL transcript writer | Phase 04.5 (`@eos/agent-runtime`) |
 | Per-kind submission payload schemas | the `SUBMISSIONS` table holds a schema slot per kind |
 | Rule-content hook matchers (`Bash(git *)`) | `matcher` is a string; the match function is one site |
 | Async hooks, `prompt`/`agent`/`http` hook kinds | `HookCommand` is a discriminated union; new arms are additive |
 | Notification rules, wired by the future agent package — budget tiers (75/100/125%), the text-return "keep working / submit the terminal tool" reminder (decision 20) | `inbox.publish()` is the entry; a rule evaluator is just one more publisher |
 | Agent-to-agent notifications | another run's runtime publishes into this run's inbox via the same `publish()` |
-| Push-based command completion (sandbox event channel) | `waitCommand` is the only completion read; upgrading bounded waits to push changes one port-method implementation, not the supervisor or `watchCommand`'s contract |
 | Auto-wait watchdog (sessions live but never settle) | the `waitForNext` site; classify as `failed` after a ceiling — until then, a steer or `interrupt()` is the only escape (§7) |
 | Forced final-submission turn on `max_turns` | the §7 max-turns bullet; `outcome.submission` stays absent until then |
 | Awaited session teardown on finish | the loop's `finally` dispose call site (§2.17) |
@@ -939,14 +880,12 @@ Rejected, not deferred (decisions; no seam kept):
   `background/` folder added; runner tests move to `@eos/tool` with the
   relocated logic; loop tests port to a scripted `ToolExecutor`; inbox
   and supervisor suites are engine tests.
-- `packages/contracts/`: `AgentKind`, four branded ids, `ToolCallResult`
+- `packages/contracts/`: `AgentKind`, two branded ids, `ToolCallResult`
   (additive).
 - `packages/testkit/`: first real content — `@eos/testkit` (`dependencies`:
-  `@eos/contracts`, `@eos/tool`): happy `SandboxPort` (in-memory files +
-  scripted command sessions whose `waitCommand` reports exit under test
-  control, plus a concurrent-waiter counter for §15 case 8), fake
-  `WorkflowPort` with resolvable `settled` promises,
-  transcript fixture writer for hook tests.
+  `@eos/contracts`, `@eos/tool`): transcript fixture writer for hook
+  tests, scripted tool-definition and session-handle helpers for the
+  executor and supervisor suites.
 - No new third-party dependencies.
 
 Resulting layout (files this phase owns; NEW / MOD / DEL relative to
@@ -955,8 +894,8 @@ Phase 03):
 ```
 packages/
 ├─ contracts/src/
-│  ├─ ids.ts                 MOD  + AgentRunId (mint), WorkflowRunId,
-│  │                              CommandId, SandboxId (adopt-only)
+│  ├─ ids.ts                 MOD  + AgentRunId (mint),
+│  │                              SandboxId (adopt-only)
 │  ├─ agents.ts              NEW  AgentKind
 │  ├─ tool-calls.ts          NEW  ToolCallResult
 │  └─ index.ts               MOD  re-exports
@@ -991,26 +930,10 @@ packages/
 │  │  │  ├─ protocol.ts      events, payload/output, config schema,
 │  │  │  │                   precedence kernel
 │  │  │  └─ runner.ts        HookEngine: command + callback adapters
-│  │  ├─ tools/              one folder per family: port.ts owns the
-│  │  │  │                   family's service (§2.15), index.ts is the
-│  │  │  │                   factory, one file per tool
-│  │  │  ├─ sandbox/
-│  │  │  │  ├─ port.ts                  SandboxPort
-│  │  │  │  ├─ read.ts
-│  │  │  │  ├─ multi-read.ts
-│  │  │  │  ├─ write.ts
-│  │  │  │  ├─ edit.ts
-│  │  │  │  ├─ exec-command.ts          §9 yield/promotion
-│  │  │  │  ├─ command-stdin.ts
-│  │  │  │  ├─ read-command-transcript.ts
-│  │  │  │  ├─ enter-isolated-workspace.ts
-│  │  │  │  ├─ exit-isolated-workspace.ts
-│  │  │  │  └─ index.ts                 sandboxTools()
-│  │  │  ├─ workflow/
-│  │  │  │  ├─ port.ts                  WorkflowPort
-│  │  │  │  ├─ delegate-workflow.ts
-│  │  │  │  ├─ query-workflow.ts
-│  │  │  │  └─ index.ts                 workflowTools()
+│  │  ├─ tools/              one folder per family; index.ts is the
+│  │  │  │                   factory, one file per tool (a
+│  │  │  │                   service-wrapping family adds port.ts when
+│  │  │  │                   it lands, §2.15)
 │  │  │  ├─ background/
 │  │  │  │  ├─ list-background-sessions.ts
 │  │  │  │  ├─ cancel-background-session.ts
@@ -1027,17 +950,18 @@ packages/
 │                            toolset — supervisor + inbox suites live in
 │                            engine tests
 └─ testkit/src/
-   ├─ happy-sandbox.ts       NEW  in-memory SandboxPort
-   ├─ fake-workflow-port.ts  NEW  resolvable settled promises
    ├─ transcript-fixture.ts  NEW  fixture JSONL for hook tests
+   ├─ scripted-tools.ts      NEW  scripted definitions + session handles
    └─ index.ts               NEW
 ```
 
 Deliberate absences: no `hooks/builtin.ts` (§2.5 — guards are plain code
-in `pipeline.ts`, `submission/`, and `workflow/`); no `runtime.ts` port
+in `pipeline.ts` and `submission/`); no `runtime.ts` port
 bag (§2.15 — every port lives in its owning family folder); no tool-side
 `background/` or `notifications.ts` (§2.12, §2.17 — the supervisor, the
-inbox, and the renderer are engine modules).
+inbox, and the renderer are engine modules); no `sandbox/`, `agent/`, or
+`workflow/` family folders (decision 21 — they arrive with their
+services).
 
 ## 14. Migration Steps
 
@@ -1054,10 +978,10 @@ inbox, and the renderer are engine modules).
    cases 1, 10).
 4. Hook protocol + runner (callback first, then command adapter with real
    spawned scripts) -> verify: §15 cases 10-13.
-5. Session registration at the spawn sites (`SessionHandle` capability
-   records, `exec_command` promotion) -> verify: §15 cases 8-9.
+5. Session registration over test capability handles (background
+   family: list + cancel) -> verify: §15 case 9.
 6. Tool families over testkit fakes + `buildToolExecutor` assembly ->
-   verify: §15 cases 14-16, 18-19.
+   verify: §15 cases 14-16, 19.
 7. Workspace wiring -> verify: `pnpm run check` green from
    `eos-agent-core/`.
 8. Update the migration `index.md` row for this phase.
@@ -1075,18 +999,18 @@ All suites in-process; no network, no real sandbox.
 | 5 | Steers outrank notifications | both pending at step 3: steers drain first |
 | 6 | Supervisor lifecycle | running -> settled publishes once; drain marks delivered then evicts; double-settle dropped; rejected `settled` -> `failed` with the error as summary; register after dispose -> handle cancelled, nothing registered or published; `liveCount`/`openCount` correct throughout |
 | 7 | Cancel race | `cancel()` publishes `cancelled`; the handle's late natural settle is ignored |
-| 8 | `exec_command` promotion | fast command returns output within the yield wait; slow command returns `{ command_id }` and registers; abort during the yield window still registers (dispose can reach the running command); the background `waitCommand` poll starts only after promotion and settles the session (fake counts concurrent waiters: never more than one) |
+| 8 | (moved with the sandbox family) | `exec_command` yield/promotion ships with `SandboxPort` (decision 21); the register-on-abort and single-waiter invariants are §9's recorded shape |
 | 9 | Cancel by `(type, id)` | cancels the right session; unknown ref -> error result; already-terminal -> no-op note |
 | 10 | Pipeline order | abort check -> guard -> parse -> pre-hooks -> execute -> post-hooks; already-aborted call returns `is_error` without executing; timing brackets execute only; pre-execution rejection stamps rejection instant |
 | 11 | Hook deny / exit-2 | command hook exit 2: call never executes; stderr is the model-visible reason |
 | 12 | Hook updatedInput | single update re-validated and applied; invalid update -> error; two conflicting updates -> deny |
 | 13 | Hook context + warnings | `additionalContext` arrives as `hook_context` notification next boundary; nonzero/garbage stdout -> passthrough + `metadata.hook_warnings` |
-| 14 | Isolated-mode ban | mode flip filters next turn's specs; stale call denied by the call-time guard; sandbox tools unaffected |
-| 15 | Mode turn-boundary | `enter_isolated_workspace` batch siblings execute under the old mode — including a sibling dispatched AFTER the flip completes (batch snapshot, §2.4) |
+| 14 | Isolated-mode ban | flipping `workspace.isIsolated` filters the next turn's specs by `availableInIsolatedWorkspace`; a stale call is denied by the call-time guard |
+| 15 | Mode turn-boundary | a scripted tool flips the cell mid-batch: siblings — including one dispatched AFTER the flip — still execute under the old mode (batch snapshot, §2.4) |
 | 16 | Submission guard | submit with running OR settled-but-undelivered sessions -> error naming them; after cancel/settle+delivery -> succeeds |
 | 17 | (moved to Phase 04.5) | subagent round-trip ships with the agent family and the real `AgentRunPort` (decision 21) |
-| 18 | Workflow pair | `delegate_workflow` registers + returns id; second open delegate denied; `query_workflow` passes through |
-| 19 | Executor assembly | each kind gets exactly its table row (minus the Phase 04.5 agent block) + one submission tool; deterministic order; each factory receives only its own service; `buildToolExecutor` receives definitions only (no ports); workflow tools skipped when not constructed |
+| 18 | (moved to Phase 04.5+) | workflow pair ships with the workflow family and the real `WorkflowPort` (decision 21) |
+| 19 | Executor assembly | each kind gets exactly its table row (minus the Phase 04.5+ agent and workflow blocks) + one submission tool; deterministic order; each factory receives only its own service; `buildToolExecutor` receives definitions only (no ports); row names without constructed definitions skipped |
 | 20 | Serialization point | structured content stringified once in the projected `tool_result` block; intact in `ToolCallResult`, events, and `outcome.submission` |
 | 21 | Engine normalization | an executor that drops a result: the missing `tool_use_id` gets a synthetic `is_error` result; `outcome.llm` stays provider-valid |
 | 22 | Dispose on finish | interrupt with running sessions: the loop's finish triggers dispose; every session handle's `cancel` is invoked; `run_finished` does not wait for teardown |
@@ -1134,13 +1058,11 @@ Phase 04 is accepted when:
   spawn-site `SessionHandle`s (no driver classes), with push-only single
   settles, supervisor-owned rejection mapping, delivery-then-evict, a
   dispose latch on every finish (late registrations auto-cancelled), and
-  a working `exec_command` promotion whose background `waitCommand` poll
-  starts only at promotion (never more than one waiter against the
-  sandbox) and which registers on abort,
-- the four Phase 04 tool families build per the §11 tables against
-  testkit fakes (the agent family is Phase 04.5, decision 21), each
-  factory injected with exactly its own service and no ambient port
-  record anywhere in a call path,
+  the §9 spawn-site shapes recorded for the deferred families,
+- the two Phase 04 tool families (submission, background) build per the
+  §11 tables (the sandbox, agent, and workflow families are deferred
+  with their services, decision 21), each factory injected with exactly
+  what it uses and no ambient port record anywhere in a call path,
 - `AgentRunState` holds data only, with `workspace.isIsolated` as its
   single mutable cell (§2.19), and tools observe it solely through the
   frozen `ToolCallMeta` projection,
@@ -1152,11 +1074,11 @@ Phase 04 is accepted when:
 
 | Step | Status | Required proof |
 | --- | --- | --- |
-| Contracts additions | Pending | contracts tests green with `AgentKind` + 4 ids |
+| Contracts additions | Pending | contracts tests green with `AgentKind` + 2 ids |
 | Engine restructure (executor port, inbox, supervisor) | Pending | ported Phase 03 loop suite green + §15 cases 2-7, 21-22 |
 | Contract + pipeline + executor | Pending | §15 cases 1, 10 plus relocated runner suite and defineTool default tests |
 | Hook protocol + runner | Pending | §15 cases 11-13 incl. real spawned scripts |
-| Spawn-site session handles | Pending | §15 cases 8-9 |
-| Tool families + toolsets | Pending | §15 cases 14-16, 18-20 |
+| Test-handle session registration | Pending | §15 case 9 |
+| Tool families + toolsets | Pending | §15 cases 14-16, 19-20 |
 | Workspace wiring | Pending | `pnpm run check` green; `git diff --stat -- agent-core` empty |
 | Index updated | Pending | Phase 04 row in `index.md` |

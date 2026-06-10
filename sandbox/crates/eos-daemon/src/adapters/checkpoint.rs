@@ -1,7 +1,7 @@
 //! Workspace checkpoint services: LayerStack base/binding/metrics plus the
 //! commit seams.
 //!
-//! `commit_to_git` is a thin seam over [`eos_checkpoint`]: this module owns only
+//! `commit_to_git` is a thin seam over [`crate::checkpoint`]: this module owns only
 //! the request-envelope parsing and the response/error re-mapping; the pathspec
 //! policy, worktree preparation, and git pipeline live in the host crate so the
 //! daemon does not fuse that glue into the control plane.
@@ -9,7 +9,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eos_checkpoint::{CommitOutcome, CommitRequest};
+use crate::checkpoint::{CommitOutcome, CommitRequest};
 use eos_layerstack::{
     build_workspace_base as build_layer_stack_workspace_base,
     ensure_workspace_base as ensure_layer_stack_workspace_base, read_workspace_binding,
@@ -121,7 +121,7 @@ pub(crate) fn commit_to_git(args: &Value) -> Result<Value, DaemonError> {
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
     let message = require_string(args, "message")?;
     let raw_paths = raw_commit_paths(args)?;
-    let outcome = eos_checkpoint::commit_to_git(&CommitRequest {
+    let outcome = crate::checkpoint::commit_to_git(&CommitRequest {
         layer_stack_root: &layer_stack_root,
         workspace_root: &workspace_root,
         message: &message,

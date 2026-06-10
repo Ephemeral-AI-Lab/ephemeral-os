@@ -19,15 +19,14 @@ pub(crate) fn forward(
 ) -> Result<Value, ForwardError> {
     let mut tcp_line = stamped_envelope_bytes(op, invocation_id, args, Some(&record.token));
     tcp_line.push(b'\n');
-    // The in-container AF_UNIX hop carries no auth field.
-    let uds_payload = String::from_utf8(stamped_envelope_bytes(op, invocation_id, args, None))
-        .unwrap_or_default();
     let attempt = ForwardAttempt {
         record,
         config,
         mutates_state,
         tcp_line,
-        uds_payload,
+        op,
+        invocation_id,
+        args,
     };
     recovery::run(&attempt)
 }

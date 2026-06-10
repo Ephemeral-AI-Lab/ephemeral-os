@@ -81,6 +81,29 @@ pub fn container_label(id: &str, label: &str) -> Result<String> {
     Ok(value)
 }
 
+/// The full label map of every container in `ids`, in input order, via ONE
+/// `docker inspect` round trip (one JSON object per output line).
+///
+/// # Errors
+/// Returns an error if docker inspect fails or emits undecodable output.
+pub fn container_labels(ids: &[String]) -> Result<Vec<serde_json::Map<String, serde_json::Value>>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut args = vec![
+        "inspect".to_owned(),
+        "-f".to_owned(),
+        "{{json .Config.Labels}}".to_owned(),
+    ];
+    args.extend(ids.iter().cloned());
+    docker(&args)?
+        .lines()
+        .map(|line| {
+            serde_json::from_str(line).with_context(|| format!("parse container labels: {line}"))
+        })
+        .collect()
+}
+
 pub(crate) fn put_archive_file(
     container: &str,
     dest_dir: &str,

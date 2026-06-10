@@ -44,9 +44,11 @@ pub(crate) struct ForwardAttempt<'a> {
     pub mutates_state: bool,
     /// Stamped envelope WITH the auth token (TCP hop), newline-terminated.
     pub tcp_line: Vec<u8>,
-    /// Stamped envelope WITHOUT the auth token (AF_UNIX thin-client hop),
-    /// compact JSON without the trailing newline (passed as one argv token).
-    pub uds_payload: String,
+    /// Request parts, kept so the (rare) exec fallback can build the auth-free
+    /// AF_UNIX thin-client payload on demand.
+    pub op: &'a str,
+    pub invocation_id: &'a str,
+    pub args: &'a Value,
 }
 
 pub(crate) fn run(attempt: &ForwardAttempt<'_>) -> Result<Value, ForwardError> {
@@ -155,10 +157,7 @@ fn fallback_chain(
         return Ok(value);
     }
     respawn_and_gate(attempt).map_err(|err| {
-        ForwardError::SandboxUnavailable(format!(
-            "{}; respawn failed: {err:#}",
-            failure_text(failure)
-        ))
+        ForwardError::SandboxUnavailable(format!("{failure}; respawn failed: {err:#}"))
     })?;
     if attempt.mutates_state {
         return Err(ForwardError::UncertainOutcome(format!(
@@ -173,12 +172,10 @@ fn fallback_chain(
         .map_err(|err| ForwardError::SandboxUnavailable(format!("replay after respawn: {err}")))
 }
 
-fn failure_text(failure: &ForwardError) -> String {
-    failure.to_string()
-}
-
 /// `docker exec <container> eosd daemon --client <socket> <payload>` — the
 /// daemon binary as its own thin client over its in-container AF_UNIX socket.
+/// The payload is the stamped envelope WITHOUT the auth token (AF_UNIX carries
+/// no auth), built here so the happy path never pays for it.
 fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
     let container = handle(attempt);
     let socket = attempt
@@ -192,7 +189,13 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         .remote_eosd_path
         .to_string_lossy()
         .into_owned();
-    let stdout = container.exec(&[&eosd, "daemon", "--client", &socket, &attempt.uds_payload])?;
+    let payload = String::from_utf8(crate::client::stamped_envelope_bytes(
+        attempt.op,
+        attempt.invocation_id,
+        attempt.args,
+        None,
+    ))?;
+    let stdout = container.exec(&[&eosd, "daemon", "--client", &socket, &payload])?;
     Ok(serde_json::from_str(stdout.trim())?)
 }
 

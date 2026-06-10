@@ -172,7 +172,7 @@ impl DaemonContainer {
             token: auth_token.clone(),
             keep,
         };
-        match handle.bringup(daemon, &auth_token) {
+        match handle.bringup(daemon) {
             Ok(client) => {
                 handle.client = client;
                 Ok(handle)
@@ -241,7 +241,7 @@ impl DaemonContainer {
         Ok(handle)
     }
 
-    fn bringup(&self, daemon: &DaemonSpec, token: &str) -> Result<ProtocolClient> {
+    fn bringup(&self, daemon: &DaemonSpec) -> Result<ProtocolClient> {
         let daemon_dir = path_str(&daemon.remote_daemon_dir)?;
         let remote_eosd_path = path_str(&daemon.remote_eosd_path)?;
         let config_dir = daemon
@@ -292,31 +292,11 @@ impl DaemonContainer {
         )
         .with_context(|| format!("Docker put_archive merged config into {config_dir}"))?;
 
-        // Spawn the daemon detached: `--spawn` re-execs a foreground child with
-        // stdout/stderr redirected to `--log-file`, so bringup diagnostics land in
-        // runtime.log (a plain foreground daemon parses but ignores `--log-file`).
-        self.exec(&[
-            "-d",
-            &remote_eosd_path,
-            "daemon",
-            "--spawn",
-            "--socket",
-            &format!("{daemon_dir}/runtime.sock"),
-            "--pid-file",
-            &format!("{daemon_dir}/runtime.pid"),
-            "--log-file",
-            &format!("{daemon_dir}/runtime.log"),
-            "--tcp-host",
-            "0.0.0.0",
-            "--tcp-port",
-            &daemon.tcp_port.to_string(),
-            "--auth-token",
-            token,
-        ])
-        .context("spawn eosd daemon")?;
+        self.spawn_daemon(&daemon_dir, &remote_eosd_path, daemon.tcp_port)
+            .context("spawn eosd daemon")?;
 
         let addr = self.resolve_addr(daemon.tcp_port)?;
-        let client = ProtocolClient::new(addr, Some(token.to_owned()), daemon.request_timeout);
+        let client = ProtocolClient::new(addr, Some(self.token.clone()), daemon.request_timeout);
         await_ready(&client, daemon.ready_timeout)?;
         Ok(client)
     }
@@ -389,13 +369,16 @@ impl DaemonContainer {
              rm -f {daemon_dir}/runtime.sock {daemon_dir}/runtime.pid"
         );
         let _ = self.exec(&["sh", "-lc", &teardown]);
-        self.respawn_daemon(&daemon_dir, &remote_eosd_path, daemon.tcp_port)
+        self.spawn_daemon(&daemon_dir, &remote_eosd_path, daemon.tcp_port)
             .context("respawn eosd daemon")?;
         await_ready(&self.client, daemon.ready_timeout).context("daemon not ready after restart")
     }
 
-    /// Re-exec the daemon in place with this container's original spawn flags.
-    fn respawn_daemon(
+    /// Exec the daemon detached with this container's spawn flags (shared by
+    /// bring-up and in-place respawn): `--spawn` re-execs a foreground child
+    /// with stdout/stderr redirected to `--log-file`, so bring-up diagnostics
+    /// land in runtime.log.
+    fn spawn_daemon(
         &self,
         daemon_dir: &str,
         remote_eosd_path: &str,

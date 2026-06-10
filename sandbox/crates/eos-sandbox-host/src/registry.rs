@@ -12,8 +12,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use anyhow::{Context, Result};
+use serde_json::Value;
 
-use crate::docker::{container_label, running_container_ids};
+use crate::docker::{container_labels, running_container_ids};
 
 /// Container label carrying the sandbox id (also the registry rebuild filter).
 pub const SANDBOX_ID_LABEL: &str = "eos.sandbox_id";
@@ -104,31 +105,35 @@ impl SandboxRegistry {
     /// whose token file is missing are skipped (unreachable without auth).
     /// Returns how many sandboxes were adopted.
     pub fn rebuild_from_docker(&self) -> usize {
+        let ids = running_container_ids(&[SANDBOX_ID_LABEL.to_owned()]);
+        let Ok(label_maps) = container_labels(&ids) else {
+            return 0;
+        };
         let mut adopted = 0;
-        for id in running_container_ids(&[SANDBOX_ID_LABEL.to_owned()]) {
-            let Ok(sandbox_id) = container_label(&id, SANDBOX_ID_LABEL) else {
+        for labels in label_maps {
+            let label = |key: &str| labels.get(key).and_then(Value::as_str);
+            let Some(sandbox_id) = label(SANDBOX_ID_LABEL) else {
                 continue;
             };
-            let Ok(token) = self.load_token(&sandbox_id) else {
+            let Ok(token) = self.load_token(sandbox_id) else {
                 continue;
             };
-            let tcp_port = container_label(&id, TCP_PORT_LABEL)
-                .ok()
-                .and_then(|port| port.parse::<u16>().ok());
-            let Some(tcp_port) = tcp_port else { continue };
-            let created_by =
-                container_label(&id, CREATED_BY_LABEL).unwrap_or_else(|_| "unknown".to_owned());
+            let Some(tcp_port) = label(TCP_PORT_LABEL).and_then(|port| port.parse::<u16>().ok())
+            else {
+                continue;
+            };
+            let created_by = label(CREATED_BY_LABEL).unwrap_or("unknown").to_owned();
             // Container NAME is the docker handle the engine commands use; the
             // provision flow names containers after their sandbox id.
             let record = SandboxRecord::new(
-                sandbox_id.clone(),
-                sandbox_id.clone(),
+                sandbox_id.to_owned(),
+                sandbox_id.to_owned(),
                 token,
                 tcp_port,
                 created_by,
                 None,
             );
-            self.lock().insert(sandbox_id, Arc::new(record));
+            self.lock().insert(sandbox_id.to_owned(), Arc::new(record));
             adopted += 1;
         }
         adopted
