@@ -17,6 +17,7 @@ use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use serde_json::Value;
 use thiserror::Error;
 
 mod direct;
@@ -26,29 +27,6 @@ pub use direct::DirectBackend;
 pub use isolated::IsolatedBackend;
 
 use std::collections::BTreeMap;
-use serde_json::Value;
-
-/// Workspace mode that produced a result.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum WorkspaceMode {
-    /// Shared publish-capable workspace path.
-    #[default]
-    Ephemeral,
-    /// Caller-private no-publish workspace path.
-    Isolated,
-}
-
-impl WorkspaceMode {
-    /// Stable daemon/API string for this mode.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Ephemeral => "ephemeral",
-            Self::Isolated => "isolated",
-        }
-    }
-}
 
 /// Timing/telemetry map keyed by stable wire strings.
 pub type WorkspaceTimings = BTreeMap<String, Value>;
@@ -154,7 +132,7 @@ pub struct Mutation {
 /// Normalized mutation outcome before daemon JSON conversion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MutationOutcome {
-    pub mode: WorkspaceMode,
+    pub workspace_kind: String,
     pub success: bool,
     /// True only when the mutation reached shared workspace truth.
     pub published: bool,
@@ -179,7 +157,7 @@ pub struct MutationOutcome {
 /// gated single-writer commit) and [`IsolatedBackend`] (upperdir-first reads,
 /// private upperdir writes, never published).
 pub trait FileBackend {
-    fn mode(&self) -> WorkspaceMode;
+    fn workspace_kind(&self) -> &'static str;
 
     /// Stable `mutation_source` string for outcomes of `kind`.
     fn mutation_source(&self, kind: MutationKind) -> &'static str;
@@ -241,7 +219,7 @@ pub struct EditFileRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadFileOutcome {
-    pub mode: WorkspaceMode,
+    pub workspace_kind: String,
     pub success: bool,
     pub content: String,
     pub exists: bool,
@@ -252,7 +230,7 @@ pub struct ReadFileOutcome {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WriteFileOutcome {
-    pub mode: WorkspaceMode,
+    pub workspace_kind: String,
     pub success: bool,
     pub published: bool,
     pub status: String,
@@ -273,7 +251,7 @@ pub struct WriteFileOutcome {
 impl From<MutationOutcome> for WriteFileOutcome {
     fn from(outcome: MutationOutcome) -> Self {
         Self {
-            mode: outcome.mode,
+            workspace_kind: outcome.workspace_kind,
             success: outcome.success,
             published: outcome.published,
             status: outcome.status,
@@ -289,7 +267,7 @@ impl From<MutationOutcome> for WriteFileOutcome {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EditFileOutcome {
-    pub mode: WorkspaceMode,
+    pub workspace_kind: String,
     pub success: bool,
     pub published: bool,
     pub status: String,
@@ -312,7 +290,7 @@ impl EditFileOutcome {
     #[must_use]
     pub fn from_mutation(outcome: MutationOutcome, applied_edits: i64) -> Self {
         Self {
-            mode: outcome.mode,
+            workspace_kind: outcome.workspace_kind,
             success: outcome.success,
             published: outcome.published,
             status: outcome.status,
@@ -356,7 +334,7 @@ pub fn read_file<B: FileBackend>(
     let mut timings = read.timings;
     insert_total(&mut timings, "read", total_start);
     Ok(ReadFileOutcome {
-        mode: backend.mode(),
+        workspace_kind: backend.workspace_kind().to_owned(),
         success: true,
         content,
         exists: read.exists,
@@ -479,7 +457,7 @@ fn write_conflict<B: FileBackend>(
     timings: WorkspaceTimings,
 ) -> WriteFileOutcome {
     WriteFileOutcome {
-        mode: backend.mode(),
+        workspace_kind: backend.workspace_kind().to_owned(),
         success: false,
         published: false,
         status: status.to_owned(),
@@ -501,7 +479,7 @@ fn edit_conflict<B: FileBackend>(
     timings: WorkspaceTimings,
 ) -> EditFileOutcome {
     EditFileOutcome {
-        mode: backend.mode(),
+        workspace_kind: backend.workspace_kind().to_owned(),
         success: false,
         published: false,
         status: status.to_owned(),

@@ -10,9 +10,7 @@ use serde_json::Value;
 use crate::process::{
     CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, KillReason, ProcessReap,
 };
-use crate::transcript::{
-    read_transcript_since, read_transcript_stdout, read_transcript_tail,
-};
+use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
 use crate::wait::CommandSessionWaitTarget;
 use crate::{CommandResponse, CommandSessionError};
 

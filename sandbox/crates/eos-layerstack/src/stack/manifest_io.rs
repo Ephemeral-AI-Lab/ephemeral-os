@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::model::{LayerRef, MANIFEST_SCHEMA_VERSION, Manifest};
+use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
 use crate::error::LayerStackError;

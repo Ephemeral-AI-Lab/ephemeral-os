@@ -14,7 +14,7 @@ use serde_json::json;
 use crate::direct::{api_error, parse_layer_path, resolve_layer_path, usize_to_f64_saturating};
 use crate::{
     FileBackend, FileOpsError, Mutation, MutationKind, MutationOutcome, ReadBytes,
-    ResolvedWorkspacePath, WorkspaceMode, WorkspaceTimings,
+    ResolvedWorkspacePath, WorkspaceTimings,
 };
 
 /// One open isolated workspace's file view (plain fields — constructed by the
@@ -30,8 +30,8 @@ pub struct IsolatedBackend {
 }
 
 impl FileBackend for IsolatedBackend {
-    fn mode(&self) -> WorkspaceMode {
-        WorkspaceMode::Isolated
+    fn workspace_kind(&self) -> &'static str {
+        "isolated"
     }
 
     fn mutation_source(&self, _kind: MutationKind) -> &'static str {
@@ -76,7 +76,7 @@ impl FileBackend for IsolatedBackend {
         std::fs::write(target, &mutation.content).map_err(api_error)?;
         let changed_paths = vec![layer_path.as_str().to_owned()];
         Ok(MutationOutcome {
-            mode: WorkspaceMode::Isolated,
+            workspace_kind: "isolated".to_owned(),
             success: true,
             published: false,
             status: "committed".to_owned(),

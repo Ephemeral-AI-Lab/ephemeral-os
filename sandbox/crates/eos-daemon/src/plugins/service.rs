@@ -6,9 +6,9 @@ use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
 use eos_plugin::{PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus};
 use serde_json::Value;
 
+use crate::error::DaemonError;
 #[cfg(all(target_os = "linux", not(test)))]
 use crate::overlay::overlay_run_dirs;
-use crate::error::DaemonError;
 
 use super::process::PluginServiceOverlay;
 use super::{

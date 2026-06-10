@@ -6,12 +6,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::Instant;
 
+use crate::response_timings::usize_to_f64_saturating;
 use eos_layerstack::{LayerStack, MergedView, WorkspaceBinding};
 use eos_overlay::{
     allocate_overlay_writable_dirs, mount_overlay, overlay_writable_root, OverlayError,
     OverlayHandle, OverlayMount,
 };
-use crate::response_timings::usize_to_f64_saturating;
 
 use super::{CheckpointError, CommitOutcome, CommitRequest};
 

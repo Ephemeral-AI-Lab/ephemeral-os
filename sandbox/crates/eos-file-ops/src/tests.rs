@@ -18,8 +18,8 @@ impl FakeBackend {
 }
 
 impl FileBackend for FakeBackend {
-    fn mode(&self) -> WorkspaceMode {
-        WorkspaceMode::Ephemeral
+    fn workspace_kind(&self) -> &'static str {
+        "ephemeral"
     }
 
     fn mutation_source(&self, kind: MutationKind) -> &'static str {
@@ -46,7 +46,7 @@ impl FileBackend for FakeBackend {
         let path = mutation.path.path.clone();
         self.recorded.replace(Some(mutation));
         Ok(MutationOutcome {
-            mode: WorkspaceMode::Ephemeral,
+            workspace_kind: "ephemeral".to_owned(),
             success: true,
             published: true,
             status: "committed".to_owned(),

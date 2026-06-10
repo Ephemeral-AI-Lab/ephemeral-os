@@ -136,7 +136,10 @@ impl NamespaceRuntime {
     }
 
     /// Open `/proc/<pid>/ns/{user,mnt,pid,net}` FDs for `holder_pid`.
-    pub(crate) fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError> {
+    pub(crate) fn open_ns_fds(
+        &self,
+        holder_pid: i32,
+    ) -> Result<HashMap<String, i32>, IsolatedError> {
         if self.stub || holder_pid <= 0 {
             return Ok(HashMap::new());
         }

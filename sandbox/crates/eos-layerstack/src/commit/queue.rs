@@ -28,8 +28,8 @@ use std::time::{Duration, Instant};
 use crate::model::LayerChange;
 
 use super::error::CommitError;
-use super::usize_to_f64_saturating;
 use super::outcome::{ChangesetResult, CommitStatus, FileResult, PublishDecision, Route};
+use super::usize_to_f64_saturating;
 
 /// Dedicated single-writer thread name (reproduce exactly).
 pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";

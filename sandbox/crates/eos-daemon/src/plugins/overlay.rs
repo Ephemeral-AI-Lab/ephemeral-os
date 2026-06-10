@@ -8,15 +8,15 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use eos_ephemeral_workspace::{capture_upperdir, path_changes_to_wire, OverlayDirs};
+use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_namespace::protocol::Intent;
 use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
-use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_plugin::ServiceMode;
-use eos_ephemeral_workspace::{capture_upperdir, path_changes_to_wire, OverlayDirs};
 use serde_json::{json, Value};
 
-use crate::overlay::{overlay_run_dirs, run_ns_runner_child, OverlayDirsGuard};
 use crate::error::DaemonError;
+use crate::overlay::{overlay_run_dirs, run_ns_runner_child, OverlayDirsGuard};
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
     merge_runner_timings, resource_timings, TreeResourceStats,

@@ -16,7 +16,7 @@ use serde_json::{json, Value};
 use crate::binding::CommandBinding;
 use crate::outcome::{
     ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    WorkspaceConflict, WorkspaceTimings,
 };
 
 /// Capture the run's upperdir, publish it against its snapshot, and shape the
@@ -82,7 +82,7 @@ pub(crate) fn settle_ephemeral(
     );
 
     Ok(WorkspaceCommandOutcome {
-        mode: WorkspaceMode::Ephemeral,
+        workspace_kind: "ephemeral".to_owned(),
         success: command_success && publish_success,
         status: request.status,
         exit_code: request.exit_code,
@@ -146,7 +146,7 @@ pub(crate) fn settle_isolated(
         json!(request.command_elapsed_s),
     );
     Ok(WorkspaceCommandOutcome {
-        mode: WorkspaceMode::Isolated,
+        workspace_kind: "isolated".to_owned(),
         success: request.command_succeeded(),
         status: request.status.clone(),
         exit_code: Some(request.exit_code.unwrap_or(1)),
@@ -176,8 +176,9 @@ pub(crate) fn settle_isolated(
 /// zero-seeded tree counters the wire contract always carries (the per-run
 /// upperdir/run-dir counters overwrite their seeds on the ephemeral path).
 fn base_timings(root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
-    let manifest = service::active_manifest(root)
-        .map_err(|error| WorkspaceApiError::new("daemon_command_workspace_error", error.to_string()))?;
+    let manifest = service::active_manifest(root).map_err(|error| {
+        WorkspaceApiError::new("daemon_command_workspace_error", error.to_string())
+    })?;
     let mut timings = WorkspaceTimings::new();
     timings.insert(
         "resource.command_exec.changed_path_count".to_owned(),

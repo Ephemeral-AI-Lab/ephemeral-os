@@ -149,7 +149,9 @@ impl<T: CommitTransactionPort + 'static> CommitService<T> {
         let snapshot_version = prepared.snapshot_version;
         let receiver = self.commit_queue.submit(prepared)?;
         let commit_start = Instant::now();
-        let result = receiver.recv().map_err(|_| CommitError::ReplyDisconnected)??;
+        let result = receiver
+            .recv()
+            .map_err(|_| CommitError::ReplyDisconnected)??;
         Ok(finalize_apply_result(
             result,
             snapshot_version,

@@ -23,8 +23,7 @@ fn root_service(root: &Path) -> TestResult<RootService> {
 #[test]
 fn snapshot_manifest_converts_absolute_layer_paths_to_relative() -> TestResult {
     let root = std::path::PathBuf::from("/stack");
-    let manifest =
-        snapshot_manifest(&root, 7, &[root.join("layers/a"), root.join("layers/b")])?;
+    let manifest = snapshot_manifest(&root, 7, &[root.join("layers/a"), root.join("layers/b")])?;
 
     assert_eq!(manifest.version, 7);
     assert_eq!(manifest.layers[0].path, "layers/a");

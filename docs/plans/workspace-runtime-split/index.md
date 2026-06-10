@@ -1,6 +1,6 @@
 # Workspace Runtime Split: Tool-Call-Centric Crates
 
-Status: Proposed (round 2 — storage consolidated, eos-cas dissolved)
+Status: **Implemented** (2026-06-11; all 8 stages; deviations in §8)
 Date: 2026-06-11
 Owner: sandbox/crates
 Scope: replace `eos-workspace-runtime` (and the daemon glue that props it up)
@@ -404,3 +404,57 @@ every surface exceeds the gain — but each crate's rustdoc must lead with the
 settle semantics: *ephemeral = per-command overlay transaction whose changes
 publish on success; isolated = persistent private overlay whose changes never
 leave it.*
+
+## 8. Implementation record (2026-06-11)
+
+All eight stages landed. Final crate set under `sandbox/crates/`:
+`eos-layerstack` (absorbed eos-occ + the cas model + the daemon's per-root
+cache as `service`), `eos-overlay`, `eos-namespace` (+`protocol`),
+`eos-command-session`, `eos-ephemeral-workspace`, `eos-isolated-workspace`,
+`eos-command-ops`, `eos-file-ops`, plus the untouched `eos-config`, `eos-api`,
+`eos-plugin`, `eos-sandbox-host`, `eos-daemon` (thin), `eosd`, `eos-e2e-test`.
+Deleted crates: `eos-workspace-runtime`, `eos-occ`, `eos-cas`. Verification at
+completion: `cargo check`/`clippy --all-targets` clean (0 warnings) on macOS
+host **and** `x86_64-unknown-linux-gnu`; 259 unit/integration tests green
+across 38 suites. The docker-backed e2e suite could not run on the dev host
+(no docker); it compiles clean and is the required follow-up gate.
+
+Deviations from the plan as written:
+
+1. **`CommitTransactionPort` demoted, not deleted.** The commit queue's
+   batching/atomicity/CAS-retry unit tests inject a recording transaction;
+   the trait survives as a crate-internal seam inside
+   `eos-layerstack::commit` (not re-exported). The cross-crate port is gone.
+2. **`CommandId` newtype skipped.** Registry keys and the wire field stay
+   `command_session_id: String`; introducing the newtype was pure churn at
+   this stage and can ride a later cleanup.
+3. **Settle telemetry lives in `eos-command-ops`, not the daemon wire layer.**
+   Parked completions must carry final timings, so the cgroup//proc gauges are
+   sampled at settle. Direct file ops DO get the planned wire-layer
+   enrichment (`enrich_direct_timings` in the daemon); the samplers exist in
+   both `eos-daemon/src/runtime/response_timings.rs` and
+   `eos-command-ops/src/settle.rs` — a known duplication to consolidate if a
+   telemetry home ever appears.
+4. **`touch_isolated` replaces `record_tool_call`.** The audit pipeline is
+   gone, but tool activity still bumps the isolated workspace's TTL liveness
+   (a payload-free touch), preserving eviction behavior for callers doing
+   only file ops.
+5. **`MAX_READ_BYTES`/`MAX_FILE_BYTES` moved to `eos-config`**
+   (`configs::daemon`), not the protocol module — they are config fallbacks,
+   and both the daemon and e2e consume them from there.
+6. **`eos-plugin` never had a real eos-occ dependency** (the manifest match
+   was a comment); nothing to drop beyond the comment.
+7. **Plugin overlay path publishes directly.** `plugins/overlay.rs` now uses
+   `eos_ephemeral_workspace::capture_upperdir` +
+   `eos_layerstack::service::publish_capture`, deleting the
+   `PublishOutcome.raw` JSON round-trip and the daemon publisher adapter.
+8. **e2e `[[test]]` target `eos-occ` keeps its name** — it exercises the
+   commit gate over the wire and renaming would churn harness config for a
+   label.
+
+Follow-ups (not blocking):
+- Run the docker e2e suite (`cargo test -p eos-e2e-test` / xtask suites) on a
+  linux host before relying on the wire-stability claims in §5.
+- Consider consolidating the duplicated cgroup//proc samplers (deviation 3).
+- `contract/` spec documents under `sandbox/contract/` still describe the old
+  crate map in places; update opportunistically.

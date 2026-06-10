@@ -14,7 +14,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, aggregate_layer_changes, layer_digest, manifest_root_hash};
+use crate::model::{
+    aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef,
+    Manifest,
+};
 
 use crate::error::LayerStackError;
 use crate::fsutil::{join_layer_path, record_elapsed, remove_path, resolve_layer_path};

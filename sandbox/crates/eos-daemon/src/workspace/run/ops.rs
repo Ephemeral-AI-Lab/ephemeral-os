@@ -5,21 +5,21 @@
 use std::path::PathBuf;
 
 #[cfg(target_os = "linux")]
-use eos_layerstack::require_workspace_binding;
+use eos_command_ops::ExecTarget;
 #[cfg(target_os = "linux")]
 use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
 #[cfg(target_os = "linux")]
-use eos_command_ops::ExecTarget;
+use eos_layerstack::require_workspace_binding;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
 #[cfg(target_os = "linux")]
-use super::manager::{command_session_config, command_session_scratch_root, command_ops};
+use super::manager::{command_ops, command_session_config, command_session_scratch_root};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(any(target_os = "linux", test))]
@@ -220,8 +220,7 @@ pub(crate) fn op_command_session_count(
         .to_owned();
     #[cfg(target_os = "linux")]
     {
-        let count =
-            command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
+        let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
         Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
     }
     #[cfg(not(target_os = "linux"))]

@@ -16,7 +16,7 @@ use serde_json::json;
 
 use crate::{
     ChangedPathKinds, FileBackend, FileOpsError, Mutation, MutationKind, MutationOutcome,
-    ReadBytes, ResolvedWorkspacePath, WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    ReadBytes, ResolvedWorkspacePath, WorkspaceConflict, WorkspaceTimings,
 };
 
 /// Latest-state file backend for one layer-stack root.
@@ -33,8 +33,8 @@ impl DirectBackend {
 }
 
 impl FileBackend for DirectBackend {
-    fn mode(&self) -> WorkspaceMode {
-        WorkspaceMode::Ephemeral
+    fn workspace_kind(&self) -> &'static str {
+        "ephemeral"
     }
 
     fn mutation_source(&self, kind: MutationKind) -> &'static str {
@@ -115,7 +115,7 @@ fn changeset_outcome(
         .collect::<ChangedPathKinds>();
     let conflict = result.first_conflict();
     MutationOutcome {
-        mode: WorkspaceMode::Ephemeral,
+        workspace_kind: "ephemeral".to_owned(),
         success: result.success(),
         published: result.success(),
         status: conflict

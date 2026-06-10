@@ -139,7 +139,6 @@ impl IsolatedSessions {
             let _ = std::fs::remove_dir_all(&path);
         }
     }
-
 }
 
 fn persisted_string(row: &Value, key: &str) -> Option<String> {

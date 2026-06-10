@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -26,7 +26,7 @@ import {
   SLEEPER_BODY,
   TERSE_BODY,
   advisoryReadyProfile,
-  noOpenBackgroundSessionsHookEntries,
+  rootHookConfigPath,
   submissionOf,
   toolResultsIn,
   waitTool,
@@ -45,16 +45,11 @@ function runtimeFixture(options: FixtureOptions): AgentRuntime {
   for (const profile of options.profiles) {
     writeProfile(profilesDir, advisoryReadyProfile(profile));
   }
-  const hookConfigPath = join(root, "hooks.json");
-  writeFileSync(
-    hookConfigPath,
-    JSON.stringify(noOpenBackgroundSessionsHookEntries()),
-  );
   return createAgentRuntime({
     agentProfilesDir: profilesDir,
     llmClients: llmRegistry(options.clients),
     baseTools: options.baseTools,
-    hookConfigPath,
+    hookConfigPath: rootHookConfigPath(),
     dataDir: join(root, "data"),
   });
 }
@@ -73,6 +68,24 @@ function toolResultJson(request: LlmRequest, toolUseId: string): JsonObject {
 describe("submission prehook (e2e)", () => {
   it("pre-rejects terminal submission while a background session is open, then allows submit after cancellation", async () => {
     const wait = waitTool();
+    const advisorClient = new MockLlmClient([
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_advisor_submit", "submit_advisor_outcome", {
+              summary: "pass",
+              payload: {
+                verdict: "pass",
+                tool_name: "submit_main_outcome",
+                payload: { summary: "cleaned up" },
+                reason: "exact payload matches",
+              },
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+    ]);
     const sleeperClient = new MockLlmClient([
       scriptedTurn([
         complete(
@@ -121,6 +134,17 @@ describe("submission prehook (e2e)", () => {
       scriptedTurn([
         complete(
           assistantMessage(
+            toolUseBlock("tu_ask_advisor", "ask_advisor", {
+              tool_name: "submit_main_outcome",
+              payload: { summary: "cleaned up" },
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+      scriptedTurn([
+        complete(
+          assistantMessage(
             toolUseBlock("tu_submit_final", "submit_main_outcome", {
               summary: "cleaned up",
             }),
@@ -147,8 +171,20 @@ describe("submission prehook (e2e)", () => {
           maxTurns: 3,
           body: SLEEPER_BODY,
         },
+        {
+          name: "advisor",
+          kind: "advisor",
+          llmClientId: "advisor_llm",
+          allowed: [],
+          maxTurns: 3,
+          body: TERSE_BODY,
+        },
       ],
-      clients: { boss_llm: bossClient, sleeper_llm: sleeperClient },
+      clients: {
+        boss_llm: bossClient,
+        sleeper_llm: sleeperClient,
+        advisor_llm: advisorClient,
+      },
       baseTools: [wait.definition],
     });
 
@@ -174,6 +210,12 @@ describe("submission prehook (e2e)", () => {
 
     const cancel = must(results.find((result) => result.tool_use_id === "tu_cancel"));
     expect(cancel.is_error, "the scripted recovery cancels the open session").toBe(
+      false,
+    );
+    const askAdvisor = must(
+      results.find((result) => result.tool_use_id === "tu_ask_advisor"),
+    );
+    expect(askAdvisor.is_error, "the advisor pass unlocks the final submit").toBe(
       false,
     );
     const finalSubmit = must(

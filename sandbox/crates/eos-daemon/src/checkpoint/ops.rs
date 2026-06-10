@@ -19,8 +19,8 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use eos_layerstack::service::cache_snapshot;
 use crate::request_args::{binding_to_value, require_string, timings_to_value_map};
+use eos_layerstack::service::cache_snapshot;
 
 pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);

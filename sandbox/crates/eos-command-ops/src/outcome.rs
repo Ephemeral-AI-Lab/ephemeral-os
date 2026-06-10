@@ -6,28 +6,6 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// Workspace mode that produced a result.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum WorkspaceMode {
-    /// Shared publish-capable workspace path.
-    #[default]
-    Ephemeral,
-    /// Caller-private no-publish workspace path.
-    Isolated,
-}
-
-impl WorkspaceMode {
-    /// Stable daemon/API string for this mode.
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Ephemeral => "ephemeral",
-            Self::Isolated => "isolated",
-        }
-    }
-}
-
 /// Timing/telemetry map keyed by stable wire strings.
 pub type WorkspaceTimings = BTreeMap<String, Value>;
 
@@ -114,7 +92,7 @@ impl FinalizeCommandRequest {
 /// Normalized command outcome before daemon persistence/parking.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceCommandOutcome {
-    pub mode: WorkspaceMode,
+    pub workspace_kind: String,
     pub success: bool,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -146,9 +124,9 @@ impl WorkspaceCommandOutcome {
     /// command's status and output but no published paths, because a cancelled
     /// command never merges into the shared workspace.
     #[must_use]
-    pub fn discarded(mode: WorkspaceMode, request: FinalizeCommandRequest) -> Self {
+    pub fn discarded(workspace_kind: &'static str, request: FinalizeCommandRequest) -> Self {
         Self {
-            mode,
+            workspace_kind: workspace_kind.to_owned(),
             success: false,
             status: request.status,
             exit_code: request.exit_code,

@@ -63,9 +63,7 @@ const fn path_change_kind_wire(kind: PathChangeKind) -> &'static str {
 /// # Errors
 ///
 /// Returns [`EphemeralWorkspaceError::CaptureFailed`] when the walk fails.
-pub fn capture_upperdir(
-    upperdir: &Path,
-) -> Result<CapturedChanges, EphemeralWorkspaceError> {
+pub fn capture_upperdir(upperdir: &Path) -> Result<CapturedChanges, EphemeralWorkspaceError> {
     let start = std::time::Instant::now();
     let changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
         EphemeralWorkspaceError::CaptureFailed {

@@ -8,6 +8,7 @@ import { scriptedTool } from "@eos/testkit";
 import { defineTool, type HookConfigEntry, type ToolDefinition } from "@eos/tool";
 import { z } from "zod";
 
+import { loadHookConfig } from "../../src/hook-config.js";
 import type { RunSummary } from "../../src/run-registry.js";
 import { createAgentRuntime, type AgentRuntime } from "../../src/runtime.js";
 import { tempDir, writeProfile, type ProfileSpec } from "../../tests/support.js";
@@ -28,6 +29,15 @@ export const PARALLEL_BODY = [
   "Write no prose.",
 ].join(" ");
 
+export const ADVISOR_BODY = [
+  "You are the advisor.",
+  "Read the caller transcript, then read the final JSON object on the last line of the next message.",
+  "Call submit_advisor_outcome exactly once.",
+  'Use summary "pass".',
+  'Use payload {"verdict":"pass","tool_name":<copied tool_name>,"payload":<copied payload>,"reason":"approved for e2e"}.',
+  "Do not call any other tool and write no prose.",
+].join(" ");
+
 /** A subagent that parks on the mocked `wait` tool until it is cancelled. */
 export const SLEEPER_BODY = [
   "You are the sleeper.",
@@ -35,51 +45,17 @@ export const SLEEPER_BODY = [
   'After it returns, call submit_subagent_outcome with summary "slept".',
 ].join(" ");
 
-const TERMINAL_SUBMISSION_TOOL_NAMES = [
-  "submit_main_outcome",
-  "submit_planner_outcome",
-  "submit_worker_outcome",
-  "submit_advisor_outcome",
-  "submit_subagent_outcome",
-] as const;
-
 const ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES = new Set<string>([
   "submit_main_outcome",
   "submit_planner_outcome",
   "submit_worker_outcome",
 ]);
 
-export function noOpenBackgroundSessionsHookPath(): string {
+export function rootHookConfigPath(): string {
   return join(
     dirname(fileURLToPath(import.meta.url)),
-    "../../../../../.eos-agents/hooks/no-open-background-sessions.cjs",
+    "../../../../../.eos-agents/hooks.json",
   );
-}
-
-export function requireAdvisoryPassHookPath(): string {
-  return join(
-    dirname(fileURLToPath(import.meta.url)),
-    "../../../../../.eos-agents/hooks/require-advisory-pass.cjs",
-  );
-}
-
-export function noOpenBackgroundSessionsHookEntries(): HookConfigEntry[] {
-  const command = `node ${JSON.stringify(noOpenBackgroundSessionsHookPath())}`;
-  return TERMINAL_SUBMISSION_TOOL_NAMES.map((matcher) => ({
-    event: "PreToolUse",
-    matcher,
-    hooks: [{ type: "command", command }],
-  }));
-}
-
-export function requireAdvisoryPassHookEntries(): HookConfigEntry[] {
-  const command = `node ${JSON.stringify(requireAdvisoryPassHookPath())}`;
-  return [
-    {
-      event: "PreToolUse",
-      hooks: [{ type: "command", command }],
-    },
-  ];
 }
 
 /** A subagent that settles immediately with a fixed summary. */
@@ -93,8 +69,18 @@ export function advisoryReadyProfile(spec: ProfileSpec): ProfileSpec {
   const terminal = spec.terminal ?? `submit_${spec.kind}_outcome`;
   if (!ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(terminal)) return spec;
   const allowed = spec.allowed ?? [];
-  if (allowed.includes("ask_advisor")) return spec;
-  return { ...spec, allowed: [...allowed, "ask_advisor"] };
+  const body = [
+    spec.body,
+    "Before calling your terminal tool, call ask_advisor with tool_name set to that terminal tool and payload exactly equal to the payload you will submit.",
+    "Only after ask_advisor returns a pass verdict, call the terminal tool with the exact same payload.",
+  ]
+    .filter((part): part is string => part !== undefined && part.length > 0)
+    .join(" ");
+  return {
+    ...spec,
+    allowed: allowed.includes("ask_advisor") ? allowed : [...allowed, "ask_advisor"],
+    body,
+  };
 }
 
 // --- mocked tools ------------------------------------------------------------
@@ -234,8 +220,8 @@ export interface RuntimeFixtureOptions {
   llmClientsPath: string;
   profiles: readonly ProfileSpec[];
   baseTools?: ToolDefinition[];
-  /** `HookConfigEntry[]` JSON, written to the fixture's `hooks.json`. */
-  hookEntries?: unknown;
+  /** Extra hooks appended to the repo `.eos-agents/hooks.json` baseline. */
+  hookEntries?: readonly HookConfigEntry[];
 }
 
 export interface RuntimeFixture {
@@ -248,12 +234,16 @@ export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
   const root = tempDir("eos-agent-runtime-e2e-");
   const profilesDir = join(root, "profiles");
   mkdirSync(profilesDir, { recursive: true });
-  for (const spec of options.profiles) {
+  for (const spec of profilesWithAdvisor(options.profiles)) {
     writeProfile(profilesDir, advisoryReadyProfile(spec));
   }
-  const hookConfigPath = join(root, "hooks.json");
+  let hookConfigPath = rootHookConfigPath();
   if (options.hookEntries !== undefined) {
-    writeFileSync(hookConfigPath, JSON.stringify(options.hookEntries));
+    hookConfigPath = join(root, "hooks.json");
+    writeFileSync(
+      hookConfigPath,
+      JSON.stringify([...loadHookConfig(rootHookConfigPath()), ...options.hookEntries]),
+    );
   }
   const dataDir = join(root, "data");
   const runtime = createAgentRuntime({
@@ -264,6 +254,30 @@ export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
     dataDir,
   });
   return { runtime, dataDir };
+}
+
+function profilesWithAdvisor(profiles: readonly ProfileSpec[]): readonly ProfileSpec[] {
+  const needsAdvisor = profiles.some((profile) =>
+    ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(
+      profile.terminal ?? `submit_${profile.kind}_outcome`,
+    ),
+  );
+  if (!needsAdvisor || profiles.some((profile) => profile.name === "advisor")) {
+    return profiles;
+  }
+  const llmClientId = profiles[0]?.llmClientId;
+  if (llmClientId === undefined) return profiles;
+  return [
+    ...profiles,
+    {
+      name: "advisor",
+      kind: "advisor",
+      llmClientId,
+      allowed: [],
+      maxTurns: 3,
+      body: ADVISOR_BODY,
+    },
+  ];
 }
 
 // --- polling -------------------------------------------------------------------

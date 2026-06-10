@@ -13,8 +13,8 @@ use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
 use serde::Deserialize;
 use serde_json::json;
 
-use eos_layerstack::service::commit_direct;
 use crate::error::DaemonError;
+use eos_layerstack::service::commit_direct;
 
 pub(super) const OCC_APPLY_CHANGESET_OP: &str = "daemon.occ.apply_changeset";
 

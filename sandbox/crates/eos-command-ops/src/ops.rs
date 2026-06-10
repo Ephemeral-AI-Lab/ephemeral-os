@@ -25,7 +25,7 @@ use eos_ephemeral_workspace::EphemeralWorkspace;
 use eos_layerstack::service;
 
 use crate::binding::CommandBinding;
-use crate::outcome::{FinalizeCommandRequest, WorkspaceCommandOutcome, WorkspaceMode};
+use crate::outcome::{FinalizeCommandRequest, WorkspaceCommandOutcome};
 use crate::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
 use crate::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
 use crate::settle::{settle_ephemeral, settle_isolated};
@@ -459,10 +459,7 @@ impl CommandOps {
         let outcome = match &*run {
             ActiveCommand::Ephemeral(ephemeral) => {
                 let outcome = if cancelled {
-                    Ok(WorkspaceCommandOutcome::discarded(
-                        WorkspaceMode::Ephemeral,
-                        request,
-                    ))
+                    Ok(WorkspaceCommandOutcome::discarded("ephemeral", request))
                 } else {
                     settle_ephemeral(
                         &ephemeral.root,
@@ -479,10 +476,7 @@ impl CommandOps {
             }
             ActiveCommand::Isolated(isolated) => {
                 if cancelled {
-                    Ok(WorkspaceCommandOutcome::discarded(
-                        WorkspaceMode::Isolated,
-                        request,
-                    ))
+                    Ok(WorkspaceCommandOutcome::discarded("isolated", request))
                 } else {
                     settle_isolated(&isolated.binding, request)
                 }
@@ -526,7 +520,7 @@ fn command_response_from_outcome(outcome: WorkspaceCommandOutcome) -> CommandRes
         stdout: outcome.stdout,
         stderr: outcome.stderr,
         command_session_id: outcome.command_session_id,
-        workspace_mode: Some(outcome.mode.as_str().to_owned()),
+        workspace_mode: Some(outcome.workspace_kind),
         metadata: serde_json::json!({
             "success": outcome.success,
             "changed_paths": outcome.changed_paths,

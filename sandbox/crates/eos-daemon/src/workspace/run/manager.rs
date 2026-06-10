@@ -7,11 +7,11 @@ use std::sync::{OnceLock, RwLock};
 use std::time::Instant;
 
 #[cfg(target_os = "linux")]
+use eos_command_ops::CommandOps;
+#[cfg(target_os = "linux")]
 use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 #[cfg(target_os = "linux")]
 use eos_command_session::{CommandResponse, CommandSessionCompletion};
-#[cfg(target_os = "linux")]
-use eos_command_ops::CommandOps;
 #[cfg(target_os = "linux")]
 use serde_json::Value;
 

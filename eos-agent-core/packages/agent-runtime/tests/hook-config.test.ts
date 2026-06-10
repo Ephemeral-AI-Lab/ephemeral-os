@@ -1,5 +1,5 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -25,7 +25,29 @@ describe("hook config loading", () => {
       },
     ];
     writeFileSync(path, JSON.stringify(entries));
-    expect(loadHookConfig(path)).toEqual(entries);
+    expect(loadHookConfig(path)).toEqual(
+      entries.map((entry) => ({
+        ...entry,
+        hooks: entry.hooks.map((hook) => ({ ...hook, cwd: dirname(path) })),
+      })),
+    );
+  });
+
+  it("runs .eos-agents hook commands from the repo root", () => {
+    const root = tempDir("eos-hooks-root-");
+    const agentsDir = join(root, ".eos-agents");
+    mkdirSync(agentsDir);
+    const path = join(agentsDir, "hooks.json");
+    writeFileSync(
+      path,
+      JSON.stringify([
+        {
+          event: "PreToolUse",
+          hooks: [{ type: "command", command: "node .eos-agents/hooks/check.cjs" }],
+        },
+      ]),
+    );
+    expect(loadHookConfig(path)[0]?.hooks[0]).toMatchObject({ cwd: root });
   });
 
   it("fails loudly on a file that is not JSON (§7)", () => {

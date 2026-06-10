@@ -15,16 +15,16 @@ use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
-use eos_isolated_workspace::{ExitOutcome, IsolatedError};
-#[cfg(target_os = "linux")]
-use eos_isolated_workspace::WorkspaceHandle;
 #[cfg(target_os = "linux")]
 pub(crate) use eos_command_ops::CommandBinding as IsolatedCommandHandle;
+#[cfg(target_os = "linux")]
+use eos_isolated_workspace::WorkspaceHandle;
+use eos_isolated_workspace::{ExitOutcome, IsolatedError};
 use serde_json::{json, Value};
 
-use crate::workspace::run;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
+use crate::workspace::run;
 
 use super::{error_json, require_arg};
 pub(crate) use state::configure_isolated_workspace;
@@ -200,10 +200,7 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<IsolatedCommandHan
 }
 
 #[cfg(target_os = "linux")]
-fn command_handle_from(
-    layer_stack_root: &Path,
-    handle: WorkspaceHandle,
-) -> IsolatedCommandHandle {
+fn command_handle_from(layer_stack_root: &Path, handle: WorkspaceHandle) -> IsolatedCommandHandle {
     IsolatedCommandHandle {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,

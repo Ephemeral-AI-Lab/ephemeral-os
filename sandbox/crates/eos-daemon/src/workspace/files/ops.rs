@@ -3,13 +3,13 @@
 use std::path::PathBuf;
 
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
+#[cfg(target_os = "linux")]
+use eos_file_ops::IsolatedBackend;
 use eos_file_ops::{
     edit_file, read_file, write_file, DirectBackend, EditFileOutcome, EditFileRequest,
     FileOpsError, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit, WorkspaceConflict,
-    WorkspaceMode, WriteFileOutcome, WriteFileRequest,
+    WriteFileOutcome, WriteFileRequest,
 };
-#[cfg(target_os = "linux")]
-use eos_file_ops::IsolatedBackend;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
@@ -29,7 +29,8 @@ pub(crate) fn op_read_file(
         return Ok(read_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome = read_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    let mut outcome =
+        read_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
     enrich_direct_timings(&root, &mut outcome.timings, 0);
     Ok(read_response(outcome))
 }
@@ -47,7 +48,8 @@ pub(crate) fn op_write_file(
         return Ok(write_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome = write_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    let mut outcome =
+        write_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
     enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(write_response(outcome))
 }
@@ -65,7 +67,8 @@ pub(crate) fn op_edit_file(
         return Ok(edit_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome = edit_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    let mut outcome =
+        edit_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
     enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(edit_response(outcome))
 }
@@ -122,10 +125,11 @@ fn edit_request(args: &Value) -> Result<EditFileRequest, DaemonError> {
 }
 
 fn read_response(outcome: ReadFileOutcome) -> Value {
+    let workspace_kind = outcome.workspace_kind;
     json!({
         "success": outcome.success,
-        "workspace": mode(outcome.mode),
-        "workspace_mode": mode(outcome.mode),
+        "workspace": workspace_kind.clone(),
+        "workspace_mode": workspace_kind,
         "content": outcome.content,
         "exists": outcome.exists,
         "encoding": outcome.encoding,
@@ -135,7 +139,7 @@ fn read_response(outcome: ReadFileOutcome) -> Value {
 
 fn write_response(outcome: WriteFileOutcome) -> Value {
     GuardedWireResponse {
-        workspace_mode: outcome.mode,
+        workspace_kind: outcome.workspace_kind,
         success: outcome.success,
         published: outcome.published,
         status: outcome.status,
@@ -152,7 +156,7 @@ fn write_response(outcome: WriteFileOutcome) -> Value {
 
 fn edit_response(outcome: EditFileOutcome) -> Value {
     GuardedWireResponse {
-        workspace_mode: outcome.mode,
+        workspace_kind: outcome.workspace_kind,
         success: outcome.success,
         published: outcome.published,
         status: outcome.status,
@@ -168,7 +172,7 @@ fn edit_response(outcome: EditFileOutcome) -> Value {
 }
 
 struct GuardedWireResponse {
-    workspace_mode: WorkspaceMode,
+    workspace_kind: String,
     success: bool,
     published: bool,
     status: String,
@@ -183,11 +187,12 @@ struct GuardedWireResponse {
 
 impl GuardedWireResponse {
     fn into_json(self) -> Value {
+        let workspace_kind = self.workspace_kind;
         let mut response = json!({
             "success": self.success,
             "published": self.published,
-            "workspace": mode(self.workspace_mode),
-            "workspace_mode": mode(self.workspace_mode),
+            "workspace": workspace_kind.clone(),
+            "workspace_mode": workspace_kind,
             "changed_paths": self.changed_paths,
             "changed_path_kinds": self.changed_path_kinds,
             "mutation_source": self.mutation_source,
@@ -210,10 +215,6 @@ fn conflict_value(conflict: WorkspaceConflict) -> Value {
         "conflict_file": conflict.conflict_file,
         "message": conflict.message,
     })
-}
-
-fn mode(mode: WorkspaceMode) -> &'static str {
-    mode.as_str()
 }
 
 /// Splice the daemon's latest-state resource sample (manifest depth, tree-key

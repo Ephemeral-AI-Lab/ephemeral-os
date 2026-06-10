@@ -87,11 +87,9 @@ impl CommitTransactionPort for CommitTransaction {
                     },
                 ))
             }
-            Err(crate::LayerStackError::ManifestConflict { found, .. }) => {
-                Err(PublishConflict {
-                    observed_version: manifest_version_u64_optional(found),
-                })
-            }
+            Err(crate::LayerStackError::ManifestConflict { found, .. }) => Err(PublishConflict {
+                observed_version: manifest_version_u64_optional(found),
+            }),
             Err(err) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
                 let timings = commit_timings(

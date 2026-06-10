@@ -66,6 +66,8 @@ export type HookCommand =
       /** Spawned with `shell: true`; payload JSON + newline on stdin. */
       type: "command";
       command: string;
+      /** Working directory for relative command paths; runtime-filled when omitted. */
+      cwd?: string;
       /** Default 60 000. */
       timeout_ms?: number;
     }
@@ -90,6 +92,7 @@ export const HookConfigEntrySchema = z.object({
     z.object({
       type: z.literal("command"),
       command: z.string().min(1),
+      cwd: z.string().min(1).optional(),
       timeout_ms: z.number().int().positive().optional(),
     }),
   ),

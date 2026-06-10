@@ -37,7 +37,11 @@ impl DirAllocator {
     /// Returns [`EphemeralWorkspaceError::DirAllocation`] when directory
     /// creation fails. `kind` and `token` are sanitized into safe path
     /// segments rather than rejected.
-    pub fn allocate(&self, kind: &str, token: &str) -> Result<OverlayDirs, EphemeralWorkspaceError> {
+    pub fn allocate(
+        &self,
+        kind: &str,
+        token: &str,
+    ) -> Result<OverlayDirs, EphemeralWorkspaceError> {
         let kind = sanitized_segment(kind);
         let token = sanitized_segment(token);
         let run_dir = self

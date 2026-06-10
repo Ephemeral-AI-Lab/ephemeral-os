@@ -21,16 +21,16 @@ use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
 
+use super::registry::BUILTIN_OPS;
 use crate::audit::events::emit_dispatch_audit;
 #[cfg(test)]
 use crate::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
+#[cfg(test)]
+use crate::audit::ops::{op_audit_pull, op_audit_snapshot};
 use crate::config::{AuditConfig, FileLimitsConfig};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
-#[cfg(test)]
-use crate::audit::ops::{op_audit_pull, op_audit_snapshot};
 use crate::plugins;
-use super::registry::BUILTIN_OPS;
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,

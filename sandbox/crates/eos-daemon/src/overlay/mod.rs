@@ -14,7 +14,10 @@ use crate::invocation_registry::InFlightRegistry;
 
 pub(crate) use eos_ephemeral_workspace::OverlayDirsGuard;
 
-pub(crate) fn overlay_run_dirs(kind: &str, invocation_id: &str) -> Result<OverlayDirs, DaemonError> {
+pub(crate) fn overlay_run_dirs(
+    kind: &str,
+    invocation_id: &str,
+) -> Result<OverlayDirs, DaemonError> {
     let writable_root = overlay_writable_root()
         .map_err(|err| DaemonError::OverlayPipeline(format!("overlay writable root: {err}")))?;
     DirAllocator::new(writable_root.join("runtime"))

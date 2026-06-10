@@ -3,9 +3,9 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use eos_layerstack::ChangesetResult;
 use eos_layerstack::Manifest;
 use eos_namespace::protocol::RunResult;
-use eos_layerstack::ChangesetResult;
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     const U32_FACTOR: f64 = 4_294_967_296.0;
@@ -30,9 +30,7 @@ pub(crate) struct TreeResourceStats {
 }
 
 impl TreeResourceStats {
-    pub(crate) fn from_ephemeral(
-        stats: &eos_ephemeral_workspace::TreeResourceStats,
-    ) -> Self {
+    pub(crate) fn from_ephemeral(stats: &eos_ephemeral_workspace::TreeResourceStats) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
         let entry_count = file_entries.saturating_add(stats.dirs);
         Self {

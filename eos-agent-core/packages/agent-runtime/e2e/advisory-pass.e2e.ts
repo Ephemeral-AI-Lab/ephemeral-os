@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -21,7 +21,7 @@ import {
 } from "../tests/support.js";
 import {
   TERSE_BODY,
-  requireAdvisoryPassHookEntries,
+  rootHookConfigPath,
   submissionOf,
   toolResultsIn,
 } from "./support/fixtures.js";
@@ -34,12 +34,10 @@ function runtimeFixture(options: {
   const profilesDir = join(root, "profiles");
   mkdirSync(profilesDir, { recursive: true });
   for (const profile of options.profiles) writeProfile(profilesDir, profile);
-  const hookConfigPath = join(root, "hooks.json");
-  writeFileSync(hookConfigPath, JSON.stringify(requireAdvisoryPassHookEntries()));
   return createAgentRuntime({
     agentProfilesDir: profilesDir,
     llmClients: llmRegistry(options.clients),
-    hookConfigPath,
+    hookConfigPath: rootHookConfigPath(),
     dataDir: join(root, "data"),
   });
 }

@@ -7,7 +7,9 @@
 use std::path::{Path, PathBuf};
 
 use eos_ephemeral_workspace::MountPlan;
-use eos_namespace::protocol::{Intent, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
+use eos_namespace::protocol::{
+    Intent, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
 use serde_json::{json, Value};
 
 use crate::binding::CommandBinding;

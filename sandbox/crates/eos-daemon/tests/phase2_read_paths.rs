@@ -568,10 +568,7 @@ impl Drop for IsolatedLifecycleEnv {
     }
 }
 
-fn configure_isolated_workspace_for_test(
-    enabled: bool,
-    scratch_root: Option<&Path>,
-) -> TestResult {
+fn configure_isolated_workspace_for_test(enabled: bool, scratch_root: Option<&Path>) -> TestResult {
     let doc = eos_config::load_prd()?;
     let daemon = doc.section::<eos_config::configs::daemon::DaemonConfig>("daemon")?;
     daemon.validate()?;

@@ -106,7 +106,9 @@ impl DaemonServer {
         crate::workspace::run::configure_command_sessions(&daemon_config.command_sessions);
         crate::workspace::isolated::configure_isolated_workspace(isolated_config);
         crate::plugins::configure_plugin_runtime(&daemon_config.plugin);
-        eos_layerstack::configure_auto_squash_max_depth(daemon_config.layer_stack.auto_squash_max_depth);
+        eos_layerstack::configure_auto_squash_max_depth(
+            daemon_config.layer_stack.auto_squash_max_depth,
+        );
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),

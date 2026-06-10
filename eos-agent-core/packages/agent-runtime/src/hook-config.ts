@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 
 import { HookConfigEntrySchema, type HookConfigEntry } from "@eos/tool";
 import { z } from "zod";
@@ -36,5 +37,16 @@ export function loadHookConfig(path = DEFAULT_HOOK_CONFIG_PATH): HookConfigEntry
         .join("; ")}`,
     );
   }
-  return parsed.data;
+  const cwd = commandCwdFor(path);
+  return parsed.data.map((entry) => ({
+    ...entry,
+    hooks: entry.hooks.map((hook) =>
+      hook.type === "command" && hook.cwd === undefined ? { ...hook, cwd } : hook,
+    ),
+  }));
+}
+
+function commandCwdFor(path: string): string {
+  const configDir = dirname(resolve(path));
+  return basename(configDir) === ".eos-agents" ? dirname(configDir) : configDir;
 }

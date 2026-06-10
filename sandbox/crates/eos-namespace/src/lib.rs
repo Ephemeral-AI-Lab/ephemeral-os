@@ -33,6 +33,6 @@
 //! enforced.
 #![deny(unsafe_op_in_unsafe_fn)]
 
-pub mod protocol;
 pub mod holder;
+pub mod protocol;
 pub mod runner;

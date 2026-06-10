@@ -104,10 +104,8 @@ mod tests {
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
     fn scratch(label: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "eos-ephemeral-ws-{label}-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("eos-ephemeral-ws-{label}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir
     }
@@ -150,7 +148,10 @@ mod tests {
     fn allocator_sanitizes_unsafe_segments() -> TestResult {
         let scratch = scratch("sanitize");
         let dirs = DirAllocator::new(scratch.clone()).allocate("a/b", "../evil")?;
-        assert!(dirs.run_dir.starts_with(scratch.join("a_b")), "kind sanitized");
+        assert!(
+            dirs.run_dir.starts_with(scratch.join("a_b")),
+            "kind sanitized"
+        );
         let leaf = dirs
             .run_dir
             .file_name()

@@ -12,12 +12,12 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Instant;
 
-use crate::model::{LayerChange, LayerPath, LayerRef, MANIFEST_SCHEMA_VERSION, Manifest};
+use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use serde_json::{json, Value};
 
 use crate::commit::{
-    base_hashes_for_snapshot, usize_to_f64_saturating, ChangesetResult, CommitError,
-    CommitQueue, CommitService, CommitTransaction,
+    base_hashes_for_snapshot, usize_to_f64_saturating, ChangesetResult, CommitError, CommitQueue,
+    CommitService, CommitTransaction,
 };
 use crate::route::{insert_route_timings, route_metrics, StackRouteProvider};
 use crate::{LayerStack, LayerStackError};
@@ -292,10 +292,12 @@ pub fn commit_direct(
     base_hashes: &[(LayerPath, Option<String>)],
 ) -> Result<ChangesetResult, CommitError> {
     let lookup = service_for_root(root)?;
-    let mut result =
-        lookup
-            .service
-            .apply_changeset_with_base_hashes(changes, snapshot_version, true, base_hashes)?;
+    let mut result = lookup.service.apply_changeset_with_base_hashes(
+        changes,
+        snapshot_version,
+        true,
+        base_hashes,
+    )?;
     lookup.insert_timings(&mut result.timings);
     Ok(result)
 }

@@ -28,5 +28,5 @@ pub use binding::CommandBinding;
 pub use ops::{CommandOps, ExecTarget};
 pub use outcome::{
     ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    WorkspaceConflict, WorkspaceTimings,
 };

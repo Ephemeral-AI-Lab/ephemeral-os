@@ -3,7 +3,9 @@
 //! ground truth produced by the live Rust — never edit them to match code.
 
 use base64::Engine as _;
-use eos_layerstack::{LayerChange, LayerPath, LayerRef, Manifest, layer_digest, manifest_root_hash};
+use eos_layerstack::{
+    layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef, Manifest,
+};
 use proptest as _;
 use serde as _;
 use serde_json::Value;

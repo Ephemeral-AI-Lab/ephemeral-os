@@ -41,8 +41,8 @@ pub(crate) mod overlay;
 pub(crate) mod plugins;
 pub(crate) mod runtime;
 pub(crate) mod transport;
-pub(crate) mod workspace;
 pub mod wire;
+pub(crate) mod workspace;
 
 pub use dispatch::dispatcher;
 pub use dispatcher::{DispatchContext, OpTable};

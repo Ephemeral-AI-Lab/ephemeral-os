@@ -19,7 +19,9 @@ mod dirs;
 mod stats;
 mod workspace;
 
-pub use capture::{capture_upperdir, path_changes_to_wire, CapturedChanges, PathChange, PathChangeKind};
+pub use capture::{
+    capture_upperdir, path_changes_to_wire, CapturedChanges, PathChange, PathChangeKind,
+};
 pub use dirs::{DirAllocator, OverlayDirs, OverlayDirsGuard};
 pub use stats::TreeResourceStats;
 pub use workspace::{EphemeralWorkspace, MountPlan};

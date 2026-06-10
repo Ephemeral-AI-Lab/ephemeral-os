@@ -102,7 +102,11 @@ function runCommandHook(
     AbortSignal.timeout(command.timeout_ms ?? DEFAULT_HOOK_TIMEOUT_MS),
   ]);
   return new Promise((resolve) => {
-    const child = spawn(command.command, { shell: true, signal: hookSignal });
+    const child = spawn(command.command, {
+      shell: true,
+      signal: hookSignal,
+      ...(command.cwd !== undefined && { cwd: command.cwd }),
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");

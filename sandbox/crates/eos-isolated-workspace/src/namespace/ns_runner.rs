@@ -12,8 +12,8 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use eos_namespace::protocol::{Fd, NsFds, RunRequest, RunResult};
 use crate::error::IsolatedError;
+use eos_namespace::protocol::{Fd, NsFds, RunRequest, RunResult};
 use nix::errno::Errno;
 use nix::fcntl::{fcntl, FcntlArg, FdFlag, OFlag};
 use nix::unistd::read;

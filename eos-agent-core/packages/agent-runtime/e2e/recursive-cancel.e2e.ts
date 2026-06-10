@@ -18,7 +18,6 @@ import {
   SLEEPER_BODY,
   TERSE_BODY,
   finishedRun,
-  noOpenBackgroundSessionsHookEntries,
   runtimeFixture,
   submissionOf,
   toolResultsIn,
@@ -89,7 +88,6 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
           },
         ],
         baseTools: [wait.definition],
-        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const chief = runtime.startRun({
         agentName: "chief",
@@ -342,7 +340,6 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
           },
         ],
         baseTools: [wait.definition],
-        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const chief = runtime.startRun({
         agentName: "chief",
