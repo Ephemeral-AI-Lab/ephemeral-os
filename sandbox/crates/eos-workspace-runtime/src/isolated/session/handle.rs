@@ -5,12 +5,6 @@ use crate::isolated::network::VethAllocation;
 
 pub use eos_protocol::{CallerId, WorkspaceHandleId};
 
-/// A snapshot lease borrowed from the layer stack (snapshot/lease HINGE only).
-///
-/// Shared value object owned by `eos-workspace`; carries the lease id,
-/// manifest coordinates, and lower-layer paths. NEVER a publish transaction.
-pub use crate::contract::SnapshotLease;
-
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
 ///
 /// FD-ownership invariant: the raw FDs below (`ns_fds`, `readiness_fd`,

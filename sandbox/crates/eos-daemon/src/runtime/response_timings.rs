@@ -6,7 +6,9 @@ use std::time::Instant;
 use eos_occ::ChangesetResult;
 use eos_protocol::Manifest;
 use eos_runner::RunResult;
-use eos_workspace_runtime::contract::WorkspaceTimings;
+use eos_workspace_runtime::contract::{
+    u64_to_f64_saturating, usize_to_f64_saturating, WorkspaceTimings,
+};
 use serde_json::{json, Value};
 
 #[derive(Clone, Copy, Debug)]
@@ -284,21 +286,9 @@ fn mutation_source(verb: &str) -> &'static str {
     }
 }
 
-// Delegate to eos-workspace's converters so daemon-emitted timings/metrics
-// share ONE saturating semantics. The daemon copies used to cap at u32::MAX —
-// correct for small counts (depth, path counts) but wrong on the byte paths
-// (e.g. `*_tree_bytes`), where a >4.29 GB tree was silently clamped.
-pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
-    eos_workspace_runtime::contract::usize_to_f64_saturating(value)
-}
-
 #[cfg(test)]
 pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
     u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
-}
-
-pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
-    eos_workspace_runtime::contract::u64_to_f64_saturating(value)
 }
 
 #[cfg(test)]

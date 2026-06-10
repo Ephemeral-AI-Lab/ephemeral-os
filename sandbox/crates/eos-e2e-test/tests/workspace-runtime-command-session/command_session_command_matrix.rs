@@ -762,7 +762,7 @@ fn request_with_identity(
         .or_insert_with(|| json!(root));
     args.entry("caller_id".to_owned())
         .or_insert_with(|| json!(caller_id));
-    client.request(op, &next_invocation_id(), &Value::Object(args))
+    Ok(client.request(op, &next_invocation_id(), &Value::Object(args))?)
 }
 
 fn assert_command_ok(response: &Value, family: &str, variant: &str) -> Result<()> {

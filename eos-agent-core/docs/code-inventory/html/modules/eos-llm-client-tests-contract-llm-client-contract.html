@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/tests/contract/llm-client-contract Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/tests/contract/llm-client-contract</h1>
+          <p class="lede">packages/llm-client/tests/contract/llm-client-contract.ts</p>
+          <div class="tags"><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>assistantText, reasoningText, toolUses, type JsonObject</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/client.js</code></td>
+      <td>LlmClient</td>
+      <td>type</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/errors.js</code></td>
+      <td>ProviderError</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/events.js</code></td>
+      <td>LlmStreamEvent</td>
+      <td>type</td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/types.js</code></td>
+      <td>LlmRequest, UsageSnapshot</td>
+      <td>type</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../support.js</code></td>
+      <td>collect, collectUntilError</td>
+      <td>value</td>
+      <td>14</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>llm-client-contract.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#Scenario"><code>Scenario</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#LlmClientContractBinding"><code>LlmClientContractBinding</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CompletionEvent"><code>CompletionEvent</code></a>
+            <span>type</span>
+            <span class="compact-tags">event internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#completionOf"><code>completionOf</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#describeLlmClientContract"><code>describeLlmClientContract</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="Scenario" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>Scenario</strong>
+          <span>interface · line 16 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-llm-client-contract.html#Scenario">Module</a>
+      </div>
+      <pre><code>export interface Scenario</code></pre>
+
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>client</code></td>
+              <td><code>LlmClient</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>request</code></td>
+              <td><code>LlmRequest</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="LlmClientContractBinding" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LlmClientContractBinding</strong>
+          <span>interface · line 28 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-llm-client-contract.html#LlmClientContractBinding">Module</a>
+      </div>
+      <pre><code>export interface LlmClientContractBinding</code></pre>
+      <p>One binding of the `LlmClient` iteration contract (Phase 02 §4.5): the
+scenarios decide how each behavior is induced (fixture-fetch client vs
+live profile + eliciting prompt); the assertions are shared. Strictness is
+data: deterministic bindings add the `exact` golden block, live bindings
+omit it. There is no live/unit branching inside scenario bodies.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>scenarios</code></td>
+              <td><code>{
+    /** A plain text turn: no tool use, ends `end_turn`. */
+    text: () =&gt; Scenario;
+    /** Offers one tool (live: `echo`) and elicits a call. */
+    toolCall: () =&gt; Scenario;
+    /** History replaying a tool_use + tool_result pair; ends as text. */
+    toolRoundTrip?: () =&gt; Scenario;
+    /** A turn eliciting reasoning (live: `reasoning_effort: &quot;low&quot;`). */
+    reasoning?: () =&gt; Scenario;
+    /** A stream long enough to abort after its first event. */
+    abort?: () =&gt; Scenario;
+    /** A connection whose credential the endpoint rejects with 401. */
+    authFailure?: () =&gt; Scenario;
+  }</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>exact</code></td>
+              <td><code>{
+    text?: string;
+    reasoning?: string;
+    toolInput?: JsonObject;
+    usage?: UsageSnapshot;
+  }</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="CompletionEvent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CompletionEvent</strong>
+          <span>type · line 53 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-llm-client-contract.html#CompletionEvent">Module</a>
+      </div>
+      <pre><code>type CompletionEvent = Extract&lt; LlmStreamEvent,</code></pre>
+
+      <div class="tags"><span>event</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="completionOf" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>completionOf</strong>
+          <span>function · line 59 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-llm-client-contract.html#completionOf">Module</a>
+      </div>
+      <pre><code>function completionOf(events: LlmStreamEvent[]): CompletionEvent</code></pre>
+      <p>Delta grammar: exactly one completion, in final position.</p>
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="describeLlmClientContract" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>describeLlmClientContract</strong>
+          <span>function · line 72 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-llm-client-contract.html#describeLlmClientContract">Module</a>
+      </div>
+      <pre><code>export function describeLlmClientContract( binding: LlmClientContractBinding, ): void</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/client</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/errors</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/events</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/types</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/tests/support</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/client</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/errors</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/events</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/src/types</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>@eos/llm-client/tests/support</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

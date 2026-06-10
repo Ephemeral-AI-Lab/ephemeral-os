@@ -14,6 +14,7 @@ members = [
     "crates/eos-overlay",
     "crates/eos-occ",
     "crates/eos-plugin",
+    "crates/eos-sandbox-host",
     "crates/eos-e2e-test",
     "xtask",
 ]
@@ -64,6 +65,7 @@ eos-daemon = { path = "crates/eos-daemon" }
 eos-checkpoint = { path = "crates/eos-checkpoint" }
 eos-occ-layerstack = { path = "crates/eos-occ-layerstack" }
 eosd = { path = "crates/eosd" }
+eos-sandbox-host = { path = "crates/eos-sandbox-host" }
 eos-e2e-test = { path = "crates/eos-e2e-test" }
 xtask = { path = "xtask" }
 

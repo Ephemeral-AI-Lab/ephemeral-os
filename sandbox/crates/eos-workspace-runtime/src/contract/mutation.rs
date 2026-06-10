@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::contract::mode::WorkspaceMode;
 use crate::contract::read_view::{ResolvedWorkspacePath, WorkspaceReadBytes};
@@ -50,8 +49,6 @@ pub struct WorkspaceMutationOutcome {
     pub changed_path_kinds: ChangedPathKinds,
     #[serde(default)]
     pub mutation_source: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub error: Option<Value>,
     #[serde(default)]
     pub timings: WorkspaceTimings,
 }

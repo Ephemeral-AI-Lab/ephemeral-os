@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/tests/contract.test Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/tests/contract.test</h1>
+          <p class="lede">packages/llm-client/tests/contract.test.ts</p>
+          <div class="tags"><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>9</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>toolUseIdFrom</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/factory.js</code></td>
+      <td>createLlmClient</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/profiles.js</code></td>
+      <td>ProviderConnection</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/types.js</code></td>
+      <td>buildLlmRequest, type LlmRequestInit</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract/llm-client-contract.js</code></td>
+      <td>describeLlmClientContract, type Scenario</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support.js</code></td>
+      <td>errorResponse, fetchStub, fixture, hangingSseResponse, sseResponse</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>contract.test.ts</code>
+        <small>9 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#NO_RETRY"><code>NO_RETRY</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#replay"><code>replay</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#READ_FILE_TOOL"><code>READ_FILE_TOOL</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#roundTripMessages"><code>roundTripMessages</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ANTHROPIC_TEXT_SSE"><code>ANTHROPIC_TEXT_SSE</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ANTHROPIC_HANGING_PREFIX"><code>ANTHROPIC_HANGING_PREFIX</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#OPENAI_TEXT_SSE"><code>OPENAI_TEXT_SSE</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#OPENAI_REASONING_SSE"><code>OPENAI_REASONING_SSE</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#OPENAI_HANGING_PREFIX"><code>OPENAI_HANGING_PREFIX</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="NO_RETRY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>NO_RETRY</strong>
+          <span>const · line 18 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#NO_RETRY">Module</a>
+      </div>
+      <pre><code>const NO_RETRY = { max_retries: 0, base_delay_s: 0, max_delay_s: 0 }</code></pre>
+
+      <div class="tags"><span>internal</span><span>retry</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="replay" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>replay</strong>
+          <span>function · line 21 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#replay">Module</a>
+      </div>
+      <pre><code>function replay( connection: ProviderConnection, factory: (init: RequestInit | undefined) =&gt; Response, init: LlmRequestInit, ): Scenario</code></pre>
+      <p>Bind a profile to one canned response; each scenario gets a fresh stub.</p>
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="READ_FILE_TOOL" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>READ_FILE_TOOL</strong>
+          <span>const · line 33 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#READ_FILE_TOOL">Module</a>
+      </div>
+      <pre><code>const READ_FILE_TOOL = { name: &quot;read_file&quot;, description: &quot;Read a file&quot;, input_schema: { type: &quot;object&quot; }, }</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="roundTripMessages" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>roundTripMessages</strong>
+          <span>function · line 40 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#roundTripMessages">Module</a>
+      </div>
+      <pre><code>function roundTripMessages(callId: string): LlmRequestInit[&quot;messages&quot;]</code></pre>
+      <p>A tool_use + tool_result exchange ready for replay.</p>
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ANTHROPIC_TEXT_SSE" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ANTHROPIC_TEXT_SSE</strong>
+          <span>const · line 68 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#ANTHROPIC_TEXT_SSE">Module</a>
+      </div>
+      <pre><code>const ANTHROPIC_TEXT_SSE = [ &quot;event: message_start&quot;, 'data: {&quot;type&quot;:&quot;message_start&quot;,&quot;message&quot;:{&quot;role&quot;:&quot;assistant&quot;,&quot;usage&quot;:{&quot;input_tokens&quot;:10,&quot;output_tokens&quot;:1}}}', &quot;&quot;, &quot;event: content_block_start&quot;, 'data: {&quot;type&quot;:&quot;con...</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ANTHROPIC_HANGING_PREFIX" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ANTHROPIC_HANGING_PREFIX</strong>
+          <span>const · line 92 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#ANTHROPIC_HANGING_PREFIX">Module</a>
+      </div>
+      <pre><code>const ANTHROPIC_HANGING_PREFIX = [ &quot;event: content_block_start&quot;, 'data: {&quot;type&quot;:&quot;content_block_start&quot;,&quot;index&quot;:0,&quot;content_block&quot;:{&quot;type&quot;:&quot;text&quot;,&quot;text&quot;:&quot;&quot;}}', &quot;&quot;, &quot;event: content_block_delta&quot;, 'data: {&quot;type&quot;:&quot;content_bl...</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="OPENAI_TEXT_SSE" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OPENAI_TEXT_SSE</strong>
+          <span>const · line 154 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#OPENAI_TEXT_SSE">Module</a>
+      </div>
+      <pre><code>const OPENAI_TEXT_SSE = [ 'data: {&quot;type&quot;:&quot;response.output_text.delta&quot;,&quot;delta&quot;:&quot;Hi&quot;}', &quot;&quot;, 'data: {&quot;type&quot;:&quot;response.completed&quot;,&quot;response&quot;:{&quot;id&quot;:&quot;r&quot;,&quot;status&quot;:&quot;completed&quot;,&quot;usage&quot;:{&quot;input_tokens&quot;:5,&quot;output_tokens&quot;:4}}}', ...</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="OPENAI_REASONING_SSE" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OPENAI_REASONING_SSE</strong>
+          <span>const · line 161 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#OPENAI_REASONING_SSE">Module</a>
+      </div>
+      <pre><code>const OPENAI_REASONING_SSE = [ 'data: {&quot;type&quot;:&quot;response.reasoning_summary_text.delta&quot;,&quot;item_id&quot;:&quot;rs_1&quot;,&quot;delta&quot;:&quot;thinking &quot;}', &quot;&quot;, 'data: {&quot;type&quot;:&quot;response.reasoning_summary_text.delta&quot;,&quot;item_id&quot;:&quot;rs_1&quot;,&quot;delta&quot;:&quot;hard&quot;}...</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="OPENAI_HANGING_PREFIX" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OPENAI_HANGING_PREFIX</strong>
+          <span>const · line 172 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-contract-test.html#OPENAI_HANGING_PREFIX">Module</a>
+      </div>
+      <pre><code>const OPENAI_HANGING_PREFIX = 'data: {&quot;type&quot;:&quot;response.output_text.delta&quot;,&quot;delta&quot;:&quot;partial&quot;}\n\n'</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/factory</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/profiles</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/types</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/tests/support</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/factory</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/profiles</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/src/types</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/contract.test</code></td>
+      <td><code>@eos/llm-client/tests/support</code></td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

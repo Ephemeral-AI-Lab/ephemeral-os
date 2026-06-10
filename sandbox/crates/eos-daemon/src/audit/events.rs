@@ -11,12 +11,21 @@ use eos_protocol::{
         build_event, BackgroundToolSection, Lane, LayerStackSection, OccSection, OsResourceSection,
         OverlayWorkspaceSection, ToolCallSection,
     },
-    manifest_root_hash, Request,
+    manifest_root_hash,
+    ops::{BuiltinDaemonOp, OpFamily},
+    Request,
 };
 use serde::Serialize;
 use serde_json::Value;
 
 const OS_RESOURCE_SAMPLED: &str = "os_resource.sampled";
+
+/// Resolve a wire spelling (canonical or legacy alias) to its typed catalog
+/// op, so audit semantics stay identical under both spellings. Dynamic
+/// `plugin.*` ops resolve to `None`.
+fn catalog_op(op: &str) -> Option<BuiltinDaemonOp> {
+    BuiltinDaemonOp::resolve(op)
+}
 
 fn emit_section<T: Serialize>(event_type: &str, section_key: &str, section: &T, lane: Lane) {
     let Ok(section) = serde_json::to_value(section) else {
@@ -82,14 +91,17 @@ pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_
 }
 
 pub(crate) fn should_emit_tool_call_event(op: &str) -> bool {
-    !op.starts_with("api.audit.")
-        && !matches!(
-            op,
-            "api.runtime.ready"
-                | "api.v1.heartbeat"
-                | "api.v1.inflight_count"
-                | "api.v1.command_session_count"
-        )
+    // Unresolved spellings (dynamic plugin.* ops) always emit.
+    catalog_op(op).is_none_or(|op| {
+        op.family() != OpFamily::Audit
+            && !matches!(
+                op,
+                BuiltinDaemonOp::RuntimeReady
+                    | BuiltinDaemonOp::InvocationHeartbeat
+                    | BuiltinDaemonOp::InflightCount
+                    | BuiltinDaemonOp::CommandSessionCount
+            )
+    })
 }
 
 fn emit_occ_audit(request: &Request, response: &Value) {
@@ -138,7 +150,7 @@ fn emit_occ_audit(request: &Request, response: &Value) {
 }
 
 fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms: f64) {
-    if request.op == "api.layer_metrics" {
+    if catalog_op(&request.op) == Some(BuiltinDaemonOp::LayerMetrics) {
         emit_section(
             "layer_stack.maintenance",
             "layer_stack",

@@ -9,7 +9,7 @@
 //! the OCC writer + daemon-global state stay in the daemon process.
 //!
 //! The daemon owns the [`WorkspaceRunManager`] singleton, the config bridge, the
-//! RPC/op facade, and the §7 cancel coordinator; this crate owns the run
+//! RPC/op facade, and the §7 cancel coordinator; this module owns the run
 //! container ([`registry`]) and the lifecycle orchestration ([`manager`]).
 #![forbid(unsafe_code)]
 

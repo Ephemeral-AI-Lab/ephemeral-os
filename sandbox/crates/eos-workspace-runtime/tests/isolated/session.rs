@@ -4,10 +4,11 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use eos_workspace_runtime::contract::SnapshotLease;
 use eos_workspace_runtime::isolated::audit::AuditSink;
 use eos_workspace_runtime::isolated::{
     CallerId, IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort,
-    ResourceCaps, SnapshotLease, WorkspaceHandle,
+    ResourceCaps, WorkspaceHandle,
 };
 use serde_json::Value;
 

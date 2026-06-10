@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/engine/src/run-handle Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-engine.html">@eos/engine</a></p>
+          <h1>@eos/engine/src/run-handle</h1>
+          <p class="lede">packages/engine/src/run-handle.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>Message</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>StopReason, UsageSnapshot</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./conversation.js</code></td>
+      <td>DisplayedMessage</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./events.js</code></td>
+      <td>EventStream, type AgentEvent</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>run-handle.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunFailure"><code>AgentRunFailure</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunStatus"><code>AgentRunStatus</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunOutcome"><code>AgentRunOutcome</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunHandle"><code>AgentRunHandle</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api run-handle</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunHandle"><code>RunHandle</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api run-handle</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AgentRunFailure" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunFailure</strong>
+          <span>interface · line 8 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-run-handle.html#AgentRunFailure">Module</a>
+      </div>
+      <pre><code>export interface AgentRunFailure</code></pre>
+      <p>Why a run failed, typed so callers never parse prose.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>kind</code></td>
+              <td><code>&quot;provider_error&quot; | &quot;max_turns&quot; | &quot;internal&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>message</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunStatus" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunStatus</strong>
+          <span>type · line 15 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-run-handle.html#AgentRunStatus">Module</a>
+      </div>
+      <pre><code>export type AgentRunStatus = |</code></pre>
+      <p>The status arm of `AgentRunOutcome`; assembled at each loop exit.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ status: &quot;completed&quot;; final_message: Message; stop_reason?: StopReason }</code></li>
+
+
+        <li><code>{ status: &quot;cancelled&quot;; reason: string }</code></li>
+
+
+        <li><code>{ status: &quot;failed&quot;; failure: AgentRunFailure }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="AgentRunOutcome" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunOutcome</strong>
+          <span>type · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-run-handle.html#AgentRunOutcome">Module</a>
+      </div>
+      <pre><code>export type AgentRunOutcome =</code></pre>
+      <p>The terminal state of one run. `llm` is provider-valid restart input on
+every status: each `tool_use` is answered (synthetic results on cancel)
+and salvaged partials never land in it.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunHandle</strong>
+          <span>interface · line 34 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-run-handle.html#AgentRunHandle">Module</a>
+      </div>
+      <pre><code>export interface AgentRunHandle</code></pre>
+      <p>The public surface of one running agent loop.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>events</code></td>
+              <td><code>AsyncIterable&lt;AgentEvent&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>outcome</code></td>
+              <td><code>Promise&lt;AgentRunOutcome&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>steer</code></td>
+              <td><code>steer(message: Message): boolean;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>interrupt</code></td>
+              <td><code>interrupt(reason?: string): void;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="RunHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunHandle</strong>
+          <span>class · line 57 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-run-handle.html#RunHandle">Module</a>
+      </div>
+      <pre><code>export class RunHandle implements AgentRunHandle</code></pre>
+      <p>Run-handle internals shared with the loop: one event stream, one abort
+signal (optionally child of a caller scope), one steer queue drained at
+turn boundaries, and one atomic finish.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span><span>run-handle</span><span>stateful</span></div>
+
+    <h3>Heritage</h3>
+    <p>AgentRunHandle</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>outcome</code></td>
+              <td><code>Promise&lt;AgentRunOutcome&gt;</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#stream</code></td>
+              <td><code>new EventStream()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#controller</code></td>
+              <td><code>new AbortController()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#steers</code></td>
+              <td><code>Message[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#finished</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#cancelReason</code></td>
+              <td><code>string | undefined</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#resolveOutcome</code></td>
+              <td><code>(outcome: AgentRunOutcome) =&gt; void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>emit</code></td>
+              <td><code>(event: AgentEvent): void =&gt; { this.#stream.push(event); }</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>steer</code></td>
+              <td><code>steer(message: Message): boolean</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>interrupt</code></td>
+              <td><code>interrupt(reason?: string): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>drainSteers</code></td>
+              <td><code>drainSteers(): Message[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>hasPendingSteers</code></td>
+              <td><code>hasPendingSteers(): boolean</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>finish</code></td>
+              <td><code>finish(outcome: AgentRunOutcome): void</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>implements</td>
+      <td><code>@eos/engine/src/run-handle#RunHandle</code></td>
+      <td><code>AgentRunHandle</code></td>
+      <td>57</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/events</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

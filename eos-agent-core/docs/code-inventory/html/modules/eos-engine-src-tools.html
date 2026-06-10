@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/engine/src/tools Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-engine.html">@eos/engine</a></p>
+          <h1>@eos/engine/src/tools</h1>
+          <p class="lede">packages/engine/src/tools.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObject, ToolSpec</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>tools.ts</code>
+        <small>4 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolContext"><code>ToolContext</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolOutput"><code>ToolOutput</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolDefinition"><code>ToolDefinition</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolRegistry"><code>ToolRegistry</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="ToolContext" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolContext</strong>
+          <span>interface · line 4 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-tools.html#ToolContext">Module</a>
+      </div>
+      <pre><code>export interface ToolContext</code></pre>
+      <p>What a tool execution may observe; aborts via the run's one signal.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolOutput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolOutput</strong>
+          <span>interface · line 9 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-tools.html#ToolOutput">Module</a>
+      </div>
+      <pre><code>export interface ToolOutput</code></pre>
+      <p>What a tool execution yields back to the model.</p>
+      <div class="tags"><span>dto</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>content</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>is_error</code></td>
+              <td><code>boolean</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolDefinition" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolDefinition</strong>
+          <span>interface · line 19 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-tools.html#ToolDefinition">Module</a>
+      </div>
+      <pre><code>export interface ToolDefinition</code></pre>
+      <p>The narrow tool seam the loop needs — not a tool framework. A future
+framework phase grows this contract additively.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>spec</code></td>
+              <td><code>ToolSpec</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>isConcurrencySafe</code></td>
+              <td><code>isConcurrencySafe?(input: JsonObject): boolean;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>execute</code></td>
+              <td><code>execute(input: JsonObject, ctx: ToolContext): Promise&lt;ToolOutput&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="ToolRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolRegistry</strong>
+          <span>type · line 33 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-tools.html#ToolRegistry">Module</a>
+      </div>
+      <pre><code>export type ToolRegistry = ReadonlyMap&lt;string, ToolDefinition&gt;</code></pre>
+      <p>Tools offered to one run, keyed by `spec.name`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/tools</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

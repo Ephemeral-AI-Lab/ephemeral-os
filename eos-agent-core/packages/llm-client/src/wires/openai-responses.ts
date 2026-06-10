@@ -7,18 +7,8 @@ import {
   type ToolSpec,
 } from "@eos/contracts";
 
-import type { LlmClient, LlmStreamOptions } from "../client.js";
-import {
-  OpenAiApiConfigSchema,
-  RetryConfigSchema,
-  StreamGuardConfigSchema,
-  type OpenAiApiConfigInput,
-  type ProviderClientOptions,
-  type RetryConfig,
-} from "../config.js";
 import { ProviderError } from "../errors.js";
 import type { LlmStreamEvent, StopReason } from "../events.js";
-import { retryStream } from "../retry.js";
 import type {
   LlmRequest,
   ReasoningEffort,
@@ -27,9 +17,10 @@ import type {
 } from "../types.js";
 import {
   parseToolArgs,
-  runAttempt,
   type StreamDecoder,
-} from "./attempt.js";
+  type WireFactory,
+  type WireOptions,
+} from "./wire.js";
 
 /** §5 effort clamp: the responses api has no `max`, `minimal` is native. */
 const OPENAI_EFFORT: Record<
@@ -110,24 +101,32 @@ function encodeTool(spec: ToolSpec): OpenAI.Responses.Tool {
 
 function encodeToolChoice(
   choice: ToolChoice,
+  dialect: WireOptions["dialect"],
 ): OpenAI.Responses.ResponseCreateParams["tool_choice"] {
   if (choice === "auto") return "auto";
   if (choice === "any") return "required";
+  // The codex dialect has no named-tool forcing; it clamps to "required".
+  if (dialect === "codex") return "required";
   return { type: "function", name: choice.tool };
 }
 
 /** Project a neutral request onto `POST /v1/responses` streaming params. */
 export function encodeOpenAiRequest(
   request: LlmRequest,
+  options: WireOptions = {},
 ): OpenAI.Responses.ResponseCreateParamsStreaming {
   const params: OpenAI.Responses.ResponseCreateParamsStreaming = {
     model: request.model,
     input: request.messages.flatMap(encodeMessageItems),
-    max_output_tokens: request.max_tokens,
     // Stateless replay: nothing is stored provider-side.
     store: false,
     stream: true,
   };
+  // The codex backend rejects a completion cap; only the public dialect
+  // sends one.
+  if (options.dialect !== "codex") {
+    params.max_output_tokens = request.max_tokens;
+  }
   if (request.system_prompt !== undefined) {
     params.instructions = request.system_prompt;
   }
@@ -135,7 +134,7 @@ export function encodeOpenAiRequest(
     params.tools = request.tools.map(encodeTool);
   }
   if (request.tool_choice !== undefined) {
-    params.tool_choice = encodeToolChoice(request.tool_choice);
+    params.tool_choice = encodeToolChoice(request.tool_choice, options.dialect);
   }
   if (request.reasoning_effort !== undefined) {
     params.reasoning = { effort: OPENAI_EFFORT[request.reasoning_effort] };
@@ -293,56 +292,33 @@ class OpenAiDecoder
   }
 }
 
-/** The OpenAI Responses streaming client. */
-export class OpenAiResponsesClient implements LlmClient {
-  readonly #sdk: OpenAI;
-  readonly #retry: RetryConfig;
-  readonly #idleTimeoutMs: number;
-
-  constructor(
-    config: OpenAiApiConfigInput,
-    options: ProviderClientOptions = {},
-  ) {
-    const { base_url, api_key } = OpenAiApiConfigSchema.parse(config);
-    this.#retry = RetryConfigSchema.parse(options.retry ?? {});
-    this.#idleTimeoutMs =
-      StreamGuardConfigSchema.parse(options.streamGuard ?? {}).idle_timeout_s *
-      1000;
-    this.#sdk = new OpenAI({
-      // Credentials are always explicit; sdk env-var fallback is not used.
-      apiKey: api_key.expose(),
-      baseURL: base_url,
-      // The retry gate is the single retry-policy owner.
-      maxRetries: 0,
-      // The sdk parse-failure path echoes frame content through its logger;
-      // provider frames must stay out of logs.
-      logLevel: "off",
-      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
-    });
-  }
-
-  streamMessage(
-    request: LlmRequest,
-    options?: LlmStreamOptions,
-  ): AsyncIterable<LlmStreamEvent> {
-    const params = encodeOpenAiRequest(request);
-    const attempt = () =>
-      runAttempt(
-        {
-          open: async (signal) => {
-            const { data, response } = await this.#sdk.responses
-              .create(params, { signal })
-              .withResponse();
-            return {
-              stream: data,
-              requestId: response.headers.get("x-request-id") ?? undefined,
-            };
-          },
-          decoder: (requestId) => new OpenAiDecoder(requestId),
-        },
-        this.#idleTimeoutMs,
-        options?.signal,
-      );
-    return retryStream(this.#retry, attempt, options?.signal);
-  }
-}
+/** The OpenAI Responses wire: one sdk client per connection. */
+export const openAiResponsesWire: WireFactory = (transport) => {
+  const sdk = new OpenAI({
+    // Credentials are always explicit; sdk env-var fallback is not used.
+    // Both credential kinds map onto Authorization: Bearer.
+    apiKey: transport.credential.secret.expose(),
+    baseURL: transport.baseUrl,
+    // The retry gate is the single retry-policy owner.
+    maxRetries: 0,
+    // The sdk parse-failure path echoes frame content through its logger;
+    // provider frames must stay out of logs.
+    logLevel: "off",
+    ...(transport.fetch !== undefined ? { fetch: transport.fetch } : {}),
+  });
+  return {
+    async open(request, options, signal) {
+      const { data, response } = await sdk.responses
+        .create(encodeOpenAiRequest(request, options), {
+          signal,
+          headers: await transport.headers(),
+        })
+        .withResponse();
+      return {
+        stream: data,
+        requestId: response.headers.get("x-request-id") ?? undefined,
+      };
+    },
+    decoder: (requestId) => new OpenAiDecoder(requestId),
+  };
+};

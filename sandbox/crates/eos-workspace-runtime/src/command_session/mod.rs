@@ -1,11 +1,12 @@
 //! Command-session PTY substrate.
 //!
-//! This crate owns the per-session process/PTY/transcript machinery: spawning
+//! This module owns the per-session process/PTY/transcript machinery: spawning
 //! the runner, reaping the child into a policy-free [`ReapedCommand`], cancelling
 //! the process group, and persisting the final response. The caller-keyed
-//! workspace-run registry, the publish-vs-discard policy decision, and the
-//! completion queue live in the daemon (`eos-daemon`'s `workspace_run` service),
-//! which composes this substrate with the overlay/namespace workspace crates.
+//! workspace-run registry, run manager, and publish-vs-discard lifecycle live in
+//! the crate's `run` module; the completion queue and RPC facade stay in the
+//! daemon (`eos-daemon`'s `workspace_run` service), which composes this
+//! substrate with the overlay/namespace workspace modules.
 
 mod error;
 mod request;

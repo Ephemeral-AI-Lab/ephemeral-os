@@ -2,30 +2,35 @@ import { describe, expect, it } from "vitest";
 
 import { toolUseIdFrom } from "@eos/contracts";
 
-import { ProviderError } from "../src/errors.js";
+import type { LlmClient } from "../../src/client.js";
+import type { ProviderClientOptions } from "../../src/config.js";
+import { ProviderError } from "../../src/errors.js";
+import { createLlmClient } from "../../src/factory.js";
+import { SecretString } from "../../src/secret.js";
+import { LlmStreamClient } from "../../src/stream-client.js";
 import {
-  AnthropicApiClient,
-} from "../src/providers/anthropic.js";
-import {
-  OpenAiResponsesClient,
   encodeOpenAiRequest,
-} from "../src/providers/openai.js";
-import { buildLlmRequest, type ReasoningEffort } from "../src/types.js";
+  openAiResponsesWire,
+} from "../../src/wires/openai-responses.js";
+import { buildLlmRequest, type ReasoningEffort } from "../../src/types.js";
 import {
   collect,
   collectUntilError,
+  errorResponse,
   fetchStub,
-  fixture,
   hangingSseResponse,
   sseResponse,
-} from "./support.js";
+} from "../support.js";
 
 const NO_RETRY = { max_retries: 0, base_delay_s: 0, max_delay_s: 0 };
 
-function client(stub: ReturnType<typeof fetchStub>): OpenAiResponsesClient {
-  return new OpenAiResponsesClient(
-    { api_key: "test-key" },
-    { retry: NO_RETRY, fetch: stub.fetch },
+function client(
+  stub: ReturnType<typeof fetchStub>,
+  options: ProviderClientOptions = {},
+): LlmClient {
+  return createLlmClient(
+    { provider: "openai_api", api_key: "test-key" },
+    { retry: NO_RETRY, fetch: stub.fetch, ...options },
   );
 }
 
@@ -33,58 +38,7 @@ function completedSse(response: Record<string, unknown>): string {
   return `data: ${JSON.stringify({ type: "response.completed", response })}\n\n`;
 }
 
-describe("openai golden decode (real sdk parser via injected fetch)", () => {
-  it("decodes the full fixture into the normalized event sequence", async () => {
-    const stub = fetchStub([
-      () =>
-        sseResponse(fixture("./fixtures/openai/full.sse"), {
-          "x-request-id": "req-test",
-        }),
-    ]);
-    const events = await collect(
-      client(stub).streamMessage(buildLlmRequest({ model: "gpt-test" })),
-    );
-
-    expect(events).toHaveLength(3);
-    expect(events[0]).toEqual({ type: "assistant_text_delta", text: "Hi" });
-    expect(events[1]).toEqual({
-      type: "tool_use_delta",
-      tool_use_id: "call_9",
-      name: "read_file",
-      input: { path: "foo.txt" },
-    });
-    const complete = events[2];
-    if (complete.type !== "assistant_message_complete") {
-      throw new Error("expected a completion event");
-    }
-    expect(complete.usage).toEqual({ input_tokens: 5, output_tokens: 4 });
-    expect(complete.stop_reason).toBe("tool_use");
-    expect(complete.message.content).toHaveLength(2);
-  });
-
-  it("is variant-substitutable with the anthropic text+tool path", async () => {
-    const openAiStub = fetchStub([
-      () => sseResponse(fixture("./fixtures/openai/full.sse")),
-    ]);
-    const openAiEvents = await collect(
-      client(openAiStub).streamMessage(buildLlmRequest({ model: "gpt" })),
-    );
-
-    const anthropicStub = fetchStub([
-      () => sseResponse(fixture("./fixtures/anthropic/text_tool.sse")),
-    ]);
-    const anthropicEvents = await collect(
-      new AnthropicApiClient(
-        { api_key: "k" },
-        { retry: NO_RETRY, fetch: anthropicStub.fetch },
-      ).streamMessage(buildLlmRequest({ model: "claude" })),
-    );
-
-    expect(openAiEvents.map((event) => event.type)).toEqual(
-      anthropicEvents.map((event) => event.type),
-    );
-  });
-
+describe("openai responses decode (real sdk parser via injected fetch)", () => {
   it("maps reasoning summary deltas to reasoning", async () => {
     const sse = [
       'data: {"type":"response.reasoning_summary_text.delta","item_id":"rs_1","delta":"thinking "}',
@@ -203,6 +157,26 @@ describe("openai golden decode (real sdk parser via injected fetch)", () => {
     expect(provider.request_id).toBe("req-trunc");
   });
 
+  it("surfaces response.failed as a decode error with the provider message", async () => {
+    const sse = `data: ${JSON.stringify({
+      type: "response.failed",
+      response: {
+        id: "r",
+        status: "failed",
+        error: { code: "server_error", message: "model exploded" },
+      },
+    })}\n\n`;
+    const stub = fetchStub([() => sseResponse(sse)]);
+    const { error } = await collectUntilError(
+      client(stub).streamMessage(buildLlmRequest({ model: "gpt" })),
+    );
+    const provider = error as ProviderError;
+    expect(provider.kind).toBe("decode");
+    expect(provider.message).toContain("model exploded");
+  });
+});
+
+describe("openai responses transport reliability", () => {
   it("aborts an idle stream as a transport failure", async () => {
     const stub = fetchStub([
       (init) =>
@@ -211,14 +185,11 @@ describe("openai golden decode (real sdk parser via injected fetch)", () => {
           init,
         ),
     ]);
-    const idleClient = new OpenAiResponsesClient(
-      { api_key: "test-key" },
-      {
-        retry: NO_RETRY,
-        streamGuard: { idle_timeout_s: 0.05 },
-        fetch: stub.fetch,
-      },
-    );
+    const idleClient = client(stub, {
+      retry: NO_RETRY,
+      streamGuard: { idle_timeout_s: 0.05 },
+      fetch: stub.fetch,
+    });
     const { error } = await collectUntilError(
       idleClient.streamMessage(buildLlmRequest({ model: "gpt" })),
     );
@@ -247,26 +218,41 @@ describe("openai golden decode (real sdk parser via injected fetch)", () => {
     expect(error).toBe(controller.signal.reason);
   });
 
-  it("surfaces response.failed as a decode error with the provider message", async () => {
-    const sse = `data: ${JSON.stringify({
-      type: "response.failed",
-      response: {
-        id: "r",
-        status: "failed",
-        error: { code: "server_error", message: "model exploded" },
+  it("passes transport headers() output on each attempt", async () => {
+    const stub = fetchStub([
+      () => errorResponse(503),
+      () =>
+        sseResponse(
+          completedSse({ id: "r", status: "completed", usage: { input_tokens: 0, output_tokens: 0 } }),
+        ),
+    ]);
+    let attempts = 0;
+    const wire = openAiResponsesWire({
+      baseUrl: "https://api.openai.com/v1",
+      credential: { kind: "bearer", secret: new SecretString("k") },
+      headers: () => {
+        attempts += 1;
+        return Promise.resolve({ "x-attempt": String(attempts) });
       },
-    })}\n\n`;
-    const stub = fetchStub([() => sseResponse(sse)]);
-    const { error } = await collectUntilError(
-      client(stub).streamMessage(buildLlmRequest({ model: "gpt" })),
-    );
-    const provider = error as ProviderError;
-    expect(provider.kind).toBe("decode");
-    expect(provider.message).toContain("model exploded");
+      fetch: stub.fetch,
+    });
+    const headerClient = new LlmStreamClient(wire, {}, {
+      retry: { ...NO_RETRY, max_retries: 1 },
+    });
+    await collect(headerClient.streamMessage(buildLlmRequest({ model: "gpt" })));
+    expect(stub.calls, "one fetch per attempt").toHaveLength(2);
+    expect(
+      new Headers(stub.calls[0].init?.headers).get("x-attempt"),
+      "first attempt headers",
+    ).toBe("1");
+    expect(
+      new Headers(stub.calls[1].init?.headers).get("x-attempt"),
+      "second attempt headers",
+    ).toBe("2");
   });
 });
 
-describe("openai encode projection (§5 column)", () => {
+describe("openai responses encode projection (§5 column)", () => {
   it("projects the full request surface", () => {
     const params = encodeOpenAiRequest(
       buildLlmRequest({
@@ -382,6 +368,37 @@ describe("openai encode projection (§5 column)", () => {
         buildLlmRequest({ model: "m", reasoning_effort: effort }),
       ).reasoning?.effort,
     ).toBe(clamped);
+  });
+
+  it("encodes the codex dialect: no completion cap, forced tool clamps to required (§4.1)", () => {
+    const request = buildLlmRequest({
+      model: "gpt-test",
+      max_tokens: 256,
+      tools: [
+        {
+          name: "read_file",
+          description: "Read a file",
+          input_schema: { type: "object" },
+        },
+      ],
+      tool_choice: { tool: "read_file" },
+    });
+
+    const codex = encodeOpenAiRequest(request, { dialect: "codex" });
+    expect(codex, "codex omits the completion cap").not.toHaveProperty(
+      "max_output_tokens",
+    );
+    expect(codex.tool_choice, "forced tool clamps to required").toBe(
+      "required",
+    );
+    expect(codex.store, "stateless replay holds across dialects").toBe(false);
+
+    const publicDialect = encodeOpenAiRequest(request, { dialect: "public" });
+    expect(publicDialect.max_output_tokens).toBe(256);
+    expect(publicDialect.tool_choice).toEqual({
+      type: "function",
+      name: "read_file",
+    });
   });
 
   it("sends bearer credentials to the responses endpoint", async () => {

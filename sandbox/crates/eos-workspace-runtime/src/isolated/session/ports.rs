@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::contract::SnapshotLease;
 use crate::isolated::error::IsolatedError;
 
-use super::handle::{SnapshotLease, WorkspaceHandle};
+use super::handle::WorkspaceHandle;
 
 /// Snapshot/lease HINGE port — the ONLY layer-stack surface isolated models.
 ///

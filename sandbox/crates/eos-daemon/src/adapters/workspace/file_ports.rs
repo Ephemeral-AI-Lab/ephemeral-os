@@ -14,6 +14,8 @@ use eos_occ::ChangesetResult;
 use eos_protocol::{LayerChange, LayerPath};
 #[cfg(target_os = "linux")]
 use eos_protocol::{LayerRef, Manifest};
+#[cfg(target_os = "linux")]
+use eos_workspace_runtime::contract::usize_to_f64_saturating;
 use eos_workspace_runtime::contract::{
     ChangedPathKinds, ResolvedWorkspacePath, WorkspaceApiError, WorkspaceConflict, WorkspaceMode,
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,
@@ -22,8 +24,6 @@ use eos_workspace_runtime::contract::{
 use serde_json::json;
 
 use crate::adapters::occ::{apply_occ_changeset, hash_current, manifest_version_u64};
-#[cfg(target_os = "linux")]
-use crate::response_timings::usize_to_f64_saturating;
 use crate::response_timings::{resource_timings, timing_map};
 
 fn api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
@@ -170,7 +170,6 @@ fn changeset_outcome(
             WorkspaceMutationKind::Edit => "api_edit",
         }
         .to_owned(),
-        error: None,
         timings,
     }
 }
@@ -265,7 +264,6 @@ impl WorkspaceMutationSink for IsolatedFilePorts {
             )]),
             changed_paths,
             mutation_source: "isolated_workspace".to_owned(),
-            error: None,
             timings: isolated_timings(1),
         })
     }

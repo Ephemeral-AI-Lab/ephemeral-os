@@ -9,7 +9,7 @@ pub type WorkspaceTimings = BTreeMap<String, Value>;
 
 /// Saturating `u64` -> `f64` for timing/resource metric values.
 ///
-/// Centralized so workspace-mode crates share one conversion. Values above
+/// Centralized so workspace-mode modules share one conversion. Values above
 /// `2^53` lose integer precision (acceptable for metrics) and the cast never
 /// panics; in practice these are tiny version/duration counts.
 #[must_use]
@@ -70,10 +70,5 @@ impl WorkspaceApiError {
     #[must_use]
     pub fn invalid_request(message: impl Into<String>) -> Self {
         Self::new("invalid_request", message)
-    }
-
-    #[must_use]
-    pub fn io(message: impl Into<String>) -> Self {
-        Self::new("io_error", message)
     }
 }

@@ -30,5 +30,5 @@ pub(crate) fn request_with_identity(
         .or_insert_with(|| Value::String(root.to_owned()));
     args.entry("caller_id".to_owned())
         .or_insert_with(|| Value::String(caller_id.to_owned()));
-    client.request(op, &next_invocation_id(), &Value::Object(args))
+    Ok(client.request(op, &next_invocation_id(), &Value::Object(args))?)
 }

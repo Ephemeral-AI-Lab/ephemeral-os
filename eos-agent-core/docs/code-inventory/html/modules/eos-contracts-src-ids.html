@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/contracts/src/ids Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-contracts.html">@eos/contracts</a></p>
+          <h1>@eos/contracts/src/ids</h1>
+          <p class="lede">packages/contracts/src/ids.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>3</dd></div>
+          <div><dt>Schemas</dt><dd>1</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>ids.ts</code>
+        <small>3 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolUseIdSchema"><code>ToolUseIdSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">contract public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolUseId"><code>ToolUseId</code></a>
+            <span>type</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#toolUseIdFrom"><code>toolUseIdFrom</code></a>
+            <span>function</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="ToolUseIdSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolUseIdSchema</strong>
+          <span>schema · line 7 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#ToolUseIdSchema">Module</a>
+      </div>
+      <pre><code>export const ToolUseIdSchema = z.string().min(1).brand&lt;&quot;ToolUseId&quot;&gt;()</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>schema:brand</span><span>schema:zod</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolUseId" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolUseId</strong>
+          <span>type · line 9 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#ToolUseId">Module</a>
+      </div>
+      <pre><code>export type ToolUseId = z.infer&lt;typeof ToolUseIdSchema&gt;</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>type:inferred</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="toolUseIdFrom" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolUseIdFrom</strong>
+          <span>function · line 12 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#toolUseIdFrom">Module</a>
+      </div>
+      <pre><code>export function toolUseIdFrom(raw: string): ToolUseId</code></pre>
+      <p>Adopt a provider-assigned id. Rejects the empty string.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/ids</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/contracts/src/ids#ToolUseIdSchema</code></td>
+      <td><code>@eos/contracts/src/ids#ToolUseId</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/contracts/src/ids#ToolUseId</code></td>
+      <td><code>@eos/contracts/src/ids#ToolUseIdSchema</code></td>
+      <td>9</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

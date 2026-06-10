@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import type { ContentBlock } from "@eos/contracts";
-
 import type { AgentEvent } from "../src/events.js";
 import { runToolBatch } from "../src/tool-runner.js";
 import type { ToolOutput } from "../src/tools.js";
@@ -13,13 +11,6 @@ import {
   toolResultBlock,
   toolUseBlock,
 } from "./support.js";
-
-type ToolUseBlock = Extract<ContentBlock, { type: "tool_use" }>;
-
-function asToolUse(block: ContentBlock): ToolUseBlock {
-  if (block.type !== "tool_use") throw new Error("expected a tool_use block");
-  return block;
-}
 
 function collector(): { events: AgentEvent[]; emit: (event: AgentEvent) => void } {
   const events: AgentEvent[] = [];
@@ -47,8 +38,8 @@ describe("runToolBatch", () => {
       ],
     );
     const calls = [
-      asToolUse(toolUseBlock("tu_slow", "slow")),
-      asToolUse(toolUseBlock("tu_fast", "fast")),
+      toolUseBlock("tu_slow", "slow"),
+      toolUseBlock("tu_fast", "fast"),
     ];
     const { emit } = collector();
     const results = await runToolBatch(calls, tools, live(), emit);
@@ -73,7 +64,7 @@ describe("runToolBatch", () => {
       },
     ]);
     const calls = Array.from({ length: 12 }, (_, i) =>
-      asToolUse(toolUseBlock(`tu_${String(i)}`, "probe", { i })),
+      toolUseBlock(`tu_${String(i)}`, "probe", { i }),
     );
     const { emit } = collector();
     const results = await runToolBatch(calls, tools, live(), emit);
@@ -89,8 +80,8 @@ describe("runToolBatch", () => {
       ["ok", () => Promise.resolve({ content: "fine" })],
     );
     const calls = [
-      asToolUse(toolUseBlock("tu_a", "boom")),
-      asToolUse(toolUseBlock("tu_b", "ok")),
+      toolUseBlock("tu_a", "boom"),
+      toolUseBlock("tu_b", "ok"),
     ];
     const { emit } = collector();
     const results = await runToolBatch(calls, tools, live(), emit);
@@ -103,7 +94,7 @@ describe("runToolBatch", () => {
   it("maps an unregistered tool name to a tool-not-found error result", async () => {
     const { emit } = collector();
     const results = await runToolBatch(
-      [asToolUse(toolUseBlock("tu_g", "ghost"))],
+      [toolUseBlock("tu_g", "ghost")],
       registryOf(),
       live(),
       emit,
@@ -117,7 +108,7 @@ describe("runToolBatch", () => {
     const tools = registryOf(["echo", () => Promise.resolve({ content: "out" })]);
     const { events, emit } = collector();
     await runToolBatch(
-      [asToolUse(toolUseBlock("tu_e", "echo", { v: 1 }))],
+      [toolUseBlock("tu_e", "echo", { v: 1 })],
       tools,
       live(),
       emit,
@@ -154,8 +145,8 @@ describe("runToolBatch", () => {
       ["slow", () => slowRelease.promise.then((): ToolOutput => ({ content: "too late" }))],
     );
     const calls = [
-      asToolUse(toolUseBlock("tu_fast", "fast")),
-      asToolUse(toolUseBlock("tu_slow", "slow")),
+      toolUseBlock("tu_fast", "fast"),
+      toolUseBlock("tu_slow", "slow"),
     ];
     const { events, emit } = collector();
     const batch = runToolBatch(calls, tools, controller.signal, emit);
@@ -192,7 +183,7 @@ describe("runToolBatch", () => {
     ]);
     const { events, emit } = collector();
     const results = await runToolBatch(
-      [asToolUse(toolUseBlock("tu_n", "never"))],
+      [toolUseBlock("tu_n", "never")],
       tools,
       controller.signal,
       emit,

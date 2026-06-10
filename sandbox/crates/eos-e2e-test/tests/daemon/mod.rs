@@ -44,7 +44,7 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
     let caller_id = lease.caller_id().to_owned();
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
-        client.request(
+        Ok(client.request(
             ops::API_V1_EXEC_COMMAND,
             &invocation_id,
             &json!({
@@ -54,6 +54,6 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
                 "cmd": "sleep 8",
                 "yield_time_ms": 5000,
                 "timeout_seconds": 120,}),
-        )
+        )?)
     })
 }

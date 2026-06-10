@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 03 Agent Loop Engine
 
-Status: Proposed
+Status: Completed
 Date: 2026-06-10
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -586,10 +586,10 @@ Phase 03 is accepted when:
 
 | Step | Status | Required proof |
 | --- | --- | --- |
-| Event stream | Pending | Ordering + single-consumer tests green |
-| Conversation dual transcript | Pending | Divergence-policy tests green |
-| Tool seam + batch runner | Pending | Ordering, cap, error-mapping tests green |
-| Turn runner | Pending | Delta/accumulation/abort tests green |
-| Loop + run handle + API | Pending | §14 suite green |
-| Workspace wiring | Pending | `pnpm run check` green from `eos-agent-core/` |
-| Index updated | Pending | Phase 03 row present in `index.md` |
+| Event stream | Completed | `packages/engine/tests/events.test.ts`: ordering, waiting-consumer wake, single-consumer guard, early-`return()` detach, retained-after-close tests green |
+| Conversation dual transcript | Completed | `packages/engine/tests/conversation.test.ts`: §6 divergence table (both-list appends, displayed-only partials with reason flags, seq/ISO stamping) green |
+| Tool seam + batch runner | Completed | `packages/engine/tests/tool-runner.test.ts`: `tool_use`-order assembly, cap 8 (`maxInflight === 8` over 12 calls), thrown-error and unknown-tool mapping, abort-settles-immediately with straggler-emit suppression green |
+| Turn runner | Completed | `packages/engine/tests/turn.test.ts`: request built from `llmMessages()`, delta forwarding, abort vs `ProviderError` salvage classification, internal no-salvage, `addUsage` green |
+| Loop + run handle + API | Completed | `packages/engine/tests/agent-loop.test.ts`: §14 cases 1-18 green (case 17 enforced via `expectProviderValid` across cases); loop function 52 lines in a 92-line `agent-loop.ts` |
+| Workspace wiring | Completed | `pnpm run check` (typecheck + eslint + vitest, 122 tests) green from `eos-agent-core/`; `git diff --stat -- agent-core` empty |
+| Index updated | Completed | Phase 03 row in `index.md` marked Completed |

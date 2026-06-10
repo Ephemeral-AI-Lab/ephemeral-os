@@ -5,9 +5,11 @@
   "type": "module",
   "packageManager": "pnpm@10.23.0",
   "scripts": {
+    "code-inventory": "tsx scripts/code-inventory/src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test"
   },
   "dependencies": {

@@ -15,11 +15,10 @@ use anyhow::Result;
 
 pub mod audit;
 pub mod cas;
-pub mod client;
 pub mod container;
-mod docker;
 pub mod pool;
-mod tar;
+
+pub use eos_sandbox_host::client;
 
 pub mod config {
     pub use eos_config::configs::e2e_test::*;

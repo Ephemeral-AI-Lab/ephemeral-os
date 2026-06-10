@@ -5,10 +5,10 @@ use std::time::Instant;
 
 use eos_occ::{CommitQueue, OccService};
 use eos_occ_layerstack::{LayerStackCommitTransaction, LayerStackRouteProvider};
+use eos_workspace_runtime::contract::usize_to_f64_saturating;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-use crate::response_timings::usize_to_f64_saturating;
 
 pub(crate) const OCC_SERVICE_CACHE_MAX: usize = 256;
 

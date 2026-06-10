@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/engine/src/agent-loop Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-engine.html">@eos/engine</a></p>
+          <h1>@eos/engine/src/agent-loop</h1>
+          <p class="lede">packages/engine/src/agent-loop.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>toolUses</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>ProviderError, type UsageSnapshot</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./conversation.js</code></td>
+      <td>Conversation</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./run-handle.js</code></td>
+      <td>AgentRunFailure, AgentRunStatus, RunHandle</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./tool-runner.js</code></td>
+      <td>runToolBatch</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./tools.js</code></td>
+      <td>ToolRegistry</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./turn.js</code></td>
+      <td>addUsage, runAssistantTurn, type TurnConfig</td>
+      <td>value</td>
+      <td>8</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>agent-loop.ts</code>
+        <small>4 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentLoopContext"><code>AgentLoopContext</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runAgentLoop"><code>runAgentLoop</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#classifyLoopError"><code>classifyLoopError</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#isAborted"><code>isAborted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AgentLoopContext" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentLoopContext</strong>
+          <span>interface · line 11 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#AgentLoopContext">Module</a>
+      </div>
+      <pre><code>export interface AgentLoopContext</code></pre>
+      <p>Everything one run's loop needs; assembled by `startAgentRun`.</p>
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>RunHandle</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>conversation</code></td>
+              <td><code>Conversation</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tools</code></td>
+              <td><code>ToolRegistry</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>turnConfig</code></td>
+              <td><code>TurnConfig</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>maxTurns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="runAgentLoop" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runAgentLoop</strong>
+          <span>function · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#runAgentLoop">Module</a>
+      </div>
+      <pre><code>export async function runAgentLoop(ctx: AgentLoopContext): Promise&lt;void&gt;</code></pre>
+      <p>The loop spine — control flow only; streaming, transcript writes, and
+tool dispatch live in their own modules. Never throws: every exit
+classifies into exactly one `finish`, committed in the same synchronous
+block as its decision so a late steer is never accepted-but-dropped.</p>
+      <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="classifyLoopError" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>classifyLoopError</strong>
+          <span>function · line 78 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#classifyLoopError">Module</a>
+      </div>
+      <pre><code>function classifyLoopError(error: unknown, handle: RunHandle): AgentRunStatus</code></pre>
+
+      <div class="tags"><span>error</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="isAborted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>isAborted</strong>
+          <span>function · line 90 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#isAborted">Module</a>
+      </div>
+      <pre><code>function isAborted(signal: AbortSignal): boolean</code></pre>
+      <p>Read through a call so control-flow narrowing never caches `aborted`.</p>
+      <div class="tags"><span>abortable</span><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/tool-runner</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/tools</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

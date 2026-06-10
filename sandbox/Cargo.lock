@@ -202,6 +202,7 @@ dependencies = [
  "anyhow",
  "eos-config",
  "eos-protocol",
+ "eos-sandbox-host",
  "serde_json",
  "sha2",
 ]
@@ -294,6 +295,15 @@ dependencies = [
  "libc",
  "rustix 0.38.44",
  "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "eos-sandbox-host"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "serde_json",
  "thiserror 2.0.18",
 ]

@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::contract::mode::WorkspaceMode;
 use crate::contract::response::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 
-/// Input needed for a workspace-mode crate to prepare command execution.
+/// Input needed for a workspace-mode module to prepare command execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrepareCommandRequest {
     pub caller_id: String,

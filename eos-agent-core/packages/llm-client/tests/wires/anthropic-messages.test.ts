@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  assistantText,
-  reasoningText,
-  toolUseIdFrom,
-  toolUses,
-} from "@eos/contracts";
+import { toolUseIdFrom } from "@eos/contracts";
 
-import { ProviderError } from "../src/errors.js";
-import { encodeAnthropicRequest, AnthropicApiClient } from "../src/providers/anthropic.js";
-import { buildLlmRequest, type ReasoningEffort } from "../src/types.js";
+import { ProviderError } from "../../src/errors.js";
+import { createLlmClient } from "../../src/factory.js";
+import type { LlmClient } from "../../src/client.js";
+import type { ProviderClientOptions } from "../../src/config.js";
+import { SecretString } from "../../src/secret.js";
+import { LlmStreamClient } from "../../src/stream-client.js";
+import {
+  anthropicMessagesWire,
+  encodeAnthropicRequest,
+} from "../../src/wires/anthropic-messages.js";
+import { buildLlmRequest, type ReasoningEffort } from "../../src/types.js";
 import {
   collect,
   collectUntilError,
@@ -18,54 +21,21 @@ import {
   fixture,
   hangingSseResponse,
   sseResponse,
-} from "./support.js";
+} from "../support.js";
 
 const NO_RETRY = { max_retries: 0, base_delay_s: 0, max_delay_s: 0 };
 
 function client(
   stub: ReturnType<typeof fetchStub>,
-  options: ConstructorParameters<typeof AnthropicApiClient>[1] = {},
-): AnthropicApiClient {
-  return new AnthropicApiClient(
-    { api_key: "test-key" },
+  options: ProviderClientOptions = {},
+): LlmClient {
+  return createLlmClient(
+    { provider: "anthropic_api", api_key: "test-key" },
     { retry: NO_RETRY, fetch: stub.fetch, ...options },
   );
 }
 
-describe("anthropic golden decode (real sdk parser via injected fetch)", () => {
-  it("decodes the full fixture into the normalized event sequence", async () => {
-    const stub = fetchStub([
-      () => sseResponse(fixture("./fixtures/anthropic/full.sse"), {
-        "request-id": "req-test",
-      }),
-    ]);
-    const events = await collect(
-      client(stub).streamMessage(buildLlmRequest({ model: "claude-test" })),
-    );
-
-    expect(events).toHaveLength(5);
-    expect(events[0]).toEqual({ type: "reasoning_delta", text: "Let me think" });
-    expect(events[1]).toEqual({ type: "assistant_text_delta", text: "Hello" });
-    expect(events[2]).toEqual({ type: "assistant_text_delta", text: " world" });
-    expect(events[3]).toEqual({
-      type: "tool_use_delta",
-      tool_use_id: "toolu_01",
-      name: "read_file",
-      input: { path: "foo.txt" },
-    });
-
-    const complete = events[4];
-    if (complete.type !== "assistant_message_complete") {
-      throw new Error("expected a completion event");
-    }
-    expect(complete.usage).toEqual({ input_tokens: 10, output_tokens: 15 });
-    expect(complete.stop_reason).toBe("tool_use");
-    expect(complete.message.content).toHaveLength(3);
-    expect(assistantText(complete.message)).toBe("Hello world");
-    expect(reasoningText(complete.message)).toBe("Let me think");
-    expect(toolUses(complete.message)).toHaveLength(1);
-  });
-
+describe("anthropic messages decode (real sdk parser via injected fetch)", () => {
   it("maps thinking deltas and blocks to reasoning", async () => {
     const sse = [
       'event: content_block_start',
@@ -152,8 +122,8 @@ describe("anthropic golden decode (real sdk parser via injected fetch)", () => {
     const stub = fetchStub([
       () => sseResponse(sse, { "request-id": "req-trunc" }),
     ]);
-    const truncatedClient = new AnthropicApiClient(
-      { api_key: "k" },
+    const truncatedClient = createLlmClient(
+      { provider: "anthropic_api", api_key: "k" },
       {
         retry: { ...NO_RETRY, max_retries: 1 },
         fetch: stub.fetch,
@@ -191,7 +161,7 @@ describe("anthropic golden decode (real sdk parser via injected fetch)", () => {
   });
 });
 
-describe("anthropic transport reliability", () => {
+describe("anthropic messages transport reliability", () => {
   it("aborts an idle stream as a transport failure", async () => {
     const stub = fetchStub([
       (init) =>
@@ -228,8 +198,8 @@ describe("anthropic transport reliability", () => {
 
   it("owns retries alone: sdk maxRetries is zero", async () => {
     const stub = fetchStub([() => errorResponse(503)]);
-    const gateClient = new AnthropicApiClient(
-      { api_key: "k" },
+    const gateClient = createLlmClient(
+      { provider: "anthropic_api", api_key: "k" },
       { retry: { ...NO_RETRY, max_retries: 1 }, fetch: stub.fetch },
     );
     const { error } = await collectUntilError(
@@ -262,9 +232,39 @@ describe("anthropic transport reliability", () => {
     // Classified by signal.aborted, never by error type.
     expect(error).toBe(controller.signal.reason);
   });
+
+  it("passes transport headers() output on each attempt", async () => {
+    const stub = fetchStub([
+      () => errorResponse(503),
+      () => sseResponse('event: message_stop\ndata: {"type":"message_stop"}\n\n'),
+    ]);
+    let attempts = 0;
+    const wire = anthropicMessagesWire({
+      baseUrl: "https://api.anthropic.com",
+      credential: { kind: "api_key", secret: new SecretString("k") },
+      headers: () => {
+        attempts += 1;
+        return Promise.resolve({ "x-attempt": String(attempts) });
+      },
+      fetch: stub.fetch,
+    });
+    const headerClient = new LlmStreamClient(wire, {}, {
+      retry: { ...NO_RETRY, max_retries: 1 },
+    });
+    await collect(headerClient.streamMessage(buildLlmRequest({ model: "m" })));
+    expect(stub.calls, "one fetch per attempt").toHaveLength(2);
+    expect(
+      new Headers(stub.calls[0].init?.headers).get("x-attempt"),
+      "first attempt headers",
+    ).toBe("1");
+    expect(
+      new Headers(stub.calls[1].init?.headers).get("x-attempt"),
+      "second attempt headers",
+    ).toBe("2");
+  });
 });
 
-describe("anthropic encode projection (§5 column)", () => {
+describe("anthropic messages encode projection (§5 column)", () => {
   it("projects the full request surface", () => {
     const request = buildLlmRequest({
       model: "claude-test",
@@ -354,6 +354,26 @@ describe("anthropic encode projection (§5 column)", () => {
         buildLlmRequest({ model: "m", reasoning_effort: effort }),
       ).output_config?.effort,
     ).toBe(clamped);
+  });
+
+  it("prepends the system prefix as the first system block (§4.1 wire option)", () => {
+    const withPrompt = encodeAnthropicRequest(
+      buildLlmRequest({ model: "m", system_prompt: "be terse" }),
+      { systemPrefix: "identity text" },
+    );
+    expect(withPrompt.system).toEqual([
+      { type: "text", text: "identity text" },
+      { type: "text", text: "be terse" },
+    ]);
+
+    const withoutPrompt = encodeAnthropicRequest(
+      buildLlmRequest({ model: "m" }),
+      { systemPrefix: "identity text" },
+    );
+    expect(
+      withoutPrompt.system,
+      "the prefix stands alone when the request has no system prompt",
+    ).toEqual([{ type: "text", text: "identity text" }]);
   });
 
   it("omits optional fields and sends explicit credentials on the wire", async () => {

@@ -6,13 +6,13 @@
 //! capabilities; concrete publish, read, audit, and runtime mechanics stay
 //! injected by the daemon or the owning runtime module.
 
-pub mod command;
-pub mod file_ops;
-pub mod lease;
-pub mod mode;
-pub mod mutation;
-pub mod read_view;
-pub mod response;
+pub(crate) mod command;
+pub(crate) mod file_ops;
+pub(crate) mod lease;
+pub(crate) mod mode;
+pub(crate) mod mutation;
+pub(crate) mod read_view;
+pub(crate) mod response;
 
 pub use command::{
     FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace,
@@ -20,7 +20,7 @@ pub use command::{
 };
 pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
-    SearchReplaceError, WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
+    WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
 };
 pub use lease::SnapshotLease;
 pub use mode::WorkspaceMode;

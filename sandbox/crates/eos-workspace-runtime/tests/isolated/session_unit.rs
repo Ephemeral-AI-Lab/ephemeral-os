@@ -11,8 +11,9 @@ use super::capacity::{
 use super::resources::next_handle_id;
 use super::{
     CallerId, IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort,
-    SnapshotLease, WorkspaceHandle,
+    WorkspaceHandle,
 };
+use crate::contract::SnapshotLease;
 use crate::isolated::audit::AuditSink;
 use crate::isolated::caps::ResourceCaps;
 

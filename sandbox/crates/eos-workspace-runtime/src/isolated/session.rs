@@ -35,7 +35,7 @@ mod resources;
 #[path = "../../tests/isolated/session_unit.rs"]
 mod tests;
 
-pub use handle::{CallerId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};
+pub use handle::{CallerId, WorkspaceHandle, WorkspaceHandleId};
 pub use ports::{LayerStackSnapshotPort, NamespaceRuntimePort};
 
 /// Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, GC.

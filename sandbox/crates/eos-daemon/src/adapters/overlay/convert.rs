@@ -4,10 +4,8 @@ use std::path::Path;
 
 use eos_occ::{ChangesetResult, FileResult, OccStatus};
 use eos_protocol::{LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
-use eos_workspace_runtime::ephemeral::{
-    EphemeralWorkspaceError, PathChange, PathChangeKind, PublishOutcome, PublishStatus,
-    SnapshotLease,
-};
+use eos_workspace_runtime::contract::SnapshotLease;
+use eos_workspace_runtime::ephemeral::{EphemeralWorkspaceError, PublishOutcome};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -52,27 +50,6 @@ pub(crate) fn ephemeral_daemon_error(error: EphemeralWorkspaceError) -> DaemonEr
     DaemonError::OverlayPipeline(error.to_string())
 }
 
-pub(crate) fn path_changes_to_wire(path_changes: &[PathChange]) -> Vec<(String, String)> {
-    path_changes
-        .iter()
-        .map(|change| {
-            (
-                change.path.clone(),
-                path_change_kind_wire(change.kind).to_owned(),
-            )
-        })
-        .collect()
-}
-
-fn path_change_kind_wire(kind: PathChangeKind) -> &'static str {
-    match kind {
-        PathChangeKind::Write => "write",
-        PathChangeKind::Delete => "delete",
-        PathChangeKind::Symlink => "symlink",
-        PathChangeKind::OpaqueDir => "opaque_dir",
-    }
-}
-
 pub(crate) fn changeset_from_publish_outcome(
     outcome: &PublishOutcome,
 ) -> Result<ChangesetResult, DaemonError> {
@@ -107,34 +84,8 @@ pub(crate) fn changeset_from_publish_outcome(
 }
 
 pub(super) fn publish_outcome_from_changeset(result: &ChangesetResult) -> PublishOutcome {
-    let published_paths = result.published_paths();
-    let conflicts = result
-        .files
-        .iter()
-        .filter(|file| !file.status.is_success())
-        .map(|file| file.path.as_str().to_owned())
-        .collect::<Vec<_>>();
-    let status = if !conflicts.is_empty() {
-        if result.files.iter().any(|file| {
-            matches!(
-                file.status,
-                OccStatus::AbortedVersion | OccStatus::AbortedOverlap
-            )
-        }) {
-            PublishStatus::Conflict
-        } else {
-            PublishStatus::Rejected
-        }
-    } else if published_paths.is_empty() {
-        PublishStatus::NoChanges
-    } else {
-        PublishStatus::Published
-    };
     PublishOutcome {
-        status,
-        manifest_version: result.published_manifest_version,
-        published_paths,
-        conflicts,
+        published_paths: result.published_paths(),
         timings: result
             .timings
             .iter()

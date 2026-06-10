@@ -40,8 +40,6 @@ impl EphemeralDirAllocator {
             .join(format!("{}-{invocation}", std::process::id()));
         let upperdir = run_dir.join("upper");
         let workdir = run_dir.join("work");
-        let output_path = run_dir.join("output.json");
-        let final_path = run_dir.join("final.json");
 
         for path in [&run_dir, &upperdir, &workdir] {
             std::fs::create_dir_all(path).map_err(|error| {
@@ -56,10 +54,6 @@ impl EphemeralDirAllocator {
             run_dir,
             upperdir,
             workdir,
-            output_path,
-            final_path,
-            request_path: None,
-            result_path: None,
         })
     }
 }

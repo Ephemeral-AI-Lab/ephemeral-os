@@ -19,7 +19,7 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::response_timings::u64_to_f64_saturating;
+use eos_workspace_runtime::contract::u64_to_f64_saturating;
 
 #[cfg(target_os = "linux")]
 use super::config::{

@@ -61,7 +61,6 @@ impl WorkspaceMutationSink for FakePorts {
             changed_paths: vec![path.clone()],
             changed_path_kinds: BTreeMap::from([(path, "write".to_owned())]),
             mutation_source: "api_write".to_owned(),
-            error: None,
             timings: BTreeMap::new(),
         })
     }

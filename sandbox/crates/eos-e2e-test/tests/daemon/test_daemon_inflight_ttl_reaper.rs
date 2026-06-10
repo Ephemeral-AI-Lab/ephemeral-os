@@ -59,7 +59,7 @@ fn spawn_long_background_exec(
     let caller_id = lease.caller_id().to_owned();
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
-        client.request(
+        Ok(client.request(
             ops::API_V1_EXEC_COMMAND,
             &invocation_id,
             &json!({
@@ -69,7 +69,7 @@ fn spawn_long_background_exec(
                 "cmd": "sleep 30",
                 "yield_time_ms": 15000,
                 "timeout_seconds": 60,}),
-        )
+        )?)
     })
 }
 

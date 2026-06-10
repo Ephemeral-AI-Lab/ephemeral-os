@@ -14,9 +14,8 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
     use std::path::PathBuf;
 
     use crate::command_session::session::CommandSessionSpec;
-    use crate::ephemeral::{
-        CallerId, EphemeralRunDirs, InvocationId, SnapshotLease, WorkspaceRoot,
-    };
+    use crate::contract::SnapshotLease;
+    use crate::ephemeral::{CallerId, EphemeralRunDirs, InvocationId, LayerStackRoot};
 
     let session = CommandSession::new(CommandSessionSpec {
         id: id.to_owned(),
@@ -25,7 +24,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
         timeout_seconds: None,
     });
     let workspace = EphemeralWorkspace {
-        layer_stack_root: WorkspaceRoot(PathBuf::from("/layers")),
+        layer_stack_root: LayerStackRoot(PathBuf::from("/layers")),
         workspace_root: PathBuf::from("/workspace"),
         caller_id: CallerId(caller.to_owned()),
         invocation_id: InvocationId("inv".to_owned()),
@@ -39,10 +38,6 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
             run_dir: PathBuf::from("/run"),
             upperdir: PathBuf::from("/upper"),
             workdir: PathBuf::from("/work"),
-            output_path: PathBuf::from("/out.json"),
-            final_path: PathBuf::from("/final.json"),
-            request_path: None,
-            result_path: None,
         },
     };
     Arc::new(WorkspaceRun::Ephemeral(EphemeralRun { session, workspace }))

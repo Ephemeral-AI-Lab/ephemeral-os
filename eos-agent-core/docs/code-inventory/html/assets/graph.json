@@ -1,0 +1,4911 @@
+{
+  "nodes": [
+    {
+      "id": "@eos/contracts",
+      "kind": "package",
+      "tags": [
+        "contracts"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/ids",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/ids#ToolUseIdSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "schema:brand",
+        "schema:zod",
+        "typed-id"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/ids#ToolUseId",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "type:inferred",
+        "typed-id"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/ids#toolUseIdFrom",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/index",
+      "kind": "module",
+      "tags": [
+        "entrypoint",
+        "package-entrypoint",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/json",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/json#JsonValue",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "json-boundary",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/json#JsonObject",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "json-boundary",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/json#JsonValueSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "json-boundary",
+        "public-api",
+        "schema:union",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/json#JsonObjectSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "json-boundary",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#DEFAULT_MAX_TOKENS",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#MessageRoleSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "schema:enum",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#MessageRole",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#ContentBlockSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "schema:discriminated-union",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#ContentBlock",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#MessageSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#Message",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#ToolSpecSchema",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "json-boundary",
+        "public-api",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#ToolSpec",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#fromUserText",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#assistantText",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#reasoningText",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/src/messages#toolUses",
+      "kind": "symbol",
+      "tags": [
+        "contract",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/contracts/tests/contracts.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/db",
+      "kind": "package",
+      "tags": [
+        "empty-package",
+        "storage"
+      ]
+    },
+    {
+      "id": "@eos/engine",
+      "kind": "package",
+      "tags": [
+        "runtime"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/agent-loop",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/agent-loop#AgentLoopContext",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/agent-loop#runAgentLoop",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/agent-loop#classifyLoopError",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/agent-loop#isAborted",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/conversation",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/conversation#PartialReason",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/conversation#ToolResultBlock",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/conversation#DisplayedMessage",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/conversation#Conversation",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/events",
+      "kind": "module",
+      "tags": [
+        "event",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/events#AgentEvent",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/events#EventStream",
+      "kind": "symbol",
+      "tags": [
+        "async-iterable",
+        "event",
+        "exported",
+        "public-api",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/index",
+      "kind": "module",
+      "tags": [
+        "entrypoint",
+        "package-entrypoint",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/index#DEFAULT_MAX_TURNS",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "package-entrypoint"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/index#StartAgentRunInput",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "dto",
+        "exported",
+        "package-entrypoint",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/index#startAgentRun",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "package-entrypoint",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle#AgentRunFailure",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle#AgentRunStatus",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle#AgentRunOutcome",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle#AgentRunHandle",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "run-handle"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/run-handle#RunHandle",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api",
+        "run-handle",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#ToolUseBlock",
+      "kind": "symbol",
+      "tags": [
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#MAX_TOOL_CONCURRENCY",
+      "kind": "symbol",
+      "tags": [
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#runToolBatch",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#isAborted",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#executeCall",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tool-runner#settledOrAborted",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tools",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tools#ToolContext",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tools#ToolOutput",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tools#ToolDefinition",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/tools#ToolRegistry",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/turn",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/turn#TurnConfig",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "di-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/turn#CompletedTurn",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/turn#addUsage",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/src/turn#runAssistantTurn",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "config",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/agent-loop.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/conversation.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/conversation.test#freshConversation",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/events.test",
+      "kind": "module",
+      "tags": [
+        "event",
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/events.test#ping",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/events.test#drain",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "event",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support",
+      "kind": "module",
+      "tags": [
+        "test-only",
+        "test-support"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#ScriptedTurn",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async-iterable",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#MockLlmClient",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-client",
+        "public-api",
+        "stateful",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#scriptedTurn",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#failingTurn",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#hangingTurn",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#gatedTurn",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#USAGE",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#textDelta",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#reasoningDelta",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#toolUseDelta",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "json-boundary",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#complete",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#textBlock",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#toolUseBlock",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "json-boundary",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#toolResultBlock",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#assistantMessage",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#userText",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#registryOf",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#Deferred",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#deferred",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#rejectOnAbort",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#tick",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#StartMockRunOptions",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#startMockRun",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#collectEvents",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#must",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#asCompleted",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#asCancelled",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#asFailed",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/support#expectProviderValid",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only",
+        "typed-id"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/tool-runner.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/tool-runner.test#collector",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/tool-runner.test#live",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/turn.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/engine/tests/turn.test#setup",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client",
+      "kind": "package",
+      "tags": [
+        "provider-boundary"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/access",
+      "kind": "module",
+      "tags": [
+        "access-boundary",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/access#AccessCredential",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/access#Access",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/api-key",
+      "kind": "module",
+      "tags": [
+        "access-boundary",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/api-key#apiKeyAccess",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/claude-coding-plan",
+      "kind": "module",
+      "tags": [
+        "access-boundary",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/claude-coding-plan#CLAUDE_CODING_PLAN_HEADERS",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/claude-coding-plan#claudeCodingPlanAccess",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan",
+      "kind": "module",
+      "tags": [
+        "access-boundary",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan#OPENAI_AUTH_CLAIM",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan#CodexAccessClaimsSchema",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "internal",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan#CodexAccessClaims",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan#codexAccessClaimsFromJwt",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/access/codex-coding-plan#codexCodingPlanAccess",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/client",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/client#LlmStreamOptions",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/client#LlmClient",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-client",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config",
+      "kind": "module",
+      "tags": [
+        "config",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#RetryConfigSchema",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "exported",
+        "public-api",
+        "retry",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#RetryConfig",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "exported",
+        "public-api",
+        "retry",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#RetryConfigInput",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "dto",
+        "exported",
+        "public-api",
+        "retry"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#StreamGuardConfigSchema",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "exported",
+        "public-api",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#StreamGuardConfig",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "exported",
+        "public-api",
+        "type:inferred"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#StreamGuardConfigInput",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "dto",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/config#ProviderClientOptions",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#ProviderErrorKind",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "exported",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#ProviderErrorOptions",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "exported",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#ProviderError",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "exported",
+        "public-api",
+        "sdk-edge",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#requestIdOf",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#retryAfterSeconds",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "retry",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/errors#toProviderError",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "exported",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/events",
+      "kind": "module",
+      "tags": [
+        "event",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/events#StopReason",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/events#LlmStreamEvent",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/factory",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/factory#createLlmClient",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "factory",
+        "provider-client",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/index",
+      "kind": "module",
+      "tags": [
+        "entrypoint",
+        "package-entrypoint",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#secretString",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "schema:union",
+        "schema:zod",
+        "secret"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#CLAUDE_CODE_SYSTEM_PREFIX",
+      "kind": "symbol",
+      "tags": [
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#ProviderConnectionSchema",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "schema:discriminated-union",
+        "schema:object",
+        "schema:zod"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#ProviderConnection",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#ResolvedProfile",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/profiles#resolveProfile",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/retry",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/retry#isVisible",
+      "kind": "symbol",
+      "tags": [
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/retry#isRetryable",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "internal",
+        "retry"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/retry#backoff",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "config",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/retry#retryStream",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "async-iterable",
+        "config",
+        "exported",
+        "public-api",
+        "retry"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/secret",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/secret#REDACTED",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "secret"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/secret#SecretString",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "secret",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/stream-client",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/stream-client#IdleTimeoutSignal",
+      "kind": "symbol",
+      "tags": [
+        "error",
+        "internal",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/stream-client#withIdleGuard",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "async-iterable",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/stream-client#runAttempt",
+      "kind": "symbol",
+      "tags": [
+        "abortable",
+        "async",
+        "internal"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/stream-client#LlmStreamClient",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-client",
+        "public-api",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#ToolChoice",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#ReasoningEffort",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#UsageSnapshot",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#totalTokens",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#LlmRequest",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#LlmRequestInit",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/types#buildLlmRequest",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "module",
+      "tags": [
+        "provider-wire",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#ANTHROPIC_EFFORT",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#encodeContentBlock",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#encodeMessage",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#encodeTool",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#encodeToolChoice",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#encodeAnthropicRequest",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "provider-wire",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#BlockAccum",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#PartialUsage",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#AnthropicDecoder",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/anthropic-messages#anthropicMessagesWire",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "module",
+      "tags": [
+        "provider-wire",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#OPENAI_EFFORT",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#encodeMessageItems",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#encodeTool",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#encodeToolChoice",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#encodeOpenAiRequest",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "provider-wire",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#OpenAiDecoder",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "sdk-edge",
+        "stateful"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/openai-responses#openAiResponsesWire",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api",
+        "sdk-edge"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire",
+      "kind": "module",
+      "tags": [
+        "provider-wire",
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#WireOptions",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#WireTransport",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#StreamDecoder",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#Wire",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#WireFactory",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "factory",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/src/wires/wire#parseToolArgs",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "json-boundary",
+        "provider-wire",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/access/coding-plan.test",
+      "kind": "module",
+      "tags": [
+        "access-boundary",
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/access/coding-plan.test#jwtWithAuthClaim",
+      "kind": "symbol",
+      "tags": [
+        "access-boundary",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#NO_RETRY",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "retry",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#replay",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#READ_FILE_TOOL",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#roundTripMessages",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#ANTHROPIC_TEXT_SSE",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#ANTHROPIC_HANGING_PREFIX",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#OPENAI_TEXT_SSE",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#OPENAI_REASONING_SSE",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract.test#OPENAI_HANGING_PREFIX",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract#Scenario",
+      "kind": "symbol",
+      "tags": [
+        "di-boundary",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract#LlmClientContractBinding",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract#CompletionEvent",
+      "kind": "symbol",
+      "tags": [
+        "event",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract#completionOf",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/contract/llm-client-contract#describeLlmClientContract",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/errors.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#NO_RETRY",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "retry",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#CLAUDE_CODE_PREFIX",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#ANTHROPIC_STOP",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#OPENAI_STOP",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#jwtWithAuthClaim",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/factory.test#recordCall",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test#FAST",
+      "kind": "symbol",
+      "tags": [
+        "config",
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test#text",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test#complete",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test#Scripted",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/retry.test#scripted",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/secret-config.test",
+      "kind": "module",
+      "tags": [
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support",
+      "kind": "module",
+      "tags": [
+        "test-only",
+        "test-support"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#fixture",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#collect",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "async-iterable",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#collectUntilError",
+      "kind": "symbol",
+      "tags": [
+        "async",
+        "async-iterable",
+        "error",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#RecordedCall",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#FetchStub",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#fetchStub",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#sseResponse",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#errorResponse",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "error",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/support#hangingSseResponse",
+      "kind": "symbol",
+      "tags": [
+        "dto",
+        "exported",
+        "public-api",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "kind": "module",
+      "tags": [
+        "provider-wire",
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/anthropic-messages.test#NO_RETRY",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "retry",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/anthropic-messages.test#client",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/openai-responses.test",
+      "kind": "module",
+      "tags": [
+        "provider-wire",
+        "test",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/openai-responses.test#NO_RETRY",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "retry",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/openai-responses.test#client",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/llm-client/tests/wires/openai-responses.test#completedSse",
+      "kind": "symbol",
+      "tags": [
+        "internal",
+        "provider-wire",
+        "test-only"
+      ]
+    },
+    {
+      "id": "@eos/observability",
+      "kind": "package",
+      "tags": [
+        "empty-package",
+        "observability"
+      ]
+    },
+    {
+      "id": "@eos/runtime",
+      "kind": "package",
+      "tags": [
+        "empty-package",
+        "runtime"
+      ]
+    },
+    {
+      "id": "@eos/testkit",
+      "kind": "package",
+      "tags": [
+        "empty-package",
+        "testkit"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from": "@eos/llm-client/src/errors#ProviderError",
+      "to": "Error",
+      "kind": "extends",
+      "file": "packages/llm-client/src/errors.ts",
+      "line": 31
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client#IdleTimeoutSignal",
+      "to": "Error",
+      "kind": "extends",
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 14
+    },
+    {
+      "from": "@eos/engine/src/events#EventStream",
+      "to": "AsyncIterable",
+      "kind": "implements",
+      "file": "packages/engine/src/events.ts",
+      "line": 50
+    },
+    {
+      "from": "@eos/engine/src/run-handle#RunHandle",
+      "to": "AgentRunHandle",
+      "kind": "implements",
+      "file": "packages/engine/src/run-handle.ts",
+      "line": 57
+    },
+    {
+      "from": "@eos/engine/tests/support#MockLlmClient",
+      "to": "LlmClient",
+      "kind": "implements",
+      "file": "packages/engine/tests/support.ts",
+      "line": 37
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client#LlmStreamClient",
+      "to": "LlmClient",
+      "kind": "implements",
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 124
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages#AnthropicDecoder",
+      "to": "StreamDecoder",
+      "kind": "implements",
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 152
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses#OpenAiDecoder",
+      "to": "StreamDecoder",
+      "kind": "implements",
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 154
+    },
+    {
+      "from": "@eos/contracts/src/ids",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/ids.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts/src/json",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/json.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts/src/messages",
+      "to": "@eos/contracts/src/ids",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/messages.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/contracts/src/messages",
+      "to": "@eos/contracts/src/json",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/messages.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/contracts/src/messages",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/messages.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts/tests/contracts.test",
+      "to": "@eos/contracts/src/index",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/tests/contracts.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/contracts/tests/contracts.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/contracts/tests/contracts.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/engine/src/run-handle",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/engine/src/tool-runner",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/engine/src/tools",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/engine/src/turn",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/engine/src/agent-loop",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/agent-loop.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/engine/src/conversation",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/conversation.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/events",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/events.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/events",
+      "to": "@eos/engine/src/run-handle",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/events.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/src/events",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/events.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/index.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/agent-loop",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/index.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/index.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/run-handle",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/index.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/tools",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/engine/src/run-handle",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/run-handle.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/run-handle",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/run-handle.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/src/run-handle",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/run-handle.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/src/run-handle",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/run-handle.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/engine/src/tool-runner",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/tool-runner.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/tool-runner",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/tool-runner.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/src/tool-runner",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/tool-runner.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/src/tool-runner",
+      "to": "@eos/engine/src/tools",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/tool-runner.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/src/tools",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/tools.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/turn",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/turn.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/src/turn",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/turn.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/engine/src/turn",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/src/turn.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/engine/src/turn",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/src/turn.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/engine/src/index",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/tests/support.ts",
+      "line": 19
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/engine/src/index",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 20
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/tests/support.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/tool-runner",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/tools",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/conversation",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/turn",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/llm-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/access/access",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/access.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/access/api-key",
+      "to": "@eos/llm-client/src/access/access",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/api-key.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/access/api-key",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/api-key.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/access/claude-coding-plan",
+      "to": "@eos/llm-client/src/access/access",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/claude-coding-plan.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/access/claude-coding-plan",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/claude-coding-plan.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/access/codex-coding-plan",
+      "to": "@eos/llm-client/src/access/access",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/codex-coding-plan.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/src/access/codex-coding-plan",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/access/codex-coding-plan.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/access/codex-coding-plan",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/access/codex-coding-plan.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/src/access/codex-coding-plan",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/access/codex-coding-plan.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/client",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/client.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/client",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/client.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/config",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/config.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/errors",
+      "to": "@anthropic-ai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/errors.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/errors",
+      "to": "openai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/errors.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/src/events",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/events.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/events",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/events.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/factory",
+      "to": "@eos/llm-client/src/client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/factory.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/factory",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/factory.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/factory",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/factory.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/factory",
+      "to": "@eos/llm-client/src/stream-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/factory.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/src/factory",
+      "to": "@eos/llm-client/src/wires/wire",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/factory.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/access/access",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/access/api-key",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/access/claude-coding-plan",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/access/codex-coding-plan",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "@eos/llm-client/src/wires/wire",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/src/profiles",
+      "to": "zod",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/retry",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/retry.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/retry",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/retry.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/src/retry",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/retry.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/src/retry",
+      "to": "node:timers",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/retry.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/secret",
+      "to": "node:util",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/secret.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/retry",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/src/stream-client",
+      "to": "@eos/llm-client/src/wires/wire",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/stream-client.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/src/types",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/types.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@anthropic-ai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/src/wires/anthropic-messages",
+      "to": "@eos/llm-client/src/wires/wire",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/anthropic-messages.ts",
+      "line": 18
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "@eos/llm-client/src/wires/wire",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 18
+    },
+    {
+      "from": "@eos/llm-client/src/wires/openai-responses",
+      "to": "openai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/wires/openai-responses.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/wires/wire",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/wire.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/wires/wire",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/wire.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/src/wires/wire",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/wire.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/src/wires/wire",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/wires/wire.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/api-key",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/claude-coding-plan",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/codex-coding-plan",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/tests/contract/llm-client-contract",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 14
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "@anthropic-ai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "openai",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/retry",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "node:util",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/support",
+      "to": "@eos/llm-client/src/events",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/support.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/support",
+      "to": "node:fs",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/support.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/stream-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 16
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/contracts",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/client",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "imports",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/stream-client",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 16
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "vitest",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts",
+      "to": "zod",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/engine",
+      "to": "@eos/contracts",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/engine",
+      "to": "@eos/llm-client",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/llm-client",
+      "to": "@anthropic-ai/sdk",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/llm-client",
+      "to": "@eos/contracts",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/llm-client",
+      "to": "openai",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/llm-client",
+      "to": "zod",
+      "kind": "package-depends-on"
+    },
+    {
+      "from": "@eos/contracts/src/index",
+      "to": "@eos/contracts/src/ids",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/index.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/contracts/src/index",
+      "to": "@eos/contracts/src/json",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/index.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts/src/index",
+      "to": "@eos/contracts/src/messages",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/contracts/src/index.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/conversation",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/events",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/run-handle",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 14
+    },
+    {
+      "from": "@eos/engine/src/index",
+      "to": "@eos/engine/src/tools",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/engine/src/index.ts",
+      "line": 19
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/client",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/config",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 2
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/events",
+      "kind": "reexports",
+      "typeOnly": true,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 16
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 17
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 18
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 22
+    },
+    {
+      "from": "@eos/llm-client/src/index",
+      "to": "@eos/llm-client/src/types",
+      "kind": "reexports",
+      "typeOnly": false,
+      "file": "packages/llm-client/src/index.ts",
+      "line": 23
+    },
+    {
+      "from": "@eos/contracts/src/ids#ToolUseIdSchema",
+      "to": "@eos/contracts/src/ids#ToolUseId",
+      "kind": "schema-infers-type",
+      "file": "packages/contracts/src/ids.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/contracts/src/messages#ContentBlockSchema",
+      "to": "@eos/contracts/src/messages#ContentBlock",
+      "kind": "schema-infers-type",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 48
+    },
+    {
+      "from": "@eos/contracts/src/messages#MessageRoleSchema",
+      "to": "@eos/contracts/src/messages#MessageRole",
+      "kind": "schema-infers-type",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 18
+    },
+    {
+      "from": "@eos/contracts/src/messages#MessageSchema",
+      "to": "@eos/contracts/src/messages#Message",
+      "kind": "schema-infers-type",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 55
+    },
+    {
+      "from": "@eos/contracts/src/messages#ToolSpecSchema",
+      "to": "@eos/contracts/src/messages#ToolSpec",
+      "kind": "schema-infers-type",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 64
+    },
+    {
+      "from": "@eos/llm-client/src/config#RetryConfigSchema",
+      "to": "@eos/llm-client/src/config#RetryConfig",
+      "kind": "schema-infers-type",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/src/config#StreamGuardConfigSchema",
+      "to": "@eos/llm-client/src/config#StreamGuardConfig",
+      "kind": "schema-infers-type",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 22
+    },
+    {
+      "from": "@eos/contracts/tests/contracts.test",
+      "to": "@eos/contracts/src/index",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/contracts/tests/contracts.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/contracts/tests/contracts.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/contracts/tests/contracts.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/engine/src/index",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "@eos/llm-client",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/agent-loop.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/agent-loop.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "@eos/engine/src/conversation",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/conversation.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/conversation.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "@eos/engine/src/events",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/events.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/events.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/engine/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/engine/tests/support.ts",
+      "line": 19
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/engine/src/index",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 20
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "@eos/llm-client",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/engine/tests/support.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/engine/tests/support",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/support.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/tool-runner",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/src/tools",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/tests/tool-runner.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/tool-runner.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/conversation",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/src/turn",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/engine/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "@eos/llm-client",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/engine/tests/turn.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/engine/tests/turn.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/api-key",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/claude-coding-plan",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/access/codex-coding-plan",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/access/coding-plan.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/access/coding-plan.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/tests/contract/llm-client-contract",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/contract.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/client",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/src/types",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 14
+    },
+    {
+      "from": "@eos/llm-client/tests/contract/llm-client-contract",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/contract/llm-client-contract.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "@anthropic-ai",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "openai",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/errors.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/errors.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 4
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/profiles",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/llm-client/tests/factory.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/factory.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/src/retry",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/retry.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/retry.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "node:util",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/secret-config.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/secret-config.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/support",
+      "to": "@eos/llm-client/src/events",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/support.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/support",
+      "to": "node:fs",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/support.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/client",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/stream-client",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/src/wires/anthropic-messages",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 16
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/anthropic-messages.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/anthropic-messages.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/contracts",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 3
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/client",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 5
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/config",
+      "kind": "tests",
+      "typeOnly": true,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 6
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/errors",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/factory",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 8
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/secret",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/stream-client",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 10
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/types",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/src/wires/openai-responses",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 11
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "@eos/llm-client/tests/support",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 16
+    },
+    {
+      "from": "@eos/llm-client/tests/wires/openai-responses.test",
+      "to": "vitest",
+      "kind": "tests",
+      "typeOnly": false,
+      "file": "packages/llm-client/tests/wires/openai-responses.test.ts",
+      "line": 1
+    },
+    {
+      "from": "@eos/contracts/src/ids#ToolUseId",
+      "to": "@eos/contracts/src/ids#ToolUseIdSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/ids.ts",
+      "line": 9
+    },
+    {
+      "from": "@eos/contracts/src/json#JsonObjectSchema",
+      "to": "@eos/contracts/src/json#JsonValueSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/json.ts",
+      "line": 26
+    },
+    {
+      "from": "@eos/contracts/src/messages#ContentBlock",
+      "to": "@eos/contracts/src/messages#ContentBlockSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 48
+    },
+    {
+      "from": "@eos/contracts/src/messages#ContentBlockSchema",
+      "to": "@eos/contracts/src/messages#ToolUseIdSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 26
+    },
+    {
+      "from": "@eos/contracts/src/messages#Message",
+      "to": "@eos/contracts/src/messages#MessageSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 55
+    },
+    {
+      "from": "@eos/contracts/src/messages#MessageRole",
+      "to": "@eos/contracts/src/messages#MessageRoleSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 18
+    },
+    {
+      "from": "@eos/contracts/src/messages#MessageSchema",
+      "to": "@eos/contracts/src/messages#ContentBlockSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 51
+    },
+    {
+      "from": "@eos/contracts/src/messages#MessageSchema",
+      "to": "@eos/contracts/src/messages#MessageRoleSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 51
+    },
+    {
+      "from": "@eos/contracts/src/messages#ToolSpec",
+      "to": "@eos/contracts/src/messages#ToolSpecSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 64
+    },
+    {
+      "from": "@eos/contracts/src/messages#ToolSpecSchema",
+      "to": "@eos/contracts/src/messages#JsonObjectSchema",
+      "kind": "uses-schema",
+      "file": "packages/contracts/src/messages.ts",
+      "line": 58
+    },
+    {
+      "from": "@eos/llm-client/src/config#RetryConfig",
+      "to": "@eos/llm-client/src/config#RetryConfigSchema",
+      "kind": "uses-schema",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/llm-client/src/config#RetryConfigInput",
+      "to": "@eos/llm-client/src/config#RetryConfigSchema",
+      "kind": "uses-schema",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 13
+    },
+    {
+      "from": "@eos/llm-client/src/config#StreamGuardConfig",
+      "to": "@eos/llm-client/src/config#StreamGuardConfigSchema",
+      "kind": "uses-schema",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 22
+    },
+    {
+      "from": "@eos/llm-client/src/config#StreamGuardConfigInput",
+      "to": "@eos/llm-client/src/config#StreamGuardConfigSchema",
+      "kind": "uses-schema",
+      "file": "packages/llm-client/src/config.ts",
+      "line": 23
+    },
+    {
+      "from": "@eos/llm-client/src/profiles#ProviderConnection",
+      "to": "@eos/llm-client/src/profiles#ProviderConnectionSchema",
+      "kind": "uses-schema",
+      "file": "packages/llm-client/src/profiles.ts",
+      "line": 50
+    }
+  ]
+}

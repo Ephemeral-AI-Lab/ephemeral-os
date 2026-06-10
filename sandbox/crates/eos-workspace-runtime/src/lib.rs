@@ -9,7 +9,7 @@ pub mod command_session;
 pub mod contract;
 pub mod ephemeral;
 pub mod isolated;
-pub mod run;
+mod run;
 
 pub use run::{IsolatedCommandHandle, WorkspaceRunHostPorts};
 

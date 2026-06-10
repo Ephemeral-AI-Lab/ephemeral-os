@@ -44,7 +44,7 @@ fn concurrent_conflicting_writes() -> Result<()> {
         .collect();
     let responses: Vec<Value> = handles
         .into_iter()
-        .map(|handle| handle.join().expect("writer thread panicked"))
+        .map(|handle| Ok(handle.join().expect("writer thread panicked")?))
         .collect::<Result<_>>()?;
     assert!(
         responses

@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/src/wires/openai-responses Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/src/wires/openai-responses</h1>
+          <p class="lede">packages/llm-client/src/wires/openai-responses.ts</p>
+          <div class="tags"><span>provider-wire</span><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>4</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>openai</code></td>
+      <td>OpenAI</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>toolUseIdFrom, type ContentBlock, type Message, type ToolSpec</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../errors.js</code></td>
+      <td>ProviderError</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../events.js</code></td>
+      <td>LlmStreamEvent, StopReason</td>
+      <td>type</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../types.js</code></td>
+      <td>LlmRequest, ReasoningEffort, ToolChoice, UsageSnapshot</td>
+      <td>type</td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./wire.js</code></td>
+      <td>parseToolArgs, type StreamDecoder, type WireFactory, type WireOptions</td>
+      <td>value</td>
+      <td>18</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>openai-responses.ts</code>
+        <small>7 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#OPENAI_EFFORT"><code>OPENAI_EFFORT</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal provider-wire</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#encodeMessageItems"><code>encodeMessageItems</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-wire</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#encodeTool"><code>encodeTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-wire</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#encodeToolChoice"><code>encodeToolChoice</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-wire</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#encodeOpenAiRequest"><code>encodeOpenAiRequest</code></a>
+            <span>function</span>
+            <span class="compact-tags">provider-wire public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#OpenAiDecoder"><code>OpenAiDecoder</code></a>
+            <span>class</span>
+            <span class="compact-tags">internal provider-wire</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#openAiResponsesWire"><code>openAiResponsesWire</code></a>
+            <span>const</span>
+            <span class="compact-tags">provider-wire public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="OPENAI_EFFORT" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OPENAI_EFFORT</strong>
+          <span>const · line 26 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#OPENAI_EFFORT">Module</a>
+      </div>
+      <pre><code>const OPENAI_EFFORT: Record&lt; ReasoningEffort, &quot;minimal&quot; | &quot;low&quot; | &quot;medium&quot; | &quot;high&quot; &gt; = { minimal: &quot;minimal&quot;, low: &quot;low&quot;, medium: &quot;medium&quot;, high: &quot;high&quot;, max: &quot;high&quot;, }</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-wire</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="encodeMessageItems" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>encodeMessageItems</strong>
+          <span>function · line 43 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#encodeMessageItems">Module</a>
+      </div>
+      <pre><code>function encodeMessageItems( message: Message, ): OpenAI.Responses.ResponseInputItem[]</code></pre>
+      <p>Project one neutral message onto responses input items: a `message` item
+for its text parts (if any), plus `function_call`/`function_call_output`
+items for tool calls and results. Reasoning is provider-managed and
+dropped on encode (§5 caveat 1).</p>
+      <div class="tags"><span>internal</span><span>provider-wire</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="encodeTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>encodeTool</strong>
+          <span>function · line 85 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#encodeTool">Module</a>
+      </div>
+      <pre><code>function encodeTool(spec: ToolSpec): OpenAI.Responses.Tool</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-wire</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="encodeToolChoice" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>encodeToolChoice</strong>
+          <span>function · line 102 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#encodeToolChoice">Module</a>
+      </div>
+      <pre><code>function encodeToolChoice( choice: ToolChoice, dialect: WireOptions[&quot;dialect&quot;], ): OpenAI.Responses.ResponseCreateParams[&quot;tool_choice&quot;]</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-wire</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="encodeOpenAiRequest" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>encodeOpenAiRequest</strong>
+          <span>function · line 114 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#encodeOpenAiRequest">Module</a>
+      </div>
+      <pre><code>export function encodeOpenAiRequest( request: LlmRequest, options: WireOptions =</code></pre>
+      <p>Project a neutral request onto `POST /v1/responses` streaming params.</p>
+      <div class="tags"><span>dto</span><span>exported</span><span>provider-wire</span><span>public-api</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="OpenAiDecoder" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OpenAiDecoder</strong>
+          <span>class · line 154 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#OpenAiDecoder">Module</a>
+      </div>
+      <pre><code>class OpenAiDecoder implements StreamDecoder&lt;OpenAI.Responses.ResponseStreamEvent&gt;</code></pre>
+      <p>The responses-stream state machine. Text deltas stream from
+`response.output_text.delta`, reasoning summaries from
+`response.reasoning_summary_text.delta`, function calls assemble from
+`response.output_item.added` plus argument deltas keyed by `item_id` and
+close at `response.function_call_arguments.done`, and the terminus is the
+completed (or incomplete) response snapshot. Unknown event types are
+ignored (forward compatibility).</p>
+      <div class="tags"><span>internal</span><span>provider-wire</span><span>sdk-edge</span><span>stateful</span></div>
+
+    <h3>Heritage</h3>
+    <p>StreamDecoder</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>completed</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#requestId</code></td>
+              <td><code>string | undefined</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#items</code></td>
+              <td><code>new Map&lt; string, { callId: string; name: string; args: string } &gt;()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#tools</code></td>
+              <td><code>ContentBlock[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#text</code></td>
+              <td><code>&quot;&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#reasoning</code></td>
+              <td><code>&quot;&quot;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>*handle( event: OpenAI.Responses.ResponseStreamEvent, ): Iterable&lt;LlmStreamEvent&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#complete</code></td>
+              <td><code>#complete(response: OpenAI.Responses.Response): LlmStreamEvent</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#deriveStopReason</code></td>
+              <td><code>#deriveStopReason( response: OpenAI.Responses.Response, ): StopReason | undefined</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="openAiResponsesWire" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>openAiResponsesWire</strong>
+          <span>const · line 296 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-wires-openai-responses.html#openAiResponsesWire">Module</a>
+      </div>
+      <pre><code>export const openAiResponsesWire: WireFactory = (transport) =&gt; { const sdk = new OpenAI({ // Credentials are always explicit; sdk env-var fallback is not used. // Both credential kinds map onto Authorization: Bearer. ...</code></pre>
+
+      <div class="tags"><span>exported</span><span>provider-wire</span><span>public-api</span><span>sdk-edge</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>implements</td>
+      <td><code>@eos/llm-client/src/wires/openai-responses#OpenAiDecoder</code></td>
+      <td><code>StreamDecoder</code></td>
+      <td>154</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>@eos/llm-client/src/errors</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>@eos/llm-client/src/events</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>@eos/llm-client/src/types</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>@eos/llm-client/src/wires/wire</code></td>
+      <td>18</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/src/wires/openai-responses</code></td>
+      <td><code>openai</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

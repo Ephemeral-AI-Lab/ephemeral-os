@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/src/config Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/src/config</h1>
+          <p class="lede">packages/llm-client/src/config.ts</p>
+          <div class="tags"><span>config</span><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Schemas</dt><dd>2</dd></div>
+          <div><dt>Types</dt><dd>4</dd></div>
+          <div><dt>Functions</dt><dd>0</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>config.ts</code>
+        <small>7 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#RetryConfigSchema"><code>RetryConfigSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">config public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RetryConfig"><code>RetryConfig</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RetryConfigInput"><code>RetryConfigInput</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#StreamGuardConfigSchema"><code>StreamGuardConfigSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">config public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#StreamGuardConfig"><code>StreamGuardConfig</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#StreamGuardConfigInput"><code>StreamGuardConfigInput</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ProviderClientOptions"><code>ProviderClientOptions</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="RetryConfigSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RetryConfigSchema</strong>
+          <span>schema · line 4 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#RetryConfigSchema">Module</a>
+      </div>
+      <pre><code>export const RetryConfigSchema = z.object({ max_retries: z.number().int().min(0).default(3), base_delay_s: z.number().min(0).default(1), max_delay_s: z.number().min(0).default(30), status_codes: z .array(z.number().in...</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span><span>retry</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>max_retries</code></td>
+              <td><code>z.number().int().min(0).default(3)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>base_delay_s</code></td>
+              <td><code>z.number().min(0).default(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>max_delay_s</code></td>
+              <td><code>z.number().min(0).default(30)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>status_codes</code></td>
+              <td><code>z .array(z.number().int()) .default([429, 500, 502, 503, 529])</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="RetryConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RetryConfig</strong>
+          <span>type · line 12 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#RetryConfig">Module</a>
+      </div>
+      <pre><code>export type RetryConfig = z.infer&lt;typeof RetryConfigSchema&gt;</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span><span>retry</span><span>type:inferred</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RetryConfigInput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RetryConfigInput</strong>
+          <span>type · line 13 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#RetryConfigInput">Module</a>
+      </div>
+      <pre><code>export type RetryConfigInput = z.input&lt;typeof RetryConfigSchema&gt;</code></pre>
+
+      <div class="tags"><span>config</span><span>dto</span><span>exported</span><span>public-api</span><span>retry</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="StreamGuardConfigSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>StreamGuardConfigSchema</strong>
+          <span>schema · line 19 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#StreamGuardConfigSchema">Module</a>
+      </div>
+      <pre><code>export const StreamGuardConfigSchema = z.object({ idle_timeout_s: z.number().min(0).default(90), })</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>idle_timeout_s</code></td>
+              <td><code>z.number().min(0).default(90)</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="StreamGuardConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>StreamGuardConfig</strong>
+          <span>type · line 22 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#StreamGuardConfig">Module</a>
+      </div>
+      <pre><code>export type StreamGuardConfig = z.infer&lt;typeof StreamGuardConfigSchema&gt;</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span><span>type:inferred</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="StreamGuardConfigInput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>StreamGuardConfigInput</strong>
+          <span>type · line 23 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#StreamGuardConfigInput">Module</a>
+      </div>
+      <pre><code>export type StreamGuardConfigInput = z.input&lt;typeof StreamGuardConfigSchema&gt;</code></pre>
+
+      <div class="tags"><span>config</span><span>dto</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ProviderClientOptions" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ProviderClientOptions</strong>
+          <span>interface · line 26 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-config.html#ProviderClientOptions">Module</a>
+      </div>
+      <pre><code>export interface ProviderClientOptions</code></pre>
+      <p>Construction options shared by every provider client (never serialized).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>retry</code></td>
+              <td><code>RetryConfigInput</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>streamGuard</code></td>
+              <td><code>StreamGuardConfigInput</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>fetch</code></td>
+              <td><code>typeof globalThis.fetch</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/src/config</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/llm-client/src/config#RetryConfigSchema</code></td>
+      <td><code>@eos/llm-client/src/config#RetryConfig</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfigSchema</code></td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfig</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/llm-client/src/config#RetryConfig</code></td>
+      <td><code>@eos/llm-client/src/config#RetryConfigSchema</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/llm-client/src/config#RetryConfigInput</code></td>
+      <td><code>@eos/llm-client/src/config#RetryConfigSchema</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfig</code></td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfigSchema</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfigInput</code></td>
+      <td><code>@eos/llm-client/src/config#StreamGuardConfigSchema</code></td>
+      <td>23</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -89,7 +89,7 @@ fn spawn_background_plugin_query(
     let caller_id = lease.caller_id().to_owned();
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
-        client.request(
+        Ok(client.request(
             "plugin.daemonplug.query",
             &invocation_id,
             &json!({
@@ -99,7 +99,7 @@ fn spawn_background_plugin_query(
                 "sleep_s": 4,
                 "request": "daemon-background-control"
             }),
-        )
+        )?)
     })
 }
 

@@ -7,9 +7,11 @@ license.workspace = true
 description = "Protocol-only sandbox correctness/pressure suite: drives a live eosd over eos-protocol."
 
 [dependencies]
-# The ONLY operation interface: raw eos-protocol envelopes against a live eosd.
+# The ONLY operation interface: the eos-sandbox-host wire client against a
+# live eosd; eos-protocol supplies the op-name catalog for tests.
 eos-config = { workspace = true }
 eos-protocol = { workspace = true }
+eos-sandbox-host = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 # Test-edge orchestration error type (binary/test boundary, per Rust guidance).

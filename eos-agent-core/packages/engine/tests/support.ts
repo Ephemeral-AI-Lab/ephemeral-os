@@ -148,7 +148,7 @@ export function toolUseBlock(
   id: string,
   name: string,
   input: JsonObject = {},
-): ContentBlock {
+): Extract<ContentBlock, { type: "tool_use" }> {
   return { type: "tool_use", tool_use_id: toolUseIdFrom(id), name, input };
 }
 
@@ -201,7 +201,7 @@ export function deferred<T = void>(): Deferred<T> {
 }
 
 /** Rejects when the signal aborts; classification stays on `signal.aborted`. */
-export function rejectOnAbort(signal: AbortSignal | undefined): Promise<never> {
+function rejectOnAbort(signal: AbortSignal | undefined): Promise<never> {
   return new Promise((_resolve, reject) => {
     if (!signal) return;
     const fail = (): void => {
@@ -227,8 +227,6 @@ export interface StartMockRunOptions {
   tools?: ToolRegistry;
   maxTurns?: number;
   signal?: AbortSignal;
-  initialMessages?: Message[];
-  systemPrompt?: string;
 }
 
 /** Start a run over scripted turns with small defaults. */
@@ -241,8 +239,7 @@ export function startMockRun(
     llmClient: client,
     tools: options.tools ?? new Map<string, ToolDefinition>(),
     model: "mock-model",
-    systemPrompt: options.systemPrompt,
-    initialMessages: options.initialMessages ?? [userText("hi")],
+    initialMessages: [userText("hi")],
     maxTokens: 1024,
     maxTurns: options.maxTurns,
     signal: options.signal,
@@ -266,9 +263,9 @@ export function collectEvents(handle: AgentRunHandle): {
 
 // --- assertions -----------------------------------------------------------------
 
-export function must<T>(value: T | undefined | null, label = "value"): T {
+export function must<T>(value: T | undefined | null): T {
   if (value === undefined || value === null) {
-    throw new Error(`expected ${label} to be present`);
+    throw new Error("expected a value to be present");
   }
   return value;
 }

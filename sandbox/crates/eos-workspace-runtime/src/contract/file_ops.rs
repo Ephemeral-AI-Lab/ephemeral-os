@@ -369,10 +369,7 @@ fn insert_total(timings: &mut WorkspaceTimings, verb: &str, start: Instant) {
 /// Search/replace failure. Message strings are part of the public conflict
 /// contract and match `eos-protocol`.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[non_exhaustive]
-pub enum SearchReplaceError {
-    #[error("edit anchor old_text must be non-empty")]
-    EmptyAnchor,
+enum SearchReplaceError {
     #[error("anchor not found")]
     NotFound,
     #[error("anchor occurrence count mismatch")]
@@ -381,27 +378,19 @@ pub enum SearchReplaceError {
 
 const fn search_replace_message(err: &SearchReplaceError) -> &'static str {
     match err {
-        SearchReplaceError::EmptyAnchor => "edit anchor old_text must be non-empty",
         SearchReplaceError::NotFound => "anchor not found",
         SearchReplaceError::CountMismatch => "anchor occurrence count mismatch",
     }
 }
 
-/// Apply one search/replace edit with Rust `str.count` semantics.
-///
-/// # Errors
-///
-/// Returns [`SearchReplaceError`] when the anchor is empty, absent, or ambiguous
-/// with `replace_all=false`.
-pub fn apply_search_replace(
+/// Apply one search/replace edit with Rust `str.count` semantics. The anchor is
+/// non-empty: `edit_file` rejects empty anchors before calling this.
+fn apply_search_replace(
     text: &str,
     old: &str,
     new: &str,
     replace_all: bool,
 ) -> Result<String, SearchReplaceError> {
-    if old.is_empty() {
-        return Err(SearchReplaceError::EmptyAnchor);
-    }
     let count = text.matches(old).count();
     if replace_all {
         if count == 0 {

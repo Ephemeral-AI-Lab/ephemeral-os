@@ -7,18 +7,8 @@ import {
   type ToolSpec,
 } from "@eos/contracts";
 
-import type { LlmClient, LlmStreamOptions } from "../client.js";
-import {
-  AnthropicApiConfigSchema,
-  RetryConfigSchema,
-  StreamGuardConfigSchema,
-  type AnthropicApiConfigInput,
-  type ProviderClientOptions,
-  type RetryConfig,
-} from "../config.js";
 import { ProviderError } from "../errors.js";
 import type { LlmStreamEvent, StopReason } from "../events.js";
-import { retryStream } from "../retry.js";
 import type {
   LlmRequest,
   ReasoningEffort,
@@ -27,9 +17,10 @@ import type {
 } from "../types.js";
 import {
   parseToolArgs,
-  runAttempt,
   type StreamDecoder,
-} from "./attempt.js";
+  type WireFactory,
+  type WireOptions,
+} from "./wire.js";
 
 /** §5 effort clamp: the messages api has no `minimal`, `max` is native. */
 const ANTHROPIC_EFFORT: Record<
@@ -97,6 +88,7 @@ function encodeToolChoice(choice: ToolChoice): Anthropic.ToolChoice {
 /** Project a neutral request onto `POST /v1/messages` streaming params. */
 export function encodeAnthropicRequest(
   request: LlmRequest,
+  options: WireOptions = {},
 ): Anthropic.MessageCreateParamsStreaming {
   const params: Anthropic.MessageCreateParamsStreaming = {
     model: request.model,
@@ -104,7 +96,17 @@ export function encodeAnthropicRequest(
     messages: request.messages.map(encodeMessage),
     stream: true,
   };
-  if (request.system_prompt !== undefined) {
+  if (options.systemPrefix !== undefined) {
+    // The identity text is the first system block; the request's own system
+    // prompt follows as a second block.
+    const system: Anthropic.TextBlockParam[] = [
+      { type: "text", text: options.systemPrefix },
+    ];
+    if (request.system_prompt !== undefined) {
+      system.push({ type: "text", text: request.system_prompt });
+    }
+    params.system = system;
+  } else if (request.system_prompt !== undefined) {
     params.system = request.system_prompt;
   }
   if (request.tools.length > 0) {
@@ -264,56 +266,35 @@ class AnthropicDecoder implements StreamDecoder<Anthropic.RawMessageStreamEvent>
   }
 }
 
-/** The Anthropic Messages streaming client. */
-export class AnthropicApiClient implements LlmClient {
-  readonly #sdk: Anthropic;
-  readonly #retry: RetryConfig;
-  readonly #idleTimeoutMs: number;
-
-  constructor(
-    config: AnthropicApiConfigInput,
-    options: ProviderClientOptions = {},
-  ) {
-    const { base_url, api_key } = AnthropicApiConfigSchema.parse(config);
-    this.#retry = RetryConfigSchema.parse(options.retry ?? {});
-    this.#idleTimeoutMs =
-      StreamGuardConfigSchema.parse(options.streamGuard ?? {}).idle_timeout_s *
-      1000;
-    this.#sdk = new Anthropic({
-      // Credentials are always explicit; sdk env-var fallback is not used.
-      apiKey: api_key.expose(),
-      baseURL: base_url,
-      // The retry gate is the single retry-policy owner.
-      maxRetries: 0,
-      // The sdk parse-failure path echoes frame content through its logger;
-      // provider frames must stay out of logs.
-      logLevel: "off",
-      ...(options.fetch !== undefined ? { fetch: options.fetch } : {}),
-    });
-  }
-
-  streamMessage(
-    request: LlmRequest,
-    options?: LlmStreamOptions,
-  ): AsyncIterable<LlmStreamEvent> {
-    const params = encodeAnthropicRequest(request);
-    const attempt = () =>
-      runAttempt(
-        {
-          open: async (signal) => {
-            const { data, response } = await this.#sdk.messages
-              .create(params, { signal })
-              .withResponse();
-            return {
-              stream: data,
-              requestId: response.headers.get("request-id") ?? undefined,
-            };
-          },
-          decoder: (requestId) => new AnthropicDecoder(requestId),
-        },
-        this.#idleTimeoutMs,
-        options?.signal,
-      );
-    return retryStream(this.#retry, attempt, options?.signal);
-  }
-}
+/** The Anthropic Messages wire: one sdk client per connection. */
+export const anthropicMessagesWire: WireFactory = (transport) => {
+  const { kind, secret } = transport.credential;
+  const sdk = new Anthropic({
+    // Credentials are always explicit; sdk env-var fallback is not used.
+    // api_key maps to x-api-key, bearer to Authorization: Bearer.
+    apiKey: kind === "api_key" ? secret.expose() : null,
+    authToken: kind === "bearer" ? secret.expose() : null,
+    baseURL: transport.baseUrl,
+    // The retry gate is the single retry-policy owner.
+    maxRetries: 0,
+    // The sdk parse-failure path echoes frame content through its logger;
+    // provider frames must stay out of logs.
+    logLevel: "off",
+    ...(transport.fetch !== undefined ? { fetch: transport.fetch } : {}),
+  });
+  return {
+    async open(request, options, signal) {
+      const { data, response } = await sdk.messages
+        .create(encodeAnthropicRequest(request, options), {
+          signal,
+          headers: await transport.headers(),
+        })
+        .withResponse();
+      return {
+        stream: data,
+        requestId: response.headers.get("request-id") ?? undefined,
+      };
+    },
+    decoder: (requestId) => new AnthropicDecoder(requestId),
+  };
+};

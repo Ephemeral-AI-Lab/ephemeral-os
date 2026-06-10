@@ -11,9 +11,10 @@ use std::process::{Command, Stdio};
 use eos_overlay::overlay_writable_root;
 use eos_protocol::LayerChange;
 use eos_runner::{RunRequest, RunResult};
+use eos_workspace_runtime::contract::SnapshotLease;
 use eos_workspace_runtime::ephemeral::{
-    EphemeralDirAllocator, EphemeralRunDirs, EphemeralWorkspaceError, InvocationId, PathChange,
-    PublishOutcome, SnapshotLease, WorkspacePublisherPort, WorkspaceRoot,
+    EphemeralDirAllocator, EphemeralRunDirs, EphemeralWorkspaceError, InvocationId, LayerStackRoot,
+    PathChange, PublishOutcome, WorkspacePublisherPort,
 };
 
 use crate::adapters::occ::{
@@ -23,9 +24,7 @@ use crate::adapters::occ::{
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
-pub(crate) use convert::{
-    changeset_from_publish_outcome, ephemeral_daemon_error, path_changes_to_wire,
-};
+pub(crate) use convert::{changeset_from_publish_outcome, ephemeral_daemon_error};
 use convert::{manifest_from_snapshot, overlay_daemon_error, publish_outcome_from_changeset};
 
 pub(crate) use eos_workspace_runtime::ephemeral::RunDirCleanup;
@@ -50,7 +49,7 @@ impl<'a> DaemonPublisherPort<'a> {
 impl WorkspacePublisherPort for DaemonPublisherPort<'_> {
     fn publish_upperdir_changes(
         &self,
-        _root: &WorkspaceRoot,
+        _root: &LayerStackRoot,
         snapshot: &SnapshotLease,
         changes: &[LayerChange],
         _path_kinds: &[PathChange],

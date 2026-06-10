@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/tests/access/coding-plan.test Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/tests/access/coding-plan.test</h1>
+          <p class="lede">packages/llm-client/tests/access/coding-plan.test.ts</p>
+          <div class="tags"><span>access-boundary</span><span>test</span><span>test-only</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>1</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/access/api-key.js</code></td>
+      <td>apiKeyAccess</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/access/claude-coding-plan.js</code></td>
+      <td>claudeCodingPlanAccess</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/access/codex-coding-plan.js</code></td>
+      <td>codexAccessClaimsFromJwt, codexCodingPlanAccess</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/errors.js</code></td>
+      <td>ProviderError</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/secret.js</code></td>
+      <td>SecretString</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>coding-plan.test.ts</code>
+        <small>1 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#jwtWithAuthClaim"><code>jwtWithAuthClaim</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="jwtWithAuthClaim" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>jwtWithAuthClaim</strong>
+          <span>function · line 13 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-tests-access-coding-plan-test.html#jwtWithAuthClaim">Module</a>
+      </div>
+      <pre><code>function jwtWithAuthClaim(accountId: string | undefined, fedramp: boolean): string</code></pre>
+      <p>Mirror of the Rust test helper: a jwt whose payload carries the auth claim.</p>
+      <div class="tags"><span>access-boundary</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/api-key</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/claude-coding-plan</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/codex-coding-plan</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/errors</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/secret</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/api-key</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/claude-coding-plan</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/access/codex-coding-plan</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/errors</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>@eos/llm-client/src/secret</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/llm-client/tests/access/coding-plan.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

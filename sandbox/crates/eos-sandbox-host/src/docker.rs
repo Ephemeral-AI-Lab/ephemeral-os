@@ -1,4 +1,4 @@
-//! Docker CLI/API helpers for the live E2E harness.
+//! Docker CLI/Engine-API plumbing for the host engine.
 
 use std::fmt::Write as FmtWrite;
 use std::fs;
@@ -9,10 +9,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use sha2::{Digest, Sha256};
 
-use crate::config::Config;
-use crate::container::POOL_LABEL;
 use crate::tar::tar_single_file;
 
 /// Run `docker <args...>`, returning trimmed stdout. Errors include stderr.
@@ -52,6 +49,38 @@ fn docker_str(args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 
+/// IDs of running containers matching every `--filter label=...` expression
+/// (best effort: docker failures yield an empty list).
+#[must_use]
+pub fn running_container_ids(label_filters: &[String]) -> Vec<String> {
+    let mut args = vec!["ps".to_owned(), "-q".to_owned()];
+    for filter in label_filters {
+        args.push("--filter".to_owned());
+        args.push(format!("label={filter}"));
+    }
+    let Ok(out) = docker(&args) else {
+        return Vec::new();
+    };
+    out.split_whitespace().map(str::to_owned).collect()
+}
+
+/// The value of one label on a container, when present and non-empty.
+///
+/// # Errors
+/// Returns an error if docker inspect fails or the label is absent.
+pub fn container_label(id: &str, label: &str) -> Result<String> {
+    let value = docker(&[
+        "inspect".to_owned(),
+        "-f".to_owned(),
+        format!("{{{{ index .Config.Labels \"{label}\" }}}}"),
+        id.to_owned(),
+    ])?;
+    if value.is_empty() || value == "<no value>" {
+        bail!("missing {label} label on {id}");
+    }
+    Ok(value)
+}
+
 pub(crate) fn put_archive_file(
     container: &str,
     dest_dir: &str,
@@ -80,31 +109,6 @@ pub(crate) fn path_str(path: &Path) -> Result<String> {
     path.to_str()
         .map(str::to_owned)
         .with_context(|| format!("container path is not UTF-8: {}", path.display()))
-}
-
-pub(crate) fn runtime_digest(config: &Config, config_yaml: &str) -> Result<String> {
-    let mut hasher = Sha256::new();
-    hasher.update(config_yaml.as_bytes());
-    hasher.update(b"\0eosd\0");
-    let eosd = fs::read(&config.eosd_path).with_context(|| {
-        format!(
-            "read eosd binary for digest: {}",
-            config.eosd_path.display()
-        )
-    })?;
-    hasher.update(eosd);
-    Ok(hex_lower(&hasher.finalize()))
-}
-
-fn hex_lower(bytes: &[u8]) -> String {
-    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
-
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        out.push(char::from(LOWER_HEX[usize::from(byte >> 4)]));
-        out.push(char::from(LOWER_HEX[usize::from(byte & 0x0f)]));
-    }
-    out
 }
 
 #[cfg(unix)]
@@ -136,7 +140,7 @@ fn docker_put_archive(
     let request = format!(
         "PUT {request_path} HTTP/1.1\r\n\
          Host: docker\r\n\
-         User-Agent: eos-e2e-test\r\n\
+         User-Agent: eos-sandbox-host\r\n\
          Content-Type: application/x-tar\r\n\
          Content-Length: {}\r\n\
          Connection: close\r\n\
@@ -267,19 +271,20 @@ pub fn docker_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Remove all `eos-e2e-*` containers left by prior harness runs.
+/// Remove all containers (running or exited) carrying `label`, returning how
+/// many were removed.
 ///
 /// # Errors
 /// Returns an error if Docker is reachable but listing or removing containers
 /// fails.
-pub fn reap_e2e_containers() -> Result<usize> {
+pub fn remove_labeled_containers(label: &str) -> Result<usize> {
     let out = Command::new("docker")
-        .args(["ps", "-aq", "--filter", &format!("label={POOL_LABEL}")])
+        .args(["ps", "-aq", "--filter", &format!("label={label}")])
         .output()
-        .context("list eos-e2e containers")?;
+        .with_context(|| format!("list {label} containers"))?;
     if !out.status.success() {
         bail!(
-            "docker ps for eos-e2e containers failed ({}): {}",
+            "docker ps for {label} containers failed ({}): {}",
             out.status,
             String::from_utf8_lossy(&out.stderr).trim()
         );
@@ -296,7 +301,7 @@ pub fn reap_e2e_containers() -> Result<usize> {
     let output = Command::new("docker")
         .args(&argv)
         .output()
-        .context("remove eos-e2e containers")?;
+        .with_context(|| format!("remove {label} containers"))?;
     if !output.status.success() {
         bail!(
             "docker {} failed ({}): {}",
@@ -310,17 +315,11 @@ pub fn reap_e2e_containers() -> Result<usize> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use std::path::PathBuf;
-    use std::time::Duration;
-
-    use anyhow::Result;
-
-    use crate::config::{Config, NodeMode, WorkloadConfig};
 
     use super::{
-        docker_exec_args, docker_http_status, docker_unix_socket_from_host, percent_encode,
-        runtime_digest,
+        docker_exec_args, docker_http_status, docker_unix_socket_from_host, parse_published_addr,
+        percent_encode,
     };
 
     #[test]
@@ -359,73 +358,12 @@ mod tests {
         );
     }
 
-    fn digest_test_config(eosd_path: PathBuf) -> Config {
-        Config {
-            image: "image".to_owned(),
-            platform: None,
-            eosd_path,
-            remote_daemon_dir: PathBuf::from("/eos/runtime/daemon"),
-            remote_eosd_path: PathBuf::from("/eos/runtime/daemon/eosd"),
-            root_dir: PathBuf::from("/eos/state/e2e"),
-            cap_add: Vec::new(),
-            security_opt: Vec::new(),
-            tmpfs: Vec::new(),
-            tcp_port: 37_657,
-            sandboxes: 1,
-            mode: NodeMode::Pool,
-            recycle_after: 50,
-            ready_timeout: Duration::from_secs(1),
-            request_timeout: Duration::from_secs(1),
-            base_build_timeout: Duration::from_secs(1),
-            workspace_root: "/testbed".to_owned(),
-            keep_container: true,
-            non_kept_container_ttl: Duration::from_secs(60),
-            audit_pull_limit: 100,
-            workload: WorkloadConfig {
-                concurrency_levels: vec![1, 3, 6, 12],
-                write_iterations: 1,
-                sample_count: 1,
-                perf_artifact_dir: PathBuf::from("target/e2e-perf"),
-                timeout: Duration::from_secs(1),
-            },
-        }
-    }
-
     #[test]
-    fn runtime_digest_tracks_config_and_eosd_bytes() -> Result<()> {
-        let root =
-            std::env::temp_dir().join(format!("eos-e2e-runtime-digest-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(&root)?;
-        let eosd_path = root.join("eosd");
-        fs::write(&eosd_path, b"daemon-v1")?;
-        let config = digest_test_config(eosd_path);
-        let baseline = runtime_digest(
-            &config,
-            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
-        )?;
-        let override_digest = runtime_digest(
-            &config,
-            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n",
-        )?;
-
+    fn published_addr_parses_loopback_port() {
         assert_eq!(
-            baseline,
-            runtime_digest(
-                &config,
-                "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
-            )?
+            parse_published_addr("0.0.0.0:54321"),
+            Some("127.0.0.1:54321".parse().expect("addr"))
         );
-        assert_eq!(baseline.len(), 64);
-        assert_ne!(baseline, override_digest);
-        fs::write(&config.eosd_path, b"daemon-v2")?;
-        let rebuilt_digest = runtime_digest(
-            &config,
-            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
-        )?;
-        assert_ne!(baseline, rebuilt_digest);
-
-        let _ = fs::remove_dir_all(root);
-        Ok(())
+        assert_eq!(parse_published_addr("garbage"), None);
     }
 }

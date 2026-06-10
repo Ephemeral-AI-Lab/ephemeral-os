@@ -1,0 +1,17 @@
+[package]
+name = "eos-sandbox-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+# preserve_order is load-bearing: request args must cross the wire in
+# insertion order so host-encoded envelopes stay byte-compatible with the
+# frozen request fixtures in contract/fixtures/envelopes/.
+serde_json = { workspace = true, features = ["preserve_order"] }
+thiserror.workspace = true
+
+[lints]
+workspace = true

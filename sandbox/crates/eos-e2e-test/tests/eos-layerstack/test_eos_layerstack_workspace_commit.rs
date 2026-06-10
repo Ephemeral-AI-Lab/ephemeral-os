@@ -505,7 +505,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
 
     let writer_responses: Vec<Value> = writer_handles
         .into_iter()
-        .map(|handle| handle.join().expect("commit-race writer panicked"))
+        .map(|handle| Ok(handle.join().expect("commit-race writer panicked")?))
         .collect::<Result<_>>()?;
     let commit_response = committer.join().expect("commit-race committer panicked")?;
 

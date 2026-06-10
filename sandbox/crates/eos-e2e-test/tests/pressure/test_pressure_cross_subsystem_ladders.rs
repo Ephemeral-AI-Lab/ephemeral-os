@@ -172,7 +172,7 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || -> Result<Value> {
                 barrier.wait();
-                client.request(
+                Ok(client.request(
                     ops::API_V1_WRITE_FILE,
                     &format!("occ-merge-{index}"),
                     &json!({
@@ -182,7 +182,7 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
                         "content": format!("merge-{index}\n"),
                         "overwrite": true
                     }),
-                )
+                )?)
             })
         })
         .collect();

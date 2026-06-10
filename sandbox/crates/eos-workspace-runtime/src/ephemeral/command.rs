@@ -11,16 +11,15 @@ use std::path::PathBuf;
 
 use crate::contract::{
     u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest,
-    PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    PrepareCommandRequest, PreparedCommandWorkspace, SnapshotLease, WorkspaceApiError,
+    WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
 };
 use serde_json::{json, Value};
 
 use crate::ephemeral::{
-    finalize_publishable_workspace, CallerId, EphemeralDirAllocator, EphemeralRunDirs,
-    EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, InvocationId, PathChange,
-    PathChangeKind, PublishOutcome, SnapshotLease, TreeResourceStats, WorkspacePublisherPort,
-    WorkspaceRoot,
+    finalize_publishable_workspace, path_changes_to_wire, CallerId, EphemeralDirAllocator,
+    EphemeralRunDirs, EphemeralWorkspace, EphemeralWorkspaceError, FinalizeRequest, InvocationId,
+    LayerStackRoot, PublishOutcome, TreeResourceStats, WorkspacePublisherPort,
 };
 
 /// Daemon-supplied facts needed to prepare a publishable command workspace.
@@ -78,13 +77,11 @@ pub fn prepare_ephemeral_command(
         .map_err(prepare_error)?,
     )
     .map_err(prepare_error)?;
-    let mut dirs = EphemeralDirAllocator::new(context.writable_root)
+    let dirs = EphemeralDirAllocator::new(context.writable_root)
         .allocate("sandbox-overlay", &InvocationId(invocation_id.clone()))
         .map_err(prepare_workspace_error)?;
-    dirs.output_path = dirs.run_dir.join("command-runner-result.json");
+    let output_path = dirs.run_dir.join("command-runner-result.json");
     let request_path = dirs.run_dir.join("command-runner-request.json");
-    dirs.request_path = Some(request_path.clone());
-    dirs.final_path = context.final_path.clone();
 
     let run_request = json!({
         "mode": "fresh_ns",
@@ -111,13 +108,13 @@ pub fn prepare_ephemeral_command(
     let prepared = PreparedCommandWorkspace {
         run_request,
         request_path,
-        output_path: dirs.output_path.clone(),
+        output_path,
         final_path: context.final_path,
         session_dir: context.session_dir.clone(),
         transcript_path: context.session_dir.join("transcript.log"),
     };
     let workspace = EphemeralWorkspace {
-        layer_stack_root: WorkspaceRoot(context.layer_stack_root),
+        layer_stack_root: LayerStackRoot(context.layer_stack_root),
         workspace_root: context.workspace_root,
         caller_id: CallerId(caller_id),
         invocation_id: InvocationId(invocation_id),
@@ -276,27 +273,6 @@ fn publish_files(outcome: &PublishOutcome) -> Result<Vec<PublishFile>, Workspace
             })
         })
         .collect()
-}
-
-fn path_changes_to_wire(path_changes: &[PathChange]) -> Vec<(String, String)> {
-    path_changes
-        .iter()
-        .map(|change| {
-            (
-                change.path.clone(),
-                path_change_kind_wire(change.kind).to_owned(),
-            )
-        })
-        .collect()
-}
-
-const fn path_change_kind_wire(kind: PathChangeKind) -> &'static str {
-    match kind {
-        PathChangeKind::Write => "write",
-        PathChangeKind::Delete => "delete",
-        PathChangeKind::Symlink => "symlink",
-        PathChangeKind::OpaqueDir => "opaque_dir",
-    }
 }
 
 fn status_is_published(status: &str) -> bool {

@@ -4,23 +4,20 @@ use std::path::PathBuf;
 use eos_protocol::LayerChange;
 
 use super::*;
-use crate::ephemeral::{EphemeralRunDirs, PublishStatus};
+use crate::ephemeral::{EphemeralRunDirs, PathChange};
 
 struct FakePublisher;
 
 impl WorkspacePublisherPort for FakePublisher {
     fn publish_upperdir_changes(
         &self,
-        _root: &WorkspaceRoot,
+        _root: &LayerStackRoot,
         _snapshot: &SnapshotLease,
         changes: &[LayerChange],
         _path_kinds: &[PathChange],
     ) -> Result<PublishOutcome, EphemeralWorkspaceError> {
         Ok(PublishOutcome {
-            status: PublishStatus::Published,
-            manifest_version: Some(8),
             published_paths: vec!["result.txt".to_owned()],
-            conflicts: Vec::new(),
             timings: BTreeMap::from([("occ.commit.total_s".to_owned(), json!(0.25))]),
             raw: json!({
                 "files": changes.iter().map(|change| json!({
@@ -44,7 +41,7 @@ fn workspace_with_upperdir(root: &std::path::Path) -> EphemeralWorkspace {
     std::fs::create_dir_all(&run_dir).expect("run_dir");
     std::fs::write(upperdir.join("result.txt"), b"ok").expect("write upperdir file");
     EphemeralWorkspace {
-        layer_stack_root: WorkspaceRoot(PathBuf::from("/layers")),
+        layer_stack_root: LayerStackRoot(PathBuf::from("/layers")),
         workspace_root: PathBuf::from("/workspace"),
         caller_id: CallerId("caller-1".to_owned()),
         invocation_id: InvocationId("cmd-1".to_owned()),
@@ -58,10 +55,6 @@ fn workspace_with_upperdir(root: &std::path::Path) -> EphemeralWorkspace {
             run_dir,
             upperdir,
             workdir,
-            output_path: root.join("runner-result.json"),
-            final_path: root.join("final.json"),
-            request_path: Some(root.join("runner-request.json")),
-            result_path: None,
         },
     }
 }

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/engine/src/turn Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-engine.html">@eos/engine</a></p>
+          <h1>@eos/engine/src/turn</h1>
+          <p class="lede">packages/engine/src/turn.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>ContentBlock, Message, ToolSpec</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>ProviderError, type LlmClient, type LlmRequest, type ReasoningEffort, type StopReason, type UsageSnapshot</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./conversation.js</code></td>
+      <td>Conversation, PartialReason</td>
+      <td>type</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./events.js</code></td>
+      <td>AgentEvent</td>
+      <td>type</td>
+      <td>12</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>turn.ts</code>
+        <small>4 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#TurnConfig"><code>TurnConfig</code></a>
+            <span>interface</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CompletedTurn"><code>CompletedTurn</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#addUsage"><code>addUsage</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runAssistantTurn"><code>runAssistantTurn</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="TurnConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TurnConfig</strong>
+          <span>interface · line 15 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-turn.html#TurnConfig">Module</a>
+      </div>
+      <pre><code>export interface TurnConfig</code></pre>
+      <p>Per-run provider-call configuration, fixed at `startAgentRun`.</p>
+      <div class="tags"><span>config</span><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>client</code></td>
+              <td><code>LlmClient</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>model</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>systemPrompt</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>maxTokens</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reasoningEffort</code></td>
+              <td><code>ReasoningEffort</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolSpecs</code></td>
+              <td><code>ToolSpec[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="CompletedTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CompletedTurn</strong>
+          <span>interface · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-turn.html#CompletedTurn">Module</a>
+      </div>
+      <pre><code>export interface CompletedTurn</code></pre>
+      <p>One successfully completed assistant turn.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>message</code></td>
+              <td><code>Message</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>usage</code></td>
+              <td><code>UsageSnapshot</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>stop_reason</code></td>
+              <td><code>StopReason</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="addUsage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>addUsage</strong>
+          <span>function · line 32 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-turn.html#addUsage">Module</a>
+      </div>
+      <pre><code>export function addUsage( total: UsageSnapshot, turn: UsageSnapshot, ): UsageSnapshot</code></pre>
+      <p>Sum per-turn usage into a run total; cache fields appear once reported.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runAssistantTurn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runAssistantTurn</strong>
+          <span>function · line 58 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-turn.html#runAssistantTurn">Module</a>
+      </div>
+      <pre><code>export async function runAssistantTurn( cfg: TurnConfig, conversation: Conversation, signal: AbortSignal, emit: (event: AgentEvent) =&gt; void, ): Promise&lt;CompletedTurn&gt;</code></pre>
+      <p>Stream one provider turn: forward each `LlmStreamEvent` as an
+`AgentEvent` and return the completed message. When the turn dies instead
+(abort mid-stream, `ProviderError`), accumulated text/reasoning is
+salvaged to `displayed_messages` only — incomplete `tool_use` blocks are
+discarded entirely — and the error is rethrown for the loop's catch-all
+to classify by `signal.aborted`, never by error type.</p>
+      <div class="tags"><span>abortable</span><span>async</span><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/engine/src/events</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

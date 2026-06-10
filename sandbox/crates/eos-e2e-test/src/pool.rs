@@ -16,7 +16,7 @@ use serde_json::{json, Map, Value};
 use crate::audit::AuditTap;
 use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode, WorkloadConfig};
-use crate::container::{reap_e2e_containers, DaemonContainer};
+use crate::container::{self, reap_e2e_containers, DaemonContainer};
 use crate::{next_invocation_id, unique_suffix};
 
 struct Node {
@@ -46,7 +46,7 @@ impl NodePool {
         }
         let cap = cap_for(&config);
         let available: Vec<Node> = if config.keep_container && config.mode != NodeMode::PerTest {
-            DaemonContainer::adopt_healthy(&config, &config_yaml)
+            container::adopt_healthy(&config, &config_yaml)
                 .into_iter()
                 .take(cap)
                 .map(|container| Node {
@@ -112,7 +112,7 @@ impl NodePool {
             if inner.created < self.cap() {
                 inner.created += 1;
                 drop(inner);
-                match DaemonContainer::start(&self.config, &self.config_yaml) {
+                match container::start_node(&self.config, &self.config_yaml) {
                     Ok(container) => {
                         return Ok(Node {
                             container,
@@ -201,7 +201,7 @@ impl<'p> NodeLease<'p> {
                 node,
                 anyhow::anyhow!("ensure_workspace_base failed: {resp}"),
             ))),
-            Err(err) => Err(Box::new((node, err))),
+            Err(err) => Err(Box::new((node, err.into()))),
         }
     }
 
@@ -259,7 +259,7 @@ impl<'p> NodeLease<'p> {
         obj.entry("caller_id".to_owned())
             .or_insert_with(|| json!(self.caller_id));
         let iid = next_invocation_id();
-        self.client().request(op, &iid, &Value::Object(obj))
+        Ok(self.client().request(op, &iid, &Value::Object(obj))?)
     }
 
     /// Like [`Self::call`] but asserts the response is a success payload.
@@ -294,7 +294,8 @@ impl<'p> NodeLease<'p> {
     /// # Errors
     /// Returns an error if the daemon cannot be restarted or never becomes ready.
     pub fn restart_daemon(&self) -> Result<()> {
-        self.node().container.restart_daemon(&self.pool.config)
+        let daemon = container::daemon_spec(&self.pool.config, &self.pool.config_yaml)?;
+        self.node().container.restart_daemon(&daemon)
     }
 }
 

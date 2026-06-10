@@ -1,40 +1,15 @@
-import type { JsonObject } from "@eos/contracts";
-
-import { ProviderError, toProviderError } from "../errors.js";
-import type { LlmStreamEvent } from "../events.js";
-
-/**
- * Per-provider decoder state machine: sdk stream events in, normalized
- * events out. Decoders accumulate per-block strings linearly and parse tool
- * arguments once at block close.
- */
-export interface StreamDecoder<TEvent> {
-  /** Set once the provider terminal event has been decoded. */
-  readonly completed: boolean;
-  handle(event: TEvent): Iterable<LlmStreamEvent>;
-}
-
-export interface ProviderAttempt<TEvent> {
-  /** Open one sdk streaming call under the attempt's abort signal. */
-  open(
-    signal: AbortSignal,
-  ): Promise<{ stream: AsyncIterable<TEvent>; requestId?: string }>;
-  decoder(requestId: string | undefined): StreamDecoder<TEvent>;
-}
-
-/** Parse accumulated tool-argument json; malformed provider json yields `{}`. */
-export function parseToolArgs(raw: string): JsonObject {
-  if (raw === "") return {};
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as JsonObject;
-    }
-  } catch {
-    // fall through to the empty object
-  }
-  return {};
-}
+import type { LlmClient, LlmStreamOptions } from "./client.js";
+import {
+  RetryConfigSchema,
+  StreamGuardConfigSchema,
+  type ProviderClientOptions,
+  type RetryConfig,
+} from "./config.js";
+import { ProviderError, toProviderError } from "./errors.js";
+import type { LlmStreamEvent } from "./events.js";
+import { retryStream } from "./retry.js";
+import type { LlmRequest } from "./types.js";
+import type { Wire, WireOptions } from "./wires/wire.js";
 
 class IdleTimeoutSignal extends Error {}
 
@@ -89,13 +64,16 @@ async function* withIdleGuard<T>(
 }
 
 /**
- * Run one provider attempt: open the sdk stream, guard it with the idle
- * watchdog, feed events through the decoder, and enforce the iteration
- * contract (exactly one terminal event; a clean end without it is a
- * truncated stream). Caller aborts are rethrown as-is.
+ * Run one wire attempt: open the sdk stream (the wire pulls per-attempt
+ * headers from its transport), guard it with the idle watchdog, feed events
+ * through the decoder, and enforce the iteration contract (exactly one
+ * terminal event; a clean end without it is a truncated stream). Caller
+ * aborts are rethrown as-is.
  */
-export async function* runAttempt<TEvent>(
-  attempt: ProviderAttempt<TEvent>,
+async function* runAttempt(
+  wire: Wire,
+  request: LlmRequest,
+  wireOptions: WireOptions,
   idleTimeoutMs: number,
   signal: AbortSignal | undefined,
 ): AsyncGenerator<LlmStreamEvent> {
@@ -103,15 +81,19 @@ export async function* runAttempt<TEvent>(
   const attemptSignal = signal
     ? AbortSignal.any([signal, attemptAbort.signal])
     : attemptAbort.signal;
-  let stream: AsyncIterable<TEvent>;
+  let stream: AsyncIterable<unknown>;
   let requestId: string | undefined;
   try {
-    ({ stream, requestId } = await attempt.open(attemptSignal));
+    ({ stream, requestId } = await wire.open(
+      request,
+      wireOptions,
+      attemptSignal,
+    ));
   } catch (error) {
     if (signal?.aborted) throw error;
     throw toProviderError(error, "open");
   }
-  const decoder = attempt.decoder(requestId);
+  const decoder = wire.decoder(requestId);
   try {
     for await (const event of withIdleGuard(
       stream,
@@ -130,5 +112,46 @@ export async function* runAttempt<TEvent>(
   signal?.throwIfAborted();
   if (!decoder.completed) {
     throw ProviderError.truncatedStream(requestId);
+  }
+}
+
+/**
+ * The one generic streaming client: a wire composed with an access scheme's
+ * transport (bound in the factory), wrapped in the visible-output retry gate
+ * and the idle guard. Implements the `LlmClient` iteration contract
+ * unchanged from Phase 02.
+ */
+export class LlmStreamClient implements LlmClient {
+  readonly #wire: Wire;
+  readonly #wireOptions: WireOptions;
+  readonly #retry: RetryConfig;
+  readonly #idleTimeoutMs: number;
+
+  constructor(
+    wire: Wire,
+    wireOptions: WireOptions = {},
+    options: ProviderClientOptions = {},
+  ) {
+    this.#wire = wire;
+    this.#wireOptions = wireOptions;
+    this.#retry = RetryConfigSchema.parse(options.retry ?? {});
+    this.#idleTimeoutMs =
+      StreamGuardConfigSchema.parse(options.streamGuard ?? {}).idle_timeout_s *
+      1000;
+  }
+
+  streamMessage(
+    request: LlmRequest,
+    options?: LlmStreamOptions,
+  ): AsyncIterable<LlmStreamEvent> {
+    const attempt = () =>
+      runAttempt(
+        this.#wire,
+        request,
+        this.#wireOptions,
+        this.#idleTimeoutMs,
+        options?.signal,
+      );
+    return retryStream(this.#retry, attempt, options?.signal);
   }
 }

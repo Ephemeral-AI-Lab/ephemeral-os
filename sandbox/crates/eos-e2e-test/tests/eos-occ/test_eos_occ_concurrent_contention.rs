@@ -143,7 +143,7 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
 
     let responses: Vec<Value> = handles
         .into_iter()
-        .map(|handle| handle.join().expect("concurrent edit panicked"))
+        .map(|handle| Ok(handle.join().expect("concurrent edit panicked")?))
         .collect::<Result<_>>()?;
 
     assert!(
@@ -238,7 +238,7 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
 
     let responses: Vec<Value> = handles
         .into_iter()
-        .map(|handle| handle.join().expect("same-anchor edit panicked"))
+        .map(|handle| Ok(handle.join().expect("same-anchor edit panicked")?))
         .collect::<Result<_>>()?;
 
     let winners = responses

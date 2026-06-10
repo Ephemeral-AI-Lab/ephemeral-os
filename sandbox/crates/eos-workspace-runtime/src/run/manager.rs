@@ -2,7 +2,7 @@
 //! caller-keyed registry.
 //!
 //! The manager owns no policy. It acquires the snapshot lease (ephemeral),
-//! builds the runner request via the workspace crates' lifecycle free functions,
+//! builds the runner request via the workspace modules' lifecycle free functions,
 //! spawns the PTY substrate, and on settlement either **publishes** (ephemeral
 //! complete), **records for audit** (isolated complete), or **discards** (cancel
 //! — never reaching the OCC merge). Each run owns its overlay/namespace state
@@ -28,7 +28,7 @@ use crate::command_session::{
 };
 use crate::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
-    PreparedEphemeralCommand, SnapshotLease,
+    PreparedEphemeralCommand,
 };
 use crate::isolated::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
@@ -37,7 +37,8 @@ use crate::isolated::{
 use eos_layerstack::LayerStack;
 use eos_overlay::overlay_writable_root;
 use crate::contract::{
-    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
+    FinalizeCommandRequest, SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome,
+    WorkspaceMode,
 };
 
 use super::isolated_command_handle::IsolatedCommandHandle;

@@ -1,13 +1,7 @@
 export type { LlmClient, LlmStreamOptions } from "./client.js";
 export {
-  AnthropicApiConfigSchema,
-  OpenAiApiConfigSchema,
   RetryConfigSchema,
   StreamGuardConfigSchema,
-  type AnthropicApiConfig,
-  type AnthropicApiConfigInput,
-  type OpenAiApiConfig,
-  type OpenAiApiConfigInput,
   type ProviderClientOptions,
   type RetryConfig,
   type RetryConfigInput,
@@ -20,6 +14,11 @@ export {
   type ProviderErrorOptions,
 } from "./errors.js";
 export type { LlmStreamEvent, StopReason } from "./events.js";
+export { createLlmClient } from "./factory.js";
+export {
+  ProviderConnectionSchema,
+  type ProviderConnection,
+} from "./profiles.js";
 export { SecretString } from "./secret.js";
 export {
   buildLlmRequest,
@@ -30,5 +29,3 @@ export {
   type ToolChoice,
   type UsageSnapshot,
 } from "./types.js";
-export { AnthropicApiClient } from "./providers/anthropic.js";
-export { OpenAiResponsesClient } from "./providers/openai.js";

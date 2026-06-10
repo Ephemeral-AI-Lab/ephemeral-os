@@ -12,20 +12,21 @@ use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBind
 use eos_plugin::ServiceMode;
 use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
+use eos_workspace_runtime::contract::{u64_to_f64_saturating, SnapshotLease};
 use eos_workspace_runtime::ephemeral::{
-    finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralWorkspace,
-    FinalizeRequest, InvocationId, SnapshotLease, WorkspaceRoot as EphemeralWorkspaceRoot,
+    finalize_publishable_workspace, path_changes_to_wire, CallerId, EphemeralRunDirs,
+    EphemeralWorkspace, FinalizeRequest, InvocationId, LayerStackRoot,
 };
 use serde_json::{json, Value};
 
 use crate::adapters::overlay::{
-    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
-    run_ns_runner_child, DaemonPublisherPort, RunDirCleanup,
+    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, run_ns_runner_child,
+    DaemonPublisherPort, RunDirCleanup,
 };
 use crate::error::DaemonError;
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    merge_runner_timings, resource_timings, u64_to_f64_saturating, TreeResourceStats,
+    merge_runner_timings, resource_timings, TreeResourceStats,
 };
 
 use eos_plugin::host::route::PluginOperationRoute;
@@ -170,7 +171,7 @@ fn run_plugin_overlay_once(
         &DaemonPublisherPort::new(&spec.layer_stack_root),
         FinalizeRequest {
             workspace: EphemeralWorkspace {
-                layer_stack_root: EphemeralWorkspaceRoot(spec.layer_stack_root.clone()),
+                layer_stack_root: LayerStackRoot(spec.layer_stack_root.clone()),
                 workspace_root: PathBuf::from(&binding.workspace_root),
                 caller_id: CallerId(spec.caller_id.clone()),
                 invocation_id: InvocationId(spec.invocation_id.clone()),

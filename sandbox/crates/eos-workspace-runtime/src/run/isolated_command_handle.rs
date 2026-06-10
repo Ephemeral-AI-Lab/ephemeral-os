@@ -7,8 +7,8 @@ use std::path::PathBuf;
 /// needs to build the set-ns runner request and finalize for audit.
 ///
 /// Constructed by the daemon from its isolated-session state and stored in the
-/// run [`crate::registry`]; the namespace + lease themselves are owned by the
-/// daemon's isolated-session subsystem and torn down on `exit`.
+/// run registry; the namespace + lease themselves are owned by the daemon's
+/// isolated-session subsystem and torn down on `exit`.
 #[derive(Debug, Clone)]
 pub struct IsolatedCommandHandle {
     pub caller_id: String,
