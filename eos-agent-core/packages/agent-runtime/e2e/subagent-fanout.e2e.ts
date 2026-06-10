@@ -207,7 +207,7 @@ describe.skipIf(!codex.available)("subagent fan-out and nesting over live codex 
         initialMessages: [
           userMessage(
             [
-              '1. In one single assistant turn, call run_subagent twice - once with agent_name "helper" and prompt "finish", once with agent_name "sleeper" and prompt "hold".',
+              '1. Your first assistant response must contain exactly two run_subagent tool calls in the same response - one with agent_name "helper" and prompt "finish", one with agent_name "sleeper" and prompt "hold". Do not wait for the first result before issuing the second call.',
               "2. Call list_background_sessions.",
               '3. Call cancel_background_session with type "subagent" and id set to the run_id returned by the sleeper call.',
               "4. Wait until you have received completion notifications for BOTH child runs.",

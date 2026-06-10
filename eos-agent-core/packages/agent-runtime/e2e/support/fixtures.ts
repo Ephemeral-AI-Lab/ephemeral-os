@@ -72,6 +72,8 @@ export function advisoryReadyProfile(spec: ProfileSpec): ProfileSpec {
   const body = [
     spec.body,
     "Before calling your terminal tool, call ask_advisor with tool_name set to that terminal tool and payload exactly equal to the payload you will submit.",
+    'The tool_name for ask_advisor must be the bare tool name such as "submit_main_outcome"; never prefix it with "functions.".',
+    "Do not call ask_advisor for ordinary tools such as run_subagent, list_background_sessions, cancel_background_session, wait, lookup_codeword, or read_agent_run_transcript.",
     "Only after ask_advisor returns a pass verdict, call the terminal tool with the exact same payload.",
   ]
     .filter((part): part is string => part !== undefined && part.length > 0)
