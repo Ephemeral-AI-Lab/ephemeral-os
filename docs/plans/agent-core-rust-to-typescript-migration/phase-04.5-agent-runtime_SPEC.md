@@ -19,8 +19,8 @@ Phase 04.5 introduces `@eos/agent-runtime` (renaming the empty
 per-run objects meet. It owns:
 
 - `AgentRuntime.startRun()` — the per-run assembly: notification queue,
-  background supervisor, `ToolRuntime`, toolset, engine `startAgentRun`,
-  disposal — in one wiring order, in one file,
+  background supervisor, service ports, `buildToolExecutor`, engine
+  `startAgentRun`, disposal — in one wiring order, in one file,
 - the run registry (typed map of active runs; mints `AgentRunId`),
 - the real `AgentRunPort`: subagent spawning recurses into `startRun`,
   advisor asks run a child to completion, transcript reads serve the JSONL,
@@ -46,10 +46,12 @@ live; nothing under `agent-core/` changes.
    their own pair via the same factory — the hierarchy needs no tree; a
    parent's subagent driver just watches the child's outcome.
 2. **The wiring order is the spec.** queue -> supervisor -> `onDrained`
-   delivery wiring -> `ToolRuntime` -> toolset -> engine start -> dispose
-   subscription. Each arrow is a real dependency; the order lives in one
-   function so neither `@eos/engine` nor `@eos/tool` ever learns process
-   topology.
+   delivery wiring -> service ports -> `buildToolExecutor` -> engine start
+   -> dispose subscription. Each arrow is a real dependency; the order
+   lives in one function so neither `@eos/engine` nor `@eos/tool` ever
+   learns process topology. Services meet only as named arguments at the
+   `buildToolExecutor` call — each tool family factory receives exactly its
+   own port (Phase 04 §2.15); no ambient port record exists.
 3. **Two lifetimes, one boundary.** Process-level services (LLM client,
    sandbox factory, workflow port, hook config) are bound at
    `createAgentRuntime`; everything per-run is built in `startRun`. The
@@ -130,11 +132,11 @@ interface StartedRun {
 3. supervisor = new BackgroundSupervisor(queue, drivers)
 4. queue.onDrained(refs => supervisor.markDelivered(refs))
 5. workspace = new WorkspaceState()
-6. runtime: ToolRuntime = { sandbox: services.sandbox(run_id),
-     agents: agentRunPort, workflows: services.workflows, supervisor }
-7. { tools, toolSpecs } = buildToolset(kind, { runtime, hookEngine,
-     workspace, runIdentity, transcriptPath })
-8. handle = startAgentRun({ llmClient, tools, toolSpecs,
+6. sandbox = services.sandbox(run_id)          // per-run workspace binding
+7. tools = buildToolExecutor({ kind, sandbox, agents: agentRunPort,
+     workflows: services.workflows, supervisor, hookEngine, workspace,
+     identity, transcript_path })
+8. handle = startAgentRun({ llmClient, tools,
      notifications: createNotificationSource(queue, supervisor), … })
 9. broadcaster = fanOut(handle.events)         // sole stream consumer
    broadcaster.subscribe(transcriptWriter)

@@ -250,9 +250,9 @@ fn emit_workspace_base_audit(request: &Request, response: &Value) {
     let Some(total_ms) = timing_ms(response, "api.workspace_base.total_s") else {
         return;
     };
-    let event_type = match request.op.as_str() {
-        "api.ensure_workspace_base" => "workspace_base.ensured",
-        "api.build_workspace_base" => "workspace_base.built",
+    let event_type = match catalog_op(&request.op) {
+        Some(BuiltinDaemonOp::EnsureWorkspaceBase) => "workspace_base.ensured",
+        Some(BuiltinDaemonOp::BuildWorkspaceBase) => "workspace_base.built",
         _ => return,
     };
     let manifest_version = response
@@ -266,7 +266,7 @@ fn emit_commit_audit(request: &Request, response: &Value) {
     let Some(total_ms) = timing_ms(response, "api.commit_to_workspace.total_s") else {
         return;
     };
-    if request.op != "api.commit_to_workspace" {
+    if catalog_op(&request.op) != Some(BuiltinDaemonOp::CommitToWorkspace) {
         return;
     }
     let manifest_version = response.get("manifest_version").and_then(Value::as_i64);
@@ -399,13 +399,13 @@ pub(crate) fn background_event_kind(
     request: &Request,
     response: &Value,
 ) -> Option<(&'static str, &'static str)> {
-    match request.op.as_str() {
-        "api.v1.exec_command" if response.get("command_session_id").is_some() => {
+    match catalog_op(&request.op)? {
+        BuiltinDaemonOp::ExecCommand if response.get("command_session_id").is_some() => {
             Some(("background_tool.started", "command_session"))
         }
-        "api.v1.write_stdin" => Some(("background_tool.input", "command_session")),
-        "api.v1.command.cancel" => Some(("background_tool.cancelled", "command_session")),
-        "api.v1.command.collect_completed" => {
+        BuiltinDaemonOp::WriteStdin => Some(("background_tool.input", "command_session")),
+        BuiltinDaemonOp::CommandCancel => Some(("background_tool.cancelled", "command_session")),
+        BuiltinDaemonOp::CommandCollectCompleted => {
             Some(("background_tool.completed", "command_session"))
         }
         _ => None,
@@ -414,8 +414,10 @@ pub(crate) fn background_event_kind(
 
 fn is_occ_op(op: &str) -> bool {
     matches!(
-        op,
-        "api.v1.write_file" | "api.v1.edit_file" | "api.v1.exec_command"
+        catalog_op(op),
+        Some(
+            BuiltinDaemonOp::WriteFile | BuiltinDaemonOp::EditFile | BuiltinDaemonOp::ExecCommand
+        )
     )
 }
 
@@ -423,14 +425,15 @@ pub(crate) fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
     if response_workspace_isolated(response) {
         return false;
     }
-    if op == "api.v1.command.cancel" {
-        return true;
-    }
-    if op == "api.v1.exec_command" {
-        return response
-            .get("command_session_id")
-            .and_then(Value::as_str)
-            .is_none();
+    match catalog_op(op) {
+        Some(BuiltinDaemonOp::CommandCancel) => return true,
+        Some(BuiltinDaemonOp::ExecCommand) => {
+            return response
+                .get("command_session_id")
+                .and_then(Value::as_str)
+                .is_none();
+        }
+        _ => {}
     }
     if is_plugin_overlay_response(response) {
         return true;

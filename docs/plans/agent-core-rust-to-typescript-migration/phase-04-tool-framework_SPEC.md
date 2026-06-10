@@ -26,8 +26,9 @@ the Phase 03 engine seams it needs:
   flags (`terminal`, `availableInIsolatedWorkspace`) and fail-closed
   `defineTool` defaults,
 - a per-call execution pipeline (parse -> pre-hooks -> execute -> post-hooks
-  -> stamping) that adapts each handler into the engine's existing
-  `ToolDefinition` seam,
+  -> stamping) plus a batch executor that together absorb the engine's
+  Phase 03 tool seam: `tools.ts` and `tool-runner.ts` leave `@eos/engine`,
+  which keeps one injected `ToolExecutor` port,
 - a generic background supervisor (command / subagent / workflow sessions
   behind one `SessionDriver` interface, keyed by native ids),
 - a system notification queue drained at the loop boundary, with an
@@ -36,13 +37,14 @@ the Phase 03 engine seams it needs:
   with a JS-script `command` adapter and an in-process `callback` adapter,
 - the five tool families: sandbox, agent, submission, workflow, background.
 
-Tools are implemented against narrow ports (`SandboxPort`, `AgentRunPort`,
-`WorkflowPort`); real port implementations are Phase 04.5
+Each tool family is constructed with exactly its own service (`SandboxPort`,
+`AgentRunPort`, `WorkflowPort`); real implementations are Phase 04.5
 (`@eos/agent-runtime`) and later sandbox-host work. This phase verifies
 everything against fakes in `@eos/testkit` ("happy" sandbox).
 
-This phase is additive plus bounded engine edits. The Rust engine remains the
-live implementation; nothing under `agent-core/` changes.
+This phase is additive plus a bounded engine restructure at the tool
+boundary. The Rust engine remains the live implementation; nothing under
+`agent-core/` changes.
 
 ## 2. Design Decisions
 
@@ -97,14 +99,17 @@ omissions:
    `JSON.stringify`-ed exactly once, where the engine projects
    `tool_result` blocks; the structured value survives in events and the
    outcome.
-9. **`ToolCallResult` is constructed, not inherited.** The engine tool
-   runner already owns the per-call record (it must pair `tool_use_id`);
-   it grows the new fields and normalizes defaults. There is no
-   `ToolOutcome extends` hierarchy.
+9. **`ToolCallResult` is constructed, not inherited.** The batch executor
+   owns the per-call record (it must pair `tool_use_id`); it stamps and
+   normalizes around each pipeline result. There is no
+   `ToolOutcome extends` hierarchy, and the record type lives in
+   `@eos/contracts` because it crosses the engine/tool boundary.
 10. **One shared per-call fact record.** `ToolCallMeta` is built once per
     call, frozen, and shared by pre-hooks, `execute`, and post-hooks. It
     contains only serializable facts (command hooks eat JSON over stdin);
-    live handles (`signal`, `runtime`) compose on top for `execute` only.
+    the live `signal` composes on top for `execute` only — services are
+    closed over at construction (decision 15), so nothing ambient travels
+    with the call.
 11. **Completion reaches the model as a system notification drained at the
     loop boundary** — never a late synthetic `tool_result` (provider
     adjacency), never model polling, never blocking the tool call. When the
@@ -126,19 +131,35 @@ omissions:
     Notifications carry only `{ ref, status, summary }`; the model pulls
     detail through the read tool. Full outputs never sit in conversation
     state.
+15. **No ambient `ToolRuntime`.** There is no shared port record threaded
+    through calls. Each tool family factory takes exactly its own
+    service(s) — `sandboxTools(sandbox, supervisor)`,
+    `agentTools(agents, supervisor)`,
+    `workflowTools(workflows, supervisor)`, `backgroundTools(supervisor)`,
+    `submissionTool(kind, supervisor)` — and handlers close over them. A
+    sandbox tool cannot reach the workflow port by construction, and a new
+    service later touches one factory signature, not a shared type.
+16. **The engine owns no tool machinery.** `tools.ts` and `tool-runner.ts`
+    are removed from `@eos/engine`; registry, concurrency cap, batch
+    policy, and the pipeline all live behind one injected `ToolExecutor`.
+    The engine keeps the invariant it cannot delegate: after
+    `executeBatch` returns, it fills any unanswered `tool_use_id` with a
+    synthetic error result, so provider-history validity (Phase 03 §7)
+    never depends on executor correctness.
 
 ## 3. Scope
 
 In scope:
 
-- `@eos/tool` package: contract, `defineTool`, pipeline, hook protocol and
-  runner, background supervisor and drivers, notification queue, toolset
-  assembly, and the five tool families,
-- engine edits (additive at the §7 seams Phase 03 named): terminal-solo
-  batch policy, terminal exit, `ToolCallResult`, per-turn tool specs,
-  `NotificationSource` port, auto-wait and reminder branches,
+- `@eos/tool` package: contract, `defineTool`, pipeline, batch executor,
+  hook protocol and runner, background supervisor and drivers,
+  notification queue, executor assembly, and the five tool families,
+- engine restructure at the tool boundary: `tools.ts` and `tool-runner.ts`
+  removed, one `ToolExecutor` port added, batch-result normalization,
+  terminal exit, `NotificationSource` port, auto-wait and reminder
+  branches; loop tests ported to a scripted executor,
 - `@eos/contracts` additions: `AgentKind`, `AgentRunId`, `WorkflowRunId`,
-  `CommandId`,
+  `CommandId`, `ToolCallResult`,
 - `@eos/testkit` first real content: happy `SandboxPort`, fake
   `AgentRunPort` / `WorkflowPort`, transcript fixture helper,
 - tests per §15.
@@ -158,16 +179,16 @@ Out of scope (named seams in §12):
 
 | Rust source | TypeScript target | Carries |
 | --- | --- | --- |
-| `eos-tool/src/registry.rs` (`ToolExecutor`, `RegisteredTool`, `ToolRegistry`, `ToolRuntime`) | `packages/tool/src/contract.ts`, `define.ts`, `toolset.ts`, `runtime.ts` | Redesigned: flat handler + two flags + table-driven assembly |
+| `eos-tool/src/registry.rs` (`ToolExecutor`, `RegisteredTool`, `ToolRegistry`, `ToolRuntime`) | `packages/tool/src/contract.ts`, `define.ts`, `toolset.ts` | Redesigned: flat handler + two flags + per-family service injection |
 | `eos-tool/src/model.rs` (`ToolResult`, `ExecutionMetadata`) | `packages/tool/src/contract.ts` | `ToolOutcome`, `ToolCallMeta` |
 | `eos-engine/src/tool_call/execute.rs` (pipeline, `stamp_terminal`) | `packages/tool/src/pipeline.ts` | Per-call pipeline; terminal stamping |
-| `eos-engine/src/tool_call/batch.rs` (terminal batch policy) | `packages/engine/src/tool-runner.ts` | Terminal-solo rule only; lifecycle policy rejected (§2.4) |
+| `eos-engine/src/tool_call/batch.rs` (terminal batch policy) + Phase 03 `tool-runner.ts` | `packages/tool/src/executor.ts` | Batch dispatch (cap 8, ordering, abort settling) + terminal-solo; lifecycle policy rejected (§2.4) |
 | `eos-tool/src/hooks.rs` + `eos-engine/src/tool_call/hooks.rs` | `packages/tool/src/hooks/` | Redesigned: enum hooks -> external protocol (§2.5) |
 | `eos-engine/src/background/session_runtime.rs` (managers, monitors, statuses) | `packages/tool/src/background/` | Generic supervisor + per-kind drivers |
 | `eos-engine/src/notifications.rs` | `packages/tool/src/notifications/` + engine `NotificationSource` port | Push queue; rule trait not ported (§2.12) |
 | `eos-tool/src/tools/{sandbox,command,subagent,workflow}.rs` + submission tools | `packages/tool/src/tools/` | The five families |
 
-## 5. Tool Contract (`contract.ts`, `define.ts`, `runtime.ts`)
+## 5. Tool Contract (`contract.ts`, `define.ts`, family modules)
 
 ```ts
 // Authoring surface — the only types a tool author sees.
@@ -204,25 +225,20 @@ interface ToolCallMeta {
   transcript_path: string;
 }
 
-// What execute() receives: facts + live handles. Hooks never see ports.
+// What execute() receives: the frozen facts plus the one live handle.
+// Services are NOT here — handlers close over their own service at
+// construction (§2.15), so neither tools nor hooks ever see a port bag.
 interface ToolCallContext {
   meta: ToolCallMeta;
   signal: AbortSignal;
-  runtime: ToolRuntime;
 }
 ```
 
-`ToolRuntime` is the port record, assembled once per run by the composition
-root (Phase 04.5). DI sits at real resource boundaries only:
+Each service port is declared in its owning family module and injected at
+factory construction by the composition root (Phase 04.5). DI sits at real
+resource boundaries only:
 
 ```ts
-interface ToolRuntime {
-  sandbox: SandboxPort;
-  agents: AgentRunPort;
-  workflows: WorkflowPort;
-  supervisor: BackgroundSupervisor;
-}
-
 interface SandboxPort {
   readFile(path: string, opts?: { offset?: number; limit?: number }): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;
@@ -260,20 +276,20 @@ the `SandboxPort` call succeeds), the per-turn spec provider, and the
 pipeline's meta builder.
 
 Naming rule (Phase 02 §4.1): authoring/in-process surfaces (`ToolHandler`,
-`ToolOutcome`, `ToolRuntime`) are camelCase; records that cross a process
-or persistence boundary (`ToolCallMeta`, `ToolCallResult`, `HookPayload`,
-notification payloads) are snake_case.
+`ToolOutcome`, the family factories) are camelCase; records that cross a
+process or persistence boundary (`ToolCallMeta`, `ToolCallResult`,
+`HookPayload`, notification payloads) are snake_case.
 
 ## 6. Execution Pipeline (`pipeline.ts`)
 
-`toToolDefinition(handler, deps)` closes over run-level dependencies
-(`runtime`, `hookEngine`, `workspaceState`, run identity, `transcriptPath`)
-at toolset build and produces the engine's `ToolDefinition`. The engine tool
-runner keeps batch concerns (concurrency, ordering, abort, `tool_use_id`
-pairing); the pipeline owns per-call semantics inside the wrapped `execute`:
+`bindTool(handler, deps)` closes over run-level dependencies (`hookEngine`,
+`workspaceState`, run identity, `transcriptPath`) at executor build —
+handlers already close over their own services (§2.15). The `@eos/tool`
+batch executor (§7) keeps batch concerns (concurrency, ordering, abort,
+`tool_use_id` pairing); the pipeline owns per-call semantics:
 
 ```
-1. meta = Object.freeze({ … })          tool_use_id from engine ToolContext
+1. meta = Object.freeze({ … })          tool_use_id from the executor
 2. isolated-mode guard                  meta.workspace.is_isolated &&
                                         !handler.availableInIsolatedWorkspace
                                         -> is_error result
@@ -306,43 +322,27 @@ Rules:
 - The pipeline never throws; every path returns a result the runner can
   record.
 
-## 7. Engine Changes (additive at Phase 03 §11 seams)
+## 7. Engine Changes (the tool boundary becomes one port)
 
-`tools.ts`:
+Phase 03's `tools.ts` (`ToolDefinition`, `ToolRegistry`, `ToolContext`,
+`ToolOutput`) and `tool-runner.ts` are REMOVED from `@eos/engine` (§2.16).
+The engine retains exactly one piece of tool knowledge, an injected port:
 
 ```ts
-interface ToolContext {
-  signal: AbortSignal;
-  toolUseId: ToolUseId;          // NEW: the runner passes the call id
-}
-
-interface ToolOutput {
-  content: JsonValue;            // WIDENED from string (string still valid)
-  is_error?: boolean;
-  is_terminal?: boolean;         // NEW: stamped by the @eos/tool pipeline
-  tool_start_time?: number;      // NEW: epoch ms
-  tool_end_time?: number;        // NEW
-  metadata?: JsonObject;         // NEW
-}
-
-interface ToolDefinition {
-  spec: ToolSpec;
-  terminal?: boolean;            // NEW: pre-dispatch batch policy input
-  isConcurrencySafe?(input: JsonObject): boolean;
-  execute(input: JsonObject, ctx: ToolContext): Promise<ToolOutput>;
+// packages/engine/src/tool-executor.ts (new)
+interface ToolExecutor {
+  /** Evaluated per turn; @eos/tool filters by workspace mode here (§2.4). */
+  specs(): ToolSpec[];
+  /** Empty -> Phase 03 termination; non-empty -> submission regime, and
+      the names render into the reminder message. */
+  terminalToolNames(): readonly string[];
+  executeBatch(calls: ToolUseBlock[], signal: AbortSignal,
+               emit: (event: AgentEvent) => void): Promise<ToolCallResult[]>;
 }
 ```
 
-`tool-runner.ts`:
-
-- Pre-dispatch terminal-solo policy (the Phase 03 "batch policies" seam):
-  a batch containing a terminal call plus any sibling rejects ALL calls —
-  each gets `is_error: true` "terminal tool must be called alone"; the loop
-  continues (parity with Rust `reject_terminal_batch`). A solo terminal
-  call dispatches normally.
-- `runToolBatch` returns `ToolCallResult[]`; the loop projects
-  `ToolResultBlock`s from it (non-string `content` is stringified exactly
-  here, §2.8):
+`ToolCallResult` moves to `@eos/contracts` — it crosses the engine/tool
+boundary and references only contracts types:
 
 ```ts
 interface ToolCallResult {
@@ -350,20 +350,24 @@ interface ToolCallResult {
   content: JsonValue;
   is_error: boolean;             // normalized, no optional
   is_terminal: boolean;
-  tool_start_time: number;
+  tool_start_time: number;       // epoch ms
   tool_end_time: number;
   metadata?: JsonObject;
 }
 ```
 
-- Bare `ToolDefinition`s without stamps (Phase 03-style tools, tests) are
-  normalized: missing timings filled with the runner's own clock, missing
-  flags with `false`.
-- `tool_execution_completed` grows `is_terminal`, `tool_start_time`,
-  `tool_end_time`, `metadata` (additive; `output` stays the string
-  projection).
+The Phase 03 runner behaviors relocate to `@eos/tool`'s executor
+(`packages/tool/src/executor.ts`) with their tests, semantics unchanged:
+concurrency cap 8, `tool_use`-order assembly, error/unknown-tool mapping to
+`is_error` results, abort settling with straggler-emit suppression, and
+`tool_execution_started`/`completed` emission (the completed event grows
+`is_terminal`, `tool_start_time`, `tool_end_time`, `metadata`; `output`
+stays the string projection). The executor adds the terminal-solo policy
+(the Phase 03 "batch policies" seam): a batch containing a terminal call
+plus any sibling rejects ALL calls with `is_error` results — parity with
+Rust `reject_terminal_batch`; a solo terminal call dispatches normally.
 
-`agent-loop.ts` — the loop spine grows three branches:
+`agent-loop.ts` — the loop spine grows three branches and one invariant:
 
 ```
 3.  drain steers; then drain notifications        (steers first: user input
@@ -372,19 +376,24 @@ interface ToolCallResult {
       pending steers                 -> continue   (Phase 03)
       notifications?.hasLiveSessions() -> await
         notifications.waitForNext(signal); continue        (auto-wait)
-      registry has terminal tools    -> appendUser(terminal reminder);
+      terminalToolNames() non-empty  -> appendUser(terminal reminder);
                                         continue   (submission regime)
       otherwise                      -> finish(completed)  (Phase 03)
+7.  results = tools.executeBatch(calls, signal, emit)
+    NORMALIZE: every tool_use_id absent from results gets a synthetic
+    is_error "interrupted" result — provider-history validity stays an
+    engine-owned invariant (Phase 03 §7) regardless of executor behavior
 7.5 any result.is_terminal          -> finish({ status: 'completed',
                                         final_message, stop_reason,
                                         submission: result.content })
+8.  project ToolResultBlocks (non-string content stringified exactly
+    here, §2.8); conversation.appendToolResults(...)
 ```
 
-- The submission regime is derived, not configured: any registered
-  `ToolDefinition.terminal` flips the bare-text branch from "finish" to
-  "remind and continue". The reminder is one engine-rendered user message
-  naming the run's terminal tool(s); it re-fires on every bare-text turn
-  and `maxTurns` is the backstop against spin.
+- The submission regime is derived from `terminalToolNames()`, never
+  configured. The reminder is one engine-rendered user message naming the
+  run's terminal tool(s); it re-fires on every bare-text turn and
+  `maxTurns` is the backstop against spin.
 - Auto-wait consumes no turn (no provider call). `waitForNext` is
   level-triggered: it resolves immediately if notifications are already
   pending, on the next `publish`, or on abort (the loop-top check then
@@ -403,11 +412,12 @@ interface NotificationSource {
 }
 ```
 
-`StartAgentRunInput` gains `notifications?: NotificationSource` and
-`toolSpecs?: () => ToolSpec[]` (per-turn provider; default is the static
-registry projection — `TurnConfig.toolSpecs` becomes a thunk). The provider
-is what makes §2.4 mode filtering per-turn without the engine knowing about
-workspace modes.
+`StartAgentRunInput`: `tools: ToolRegistry` is replaced by
+`tools: ToolExecutor`, and `notifications?: NotificationSource` is added.
+`TurnConfig.toolSpecs` becomes a thunk over `tools.specs()`. Engine loop
+tests run against a scripted `ToolExecutor`; with empty
+`terminalToolNames()` and no notification source, Phase 03 termination and
+transcript semantics are preserved unchanged.
 
 ## 8. Hook System (`hooks/protocol.ts`, `hooks/runner.ts`)
 
@@ -625,12 +635,27 @@ that object is what arrives at `outcome.submission` (§7).
 | planner | `read`, `multi_read` + `submit_planner_outcome` |
 | advisor | `read`, `multi_read` + `submit_advisor_outcome` |
 
-`buildToolset(kind, deps)` resolves the table, wraps each handler through
-`toToolDefinition`, and returns the engine `ToolRegistry` plus the per-turn
-`toolSpecs` provider (filtering on `WorkspaceState.isIsolated` ×
-`availableInIsolatedWorkspace`). Registries are deterministic and sorted
-once per run (prompt-cache stability). The workflow family is included only
-when a `WorkflowPort` is supplied.
+Family factories — each takes exactly its own service(s) (§2.15):
+
+```ts
+sandboxTools(sandbox: SandboxPort, supervisor: BackgroundSupervisor)
+agentTools(agents: AgentRunPort, supervisor: BackgroundSupervisor)
+workflowTools(workflows: WorkflowPort, supervisor: BackgroundSupervisor)
+backgroundTools(supervisor: BackgroundSupervisor)
+submissionTool(kind: AgentKind, supervisor: BackgroundSupervisor)
+```
+
+`buildToolExecutor({ kind, sandbox, agents, workflows?, supervisor,
+hookEngine, workspace, identity, transcript_path })` consults
+`AGENT_TOOLSET`, invokes only the factories the kind's row names — each
+with exactly its own service — binds every handler through the §6
+pipeline, and returns the engine `ToolExecutor`: a deterministic sorted
+registry (prompt-cache stability), per-turn `specs()` filtering on
+`WorkspaceState.isIsolated` × `availableInIsolatedWorkspace`,
+`terminalToolNames()`, and batch dispatch. The services appear together
+only as named arguments at this one assembly site; no ambient record
+reaches a tool call. The workflow family is included only when a
+`WorkflowPort` is supplied.
 
 ## 12. Deferred and Rejected
 
@@ -655,6 +680,8 @@ Rejected, not deferred (decisions; no seam kept):
 - Built-in hooks (§2.5).
 - Hook output rewriting and the `ask` decision (§2.6).
 - A `SubmissionSink` port (§2.8): the return path carries the payload.
+- An ambient `ToolRuntime` port record threaded through calls (§2.15):
+  per-family construction injection instead.
 - Minted session ids (§2.3): native refs only.
 - A Sleep/wait tool: auto-wait is an engine rule (§2.11).
 
@@ -662,9 +689,12 @@ Rejected, not deferred (decisions; no seam kept):
 
 - `packages/tool/`: new package `@eos/tool` (`dependencies`:
   `@eos/contracts`, `@eos/engine` via `workspace:*`, `zod`).
-- `packages/engine/`: §7 edits only; all Phase 03 tests keep passing
-  (widened `content` accepts every existing string-returning tool).
-- `packages/contracts/`: `AgentKind`, three branded ids (additive).
+- `packages/engine/`: §7 restructure — `tools.ts` and `tool-runner.ts`
+  deleted, `tool-executor.ts` and `notifications.ts` added; runner tests
+  move to `@eos/tool` with the relocated logic; loop tests port to a
+  scripted `ToolExecutor`.
+- `packages/contracts/`: `AgentKind`, three branded ids, `ToolCallResult`
+  (additive).
 - `packages/testkit/`: first real content — `@eos/testkit` (`dependencies`:
   `@eos/contracts`, `@eos/tool`): happy `SandboxPort` (in-memory files +
   scripted command sessions with controllable completion), fake
@@ -675,18 +705,21 @@ Rejected, not deferred (decisions; no seam kept):
 ## 14. Migration Steps
 
 1. Contracts additions (`AgentKind`, ids) -> verify: contracts tests green.
-2. Engine §7 edits behind existing tests (`ToolCallResult`, terminal-solo,
-   terminal exit, `toolSpecs` thunk, `NotificationSource` + auto-wait +
-   reminder, fake source in engine tests) -> verify: Phase 03 suite green
-   plus new loop cases (§15 cases 1-5).
-3. `@eos/tool` contract + `defineTool` + pipeline (hooks stubbed
-   pass-through) -> verify: pipeline order, guard, parse, stamping tests.
+2. Engine §7 restructure (`ToolExecutor` port, batch normalization,
+   terminal exit, `NotificationSource` + auto-wait + reminder; loop tests
+   ported to a scripted executor and fake source) -> verify: ported
+   Phase 03 loop suite green plus new loop cases (§15 cases 2-5, 21).
+3. `@eos/tool` contract + `defineTool` + pipeline + batch executor
+   (relocated runner logic and tests; hooks stubbed pass-through) ->
+   verify: pipeline order, guard, parse, stamping tests plus the relocated
+   runner suite (cap 8, ordering, abort settling, terminal-solo — §15
+   cases 1, 10).
 4. Hook protocol + runner (callback first, then command adapter with real
    spawned scripts) -> verify: §15 cases 10-13.
 5. Supervisor + drivers + notification queue + `createNotificationSource`
    -> verify: §15 cases 6-9.
-6. Tool families over testkit fakes + toolset assembly -> verify: §15
-   cases 14-19.
+6. Tool families over testkit fakes + `buildToolExecutor` assembly ->
+   verify: §15 cases 14-19.
 7. Workspace wiring -> verify: `pnpm run check` green from
    `eos-agent-core/`.
 8. Update the migration `index.md` row for this phase.
@@ -715,8 +748,9 @@ All suites in-process; no network, no real sandbox.
 | 16 | Submission guard | submit with live sessions -> error naming them; after cancel/settle+delivery -> succeeds |
 | 17 | Subagent round-trip | `run_subagent` returns `{ agent_run_id }`; fake settle -> notification -> `read_agent_run_transcript` reads via port |
 | 18 | Workflow pair | `delegate_workflow` registers + returns id; second open delegate denied; `query_workflow` passes through |
-| 19 | Toolset assembly | each kind gets exactly its table row + one submission tool; deterministic order; workflow family absent without a port |
+| 19 | Executor assembly | each kind gets exactly its table row + one submission tool; deterministic order; each factory receives only its own service; workflow family absent without a port |
 | 20 | Serialization point | structured content stringified once in the projected `tool_result` block; intact in `ToolCallResult`, events, and `outcome.submission` |
+| 21 | Engine normalization | an executor that drops a result: the missing `tool_use_id` gets a synthetic `is_error` result; `outcome.llm` stays provider-valid |
 
 Commands:
 
@@ -745,16 +779,20 @@ Phase 04 is accepted when:
 - `@eos/tool` exposes the §5 contract with `defineTool` fail-closed
   defaults, and tool authors never see `is_terminal` or timing fields,
 - the §6 pipeline enforces guard/parse/hook/stamp order and never throws,
-- the engine implements §7 exactly: terminal-solo, terminal exit with
-  `submission` on the outcome, per-turn spec provider, notification drain
-  below steers, auto-wait, and the derived submission-regime reminder —
-  with Phase 03 semantics byte-identical when the new inputs are absent,
+- the engine implements §7 exactly: tool machinery removed behind one
+  injected `ToolExecutor` port, batch-result normalization, terminal exit
+  with `submission` on the outcome, notification drain below steers,
+  auto-wait, and the derived submission-regime reminder — with Phase 03
+  loop semantics preserved under a scripted executor that has no terminal
+  tools and no notification source,
 - hooks run only from operator config (no built-ins), with the §8 exit-code
   protocol, precedence kernel, and single-update rule,
 - the supervisor is generic over §9 drivers, keyed by native refs, with
   push-only single settles, delivery-then-evict, and a working
   `exec_command` promotion that reuses the in-flight completion promise,
 - all five tool families build per the §11 tables against testkit fakes,
+  each factory injected with exactly its own service and no ambient port
+  record anywhere in a call path,
 - the §15 suite passes under `pnpm run check` with no network I/O,
 - the Rust `agent-core/` tree is byte-for-byte unchanged,
 - and the migration `index.md` lists Phase 04 with status and verification.
@@ -764,8 +802,8 @@ Phase 04 is accepted when:
 | Step | Status | Required proof |
 | --- | --- | --- |
 | Contracts additions | Pending | contracts tests green with `AgentKind` + 3 ids |
-| Engine seam growth | Pending | Phase 03 suite green + §15 cases 1-5 |
-| Contract + pipeline | Pending | §15 case 10 plus defineTool default tests |
+| Engine restructure | Pending | ported Phase 03 loop suite green + §15 cases 2-5, 21 |
+| Contract + pipeline + executor | Pending | §15 cases 1, 10 plus relocated runner suite and defineTool default tests |
 | Hook protocol + runner | Pending | §15 cases 11-13 incl. real spawned scripts |
 | Supervisor + notifications | Pending | §15 cases 6-9 + 3 |
 | Tool families + toolsets | Pending | §15 cases 14-20 |
