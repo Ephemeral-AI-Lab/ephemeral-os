@@ -503,5 +503,5 @@ Phase 02 is accepted when:
 | Retry gate (signal- and retry-after-aware) | Completed | `packages/llm-client/tests/retry.test.ts`: six ported `retry.rs` cases plus abort-during-backoff and retry-after-override (capped by `max_delay_s`) green |
 | Anthropic provider + fixtures | Completed | `packages/llm-client/tests/anthropic.test.ts`: golden decode of byte-identical copied fixtures through the real sdk parser via injected fetch; §5 encode column, truncated-stream, idle-timeout, and `maxRetries: 0` tests green |
 | OpenAI provider + fixtures | Completed | `packages/llm-client/tests/openai.test.ts`: same battery incl. stop-reason derivation, cached-token usage mapping, and variant substitutability with the Anthropic path |
-| Workspace wiring + exports | Completed | `pnpm run check` (typecheck + eslint + vitest, 71 tests) green from `eos-agent-core/`; `git diff --stat -- agent-core` empty |
+| Workspace wiring + exports | Completed | `pnpm run check` (typecheck + eslint + vitest, 73 tests) green from `eos-agent-core/`; `git diff --stat -- agent-core` empty |
 | Index updated | Completed | Phase 02 row in `index.md` marked Completed |
