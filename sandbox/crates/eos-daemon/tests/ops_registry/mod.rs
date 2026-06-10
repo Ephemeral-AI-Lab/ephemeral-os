@@ -6,7 +6,10 @@ use super::*;
 
 #[test]
 fn builtin_registry_matches_protocol_ops() {
-    let registered = BUILTIN_OPS.iter().map(BuiltinOp::wire).collect::<Vec<_>>();
+    let registered = BUILTIN_OPS
+        .iter()
+        .map(|op| op.spec.aliases[0])
+        .collect::<Vec<_>>();
     assert_eq!(registered, BUILTIN_DAEMON_OPS);
 }
 
@@ -18,7 +21,10 @@ fn builtin_registry_matches_protocol_catalog() {
 
 #[test]
 fn builtin_registry_has_no_duplicate_wires() {
-    let registered = BUILTIN_OPS.iter().map(BuiltinOp::wire).collect::<Vec<_>>();
+    let registered = BUILTIN_OPS
+        .iter()
+        .map(|op| op.spec.aliases[0])
+        .collect::<Vec<_>>();
     let unique = registered.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(unique.len(), registered.len());
 }

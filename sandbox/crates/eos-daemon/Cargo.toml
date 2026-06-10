@@ -12,7 +12,6 @@ eos-layerstack.workspace = true
 eos-overlay.workspace = true
 eos-occ.workspace = true
 eos-occ-layerstack.workspace = true
-eos-workspace-contract.workspace = true
 eos-workspace-runtime.workspace = true
 eos-plugin.workspace = true
 eos-checkpoint.workspace = true

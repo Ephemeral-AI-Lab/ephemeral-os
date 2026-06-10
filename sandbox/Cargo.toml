@@ -13,7 +13,6 @@ members = [
     "crates/eos-layerstack",
     "crates/eos-overlay",
     "crates/eos-occ",
-    "crates/eos-workspace-contract",
     "crates/eos-plugin",
     "crates/eos-e2e-test",
     "xtask",
@@ -57,7 +56,6 @@ eos-config = { path = "crates/eos-config" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }
-eos-workspace-contract = { path = "crates/eos-workspace-contract" }
 eos-workspace-runtime = { path = "crates/eos-workspace-runtime" }
 eos-plugin = { path = "crates/eos-plugin" }
 eos-runner = { path = "crates/eos-runner" }

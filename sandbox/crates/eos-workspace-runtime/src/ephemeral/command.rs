@@ -9,7 +9,7 @@
 
 use std::path::PathBuf;
 
-use eos_workspace_contract::{
+use crate::contract::{
     u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest,
     PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
     WorkspaceConflict, WorkspaceMode, WorkspaceTimings,

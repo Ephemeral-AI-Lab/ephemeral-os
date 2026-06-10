@@ -1,0 +1,382 @@
+{
+  "protocol_version": 1,
+  "ops": [
+    {
+      "name": "sandbox.acquire",
+      "aliases": [],
+      "served_by": "host",
+      "visibility": "public",
+      "family": "Sandbox",
+      "mutates_state": true,
+      "summary": "Provision a sandbox container plus daemon and return its sandbox_id."
+    },
+    {
+      "name": "sandbox.release",
+      "aliases": [],
+      "served_by": "host",
+      "visibility": "public",
+      "family": "Sandbox",
+      "mutates_state": true,
+      "summary": "Destroy the sandbox container and drop its registry entry."
+    },
+    {
+      "name": "sandbox.status",
+      "aliases": [],
+      "served_by": "host",
+      "visibility": "public",
+      "family": "Sandbox",
+      "mutates_state": false,
+      "summary": "Host view of one sandbox (container/endpoint/recovery state) plus embedded daemon readiness."
+    },
+    {
+      "name": "sandbox.list",
+      "aliases": [],
+      "served_by": "host",
+      "visibility": "public",
+      "family": "Sandbox",
+      "mutates_state": false,
+      "summary": "Enumerate the sandbox registry."
+    },
+    {
+      "name": "sandbox.runtime.ready",
+      "aliases": [
+        "api.runtime.ready"
+      ],
+      "served_by": "daemon",
+      "visibility": "internal",
+      "family": "Control",
+      "mutates_state": false,
+      "summary": "Daemon readiness probe used by the host recovery machine."
+    },
+    {
+      "name": "sandbox.call.heartbeat",
+      "aliases": [
+        "api.v1.heartbeat"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Control",
+      "mutates_state": true,
+      "summary": "Extend the lease on an in-flight invocation."
+    },
+    {
+      "name": "sandbox.call.cancel",
+      "aliases": [
+        "api.v1.cancel"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Control",
+      "mutates_state": true,
+      "summary": "Request cooperative cancellation of an in-flight invocation."
+    },
+    {
+      "name": "sandbox.call.count",
+      "aliases": [
+        "api.v1.inflight_count"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Control",
+      "mutates_state": false,
+      "summary": "Count in-flight invocations."
+    },
+    {
+      "name": "sandbox.checkpoint.layer_metrics",
+      "aliases": [
+        "api.layer_metrics"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": false,
+      "summary": "Report LayerStack and storage metrics for the sandbox."
+    },
+    {
+      "name": "sandbox.checkpoint.ensure_base",
+      "aliases": [
+        "api.ensure_workspace_base"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": true,
+      "summary": "Ensure a workspace base binding exists."
+    },
+    {
+      "name": "sandbox.checkpoint.build_base",
+      "aliases": [
+        "api.build_workspace_base"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": true,
+      "summary": "Build or rebuild a workspace base binding."
+    },
+    {
+      "name": "sandbox.checkpoint.commit_to_workspace",
+      "aliases": [
+        "api.commit_to_workspace"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": true,
+      "summary": "Materialize LayerStack state into the bound workspace."
+    },
+    {
+      "name": "sandbox.checkpoint.commit_to_git",
+      "aliases": [
+        "api.commit_to_git"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": true,
+      "summary": "Commit a LayerStack snapshot into the bound workspace's durable Git repo."
+    },
+    {
+      "name": "sandbox.checkpoint.binding",
+      "aliases": [
+        "api.workspace_binding"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Checkpoint",
+      "mutates_state": false,
+      "summary": "Inspect the workspace binding for a layer stack root."
+    },
+    {
+      "name": "sandbox.audit.pull",
+      "aliases": [
+        "api.audit.pull"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Audit",
+      "mutates_state": false,
+      "summary": "Pull audit events after a cursor."
+    },
+    {
+      "name": "sandbox.audit.snapshot",
+      "aliases": [
+        "api.audit.snapshot"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Audit",
+      "mutates_state": false,
+      "summary": "Snapshot audit ring metadata."
+    },
+    {
+      "name": "sandbox.audit.reset_floor",
+      "aliases": [
+        "api.audit.reset_floor"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "Audit",
+      "mutates_state": true,
+      "summary": "Reset the audit floor when the daemon-side test gate allows it."
+    },
+    {
+      "name": "sandbox.file.read",
+      "aliases": [
+        "api.v1.read_file"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Files",
+      "mutates_state": false,
+      "summary": "Read one file from the layer stack or isolated workspace."
+    },
+    {
+      "name": "sandbox.file.write",
+      "aliases": [
+        "api.v1.write_file"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Files",
+      "mutates_state": true,
+      "summary": "Write one file through the OCC gate."
+    },
+    {
+      "name": "sandbox.file.edit",
+      "aliases": [
+        "api.v1.edit_file"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Files",
+      "mutates_state": true,
+      "summary": "Edit one file through the OCC gate."
+    },
+    {
+      "name": "sandbox.plugin.ensure",
+      "aliases": [
+        "api.plugin.ensure"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Plugins",
+      "mutates_state": true,
+      "summary": "Ensure a plugin service is installed and running."
+    },
+    {
+      "name": "sandbox.plugin.status",
+      "aliases": [
+        "api.plugin.status"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "Plugins",
+      "mutates_state": false,
+      "summary": "Inspect plugin service status."
+    },
+    {
+      "name": "sandbox.isolation.enter",
+      "aliases": [
+        "api.isolated_workspace.enter"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "IsolatedWorkspace",
+      "mutates_state": true,
+      "summary": "Enter isolated workspace mode for a caller."
+    },
+    {
+      "name": "sandbox.isolation.exit",
+      "aliases": [
+        "api.isolated_workspace.exit"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "IsolatedWorkspace",
+      "mutates_state": true,
+      "summary": "Exit isolated workspace mode for a caller."
+    },
+    {
+      "name": "sandbox.isolation.status",
+      "aliases": [
+        "api.isolated_workspace.status"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "IsolatedWorkspace",
+      "mutates_state": false,
+      "summary": "Inspect isolated workspace status."
+    },
+    {
+      "name": "sandbox.isolation.list_open",
+      "aliases": [
+        "api.isolated_workspace.list_open"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "IsolatedWorkspace",
+      "mutates_state": false,
+      "summary": "List open isolated workspaces."
+    },
+    {
+      "name": "sandbox.isolation.test_reset",
+      "aliases": [
+        "api.isolated_workspace.test_reset"
+      ],
+      "served_by": "daemon",
+      "visibility": "test",
+      "family": "IsolatedWorkspace",
+      "mutates_state": true,
+      "summary": "Test-only isolated workspace reset hook."
+    },
+    {
+      "name": "sandbox.command.exec",
+      "aliases": [
+        "api.v1.exec_command"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": true,
+      "summary": "Run a foreground command or start a command session."
+    },
+    {
+      "name": "sandbox.command.write_stdin",
+      "aliases": [
+        "api.v1.write_stdin"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": true,
+      "summary": "Write stdin to a command session."
+    },
+    {
+      "name": "sandbox.command.poll",
+      "aliases": [
+        "api.v1.command.read_progress"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": false,
+      "summary": "Poll command-session progress without writing stdin."
+    },
+    {
+      "name": "sandbox.command.cancel",
+      "aliases": [
+        "api.v1.command.cancel"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": true,
+      "summary": "Cancel a command session."
+    },
+    {
+      "name": "sandbox.command.collect_completed",
+      "aliases": [
+        "api.v1.command.collect_completed"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": true,
+      "summary": "Collect completed command-session notifications."
+    },
+    {
+      "name": "sandbox.command.count",
+      "aliases": [
+        "api.v1.command_session_count"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "CommandSession",
+      "mutates_state": false,
+      "summary": "Count live command sessions."
+    },
+    {
+      "name": "sandbox.run.end",
+      "aliases": [
+        "api.v1.cancel_workspace_runs_by_caller_id"
+      ],
+      "served_by": "daemon",
+      "visibility": "public",
+      "family": "WorkspaceRun",
+      "mutates_state": true,
+      "summary": "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace."
+    },
+    {
+      "name": "sandbox.run.cancel_all",
+      "aliases": [
+        "api.v1.cancel_workspace_runs"
+      ],
+      "served_by": "daemon",
+      "visibility": "operator",
+      "family": "WorkspaceRun",
+      "mutates_state": true,
+      "summary": "Cancel every workspace run in the sandbox: the whole-sandbox sweep backstop."
+    }
+  ]
+}

@@ -14,11 +14,6 @@ pub(crate) struct BuiltinOp {
     pub(crate) handler: Handler,
 }
 
-impl BuiltinOp {
-    pub(crate) const fn wire(&self) -> &'static str {
-        self.spec.wire
-    }
-}
 
 pub(crate) const BUILTIN_OPS: &[BuiltinOp] = &[
     BuiltinOp {

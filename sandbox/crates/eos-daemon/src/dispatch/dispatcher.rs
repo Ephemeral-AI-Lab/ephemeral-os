@@ -132,7 +132,9 @@ impl OpTable {
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
         for op in BUILTIN_OPS {
-            table.register_builtin(op.wire(), op.handler);
+            for spelling in op.spec.aliases {
+                table.register_builtin(spelling, op.handler);
+            }
         }
         table
     }

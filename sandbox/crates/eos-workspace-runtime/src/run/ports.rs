@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ephemeral::EphemeralWorkspace;
-use eos_workspace_contract::{
+use crate::contract::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
 use serde_json::Value;

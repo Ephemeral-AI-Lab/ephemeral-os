@@ -13,7 +13,7 @@ pub struct WorkspaceRoot(pub PathBuf);
 /// Snapshot lease material needed to mount a fresh overlay.
 ///
 /// Shared value object owned by `eos-workspace-contract`.
-pub use eos_workspace_contract::SnapshotLease;
+pub use crate::contract::SnapshotLease;
 
 /// Fresh writable paths allocated for one operation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

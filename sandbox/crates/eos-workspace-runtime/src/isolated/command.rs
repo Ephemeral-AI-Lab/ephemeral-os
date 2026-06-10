@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use eos_protocol::LayerChange;
-use eos_workspace_contract::{
+use crate::contract::{
     usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest, PrepareCommandRequest,
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
     WorkspaceTimings,

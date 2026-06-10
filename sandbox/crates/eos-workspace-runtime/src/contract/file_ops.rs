@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
-use crate::mode::WorkspaceMode;
-use crate::mutation::{
+use crate::contract::mode::WorkspaceMode;
+use crate::contract::mutation::{
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,
     WorkspaceMutationSink,
 };
-use crate::read_view::WorkspaceReadView;
-use crate::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
+use crate::contract::read_view::WorkspaceReadView;
+use crate::contract::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
 
 /// Read one text file from a workspace mode.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

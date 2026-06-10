@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::mode::WorkspaceMode;
-use crate::read_view::{ResolvedWorkspacePath, WorkspaceReadBytes};
-use crate::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
+use crate::contract::mode::WorkspaceMode;
+use crate::contract::read_view::{ResolvedWorkspacePath, WorkspaceReadBytes};
+use crate::contract::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
 
 /// Direct mutation kind produced by a file operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

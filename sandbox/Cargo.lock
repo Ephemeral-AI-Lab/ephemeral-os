@@ -184,7 +184,6 @@ dependencies = [
  "eos-plugin",
  "eos-protocol",
  "eos-runner",
- "eos-workspace-contract",
  "eos-workspace-runtime",
  "nix 0.29.0",
  "serde",
@@ -300,15 +299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-workspace-contract"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "eos-workspace-runtime"
 version = "0.1.0"
 dependencies = [
@@ -316,7 +306,6 @@ dependencies = [
  "eos-layerstack",
  "eos-overlay",
  "eos-protocol",
- "eos-workspace-contract",
  "futures-util",
  "libc",
  "netlink-sys",
@@ -1543,6 +1532,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "eos-protocol",
+ "serde_json",
  "sha2",
 ]
 

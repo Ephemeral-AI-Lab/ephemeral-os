@@ -17,7 +17,7 @@ macro_rules! fixture {
     ($name:literal) => {
         include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/fixtures/envelopes/",
+            "/../../contract/fixtures/envelopes/",
             $name
         ))
     };

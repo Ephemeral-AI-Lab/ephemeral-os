@@ -27,12 +27,138 @@ fn main() -> Result<()> {
         .as_deref()
     {
         Some("package") => package(&PackageArgs::parse(args)?),
+        Some("check-contract") => check_contract(),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
         }
         Some(other) => bail!("unknown xtask command {other:?}; run `cargo run -p xtask -- help`"),
     }
+}
+
+/// The CI drift gate for `contract/` (SPEC §9):
+/// 1. `eosd dump-ops` must equal the committed `contract/ops.json`.
+/// 2. Alias integrity: spellings unique, no alias collides with a canonical
+///    name, and the two fixture-pinned aliases exist.
+/// 3. Both sides' conformance test suites pass against `contract/fixtures/`.
+fn check_contract() -> Result<()> {
+    let root = workspace_root()?;
+
+    let committed_path = root.join("contract").join("ops.json");
+    let committed = fs::read_to_string(&committed_path)
+        .with_context(|| format!("read {}", committed_path.display()))?;
+    let generated = capture_stdout(
+        &root,
+        &["run", "--quiet", "-p", "eosd", "--", "dump-ops"],
+        "eosd dump-ops",
+    )?;
+    if committed != generated {
+        bail!(
+            "contract/ops.json is stale: regenerate with \
+             `cargo run -p eosd -- dump-ops > contract/ops.json` and review the diff"
+        );
+    }
+    check_alias_integrity(&committed)?;
+
+    for suite in CONFORMANCE_SUITES {
+        let mut cargo_args = vec!["test", "--quiet", "-p", suite.package];
+        for test in suite.tests {
+            cargo_args.extend(["--test", test]);
+        }
+        run_cargo(&root, &cargo_args, suite.package)?;
+    }
+
+    println!("check-contract: ops.json in sync, aliases sound, conformance suites green");
+    Ok(())
+}
+
+/// Conformance suites the gate runs, host side and box side. Extend this list
+/// as contract tests land in new crates.
+struct ConformanceSuite {
+    package: &'static str,
+    tests: &'static [&'static str],
+}
+
+const CONFORMANCE_SUITES: &[ConformanceSuite] = &[ConformanceSuite {
+    package: "eos-protocol",
+    tests: &["envelope_fixtures", "cas_fixtures"],
+}];
+
+/// Aliases pinned by immutable golden fixtures; they may never leave the
+/// catalog (SPEC §4.2).
+const PINNED_ALIASES: &[(&str, &str)] = &[
+    ("sandbox.file.read", "api.v1.read_file"),
+    ("sandbox.call.heartbeat", "api.v1.heartbeat"),
+];
+
+fn check_alias_integrity(ops_json: &str) -> Result<()> {
+    let document: serde_json::Value =
+        serde_json::from_str(ops_json).context("parse contract/ops.json")?;
+    let ops = document
+        .get("ops")
+        .and_then(serde_json::Value::as_array)
+        .context("contract/ops.json must carry an `ops` array")?;
+
+    let mut names = std::collections::BTreeSet::new();
+    let mut aliases = std::collections::BTreeMap::new();
+    for op in ops {
+        let name = op
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .context("catalog op missing `name`")?;
+        if !names.insert(name) {
+            bail!("canonical name claimed twice in contract/ops.json: {name}");
+        }
+        for alias in op
+            .get("aliases")
+            .and_then(serde_json::Value::as_array)
+            .context("catalog op missing `aliases`")?
+        {
+            let alias = alias
+                .as_str()
+                .context("catalog alias must be a string")?;
+            if aliases.insert(alias, name).is_some() {
+                bail!("alias claimed twice in contract/ops.json: {alias}");
+            }
+        }
+    }
+    if let Some(collision) = aliases.keys().find(|alias| names.contains(**alias)) {
+        bail!("alias collides with a canonical name in contract/ops.json: {collision}");
+    }
+    for (name, alias) in PINNED_ALIASES {
+        if aliases.get(alias) != Some(name) {
+            bail!("fixture-pinned alias missing from contract/ops.json: {alias} -> {name}");
+        }
+    }
+    Ok(())
+}
+
+fn capture_stdout(root: &Path, cargo_args: &[&str], what: &str) -> Result<String> {
+    let output = Command::new("cargo")
+        .args(cargo_args)
+        .current_dir(root)
+        .output()
+        .with_context(|| format!("spawn {what}"))?;
+    if !output.status.success() {
+        bail!(
+            "{what} failed with {}:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    String::from_utf8(output.stdout).with_context(|| format!("{what} produced non-UTF-8 output"))
+}
+
+fn run_cargo(root: &Path, cargo_args: &[&str], what: &str) -> Result<()> {
+    let status = Command::new("cargo")
+        .args(cargo_args)
+        .current_dir(root)
+        .status()
+        .with_context(|| format!("spawn cargo for {what}"))?;
+    if !status.success() {
+        bail!("conformance suite failed for {what} with {status}");
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -336,6 +462,8 @@ fn print_help() {
 xtask commands:
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
           [--sign --minisign-key <path>]
+  check-contract    verify contract/ops.json matches `eosd dump-ops`, alias
+                    integrity holds, and the conformance suites pass
 
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64

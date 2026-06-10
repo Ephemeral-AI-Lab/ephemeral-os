@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::mode::WorkspaceMode;
-use crate::response::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
+use crate::contract::mode::WorkspaceMode;
+use crate::contract::response::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 
 /// Input needed for a workspace-mode crate to prepare command execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -36,7 +36,7 @@ use crate::isolated::{
 };
 use eos_layerstack::LayerStack;
 use eos_overlay::overlay_writable_root;
-use eos_workspace_contract::{
+use crate::contract::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 
@@ -118,7 +118,7 @@ impl WorkspaceRunManager {
     fn start_ephemeral(
         &self,
         spec: CommandSessionSpec,
-        prepare_request: eos_workspace_contract::PrepareCommandRequest,
+        prepare_request: crate::contract::PrepareCommandRequest,
         root: PathBuf,
         workspace_root: PathBuf,
         scratch_root: PathBuf,
@@ -175,7 +175,7 @@ impl WorkspaceRunManager {
     fn start_isolated(
         &self,
         spec: CommandSessionSpec,
-        prepare_request: eos_workspace_contract::PrepareCommandRequest,
+        prepare_request: crate::contract::PrepareCommandRequest,
         handle: Box<IsolatedCommandHandle>,
         yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
@@ -202,7 +202,7 @@ impl WorkspaceRunManager {
     fn spawn_session(
         &self,
         spec: CommandSessionSpec,
-        prepared: eos_workspace_contract::PreparedCommandWorkspace,
+        prepared: crate::contract::PreparedCommandWorkspace,
     ) -> Result<CommandSession, CommandSessionError> {
         let process = spawn_current_exe_ns_runner(
             &prepared.request_path,

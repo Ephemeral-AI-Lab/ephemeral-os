@@ -49,11 +49,17 @@ fn main() -> Result<()> {
         Some("daemon") => daemon::run(args),
         Some("ns-runner") => runner::run(args),
         Some("ns-holder") => run_ns_holder(args),
+        // The committed `contract/ops.json`; `cargo xtask check-contract`
+        // fails when this output drifts from the checked-in artifact.
+        Some("dump-ops") => {
+            print!("{}", eos_protocol::ops::ops_json_document());
+            Ok(())
+        }
         Some(other) => Err(anyhow!(
-            "unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | --version"
+            "unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | dump-ops | --version"
         )),
         None => Err(anyhow!(
-            "missing subcommand; expected daemon | ns-runner | ns-holder | --version"
+            "missing subcommand; expected daemon | ns-runner | ns-holder | dump-ops | --version"
         )),
     }
 }

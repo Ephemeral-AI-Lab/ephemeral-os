@@ -23,12 +23,12 @@ fn converters_match_workspace_api() {
     for value in [0_u64, 1, u64::from(u32::MAX), 5_000_000_000, u64::MAX] {
         assert_eq!(
             u64_to_f64_saturating(value),
-            eos_workspace_contract::u64_to_f64_saturating(value),
+            eos_workspace_runtime::contract::u64_to_f64_saturating(value),
         );
     }
     let big: usize = 5_000_000_000;
     assert_eq!(
         usize_to_f64_saturating(big),
-        eos_workspace_contract::usize_to_f64_saturating(big),
+        eos_workspace_runtime::contract::usize_to_f64_saturating(big),
     );
 }

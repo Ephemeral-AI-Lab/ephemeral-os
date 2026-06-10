@@ -9,7 +9,7 @@
 use std::path::Path;
 
 use eos_layerstack::LayerStack;
-use eos_workspace_contract::{
+use eos_workspace_runtime::contract::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
 use eos_workspace_runtime::ephemeral::{finalize_ephemeral_command, EphemeralWorkspace};

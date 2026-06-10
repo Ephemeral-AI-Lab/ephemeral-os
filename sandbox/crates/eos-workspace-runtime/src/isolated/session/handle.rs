@@ -9,7 +9,7 @@ pub use eos_protocol::{CallerId, WorkspaceHandleId};
 ///
 /// Shared value object owned by `eos-workspace`; carries the lease id,
 /// manifest coordinates, and lower-layer paths. NEVER a publish transaction.
-pub use eos_workspace_contract::SnapshotLease;
+pub use crate::contract::SnapshotLease;
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
 ///

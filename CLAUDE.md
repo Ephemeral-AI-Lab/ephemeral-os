@@ -57,6 +57,15 @@ not as a reason to stop.
 - Tests use Vitest. Add or adjust focused package tests for behavior changes,
   keep fixtures small, and avoid broad snapshot tests when a typed assertion is
   clearer.
+- Structure tests as one `describe` per unit under test, with `it` titles that
+  read as behavior sentences (for example "retries only before visible
+  output"). Use `it.each` with templated titles for case tables.
+- Pass the optional `expect(value, message)` second argument when one test
+  asserts multiple scenarios, repeated counters, or timing bounds, so a failure
+  names the step that broke. Rely on Vitest's default diff for single-scenario
+  assertions.
+- Leave Vitest's annotation API (`context.annotate`) unused until a reporter
+  that surfaces annotations is configured.
 
 ## Implementation Style
 

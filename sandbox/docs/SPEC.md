@@ -259,9 +259,9 @@ sandbox/
 │   │   └── tests/contract.rs
 │   ├── eos-cas/                    renamed rump of eos-protocol: cas.rs, models.rs
 │   ├── eos-plugin/                 + framing.rs (own PPC framing)
-│   ├── eos-workspace-contract/     + ids.rs (absorbed typed IDs)
+│   ├── eos-workspace-runtime/      src/contract/ + ids.rs (absorbed typed IDs)
 │   ├── eos-layerstack/ eos-occ/ eos-overlay/ eos-occ-layerstack/
-│   │   eos-runner/ eos-workspace-runtime/        dep: eos-protocol → eos-cas
+│   │   eos-runner/                 dep: eos-protocol → eos-cas
 │   ├── eos-e2e-test/               shrinks; imports eos-sandbox-host
 │   └── eos-protocol/               DELETED (final step)
 ├── docs/
@@ -296,7 +296,7 @@ depend on it.
 | 1 | `contract/` (fixtures moved, PROTOCOL.md), `eosd dump-ops`, `ops.json`, `check-contract` gate — `eos-protocol` still present | gate passes; fixture tests repointed |
 | 2 | `eos-sandbox-host` (promote e2e docker/container/client); repoint `eos-e2e-test` | e2e suite green against live daemon |
 | 3 | fix `audit/events.rs` op-name literals → catalog consts; dispatcher alias table (canonical + legacy); `eos-api` + contract tests | e2e invokes ops under both spellings |
-| 4 | absorb wire into `eos-daemon/src/wire/`; `eos-cas` rename; `eos-plugin` framing; ids → `eos-workspace-contract`; delete `eos-protocol` | workspace builds; `check-contract` green |
+| 4 | absorb wire into `eos-daemon/src/wire/`; `eos-cas` rename; `eos-plugin` framing; ids → `eos-workspace-runtime::contract`; delete `eos-protocol` | workspace builds; `check-contract` green |
 | 5 | READMEs, `docs/API.md` generation, gitignore hygiene | docs regenerate-and-diff clean |
 
 ## 11. Out of scope

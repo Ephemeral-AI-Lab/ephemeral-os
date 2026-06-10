@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::response::{WorkspaceApiError, WorkspaceTimings};
+use crate::contract::response::{WorkspaceApiError, WorkspaceTimings};
 
 /// A workspace-relative path after mode-specific binding/root resolution.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

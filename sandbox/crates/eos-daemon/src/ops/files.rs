@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use eos_protocol::models::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_workspace_contract::{
+use eos_workspace_runtime::contract::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceApiError, WorkspaceConflict, WorkspaceFileOps, WorkspaceMode, WriteFileOutcome,
     WriteFileRequest,
@@ -189,7 +189,7 @@ struct GuardedWireResponse {
     changed_paths: Vec<String>,
     changed_path_kinds: std::collections::BTreeMap<String, String>,
     mutation_source: String,
-    timings: eos_workspace_contract::WorkspaceTimings,
+    timings: eos_workspace_runtime::contract::WorkspaceTimings,
     applied_edits: Option<i64>,
 }
 

@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use eos_workspace_contract::{
+use crate::contract::{
     ReadFileRequest, ResolvedWorkspacePath, WorkspaceFileOps, WorkspaceMode, WorkspaceMutationKind,
     WorkspaceMutationOutcome, WorkspaceMutationRequest, WorkspaceMutationSink, WorkspaceReadBytes,
     WorkspaceReadView, WriteFileRequest,
@@ -29,14 +29,14 @@ impl WorkspaceReadView for FakePorts {
     fn resolve_path(
         &self,
         request_path: &str,
-    ) -> Result<ResolvedWorkspacePath, eos_workspace_contract::WorkspaceApiError> {
+    ) -> Result<ResolvedWorkspacePath, crate::contract::WorkspaceApiError> {
         Ok(ResolvedWorkspacePath::new(format!("src/{request_path}")))
     }
 
     fn read_bytes(
         &self,
         _path: &ResolvedWorkspacePath,
-    ) -> Result<WorkspaceReadBytes, eos_workspace_contract::WorkspaceApiError> {
+    ) -> Result<WorkspaceReadBytes, crate::contract::WorkspaceApiError> {
         let bytes = self
             .upper_bytes
             .clone()
@@ -54,7 +54,7 @@ impl WorkspaceMutationSink for FakePorts {
     fn commit_or_record(
         &self,
         request: WorkspaceMutationRequest,
-    ) -> Result<WorkspaceMutationOutcome, eos_workspace_contract::WorkspaceApiError> {
+    ) -> Result<WorkspaceMutationOutcome, crate::contract::WorkspaceApiError> {
         let path = request.path.path.clone();
         self.recorded.replace(Some(request));
         Ok(WorkspaceMutationOutcome {

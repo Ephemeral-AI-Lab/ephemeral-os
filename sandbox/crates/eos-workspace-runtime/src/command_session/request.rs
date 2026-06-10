@@ -1,4 +1,4 @@
-use eos_workspace_contract::PrepareCommandRequest;
+use crate::contract::PrepareCommandRequest;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StartCommandSession {

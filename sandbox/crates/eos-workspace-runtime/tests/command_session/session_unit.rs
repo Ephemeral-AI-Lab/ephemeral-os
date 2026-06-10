@@ -61,7 +61,7 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
         stdout: reaped.stdout.clone(),
         stderr: String::new(),
         command_session_id: Some("cmd_1".to_owned()),
-        workspace_mode: Some(eos_workspace_contract::WorkspaceMode::default()),
+        workspace_mode: Some(crate::contract::WorkspaceMode::default()),
         metadata: serde_json::Value::Null,
     };
     session.persist_final(&response);

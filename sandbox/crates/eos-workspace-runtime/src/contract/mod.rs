@@ -1,10 +1,10 @@
-//! Neutral workspace-mode contracts shared by daemon adapters and concrete
-//! workspace-runtime modules.
+//! Neutral workspace-mode contracts shared by daemon adapters and the
+//! concrete workspace-runtime modules in this crate.
 //!
-//! This crate deliberately owns no daemon, LayerStack, or OCC dependency. It is
-//! the common typed boundary for symmetric file and command workspace
+//! This module deliberately references no daemon, LayerStack, or OCC types. It
+//! is the common typed boundary for symmetric file and command workspace
 //! capabilities; concrete publish, read, audit, and runtime mechanics stay
-//! injected by the daemon or the owning workspace crate.
+//! injected by the daemon or the owning runtime module.
 
 pub mod command;
 pub mod file_ops;

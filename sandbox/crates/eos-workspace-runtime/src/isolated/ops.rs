@@ -1,6 +1,6 @@
 //! Concrete private isolated workspace API implementation.
 
-use eos_workspace_contract::{
+use crate::contract::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, WorkspaceApiError,
     WorkspaceFileOps, WorkspaceMode, WorkspaceMutationSink, WorkspaceReadView, WriteFileOutcome,
     WriteFileRequest,
@@ -29,11 +29,11 @@ where
     P: WorkspaceReadView + WorkspaceMutationSink,
 {
     fn read_file(&self, request: ReadFileRequest) -> Result<ReadFileOutcome, WorkspaceApiError> {
-        eos_workspace_contract::file_ops::read_file(self.ports(), WorkspaceMode::Isolated, request)
+        crate::contract::file_ops::read_file(self.ports(), WorkspaceMode::Isolated, request)
     }
 
     fn write_file(&self, request: WriteFileRequest) -> Result<WriteFileOutcome, WorkspaceApiError> {
-        eos_workspace_contract::file_ops::write_file(
+        crate::contract::file_ops::write_file(
             self.ports(),
             WorkspaceMode::Isolated,
             "isolated_workspace",
@@ -42,7 +42,7 @@ where
     }
 
     fn edit_file(&self, request: EditFileRequest) -> Result<EditFileOutcome, WorkspaceApiError> {
-        eos_workspace_contract::file_ops::edit_file(
+        crate::contract::file_ops::edit_file(
             self.ports(),
             WorkspaceMode::Isolated,
             "isolated_workspace",

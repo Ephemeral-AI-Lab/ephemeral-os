@@ -1,0 +1,74 @@
+import { DEFAULT_MAX_TOKENS, type Message } from "@eos/contracts";
+import type { LlmClient, ReasoningEffort } from "@eos/llm-client";
+
+import { runAgentLoop } from "./agent-loop.js";
+import { Conversation } from "./conversation.js";
+import { RunHandle, type AgentRunHandle } from "./run-handle.js";
+import type { ToolRegistry } from "./tools.js";
+
+export type {
+  DisplayedMessage,
+  PartialReason,
+} from "./conversation.js";
+export type { AgentEvent } from "./events.js";
+export type {
+  AgentRunFailure,
+  AgentRunHandle,
+  AgentRunOutcome,
+} from "./run-handle.js";
+export type {
+  ToolContext,
+  ToolDefinition,
+  ToolOutput,
+  ToolRegistry,
+} from "./tools.js";
+
+/** Loop-turn budget when the caller does not pass `maxTurns`. */
+const DEFAULT_MAX_TURNS = 32;
+
+/** In-process input of `startAgentRun` (camelCase; never serialized). */
+export interface StartAgentRunInput {
+  /** Already-configured provider client (DI boundary). */
+  llmClient: LlmClient;
+  /** Tools offered to the model (DI boundary); may be empty. */
+  tools: ToolRegistry;
+  model: string;
+  /** A request field, never a message. */
+  systemPrompt?: string;
+  /** Seed history; a restart passes a prior outcome's `llm`. Non-empty. */
+  initialMessages: Message[];
+  /** Default `DEFAULT_MAX_TOKENS`. */
+  maxTokens?: number;
+  reasoningEffort?: ReasoningEffort;
+  /** Provider-call budget; default 32. */
+  maxTurns?: number;
+  /** Optional parent scope; an external abort ≡ `interrupt()`. */
+  signal?: AbortSignal;
+}
+
+/**
+ * Start one agent run as a detached loop and return its handle. The loop
+ * never throws: every exit resolves `handle.outcome` exactly once and ends
+ * `handle.events` with `run_finished`.
+ */
+export function startAgentRun(input: StartAgentRunInput): AgentRunHandle {
+  if (input.initialMessages.length === 0) {
+    throw new TypeError("startAgentRun requires non-empty initialMessages");
+  }
+  const handle = new RunHandle(input.signal);
+  void runAgentLoop({
+    handle,
+    conversation: new Conversation(input.initialMessages),
+    tools: input.tools,
+    maxTurns: input.maxTurns ?? DEFAULT_MAX_TURNS,
+    turnConfig: {
+      client: input.llmClient,
+      model: input.model,
+      systemPrompt: input.systemPrompt,
+      maxTokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
+      reasoningEffort: input.reasoningEffort,
+      toolSpecs: [...input.tools.values()].map((tool) => tool.spec),
+    },
+  });
+  return handle;
+}

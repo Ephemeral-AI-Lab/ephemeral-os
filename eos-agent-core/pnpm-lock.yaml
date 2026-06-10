@@ -72,6 +72,15 @@ importers:
 
   packages/db: {}
 
+  packages/engine:
+    dependencies:
+      '@eos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@eos/llm-client':
+        specifier: workspace:*
+        version: link:../llm-client
+
   packages/llm-client:
     dependencies:
       '@anthropic-ai/sdk':

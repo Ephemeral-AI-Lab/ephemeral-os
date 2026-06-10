@@ -28,7 +28,7 @@ The declaration here is intentionally narrow:
 | Runtime and language | Node.js TypeScript with strict compiler settings | Baseline for new TypeScript implementation phases. |
 | Durable state | `better-sqlite3` + `Kysely` | Baseline for local SQL persistence, migrations, and typed query access. |
 | Runtime validation | Zod 4 | Baseline for request DTOs, provider payloads, tool inputs, persisted JSON, and compatibility checks. |
-| Test runner | Vitest | Baseline for TypeScript unit and integration tests. |
+| Test runner | Vitest | Baseline for TypeScript unit and integration tests; authoring rules in Test Authoring Baseline below. |
 | Observability | OpenTelemetry JavaScript packages | Baseline for run, attempt, provider, tool, and sandbox-host spans/events. |
 | Structured logs | `pino` or the repo-selected structured logging wrapper | Phase-gated until the TypeScript runtime package is introduced. |
 | Bounded concurrency | `p-queue` or a small crate-local limiter | Optional; use only for explicit request admission, provider, tool, or agent-run concurrency limits. |
@@ -42,6 +42,20 @@ Do not introduce BullMQ, Temporal, Redux, Zustand, XState, Prisma, Drizzle, or
 Redis as Phase 00 defaults. They require a later phase spec with a concrete
 distributed-worker, UI-state, workflow-orchestration, or database-backend reason.
 
+## Test Authoring Baseline
+
+Applies to every Vitest suite under `eos-agent-core/packages/*`:
+
+- One `describe` block per unit under test, with `it` titles written as
+  behavior sentences (for example "retries only before visible output").
+  Use `it.each` with templated titles for case tables.
+- Use the optional `expect(value, message)` second argument when a single test
+  asserts multiple scenarios, repeated counters, or timing bounds, so a failure
+  names the step that broke. Single-scenario assertions rely on Vitest's
+  default diff output.
+- Vitest's annotation API (`context.annotate`) stays unused until a reporter
+  that surfaces annotations is configured.
+
 ## Spec Index
 
 | Spec | Status | Boundary | Verification |
@@ -49,6 +63,7 @@ distributed-worker, UI-state, workflow-orchestration, or database-backend reason
 | `phase-00-migration-declaration_SPEC.md` | Proposed | Planning declaration only; no live implementation boundary changes. | Spec records the migration identity, target stack, non-goals, and initial acceptance criteria. |
 | `phase-01-project-setup_SPEC.md` | Completed | Setup-only TypeScript metadata under `eos-agent-core/`; Rust `agent-core/` remains behaviorally unchanged. | `CI=true pnpm install --frozen-lockfile`, `pnpm list --depth 0`, `pnpm exec tsc --showConfig`, `pnpm exec vitest --version`, and repo `git diff --check` hygiene. |
 | `phase-02-llm-client_SPEC.md` | Completed | Additive TypeScript implementation: `@eos/contracts` minimum message DTOs and `@eos/llm-client` with two SDK-backed clients (Anthropic Messages via `@anthropic-ai/sdk`, OpenAI Responses via `openai`) behind one normalized event union and retry gate; Rust `agent-core/` remains live and unchanged. | `pnpm run check` in `eos-agent-core/`, including golden decode tests replaying both providers' copied SSE fixtures through injected-fetch SDK clients; `git diff --stat -- agent-core` stays empty. |
+| `phase-02.5-provider-composition_SPEC.md` | Proposed | Restructure within `eos-agent-core/packages/llm-client` only: recompose the two vendor-named clients into wire codecs (`wires/`) x credential schemes (`access/`) behind one generic `LlmStreamClient` and a `profiles.ts` registry (`createLlmClient`); adds `claude_coding_plan`/`codex_coding_plan` profiles and a live e2e harness (`pnpm run test:e2e`) whose codex suite auto-loads `~/.codex/auth.json`; copilot access and openai-chat wire are named seams; Rust `agent-core/` remains live and unchanged. | `pnpm run check` (unit, no network) green with all Phase 02 tests surviving as moves; `pnpm run test:e2e` live codex battery green on a logged-in machine and clean-skip without credentials; `git diff --stat -- agent-core` stays empty. |
 | `phase-03-agent-loop-engine_SPEC.md` | Proposed | Additive TypeScript implementation: `@eos/engine` agent-loop spine (thin while loop, dual transcript, event stream, interrupt/steer, non-tool-use termination); Rust `agent-core/` remains live and unchanged. | `pnpm run check` in `eos-agent-core/`, including the scripted `MockLlmClient` loop suite (termination, steering, interrupt, tool batches); `git diff --stat -- agent-core` stays empty. |
 
 ## Knowledge Base

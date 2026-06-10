@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use eos_workspace_contract::{WorkspaceCommandOutcome, WorkspaceMode};
+use crate::contract::{WorkspaceCommandOutcome, WorkspaceMode};
 
 use super::tail::tail_lines;
 
