@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/pipeline Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/pipeline</h1>
+          <p class="lede">packages/tool/src/pipeline.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>4</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObject, ToolCallResult</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>systemNotificationMessage, type NotificationInbox, type ToolUseBlock</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract.js</code></td>
+      <td>AgentRunSnapshot, ToolCallMeta, ToolDefinition, ToolOutcome</td>
+      <td>type</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./hooks/protocol.js</code></td>
+      <td>HookEvent, HookPayload</td>
+      <td>type</td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./hooks/runner.js</code></td>
+      <td>HookEngine, HookRunSummary</td>
+      <td>type</td>
+      <td>16</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>pipeline.ts</code>
+        <small>7 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#PipelineResult"><code>PipelineResult</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BindToolDeps"><code>BindToolDeps</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BoundTool"><code>BoundTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#bindTool"><code>bindTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#projectContent"><code>projectContent</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#stamp"><code>stamp</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#issueSummary"><code>issueSummary</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="PipelineResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>PipelineResult</strong>
+          <span>type · line 22 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#PipelineResult">Module</a>
+      </div>
+      <pre><code>export type PipelineResult = Omit&lt;ToolCallResult, &quot;tool_use_id&quot;&gt;</code></pre>
+      <p>Everything the pipeline owns about one settled call. The batch executor
+constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="BindToolDeps" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BindToolDeps</strong>
+          <span>interface · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#BindToolDeps">Module</a>
+      </div>
+      <pre><code>export interface BindToolDeps</code></pre>
+      <p>Run-level dependencies closed over at executor build.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>hooks</code></td>
+              <td><code>HookEngine</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>inbox</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BoundTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BoundTool</strong>
+          <span>interface · line 32 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#BoundTool">Module</a>
+      </div>
+      <pre><code>export interface BoundTool</code></pre>
+      <p>One definition bound through the pipeline; dispatched by the executor.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>definition</code></td>
+              <td><code>ToolDefinition</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>run</code></td>
+              <td><code>run(
+    call: ToolUseBlock,
+    run: AgentRunSnapshot,
+    signal: AbortSignal,
+  ): Promise&lt;PipelineResult&gt;;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="bindTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>bindTool</strong>
+          <span>function · line 49 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#bindTool">Module</a>
+      </div>
+      <pre><code>export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundTool</code></pre>
+      <p>Bind one definition to the per-call pipeline: abort check -&gt; isolated
+guard -&gt; parse -&gt; PreToolUse -&gt; execute -&gt; PostToolUse(/Failure) -&gt;
+stamping. Never throws; every path returns a result the executor can
+record. Timing brackets `execute()` only - pre-execution rejections
+stamp both times with the rejection instant, and slow hooks never
+masquerade as slow tools.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="projectContent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>projectContent</strong>
+          <span>function · line 153 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#projectContent">Module</a>
+      </div>
+      <pre><code>export function projectContent(content: ToolOutcome[&quot;content&quot;]): string</code></pre>
+      <p>String projection for events and hook payloads (results stay structured).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="stamp" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>stamp</strong>
+          <span>function · line 162 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#stamp">Module</a>
+      </div>
+      <pre><code>function stamp( definition: ToolDefinition, outcome: ToolOutcome, startedAt: number, endedAt: number, warnings: string[], ): PipelineResult</code></pre>
+      <p>The pipeline's stamping: `is_terminal = definition.terminal &amp;&amp; !isError`
+(a failed submission can never terminate a run) plus the execute-only
+clock and accumulated hook warnings.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="issueSummary" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>issueSummary</strong>
+          <span>function · line 185 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#issueSummary">Module</a>
+      </div>
+      <pre><code>function issueSummary(error: z.ZodError): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td><code>zod</code></td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

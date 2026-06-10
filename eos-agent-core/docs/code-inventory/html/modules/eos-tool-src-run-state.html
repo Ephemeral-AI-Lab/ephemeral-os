@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/run-state Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/run-state</h1>
+          <p class="lede">packages/tool/src/run-state.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>2</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>2</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>AgentKind, AgentRunId, SandboxId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract.js</code></td>
+      <td>AgentRunSnapshot</td>
+      <td>type</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>run-state.ts</code>
+        <small>2 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunState"><code>AgentRunState</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#snapshotRunState"><code>snapshotRunState</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AgentRunState" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunState</strong>
+          <span>interface · line 13 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-run-state.html#AgentRunState">Module</a>
+      </div>
+      <pre><code>export interface AgentRunState</code></pre>
+      <p>The per-run metadata record, assembled once by the composition root.
+Data only - a port or service in here would be the rejected ambient
+`ToolRuntime`. Everything except `workspace.isIsolated` is readonly;
+that one cell's writers are the sandbox family's workspace-mode tools.
+Tools never receive this record at call time - `ToolCallMeta` nests its
+frozen `AgentRunSnapshot` instead.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>run_id</code></td>
+              <td><code>AgentRunId</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>kind</code></td>
+              <td><code>AgentKind</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>parent</code></td>
+              <td><code>AgentRunId</code></td>
+              <td>optional readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>sandbox_id</code></td>
+              <td><code>SandboxId</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>transcript_path</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>workspace</code></td>
+              <td><code>{ isIsolated: boolean }</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="snapshotRunState" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>snapshotRunState</strong>
+          <span>function · line 28 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-run-state.html#snapshotRunState">Module</a>
+      </div>
+      <pre><code>export function snapshotRunState(state: AgentRunState): AgentRunSnapshot</code></pre>
+      <p>Spread + freeze of the whole record, with the mutable cell collapsed to
+its value at snapshot time. The executor takes one snapshot per batch,
+so a mid-batch mode flip never leaks into queued siblings.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/run-state</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/run-state</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>3</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

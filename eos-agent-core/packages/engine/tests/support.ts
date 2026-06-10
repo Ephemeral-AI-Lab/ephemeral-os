@@ -178,17 +178,16 @@ export const userText = fromUserText;
 // --- scripted tool executor ----------------------------------------------------
 
 /** What a scripted tool yields; the executor fills the call facts. */
-export interface ScriptedToolOutput {
+export interface ScriptedToolResult {
   content: JsonValue;
   is_error?: boolean;
   is_terminal?: boolean;
-  metadata?: JsonObject;
 }
 
 export type ScriptedToolHandler = (
   input: JsonObject,
   signal: AbortSignal,
-) => Promise<ScriptedToolOutput>;
+) => Promise<ScriptedToolResult>;
 
 /**
  * A minimal in-test `ToolExecutor`: sequential dispatch (concurrency is
@@ -221,7 +220,7 @@ export function scriptedExecutor(
         const output = handler
           ? await settleOrAbort(handler(call.input, signal), signal)
           : { content: `tool not found: ${call.name}`, is_error: true };
-        if (signal.aborted) break;
+        if (isAborted(signal)) break;
         const result: ToolCallResult = {
           tool_use_id: call.tool_use_id,
           content: output.content,
@@ -229,7 +228,6 @@ export function scriptedExecutor(
           is_terminal: output.is_terminal ?? false,
           tool_start_time: startedAt,
           tool_end_time: Date.now(),
-          ...(output.metadata !== undefined && { metadata: output.metadata }),
         };
         results.push(result);
         emit({
@@ -244,7 +242,6 @@ export function scriptedExecutor(
           is_terminal: result.is_terminal,
           tool_start_time: result.tool_start_time,
           tool_end_time: result.tool_end_time,
-          ...(result.metadata !== undefined && { metadata: result.metadata }),
         });
       }
       return results;
@@ -263,10 +260,15 @@ export function submitHandler(submission: JsonValue): ScriptedToolHandler {
     Promise.resolve({ content: submission, is_terminal: true });
 }
 
+/** Read through a call so control-flow narrowing never caches `aborted`. */
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted;
+}
+
 function settleOrAbort(
-  work: Promise<ScriptedToolOutput>,
+  work: Promise<ScriptedToolResult>,
   signal: AbortSignal,
-): Promise<ScriptedToolOutput> {
+): Promise<ScriptedToolResult> {
   return new Promise((resolve) => {
     const onAbort = (): void => {
       resolve({ content: "interrupted", is_error: true });
@@ -313,6 +315,7 @@ export function sessionHandle(
     fail = reject;
   });
   const cancelled: string[] = [];
+  const description = options.describe;
   return {
     handle: {
       settled,
@@ -322,9 +325,7 @@ export function sessionHandle(
           ? new Promise<void>(() => undefined)
           : Promise.resolve();
       },
-      ...(options.describe !== undefined && {
-        describe: () => options.describe ?? "",
-      }),
+      ...(description !== undefined && { describe: () => description }),
     },
     settle,
     fail,

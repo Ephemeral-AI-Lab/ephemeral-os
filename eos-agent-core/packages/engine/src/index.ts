@@ -19,7 +19,6 @@ export { BackgroundSupervisor } from "./background/supervisor.js";
 export type {
   DisplayedMessage,
   PartialReason,
-  ToolResultBlock,
 } from "./conversation.js";
 export type { AgentEvent } from "./events.js";
 export {

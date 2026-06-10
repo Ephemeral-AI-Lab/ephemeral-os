@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/engine/src/background/supervisor Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-engine.html">@eos/engine</a></p>
+          <h1>@eos/engine/src/background/supervisor</h1>
+          <p class="lede">packages/engine/src/background/supervisor.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>3</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>ToolUseId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../notification-inbox.js</code></td>
+      <td>systemNotificationMessage, type NotificationInbox</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./session.js</code></td>
+      <td>SessionHandle, SessionOutcome, SessionRef, SessionRow, SessionStatus</td>
+      <td>type</td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>supervisor.ts</code>
+        <small>4 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#SessionEntry"><code>SessionEntry</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sessionKey"><code>sessionKey</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#isSessionRef"><code>isSessionRef</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BackgroundSupervisor"><code>BackgroundSupervisor</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="SessionEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SessionEntry</strong>
+          <span>interface · line 15 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-background-supervisor.html#SessionEntry">Module</a>
+      </div>
+      <pre><code>interface SessionEntry</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>ref</code></td>
+              <td><code>SessionRef</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>SessionHandle</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>status</code></td>
+              <td><code>Exclude&lt;SessionStatus, &quot;delivered&quot;&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>started_at</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>summary</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="sessionKey" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sessionKey</strong>
+          <span>function · line 23 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-background-supervisor.html#sessionKey">Module</a>
+      </div>
+      <pre><code>function sessionKey(ref: SessionRef): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="isSessionRef" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>isSessionRef</strong>
+          <span>function · line 27 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-background-supervisor.html#isSessionRef">Module</a>
+      </div>
+      <pre><code>function isSessionRef(tag: unknown): tag is SessionRef</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="BackgroundSupervisor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BackgroundSupervisor</strong>
+          <span>class · line 43 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-background-supervisor.html#BackgroundSupervisor">Module</a>
+      </div>
+      <pre><code>export class BackgroundSupervisor</code></pre>
+      <p>Generic session lifecycle, keyed by the native ids the model already
+holds. Sessions are loop lifecycle: the loop's exit path calls
+`dispose()` on every finish, and every terminal transition publishes one
+`session_settled` notification whose drain marks the session delivered -
+delivery bookkeeping never leaves this class.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#inbox</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#sessions</code></td>
+              <td><code>new Map&lt;string, SessionEntry&gt;()</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#disposedReason</code></td>
+              <td><code>string | undefined</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>register</code></td>
+              <td><code>register(ref: SessionRef, spawnedBy: ToolUseId, handle: SessionHandle): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancel</code></td>
+              <td><code>async cancel(ref: SessionRef, reason: string): Promise&lt;boolean&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+
+            <tr>
+              <td><code>list</code></td>
+              <td><code>list(): SessionRow[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>liveCount</code></td>
+              <td><code>liveCount(): number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>openCount</code></td>
+              <td><code>openCount(): number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>dispose</code></td>
+              <td><code>async dispose(reason: string): Promise&lt;void&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#settle</code></td>
+              <td><code>#settle(key: string, outcome: SessionOutcome): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#transition</code></td>
+              <td><code>#transition(entry: SessionEntry, outcome: SessionOutcome): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#markDelivered</code></td>
+              <td><code>#markDelivered(tags: unknown[]): void</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>3</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

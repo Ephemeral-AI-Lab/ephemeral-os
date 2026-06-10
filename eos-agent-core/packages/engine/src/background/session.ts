@@ -42,7 +42,7 @@ export interface SessionHandle {
 }
 
 /** One row of `list()`: running and settled-but-undelivered sessions. */
-export type SessionRow = {
+export interface SessionRow {
   type: string;
   id: string;
   status: Exclude<SessionStatus, "delivered">;
@@ -52,4 +52,4 @@ export type SessionRow = {
   summary?: string;
   /** From the handle's `describe()`, when provided. */
   description?: string;
-};
+}

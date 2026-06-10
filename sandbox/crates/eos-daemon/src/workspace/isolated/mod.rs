@@ -289,7 +289,7 @@ fn error_payload(error: &IsolatedError) -> Value {
             "required_bytes": required_bytes,
             "budget_bytes": budget_bytes,
         }),
-        IsolatedError::SetupFailed { step } | IsolatedError::SetupTimeout { step } => json!({
+        IsolatedError::SetupFailed { step } => json!({
             "failed_step": step,
         }),
         _ => json!({}),

@@ -17,7 +17,7 @@ export interface ToolDefinitionInit<I> {
   terminal?: boolean;
   /** Default false: a forgotten override degrades to "banned in isolated mode". */
   availableInIsolatedWorkspace?: boolean;
-  execute(input: I, ctx: ToolCallContext): Promise<ToolOutcome>;
+  execute: (input: I, ctx: ToolCallContext) => Promise<ToolOutcome>;
 }
 
 /**

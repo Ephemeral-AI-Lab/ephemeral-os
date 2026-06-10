@@ -8,15 +8,14 @@
 //! [`host_ports`]. Completion publishes the captured upperdir (ephemeral) or
 //! records it for audit (isolated); cancellation discards it.
 
-mod config;
 #[cfg(target_os = "linux")]
 mod host_ports;
+mod manager;
 pub(crate) mod ops;
 mod wire;
 
-pub(crate) use config::configure_command_sessions;
-pub(crate) use ops::{
+pub(crate) use manager::{
     active_command_sessions_for_caller, cancel_all_command_sessions,
     cleanup_command_sessions_for_caller, command_session_reaper_sweep,
-    recover_orphaned_command_sessions,
+    configure_command_sessions, recover_orphaned_command_sessions,
 };

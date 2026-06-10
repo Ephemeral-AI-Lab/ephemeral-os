@@ -26,10 +26,10 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>3</dd></div>
-          <div><dt>Schemas</dt><dd>1</dd></div>
-          <div><dt>Types</dt><dd>1</dd></div>
-          <div><dt>Functions</dt><dd>1</dd></div>
+          <div><dt>Symbols</dt><dd>10</dd></div>
+          <div><dt>Schemas</dt><dd>3</dd></div>
+          <div><dt>Types</dt><dd>3</dd></div>
+          <div><dt>Functions</dt><dd>4</dd></div>
         </dl>
       </section>
 
@@ -76,7 +76,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>ids.ts</code>
-        <small>3 symbols</small>
+        <small>10 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -96,6 +96,55 @@
 
           <li class="tree-symbol search-item">
             <a href="#toolUseIdFrom"><code>toolUseIdFrom</code></a>
+            <span>function</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunIdSchema"><code>AgentRunIdSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">contract public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunId"><code>AgentRunId</code></a>
+            <span>type</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#agentRunIdFrom"><code>agentRunIdFrom</code></a>
+            <span>function</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#mintAgentRunId"><code>mintAgentRunId</code></a>
+            <span>function</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SandboxIdSchema"><code>SandboxIdSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">contract public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SandboxId"><code>SandboxId</code></a>
+            <span>type</span>
+            <span class="compact-tags">contract public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sandboxIdFrom"><code>sandboxIdFrom</code></a>
             <span>function</span>
             <span class="compact-tags">contract public-api</span>
           </li>
@@ -156,6 +205,132 @@
 
 
     </article>
+
+
+    <article id="AgentRunIdSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunIdSchema</strong>
+          <span>schema · line 20 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#AgentRunIdSchema">Module</a>
+      </div>
+      <pre><code>export const AgentRunIdSchema = z.string().min(1).brand&lt;&quot;AgentRunId&quot;&gt;()</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>schema:brand</span><span>schema:zod</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunId" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunId</strong>
+          <span>type · line 22 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#AgentRunId">Module</a>
+      </div>
+      <pre><code>export type AgentRunId = z.infer&lt;typeof AgentRunIdSchema&gt;</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>type:inferred</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="agentRunIdFrom" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>agentRunIdFrom</strong>
+          <span>function · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#agentRunIdFrom">Module</a>
+      </div>
+      <pre><code>export function agentRunIdFrom(raw: string): AgentRunId</code></pre>
+      <p>Adopt an existing run id (restart, parent reference). Rejects &quot;&quot;.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="mintAgentRunId" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>mintAgentRunId</strong>
+          <span>function · line 30 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#mintAgentRunId">Module</a>
+      </div>
+      <pre><code>export function mintAgentRunId(): AgentRunId</code></pre>
+      <p>Mint a fresh run id.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SandboxIdSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SandboxIdSchema</strong>
+          <span>schema · line 38 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#SandboxIdSchema">Module</a>
+      </div>
+      <pre><code>export const SandboxIdSchema = z.string().min(1).brand&lt;&quot;SandboxId&quot;&gt;()</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>schema:brand</span><span>schema:zod</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SandboxId" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SandboxId</strong>
+          <span>type · line 40 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#SandboxId">Module</a>
+      </div>
+      <pre><code>export type SandboxId = z.infer&lt;typeof SandboxIdSchema&gt;</code></pre>
+
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span><span>type:inferred</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="sandboxIdFrom" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sandboxIdFrom</strong>
+          <span>function · line 43 · public</span>
+        </div>
+        <a href="../modules/eos-contracts-src-ids.html#sandboxIdFrom">Module</a>
+      </div>
+      <pre><code>export function sandboxIdFrom(raw: string): SandboxId</code></pre>
+      <p>Adopt a runtime-assigned sandbox id. Rejects &quot;&quot;.</p>
+      <div class="tags"><span>contract</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
   </div>
         </div>
       </section>
@@ -176,9 +351,41 @@
 
     <tr class="search-item">
       <td>schema-infers-type</td>
+      <td><code>@eos/contracts/src/ids#AgentRunIdSchema</code></td>
+      <td><code>@eos/contracts/src/ids#AgentRunId</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/contracts/src/ids#SandboxIdSchema</code></td>
+      <td><code>@eos/contracts/src/ids#SandboxId</code></td>
+      <td>40</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
       <td><code>@eos/contracts/src/ids#ToolUseIdSchema</code></td>
       <td><code>@eos/contracts/src/ids#ToolUseId</code></td>
       <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/contracts/src/ids#AgentRunId</code></td>
+      <td><code>@eos/contracts/src/ids#AgentRunIdSchema</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/contracts/src/ids#SandboxId</code></td>
+      <td><code>@eos/contracts/src/ids#SandboxIdSchema</code></td>
+      <td>40</td>
     </tr>
 
 

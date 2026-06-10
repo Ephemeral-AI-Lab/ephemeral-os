@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import type { z } from "zod";
 
 import {
   HookOutputSchema,
@@ -72,12 +73,16 @@ async function runHook(
 ): Promise<HookRunResult> {
   if (command.type === "callback") {
     try {
-      return { output: await command.run(payload, signal) };
+      return validateHookOutput(await command.run(payload, signal), "callback hook output");
     } catch (error) {
       return passthrough(`callback hook failed: ${errorMessage(error)}`);
     }
   }
-  return runCommandHook(command, payload, signal);
+  // A synchronous spawn() fault rejects the command promise; map it to a
+  // warning so HookEngine.run keeps its never-throws contract.
+  return runCommandHook(command, payload, signal).catch((error: unknown) =>
+    passthrough(`hook command failed: ${errorMessage(error)}`),
+  );
 }
 
 /**
@@ -142,23 +147,33 @@ function runCommandHook(
         return;
       }
       const checked = HookOutputSchema.safeParse(parsed);
-      if (!checked.success) {
-        resolve(
-          passthrough(
-            `hook stdout did not match HookOutput: ${checked.error.issues
-              .map((issue) => issue.message)
-              .join("; ")}`,
-          ),
-        );
-        return;
-      }
-      resolve({ output: checked.data });
+      resolve(
+        checked.success
+          ? { output: checked.data }
+          : invalidHookOutput("hook stdout", checked.error),
+      );
     });
     // EPIPE from a hook that exits without reading stdin is not an error.
     child.stdin.on("error", () => undefined);
     child.stdin.write(`${JSON.stringify(payload)}\n`);
     child.stdin.end();
   });
+}
+
+function validateHookOutput(output: unknown, source: string): HookRunResult {
+  const checked = HookOutputSchema.safeParse(output);
+  return checked.success ? { output: checked.data } : invalidHookOutput(source, checked.error);
+}
+
+function invalidHookOutput(
+  source: string,
+  error: z.ZodError,
+): HookRunResult {
+  return passthrough(
+    `${source} did not match HookOutput: ${error.issues
+      .map((issue) => issue.message)
+      .join("; ")}`,
+  );
 }
 
 function errorMessage(error: unknown): string {

@@ -170,7 +170,7 @@ export function symbolTags(input: SymbolTagInput): string[] {
   }
   if (
     input.fields.some((field) =>
-      ["LlmClient", "ToolRegistry", "AbortSignal"].some((boundaryType) =>
+      ["LlmClient", "ToolExecutor", "AbortSignal"].some((boundaryType) =>
         field.ty.includes(boundaryType),
       ),
     )

@@ -12,6 +12,7 @@ import type {
   ToolDefinition,
   ToolOutcome,
 } from "./contract.js";
+import type { HookEvent, HookPayload } from "./hooks/protocol.js";
 import type { HookEngine, HookRunSummary } from "./hooks/runner.js";
 
 /**
@@ -91,17 +92,20 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
     }
     let input: unknown = parsed.data;
     let wireInput: JsonObject = call.input;
+    // Reads the CURRENT wireInput, so post hooks see an applied update.
+    const hookPayload = (
+      event: HookEvent,
+      extra: Partial<Pick<HookPayload, "tool_response" | "error">> = {},
+    ): HookPayload => ({
+      event,
+      tool_name: definition.name,
+      tool_input: wireInput,
+      tool_use_id: meta.tool_use_id,
+      run: meta.run,
+      ...extra,
+    });
 
-    const pre = await deps.hooks.run(
-      {
-        event: "PreToolUse",
-        tool_name: definition.name,
-        tool_input: wireInput,
-        tool_use_id: meta.tool_use_id,
-        run: meta.run,
-      },
-      signal,
-    );
+    const pre = await deps.hooks.run(hookPayload("PreToolUse"), signal);
     absorb(pre);
     if (pre.decision === "deny") {
       return rejected(pre.reason ?? `PreToolUse hook denied ${definition.name}`);
@@ -127,17 +131,7 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       const endedAt = Date.now();
       const message = error instanceof Error ? error.message : String(error);
       absorb(
-        await deps.hooks.run(
-          {
-            event: "PostToolUseFailure",
-            tool_name: definition.name,
-            tool_input: wireInput,
-            tool_use_id: meta.tool_use_id,
-            run: meta.run,
-            error: message,
-          },
-          signal,
-        ),
+        await deps.hooks.run(hookPayload("PostToolUseFailure", { error: message }), signal),
       );
       return stamp(definition, { content: message, isError: true }, startedAt, endedAt, warnings);
     }
@@ -145,14 +139,7 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
 
     absorb(
       await deps.hooks.run(
-        {
-          event: "PostToolUse",
-          tool_name: definition.name,
-          tool_input: wireInput,
-          tool_use_id: meta.tool_use_id,
-          run: meta.run,
-          tool_response: projectContent(outcome.content),
-        },
+        hookPayload("PostToolUse", { tool_response: projectContent(outcome.content) }),
         signal,
       ),
     );

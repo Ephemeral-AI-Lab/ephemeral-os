@@ -25,7 +25,6 @@ use self::resources::monotonic_seconds;
 pub(crate) const DEFAULT_ISOLATED_SCRATCH_ROOT: &str = "/eos/scratch/isolated";
 
 mod capacity;
-mod fault_injection;
 mod gc;
 mod handle;
 mod lifecycle;

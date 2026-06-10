@@ -14,7 +14,6 @@ import type {
 
 interface SessionEntry {
   ref: SessionRef;
-  spawnedBy: ToolUseId;
   handle: SessionHandle;
   status: Exclude<SessionStatus, "delivered">;
   started_at: string;
@@ -60,6 +59,9 @@ export class BackgroundSupervisor {
    * unhandled. After `dispose()` the supervisor is latched: a late
    * registration (an abandoned `execute()` continuation finishing after an
    * abort) is immediately cancelled and nothing is registered or published.
+   *
+   * `spawnedBy` is part of the registration contract; its reader is the
+   * transcript/observability layer, so nothing here consumes it yet.
    */
   register(ref: SessionRef, spawnedBy: ToolUseId, handle: SessionHandle): void {
     if (this.#disposedReason !== undefined) {
@@ -70,7 +72,6 @@ export class BackgroundSupervisor {
     const key = sessionKey(ref);
     this.#sessions.set(key, {
       ref,
-      spawnedBy,
       handle,
       status: "running",
       started_at: new Date().toISOString(),
@@ -96,7 +97,7 @@ export class BackgroundSupervisor {
    */
   async cancel(ref: SessionRef, reason: string): Promise<boolean> {
     const entry = this.#sessions.get(sessionKey(ref));
-    if (!entry || entry.status !== "running") return false;
+    if (entry?.status !== "running") return false;
     this.#transition(entry, { status: "cancelled", summary: reason });
     try {
       await entry.handle.cancel(reason);
@@ -160,7 +161,7 @@ export class BackgroundSupervisor {
   /** A settle against a non-running session is dropped (cancel race). */
   #settle(key: string, outcome: SessionOutcome): void {
     const entry = this.#sessions.get(key);
-    if (!entry || entry.status !== "running") return;
+    if (entry?.status !== "running") return;
     this.#transition(entry, outcome);
   }
 
@@ -184,7 +185,8 @@ export class BackgroundSupervisor {
       if (!isSessionRef(tag)) continue;
       const key = sessionKey(tag);
       const entry = this.#sessions.get(key);
-      if (entry && entry.status !== "running") this.#sessions.delete(key);
+      if (!entry) continue;
+      if (entry.status !== "running") this.#sessions.delete(key);
     }
   }
 }

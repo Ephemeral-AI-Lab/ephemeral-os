@@ -87,7 +87,7 @@ Out of scope (each named with its seam in §11):
 - terminal tools and batch policies, lifecycle tools, notifications,
   turn-ceiling formula, background sessions, subagents,
 - persistence (`eos-db`, record store): outcomes exist in memory only,
-- the run service/registry layer (`eos-agent-run`) — future `@eos/runtime`,
+- the run service/registry layer (`eos-agent-run`) - future `@eos/agent-runtime`,
 - compaction, context budgeting,
 - server transports (SSE/WebSocket endpoints), observability wiring,
 - a real tool framework (`eos-tool` port): this phase defines only the
@@ -323,7 +323,7 @@ unchanged, plus tool execution and run lifecycle (subset of
 
 Identity stamping (`agent_name`/`agent_run_id` envelope fields,
 `stream.rs:171-232`) is intentionally absent: a handle serves exactly one
-run, so events need no identity until the `@eos/runtime` supervisor
+run, so events need no identity until the `@eos/agent-runtime` supervisor
 multiplexes runs — that phase extends the envelope.
 
 Field naming follows the Phase 02 wire rule: event payload fields are
@@ -467,7 +467,7 @@ type AgentRunOutcome = {
 | Max-output-tokens recovery (escalate/retry) | `knowledge/agent-loop-and-components.md` | `stop_reason` on the `completed` outcome is the detection signal |
 | Stream idle watchdog | `knowledge/event-stream-and-sse.md` | A `turn.ts` timeout option; "stream went quiet" classifies as `provider_error` |
 | Persistence / record store | `executor.rs:187-228`, `eos-db` | `AgentRunOutcome.displayed` (audit/display) + `llm` (resume) + events carry what a recorder needs |
-| Run service, registry, identity stamping | `eos-agent-run`, `stream.rs:171-232` | Future `@eos/runtime` wraps `AgentRunHandle`; event envelope extends |
+| Run service, registry, identity stamping | `eos-agent-run`, `stream.rs:171-232` | Future `@eos/agent-runtime` wraps `AgentRunHandle`; event envelope extends |
 | Compaction | none (new) | `Conversation.llmMessages()` is the only history read |
 | Transcript-projection events for SSE | `eos-agent-core-server` | `turn_started` exists; message-level projection events (steered input, salvaged partials) arrive with the transport phase |
 | Early tool dispatch on `tool_use_delta` | `events.rs:33` intent comment | `tool-runner.ts` currently dispatches post-completion only |

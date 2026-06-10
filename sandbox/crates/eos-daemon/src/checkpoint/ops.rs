@@ -3,8 +3,8 @@
 //!
 //! `commit_to_git` is a thin seam over [`crate::checkpoint`]: this module owns only
 //! the request-envelope parsing and the response/error re-mapping; the pathspec
-//! policy, worktree preparation, and git pipeline live in the host crate so the
-//! daemon does not fuse that glue into the control plane.
+//! policy, worktree preparation, and git pipeline live in the parent module so
+//! the daemon does not fuse that glue into the control plane.
 
 use std::path::PathBuf;
 use std::time::Instant;

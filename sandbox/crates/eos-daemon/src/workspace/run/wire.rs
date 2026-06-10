@@ -39,6 +39,7 @@ pub(super) fn caller_id_arg(args: &Value) -> &str {
         .unwrap_or("default")
 }
 
+#[cfg(any(target_os = "linux", test))]
 pub(super) fn optional_u64(args: &Value, key: &str) -> Option<u64> {
     args.get(key).and_then(|value| {
         value

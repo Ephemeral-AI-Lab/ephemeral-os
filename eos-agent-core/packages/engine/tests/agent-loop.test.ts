@@ -293,7 +293,7 @@ describe("agent loop", () => {
   it("fills results the executor dropped so history stays provider-valid (§15.21)", async () => {
     const dropping: ToolExecutor = {
       specs: () => [],
-      executeBatch: (calls, _signal, _emit) =>
+      executeBatch: (calls) =>
         Promise.resolve(
           calls
             .filter((call) => call.name === "submit")
@@ -573,7 +573,6 @@ describe("agent loop", () => {
       is_terminal: true,
     });
     for (const [index, completion] of completions.entries()) {
-      if (completion.type !== "tool_execution_completed") continue;
       expect(
         completion.tool_end_time,
         `completion ${String(index)} carries the execute clock`,
@@ -615,9 +614,7 @@ describe("agent loop", () => {
     const completion = must(
       events.find((event) => event.type === "tool_execution_completed"),
     );
-    if (completion.type === "tool_execution_completed") {
-      expect(completion.output).toBe(JSON.stringify(structured));
-    }
+    expect(completion.output).toBe(JSON.stringify(structured));
     expect(outcome.submission, "the submission survives structured").toEqual(
       SUBMISSION,
     );

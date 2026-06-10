@@ -17,7 +17,6 @@ eos-plugin.workspace = true
 # the wire in insertion order for byte-stable envelope round-trips.
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde.workspace = true
-sha2.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 thiserror.workspace = true

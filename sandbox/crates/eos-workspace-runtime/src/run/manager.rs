@@ -13,7 +13,7 @@
 //! [`WorkspaceRunHostPorts`] so this crate keeps no `eos-occ` or
 //! `eos-layerstack` edge and no daemon-global state.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

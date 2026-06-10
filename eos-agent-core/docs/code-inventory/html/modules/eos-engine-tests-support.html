@@ -26,17 +26,17 @@
           <div class="tags"><span>test-only</span><span>test-support</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>29</dd></div>
+          <div><dt>Symbols</dt><dd>37</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
-          <div><dt>Types</dt><dd>1</dd></div>
-          <div><dt>Functions</dt><dd>23</dd></div>
+          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>28</dd></div>
         </dl>
       </section>
 
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>5</span>
+          <span>8</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -52,7 +52,7 @@
 
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>fromUserText, toolUseIdFrom, type ContentBlock, type JsonObject, type Message</td>
+      <td>fromUserText, toolUseIdFrom, type ContentBlock, type JsonObject, type JsonValue, type Message, type ToolCallResult</td>
       <td>value</td>
       <td>3</td>
     </tr>
@@ -62,7 +62,23 @@
       <td><code>@eos/llm-client</code></td>
       <td>LlmClient, LlmRequest, LlmStreamEvent, LlmStreamOptions, StopReason, UsageSnapshot</td>
       <td>type</td>
-      <td>10</td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/background/session.js</code></td>
+      <td>SessionOutcome</td>
+      <td>type</td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/background/supervisor.js</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>type</td>
+      <td>22</td>
     </tr>
 
 
@@ -70,15 +86,23 @@
       <td><code>../src/events.js</code></td>
       <td>AgentEvent</td>
       <td>type</td>
-      <td>19</td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/notification-inbox.js</code></td>
+      <td>NotificationInbox</td>
+      <td>type</td>
+      <td>24</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>../src/index.js</code></td>
-      <td>startAgentRun, type AgentRunHandle, type AgentRunOutcome, type ToolDefinition, type ToolRegistry</td>
+      <td>startAgentRun, type AgentRunHandle, type AgentRunOutcome, type ToolExecutor</td>
       <td>value</td>
-      <td>20</td>
+      <td>25</td>
     </tr>
   </tbody>
           </table>
@@ -108,7 +132,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>support.ts</code>
-        <small>29 symbols</small>
+        <small>37 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -225,9 +249,65 @@
 
 
           <li class="tree-symbol search-item">
-            <a href="#registryOf"><code>registryOf</code></a>
+            <a href="#ScriptedToolResult"><code>ScriptedToolResult</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ScriptedToolHandler"><code>ScriptedToolHandler</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api run-handle test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#scriptedExecutor"><code>scriptedExecutor</code></a>
             <span>function</span>
             <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#emptyExecutor"><code>emptyExecutor</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#submitHandler"><code>submitHandler</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api run-handle test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#isAborted"><code>isAborted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#settleOrAbort"><code>settleOrAbort</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TestSessionHandle"><code>TestSessionHandle</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api run-handle test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sessionHandle"><code>sessionHandle</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api run-handle test-only</span>
           </li>
 
 
@@ -322,7 +402,7 @@
       <div class="symbol-head">
         <div>
           <strong>ScriptedTurn</strong>
-          <span>type · line 31 · public</span>
+          <span>type · line 35 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#ScriptedTurn">Module</a>
       </div>
@@ -340,7 +420,7 @@
       <div class="symbol-head">
         <div>
           <strong>MockLlmClient</strong>
-          <span>class · line 37 · public</span>
+          <span>class · line 41 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#MockLlmClient">Module</a>
       </div>
@@ -404,7 +484,7 @@
       <div class="symbol-head">
         <div>
           <strong>scriptedTurn</strong>
-          <span>function · line 59 · public</span>
+          <span>function · line 63 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#scriptedTurn">Module</a>
       </div>
@@ -422,7 +502,7 @@
       <div class="symbol-head">
         <div>
           <strong>failingTurn</strong>
-          <span>function · line 69 · public</span>
+          <span>function · line 73 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#failingTurn">Module</a>
       </div>
@@ -440,7 +520,7 @@
       <div class="symbol-head">
         <div>
           <strong>hangingTurn</strong>
-          <span>function · line 86 · public</span>
+          <span>function · line 90 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#hangingTurn">Module</a>
       </div>
@@ -459,7 +539,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>gatedTurn</strong>
-          <span>function · line 101 · public</span>
+          <span>function · line 105 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#gatedTurn">Module</a>
       </div>
@@ -477,7 +557,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>USAGE</strong>
-          <span>const · line 117 · public</span>
+          <span>const · line 121 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#USAGE">Module</a>
       </div>
@@ -495,7 +575,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>textDelta</strong>
-          <span>function · line 119 · public</span>
+          <span>function · line 123 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#textDelta">Module</a>
       </div>
@@ -513,7 +593,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>reasoningDelta</strong>
-          <span>function · line 123 · public</span>
+          <span>function · line 127 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#reasoningDelta">Module</a>
       </div>
@@ -531,7 +611,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>toolUseDelta</strong>
-          <span>function · line 127 · public</span>
+          <span>function · line 131 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#toolUseDelta">Module</a>
       </div>
@@ -549,7 +629,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>complete</strong>
-          <span>function · line 135 · public</span>
+          <span>function · line 139 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#complete">Module</a>
       </div>
@@ -567,7 +647,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>textBlock</strong>
-          <span>function · line 143 · public</span>
+          <span>function · line 147 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#textBlock">Module</a>
       </div>
@@ -585,7 +665,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>toolUseBlock</strong>
-          <span>function · line 147 · public</span>
+          <span>function · line 151 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#toolUseBlock">Module</a>
       </div>
@@ -603,7 +683,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>toolResultBlock</strong>
-          <span>function · line 155 · public</span>
+          <span>function · line 159 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#toolResultBlock">Module</a>
       </div>
@@ -621,7 +701,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>assistantMessage</strong>
-          <span>function · line 168 · public</span>
+          <span>function · line 172 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#assistantMessage">Module</a>
       </div>
@@ -639,7 +719,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>userText</strong>
-          <span>const · line 172 · public</span>
+          <span>const · line 176 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#userText">Module</a>
       </div>
@@ -653,17 +733,249 @@ run's signal aborts — like a live socket killed mid-token.</p>
     </article>
 
 
-    <article id="registryOf" class="symbol-card search-item">
+    <article id="ScriptedToolResult" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>registryOf</strong>
-          <span>function · line 177 · public</span>
+          <strong>ScriptedToolResult</strong>
+          <span>interface · line 181 · public</span>
         </div>
-        <a href="../modules/eos-engine-tests-support.html#registryOf">Module</a>
+        <a href="../modules/eos-engine-tests-support.html#ScriptedToolResult">Module</a>
       </div>
-      <pre><code>export function registryOf( ...tools: [string, ToolDefinition[&quot;execute&quot;]][] ): ToolRegistry</code></pre>
-      <p>Register executors by name under a trivial spec.</p>
+      <pre><code>export interface ScriptedToolResult</code></pre>
+      <p>What a scripted tool yields; the executor fills the call facts.</p>
       <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>content</code></td>
+              <td><code>JsonValue</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>is_error</code></td>
+              <td><code>boolean</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>is_terminal</code></td>
+              <td><code>boolean</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ScriptedToolHandler" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ScriptedToolHandler</strong>
+          <span>type · line 187 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#ScriptedToolHandler">Module</a>
+      </div>
+      <pre><code>export type ScriptedToolHandler = ( input: JsonObject, signal: AbortSignal, ) =&gt; Promise&lt;ScriptedToolResult&gt;</code></pre>
+
+      <div class="tags"><span>abortable</span><span>exported</span><span>json-boundary</span><span>public-api</span><span>run-handle</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="scriptedExecutor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>scriptedExecutor</strong>
+          <span>function · line 197 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#scriptedExecutor">Module</a>
+      </div>
+      <pre><code>export function scriptedExecutor( ...tools: [string, ScriptedToolHandler][] ): ToolExecutor</code></pre>
+      <p>A minimal in-test `ToolExecutor`: sequential dispatch (concurrency is
+`@eos/tool`'s concern), abort-aware so a hanging tool settles the batch
+with whatever finished — the engine's normalization fills the rest.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="emptyExecutor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>emptyExecutor</strong>
+          <span>function · line 253 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#emptyExecutor">Module</a>
+      </div>
+      <pre><code>export function emptyExecutor(): ToolExecutor</code></pre>
+      <p>An executor over no tools at all.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="submitHandler" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>submitHandler</strong>
+          <span>function · line 258 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#submitHandler">Module</a>
+      </div>
+      <pre><code>export function submitHandler(submission: JsonValue): ScriptedToolHandler</code></pre>
+      <p>A handler that submits a structured outcome as a terminal result.</p>
+      <div class="tags"><span>exported</span><span>json-boundary</span><span>public-api</span><span>run-handle</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="isAborted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>isAborted</strong>
+          <span>function · line 264 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#isAborted">Module</a>
+      </div>
+      <pre><code>function isAborted(signal: AbortSignal): boolean</code></pre>
+      <p>Read through a call so control-flow narrowing never caches `aborted`.</p>
+      <div class="tags"><span>abortable</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="settleOrAbort" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>settleOrAbort</strong>
+          <span>function · line 268 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#settleOrAbort">Module</a>
+      </div>
+      <pre><code>function settleOrAbort( work: Promise&lt;ScriptedToolResult&gt;, signal: AbortSignal, ): Promise&lt;ScriptedToolResult&gt;</code></pre>
+
+      <div class="tags"><span>abortable</span><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="TestSessionHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TestSessionHandle</strong>
+          <span>interface · line 295 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#TestSessionHandle">Module</a>
+      </div>
+      <pre><code>export interface TestSessionHandle</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>{
+    settled: Promise&lt;SessionOutcome&gt;;
+    cancel(reason: string): Promise&lt;void&gt;;
+    describe?(): string;
+  }</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cancelled</code></td>
+              <td><code>string[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>settle</code></td>
+              <td><code>settle(outcome: SessionOutcome): void;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>fail</code></td>
+              <td><code>fail(error: Error): void;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="sessionHandle" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sessionHandle</strong>
+          <span>function · line 308 · public</span>
+        </div>
+        <a href="../modules/eos-engine-tests-support.html#sessionHandle">Module</a>
+      </div>
+      <pre><code>export function sessionHandle( options:</code></pre>
+      <p>A push-settled capability handle; `cancel` resolves per `cancelMode`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span><span>test-only</span></div>
 
 
 
@@ -675,7 +987,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>Deferred</strong>
-          <span>interface · line 190 · public</span>
+          <span>interface · line 338 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#Deferred">Module</a>
       </div>
@@ -718,7 +1030,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>deferred</strong>
-          <span>function · line 195 · public</span>
+          <span>function · line 343 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#deferred">Module</a>
       </div>
@@ -736,7 +1048,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>rejectOnAbort</strong>
-          <span>function · line 204 · internal</span>
+          <span>function · line 352 · internal</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#rejectOnAbort">Module</a>
       </div>
@@ -754,7 +1066,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>tick</strong>
-          <span>function · line 216 · public</span>
+          <span>function · line 364 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#tick">Module</a>
       </div>
@@ -772,7 +1084,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>StartMockRunOptions</strong>
-          <span>interface · line 226 · public</span>
+          <span>interface · line 374 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#StartMockRunOptions">Module</a>
       </div>
@@ -790,7 +1102,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
 
             <tr>
               <td><code>tools</code></td>
-              <td><code>ToolRegistry</code></td>
+              <td><code>ToolExecutor</code></td>
               <td>optional</td>
             </tr>
 
@@ -808,6 +1120,20 @@ run's signal aborts — like a live socket killed mid-token.</p>
               <td>optional</td>
             </tr>
 
+
+            <tr>
+              <td><code>notifications</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>background</code></td>
+              <td><code>BackgroundSupervisor</code></td>
+              <td>optional</td>
+            </tr>
+
         </tbody>
       </table>
     </div>
@@ -822,7 +1148,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>startMockRun</strong>
-          <span>function · line 233 · public</span>
+          <span>function · line 383 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#startMockRun">Module</a>
       </div>
@@ -840,7 +1166,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>collectEvents</strong>
-          <span>function · line 251 · public</span>
+          <span>function · line 403 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#collectEvents">Module</a>
       </div>
@@ -858,7 +1184,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>must</strong>
-          <span>function · line 266 · public</span>
+          <span>function · line 418 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#must">Module</a>
       </div>
@@ -876,7 +1202,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>asCompleted</strong>
-          <span>function · line 273 · public</span>
+          <span>function · line 425 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#asCompleted">Module</a>
       </div>
@@ -894,7 +1220,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>asCancelled</strong>
-          <span>function · line 282 · public</span>
+          <span>function · line 434 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#asCancelled">Module</a>
       </div>
@@ -912,7 +1238,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>asFailed</strong>
-          <span>function · line 291 · public</span>
+          <span>function · line 443 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#asFailed">Module</a>
       </div>
@@ -930,7 +1256,7 @@ run's signal aborts — like a live socket killed mid-token.</p>
       <div class="symbol-head">
         <div>
           <strong>expectProviderValid</strong>
-          <span>function · line 304 · public</span>
+          <span>function · line 456 · public</span>
         </div>
         <a href="../modules/eos-engine-tests-support.html#expectProviderValid">Module</a>
       </div>
@@ -957,7 +1283,7 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
       <td>implements</td>
       <td><code>@eos/engine/tests/support#MockLlmClient</code></td>
       <td><code>LlmClient</code></td>
-      <td>37</td>
+      <td>41</td>
     </tr>
 
 
@@ -972,8 +1298,24 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/events</code></td>
-      <td>19</td>
+      <td>23</td>
     </tr>
 
 
@@ -981,7 +1323,15 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
       <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>20</td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>24</td>
     </tr>
 
 
@@ -989,7 +1339,7 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>10</td>
+      <td>12</td>
     </tr>
 
 
@@ -1012,8 +1362,24 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
     <tr class="search-item">
       <td>tests <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/events</code></td>
-      <td>19</td>
+      <td>23</td>
     </tr>
 
 
@@ -1021,7 +1387,15 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
       <td>tests</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>20</td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>24</td>
     </tr>
 
 
@@ -1029,7 +1403,7 @@ sane and every `tool_use` answered by a later `tool_result`.</p>
       <td>tests <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>10</td>
+      <td>12</td>
     </tr>
 
 

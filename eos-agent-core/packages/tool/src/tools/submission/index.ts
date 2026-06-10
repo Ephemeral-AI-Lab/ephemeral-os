@@ -50,7 +50,7 @@ export function submissionTool(
     description: row.description,
     input: row.input,
     terminal: true,
-    execute: (input, _ctx) => {
+    execute: (input) => {
       const open = supervisor.openCount();
       if (open > 0) {
         const names = supervisor

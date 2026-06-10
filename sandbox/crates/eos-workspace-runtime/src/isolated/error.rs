@@ -49,13 +49,6 @@ pub enum IsolatedError {
         budget_bytes: u64,
     },
 
-    /// `setup_timeout` — a setup phase exceeded its deadline (rollback runs).
-    #[error("setup timed out at step {step}")]
-    SetupTimeout {
-        /// The pipeline phase that timed out.
-        step: String,
-    },
-
     /// `setup_failed` — a setup phase failed (rollback runs).
     #[error("setup failed at step {step}")]
     SetupFailed {
@@ -89,7 +82,6 @@ impl IsolatedError {
             Self::NotOpen => "not_open",
             Self::QuotaExceeded { .. } => "quota_exceeded",
             Self::HostRamPressure { .. } => "host_ram_pressure",
-            Self::SetupTimeout { .. } => "setup_timeout",
             Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",
             Self::AuditWrite { .. } => "internal_error",
         }

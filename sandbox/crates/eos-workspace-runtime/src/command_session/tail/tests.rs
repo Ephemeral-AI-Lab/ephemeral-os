@@ -1,4 +1,4 @@
-use eos_workspace_runtime::command_session::tail_lines;
+use super::tail_lines;
 
 #[test]
 fn tail_lines_returns_requested_suffix_without_cursor_state() {

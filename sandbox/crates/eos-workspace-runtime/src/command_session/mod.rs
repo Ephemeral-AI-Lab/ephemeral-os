@@ -13,7 +13,7 @@ mod request;
 mod response;
 #[cfg(any(target_os = "linux", test))]
 pub(crate) mod session;
-pub mod tail;
+pub(crate) mod tail;
 #[cfg(target_os = "linux")]
 mod transcript;
 #[cfg(any(target_os = "linux", test))]
@@ -28,4 +28,3 @@ pub use request::{
     CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 pub use response::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
-pub use tail::tail_lines;

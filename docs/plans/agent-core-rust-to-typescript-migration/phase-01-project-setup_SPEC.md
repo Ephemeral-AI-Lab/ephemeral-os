@@ -63,7 +63,7 @@ eos-agent-core/
     contracts/package.json
     db/package.json
     observability/package.json
-    runtime/package.json
+    agent-runtime/package.json
     testkit/package.json
 ```
 
@@ -131,7 +131,7 @@ The first workspace packages should be empty ownership targets:
 | `@eos/contracts` | Zod schemas, DTOs, typed IDs, compatibility fixtures | `package.json` only |
 | `@eos/db` | Kysely database adapter, migrations, run/request persistence | `package.json` only |
 | `@eos/observability` | OpenTelemetry setup and structured logging wrappers | `package.json` only |
-| `@eos/runtime` | Agent-run supervisor, request admission, cancellation, reconciliation | `package.json` only |
+| `@eos/agent-runtime` | Agent-run supervisor, request admission, cancellation, reconciliation | `package.json` only |
 | `@eos/testkit` | Shared TypeScript test fixtures and state-machine tests | `package.json` only |
 
 No package may expose a public API in Phase 01. Public exports are introduced by

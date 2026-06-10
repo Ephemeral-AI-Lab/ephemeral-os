@@ -78,6 +78,15 @@ export function resultContent(result: ToolCallResult | PipelineResult): string {
     : JSON.stringify(result.content);
 }
 
+/** The result's `metadata.hook_warnings`, joined for substring assertions. */
+export function hookWarnings(result: ToolCallResult | PipelineResult): string {
+  const warnings = result.metadata?.hook_warnings;
+  if (!Array.isArray(warnings)) {
+    throw new Error("expected metadata.hook_warnings to be present");
+  }
+  return warnings.map(String).join("\n");
+}
+
 /** One macrotask: every already-queued microtask has run by then. */
 export function tick(): Promise<void> {
   return new Promise((resolve) => {

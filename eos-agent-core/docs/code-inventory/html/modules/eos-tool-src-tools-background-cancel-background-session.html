@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/tools/background/cancel-background-session Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/tools/background/cancel-background-session</h1>
+          <p class="lede">packages/tool/src/tools/background/cancel-background-session.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>2</dd></div>
+          <div><dt>Schemas</dt><dd>1</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../contract.js</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../define.js</code></td>
+      <td>defineTool</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>cancel-background-session.ts</code>
+        <small>2 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#CancelInputSchema"><code>CancelInputSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cancelBackgroundSessionTool"><code>cancelBackgroundSessionTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="CancelInputSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CancelInputSchema</strong>
+          <span>schema · line 9 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-background-cancel-background-session.html#CancelInputSchema">Module</a>
+      </div>
+      <pre><code>const CancelInputSchema = z.object({ type: z.string().min(1), id: z.string().min(1), reason: z.string().optional(), })</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>type</code></td>
+              <td><code>z.string().min(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>id</code></td>
+              <td><code>z.string().min(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reason</code></td>
+              <td><code>z.string().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="cancelBackgroundSessionTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cancelBackgroundSessionTool</strong>
+          <span>function · line 16 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-background-cancel-background-session.html#cancelBackgroundSessionTool">Module</a>
+      </div>
+      <pre><code>export function cancelBackgroundSessionTool( supervisor: BackgroundSupervisor, ): ToolDefinition</code></pre>
+      <p>Cancel by native `(type, id)` ref - no minted session-id namespace.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/background/cancel-background-session</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/background/cancel-background-session</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/background/cancel-background-session</code></td>
+      <td><code>@eos/tool/src/define</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/background/cancel-background-session</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

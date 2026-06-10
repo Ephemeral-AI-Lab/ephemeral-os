@@ -15,3 +15,6 @@ pub fn tail_lines(text: &str, last_n_lines: usize) -> String {
         .min(line_starts.len().saturating_sub(1));
     text[line_starts[start_idx]..].to_owned()
 }
+
+#[cfg(test)]
+mod tests;

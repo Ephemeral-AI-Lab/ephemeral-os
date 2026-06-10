@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 04 Tool Framework
 
-Status: Proposed
+Status: Completed
 Date: 2026-06-10
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -1074,11 +1074,11 @@ Phase 04 is accepted when:
 
 | Step | Status | Required proof |
 | --- | --- | --- |
-| Contracts additions | Pending | contracts tests green with `AgentKind` + 2 ids |
-| Engine restructure (executor port, inbox, supervisor) | Pending | ported Phase 03 loop suite green + §15 cases 2-7, 21-22 |
-| Contract + pipeline + executor | Pending | §15 cases 1, 10 plus relocated runner suite and defineTool default tests |
-| Hook protocol + runner | Pending | §15 cases 11-13 incl. real spawned scripts |
-| Test-handle session registration | Pending | §15 case 9 |
-| Tool families + toolsets | Pending | §15 cases 14-16, 19-20 |
-| Workspace wiring | Pending | `pnpm run check` green; `git diff --stat -- agent-core` empty |
-| Index updated | Pending | Phase 04 row in `index.md` |
+| Contracts additions | Done | contracts suite green (16 tests) with `AgentKind`, `AgentRunId` mint/adopt, `SandboxId` adopt-only, `ToolCallResult` round-trip |
+| Engine restructure (executor port, inbox, supervisor) | Done | ported Phase 03 loop suite green under a scripted executor + §15 cases 2-7, 21-22 (`agent-loop`, `notification-inbox`, `background-supervisor` suites) |
+| Contract + pipeline + executor | Done | §15 cases 1, 10 plus relocated runner suite (cap 8, ordering, abort settling, straggler suppression) and defineTool default tests |
+| Hook protocol + runner | Done | §15 cases 11-13 incl. real spawned `node -e` scripts (exit-2 deny, stdin payload, updatedInput, garbage stdout, timeout, transcript fixture) |
+| Test-handle session registration | Done | §15 case 9 (`families` suite over testkit scripted handles) |
+| Tool families + toolsets | Done | §15 cases 14-16, 19-20 (`pipeline`, `executor`, `families`, `toolset` suites) |
+| Workspace wiring | Done | `pnpm run check` green (223 tests, 21 files); `git diff --stat -- agent-core` empty |
+| Index updated | Done | Phase 04 row in `index.md` marked Completed with verification |

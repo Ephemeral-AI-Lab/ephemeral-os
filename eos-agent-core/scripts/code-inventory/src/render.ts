@@ -29,36 +29,42 @@ export async function writeInventory(
   await fs.mkdir(path.join(htmlRoot, "assets"), { recursive: true });
   await fs.mkdir(path.join(htmlRoot, "packages"), { recursive: true });
   await fs.mkdir(path.join(htmlRoot, "modules"), { recursive: true });
+  const writeText = (target: string, contents: string): Promise<void> =>
+    fs.writeFile(target, stripTrailingWhitespace(contents));
 
   const inventoryJson = `${JSON.stringify(inventory, null, 2)}\n`;
   const graph = graphData(inventory);
-  await fs.writeFile(path.join(outRoot, "inventory.json"), inventoryJson);
-  await fs.writeFile(path.join(outRoot, "graph.json"), `${JSON.stringify(graph, null, 2)}\n`);
-  await fs.writeFile(path.join(htmlRoot, "assets/inventory.json"), inventoryJson);
-  await fs.writeFile(
+  await writeText(path.join(outRoot, "inventory.json"), inventoryJson);
+  await writeText(path.join(outRoot, "graph.json"), `${JSON.stringify(graph, null, 2)}\n`);
+  await writeText(path.join(htmlRoot, "assets/inventory.json"), inventoryJson);
+  await writeText(
     path.join(htmlRoot, "assets/graph.json"),
     `${JSON.stringify(graph, null, 2)}\n`,
   );
-  await fs.writeFile(
+  await writeText(
     path.join(htmlRoot, "assets/inventory-data.js"),
     `/* global window */\nwindow.EOS_CODE_INVENTORY = ${JSON.stringify(inventory)};\n`,
   );
-  await fs.writeFile(path.join(htmlRoot, "assets/inventory.css"), css());
-  await fs.writeFile(path.join(htmlRoot, "assets/inventory.js"), js());
-  await fs.writeFile(path.join(htmlRoot, "index.html"), indexPage(inventory));
+  await writeText(path.join(htmlRoot, "assets/inventory.css"), css());
+  await writeText(path.join(htmlRoot, "assets/inventory.js"), js());
+  await writeText(path.join(htmlRoot, "index.html"), indexPage(inventory));
 
   for (const pkg of inventory.packages) {
-    await fs.writeFile(
+    await writeText(
       path.join(htmlRoot, "packages", `${packageSlug(pkg.name)}.html`),
       packagePage(inventory, pkg),
     );
     for (const module of pkg.modules) {
-      await fs.writeFile(
+      await writeText(
         path.join(htmlRoot, "modules", `${moduleSlug(module.id)}.html`),
         modulePage(pkg, module, inventory.relations),
       );
     }
   }
+}
+
+function stripTrailingWhitespace(contents: string): string {
+  return contents.replace(/[ \t]+$/gm, "");
 }
 
 function graphData(inventory: WorkspaceInventory): {

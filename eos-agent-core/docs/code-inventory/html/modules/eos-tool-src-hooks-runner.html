@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/hooks/runner Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/hooks/runner</h1>
+          <p class="lede">packages/tool/src/hooks/runner.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>10</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>6</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>3</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:child_process</code></td>
+      <td>spawn</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./protocol.js</code></td>
+      <td>HookOutputSchema, combineHookOutputs, type CombinedHookOutcome, type HookCommand, type HookConfigEntry, type HookOutput, type HookPayload</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>runner.ts</code>
+        <small>10 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#DEFAULT_HOOK_TIMEOUT_MS"><code>DEFAULT_HOOK_TIMEOUT_MS</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookRunResult"><code>HookRunResult</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookRunSummary"><code>HookRunSummary</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookEngine"><code>HookEngine</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#passthrough"><code>passthrough</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runHook"><code>runHook</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runCommandHook"><code>runCommandHook</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#validateHookOutput"><code>validateHookOutput</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#invalidHookOutput"><code>invalidHookOutput</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#errorMessage"><code>errorMessage</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="DEFAULT_HOOK_TIMEOUT_MS" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>DEFAULT_HOOK_TIMEOUT_MS</strong>
+          <span>const · line 14 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#DEFAULT_HOOK_TIMEOUT_MS">Module</a>
+      </div>
+      <pre><code>const DEFAULT_HOOK_TIMEOUT_MS = 60_000</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="HookRunResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookRunResult</strong>
+          <span>interface · line 17 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#HookRunResult">Module</a>
+      </div>
+      <pre><code>interface HookRunResult</code></pre>
+      <p>One hook's settled run: a structured output, or passthrough + warning.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>output</code></td>
+              <td><code>HookOutput</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>warning</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookRunSummary" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookRunSummary</strong>
+          <span>interface · line 23 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#HookRunSummary">Module</a>
+      </div>
+      <pre><code>export interface HookRunSummary extends CombinedHookOutcome</code></pre>
+      <p>The kernel's fold plus the non-blocking failures of this event's hooks.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+    <h3>Heritage</h3>
+    <p>CombinedHookOutcome</p>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>warnings</code></td>
+              <td><code>string[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookEngine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookEngine</strong>
+          <span>class · line 35 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#HookEngine">Module</a>
+      </div>
+      <pre><code>export class HookEngine</code></pre>
+      <p>Runs operator-configured hooks for one event: all matching hooks in
+`Promise.all`, each through its adapter, folded by the precedence
+kernel. Never throws - per-hook failures become passthrough warnings.
+Three distinct channels, never collapsed: structured decision (stdout
+JSON), model feedback (exit 2 stderr), operator warning (everything else).</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>#entries</code></td>
+              <td><code>HookConfigEntry[]</code></td>
+              <td>readonly</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>run</code></td>
+              <td><code>async run(payload: HookPayload, signal: AbortSignal): Promise&lt;HookRunSummary&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="passthrough" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>passthrough</strong>
+          <span>function · line 65 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#passthrough">Module</a>
+      </div>
+      <pre><code>function passthrough(warning?: string): HookRunResult</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runHook" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runHook</strong>
+          <span>function · line 69 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#runHook">Module</a>
+      </div>
+      <pre><code>async function runHook( command: HookCommand, payload: HookPayload, signal: AbortSignal, ): Promise&lt;HookRunResult&gt;</code></pre>
+
+      <div class="tags"><span>abortable</span><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runCommandHook" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runCommandHook</strong>
+          <span>function · line 95 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#runCommandHook">Module</a>
+      </div>
+      <pre><code>function runCommandHook( command: Extract&lt;HookCommand,</code></pre>
+      <p>The JS-script pluggability: spawn with `shell: true`, payload JSON +
+newline on stdin, per-hook timeout derived from the call's signal (a
+cancelled run kills its hooks). Exit 0 stdout parses as `HookOutput`
+(mismatch = passthrough + warning); exit 2 denies with stderr as the
+model-visible reason; anything else is passthrough + warning.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="validateHookOutput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>validateHookOutput</strong>
+          <span>function · line 163 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#validateHookOutput">Module</a>
+      </div>
+      <pre><code>function validateHookOutput(output: unknown, source: string): HookRunResult</code></pre>
+
+      <div class="tags"><span>dto</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="invalidHookOutput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>invalidHookOutput</strong>
+          <span>function · line 168 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#invalidHookOutput">Module</a>
+      </div>
+      <pre><code>function invalidHookOutput( source: string, error: z.ZodError, ): HookRunResult</code></pre>
+
+      <div class="tags"><span>dto</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="errorMessage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>errorMessage</strong>
+          <span>function · line 179 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-runner.html#errorMessage">Module</a>
+      </div>
+      <pre><code>function errorMessage(error: unknown): string</code></pre>
+
+      <div class="tags"><span>error</span><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>extends</td>
+      <td><code>@eos/tool/src/hooks/runner#HookRunSummary</code></td>
+      <td><code>CombinedHookOutcome</code></td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td><code>node:child_process</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

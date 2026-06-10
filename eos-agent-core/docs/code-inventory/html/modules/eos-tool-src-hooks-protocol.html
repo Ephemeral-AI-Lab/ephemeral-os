@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/hooks/protocol Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/hooks/protocol</h1>
+          <p class="lede">packages/tool/src/hooks/protocol.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>10</dd></div>
+          <div><dt>Schemas</dt><dd>3</dd></div>
+          <div><dt>Types</dt><dd>3</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>3</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObjectSchema, type JsonObject, type ToolUseId</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../contract.js</code></td>
+      <td>AgentRunSnapshot</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>protocol.ts</code>
+        <small>10 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#HookEventSchema"><code>HookEventSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">event public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookEvent"><code>HookEvent</code></a>
+            <span>type</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookPayload"><code>HookPayload</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookOutputSchema"><code>HookOutputSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookOutput"><code>HookOutput</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookCommand"><code>HookCommand</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookConfigEntry"><code>HookConfigEntry</code></a>
+            <span>interface</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookConfigEntrySchema"><code>HookConfigEntrySchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">config public-api schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CombinedHookOutcome"><code>CombinedHookOutcome</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#combineHookOutputs"><code>combineHookOutputs</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="HookEventSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookEventSchema</strong>
+          <span>schema · line 6 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookEventSchema">Module</a>
+      </div>
+      <pre><code>export const HookEventSchema = z.enum([ &quot;PreToolUse&quot;, &quot;PostToolUse&quot;, &quot;PostToolUseFailure&quot;, ])</code></pre>
+
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span><span>schema:enum</span><span>schema:zod</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>PreToolUse</code></li>
+
+
+        <li><code>PostToolUse</code></li>
+
+
+        <li><code>PostToolUseFailure</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="HookEvent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookEvent</strong>
+          <span>type · line 11 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookEvent">Module</a>
+      </div>
+      <pre><code>export type HookEvent = z.infer&lt;typeof HookEventSchema&gt;</code></pre>
+
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span><span>type:inferred</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="HookPayload" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookPayload</strong>
+          <span>interface · line 18 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookPayload">Module</a>
+      </div>
+      <pre><code>export interface HookPayload</code></pre>
+      <p>What a hook receives (JSON over stdin for command hooks). snake_case:
+crosses the process boundary. State inference happens through
+`run.transcript_path`; hooks never receive live objects or ports.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>event</code></td>
+              <td><code>HookEvent</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tool_name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tool_input</code></td>
+              <td><code>JsonObject</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tool_use_id</code></td>
+              <td><code>ToolUseId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>run</code></td>
+              <td><code>AgentRunSnapshot</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tool_response</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>error</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookOutputSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookOutputSchema</strong>
+          <span>schema · line 34 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookOutputSchema">Module</a>
+      </div>
+      <pre><code>export const HookOutputSchema = z.object({ decision: z.enum([&quot;allow&quot;, &quot;deny&quot;]).optional(), /** Deny: model-visible feedback. */ reason: z.string().optional(), /** PreToolUse only; re-validated through the tool's own s...</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>schema:enum</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>decision</code></td>
+              <td><code>z.enum([&quot;allow&quot;, &quot;deny&quot;]).optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>reason</code></td>
+              <td><code>z.string().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>updatedInput</code></td>
+              <td><code>JsonObjectSchema.optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>additionalContext</code></td>
+              <td><code>z.string().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>allow</code></li>
+
+
+        <li><code>deny</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="HookOutput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookOutput</strong>
+          <span>type · line 43 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookOutput">Module</a>
+      </div>
+      <pre><code>export type HookOutput = z.infer&lt;typeof HookOutputSchema&gt;</code></pre>
+
+      <div class="tags"><span>dto</span><span>exported</span><span>public-api</span><span>type:inferred</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="HookCommand" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookCommand</strong>
+          <span>type · line 45 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookCommand">Module</a>
+      </div>
+      <pre><code>export type HookCommand = |</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ /** Spawned with `shell: true`; payload JSON + newline on stdin. */ type: &quot;...</code></li>
+
+
+        <li><code>{ /** In-process adapter for tests and SDK callers. */ type: &quot;callback&quot;; run(...</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="HookConfigEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookConfigEntry</strong>
+          <span>interface · line 59 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookConfigEntry">Module</a>
+      </div>
+      <pre><code>export interface HookConfigEntry</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>event</code></td>
+              <td><code>HookEvent</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>matcher</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>hooks</code></td>
+              <td><code>HookCommand[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookConfigEntrySchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookConfigEntrySchema</strong>
+          <span>schema · line 67 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#HookConfigEntrySchema">Module</a>
+      </div>
+      <pre><code>export const HookConfigEntrySchema = z.object({ event: HookEventSchema, matcher: z.string().min(1).optional(), hooks: z.array( z.object({ type: z.literal(&quot;command&quot;), command: z.string().min(1), timeout_ms: z.number()....</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>event</code></td>
+              <td><code>HookEventSchema</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>matcher</code></td>
+              <td><code>z.string().min(1).optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>hooks</code></td>
+              <td><code>z.array( z.object({ type: z.literal(&quot;command&quot;), command: z.string().min(1), timeout_ms: z.number().int().positive().optional(), }), )</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="CombinedHookOutcome" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CombinedHookOutcome</strong>
+          <span>interface · line 80 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#CombinedHookOutcome">Module</a>
+      </div>
+      <pre><code>export interface CombinedHookOutcome</code></pre>
+      <p>One event's hook outputs folded by the precedence kernel.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>decision</code></td>
+              <td><code>&quot;deny&quot; | &quot;allow&quot; | &quot;passthrough&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reason</code></td>
+              <td><code>string</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>updatedInput</code></td>
+              <td><code>JsonObject</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>additionalContexts</code></td>
+              <td><code>string[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="combineHookOutputs" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>combineHookOutputs</strong>
+          <span>function · line 96 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-hooks-protocol.html#combineHookOutputs">Module</a>
+      </div>
+      <pre><code>export function combineHookOutputs( event: HookEvent, outputs: HookOutput[], ): CombinedHookOutcome</code></pre>
+      <p>The precedence kernel, centralized: capability filtering per event
+(PostToolUse/PostToolUseFailure may only add context), `deny &gt; allow &gt;
+passthrough` across parallel hooks, and the single-update rule - two or
+more updates deny deterministically instead of merge-guessing.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/tool/src/hooks/protocol#HookEventSchema</code></td>
+      <td><code>@eos/tool/src/hooks/protocol#HookEvent</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/tool/src/hooks/protocol#HookOutputSchema</code></td>
+      <td><code>@eos/tool/src/hooks/protocol#HookOutput</code></td>
+      <td>43</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/tool/src/hooks/protocol#HookConfigEntrySchema</code></td>
+      <td><code>@eos/tool/src/hooks/protocol#HookEventSchema</code></td>
+      <td>67</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/tool/src/hooks/protocol#HookEvent</code></td>
+      <td><code>@eos/tool/src/hooks/protocol#HookEventSchema</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/tool/src/hooks/protocol#HookOutput</code></td>
+      <td><code>@eos/tool/src/hooks/protocol#HookOutputSchema</code></td>
+      <td>43</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

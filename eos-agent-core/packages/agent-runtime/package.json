@@ -1,5 +1,5 @@
 {
-  "name": "@eos/runtime",
+  "name": "@eos/agent-runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module"

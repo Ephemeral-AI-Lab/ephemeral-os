@@ -1,35 +1,28 @@
-export {
-  ToolNameSchema,
-  type AgentRunSnapshot,
-  type ToolCallContext,
-  type ToolCallMeta,
-  type ToolDefinition,
-  type ToolName,
-  type ToolOutcome,
+// The package surface is the authoring contract, the hook protocol, and
+// the assembly entry. Pipeline and batch-executor internals (bindTool,
+// toolBatchExecutor, the precedence kernel) stay package-private behind
+// buildToolExecutor.
+export type {
+  AgentRunSnapshot,
+  ToolCallContext,
+  ToolCallMeta,
+  ToolDefinition,
+  ToolName,
+  ToolOutcome,
 } from "./contract.js";
 export { defineTool, type ToolDefinitionInit } from "./define.js";
-export { toolBatchExecutor, type ToolBatchExecutorInput } from "./executor.js";
 export {
   HookConfigEntrySchema,
   HookEventSchema,
   HookOutputSchema,
-  combineHookOutputs,
-  type CombinedHookOutcome,
   type HookCommand,
   type HookConfigEntry,
   type HookEvent,
   type HookOutput,
   type HookPayload,
 } from "./hooks/protocol.js";
-export { HookEngine, type HookRunSummary } from "./hooks/runner.js";
-export {
-  bindTool,
-  projectContent,
-  type BindToolDeps,
-  type BoundTool,
-  type PipelineResult,
-} from "./pipeline.js";
-export { snapshotRunState, type AgentRunState } from "./run-state.js";
+export { HookEngine } from "./hooks/runner.js";
+export { type AgentRunState } from "./run-state.js";
 export {
   AGENT_TOOLSET,
   buildToolExecutor,

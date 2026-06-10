@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>6</span>
+          <span>8</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -67,10 +67,26 @@
 
 
     <tr class="search-item">
+      <td><code>./background/supervisor.js</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td><code>./conversation.js</code></td>
       <td>Conversation</td>
       <td>value</td>
-      <td>5</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./notification-inbox.js</code></td>
+      <td>NotificationInbox</td>
+      <td>type</td>
+      <td>7</td>
     </tr>
 
 
@@ -78,15 +94,15 @@
       <td><code>./run-handle.js</code></td>
       <td>RunHandle, type AgentRunHandle</td>
       <td>value</td>
-      <td>6</td>
+      <td>8</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./tools.js</code></td>
-      <td>ToolRegistry</td>
+      <td><code>./tool-executor.js</code></td>
+      <td>ToolExecutor</td>
       <td>type</td>
-      <td>7</td>
+      <td>9</td>
     </tr>
   </tbody>
           </table>
@@ -96,17 +112,33 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Exports</h2>
-          <span>4</span>
+          <span>7</span>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
+      <td><code>./background/session.js</code></td>
+      <td>SessionHandle, SessionOutcome, SessionRef, SessionRow, SessionStatus</td>
+      <td>type</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./background/supervisor.js</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>value</td>
+      <td>18</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td><code>./conversation.js</code></td>
       <td>DisplayedMessage, PartialReason</td>
       <td>type</td>
-      <td>9</td>
+      <td>19</td>
     </tr>
 
 
@@ -114,7 +146,15 @@
       <td><code>./events.js</code></td>
       <td>AgentEvent</td>
       <td>type</td>
-      <td>13</td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./notification-inbox.js</code></td>
+      <td>NotificationInbox, systemNotificationMessage</td>
+      <td>value</td>
+      <td>24</td>
     </tr>
 
 
@@ -122,15 +162,15 @@
       <td><code>./run-handle.js</code></td>
       <td>AgentRunFailure, AgentRunHandle, AgentRunOutcome</td>
       <td>type</td>
-      <td>14</td>
+      <td>28</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./tools.js</code></td>
-      <td>ToolContext, ToolDefinition, ToolOutput, ToolRegistry</td>
+      <td><code>./tool-executor.js</code></td>
+      <td>ToolExecutor, ToolUseBlock</td>
       <td>type</td>
-      <td>19</td>
+      <td>33</td>
     </tr>
   </tbody>
           </table>
@@ -179,7 +219,7 @@
       <div class="symbol-head">
         <div>
           <strong>DEFAULT_MAX_TURNS</strong>
-          <span>const · line 27 · internal</span>
+          <span>const · line 36 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#DEFAULT_MAX_TURNS">Module</a>
       </div>
@@ -197,7 +237,7 @@
       <div class="symbol-head">
         <div>
           <strong>StartAgentRunInput</strong>
-          <span>interface · line 30 · public</span>
+          <span>interface · line 39 · public</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#StartAgentRunInput">Module</a>
       </div>
@@ -222,7 +262,7 @@
 
             <tr>
               <td><code>tools</code></td>
-              <td><code>ToolRegistry</code></td>
+              <td><code>ToolExecutor</code></td>
               <td></td>
             </tr>
 
@@ -275,6 +315,20 @@
               <td>optional</td>
             </tr>
 
+
+            <tr>
+              <td><code>notifications</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>background</code></td>
+              <td><code>BackgroundSupervisor</code></td>
+              <td>optional</td>
+            </tr>
+
         </tbody>
       </table>
     </div>
@@ -289,7 +343,7 @@
       <div class="symbol-head">
         <div>
           <strong>startAgentRun</strong>
-          <span>function · line 54 · public</span>
+          <span>function · line 74 · public</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#startAgentRun">Module</a>
       </div>
@@ -330,9 +384,9 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
       <td>5</td>
     </tr>
 
@@ -340,7 +394,7 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -348,8 +402,24 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
       <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td>9</td>
     </tr>
 
 
@@ -364,8 +434,24 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>18</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports <small>type</small></td>
+      <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/conversation</code></td>
-      <td>9</td>
+      <td>19</td>
     </tr>
 
 
@@ -373,7 +459,15 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/events</code></td>
-      <td>13</td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>24</td>
     </tr>
 
 
@@ -381,15 +475,15 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/run-handle</code></td>
-      <td>14</td>
+      <td>28</td>
     </tr>
 
 
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
-      <td>19</td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td>33</td>
     </tr>
   </tbody>
           </table>

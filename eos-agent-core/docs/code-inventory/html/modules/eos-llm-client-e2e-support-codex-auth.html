@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/llm-client/e2e/support/codex-auth Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-llm-client.html">@eos/llm-client</a></p>
+          <h1>@eos/llm-client/e2e/support/codex-auth</h1>
+          <p class="lede">packages/llm-client/e2e/support/codex-auth.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>2</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>readFileSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:os</code></td>
+      <td>homedir</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>join</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/secret.js</code></td>
+      <td>SecretString</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>codex-auth.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AuthFileSchema"><code>AuthFileSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#JwtPayloadSchema"><code>JwtPayloadSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CodexAuth"><code>CodexAuth</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#decodeJwtPayload"><code>decodeJwtPayload</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#loadCodexAuth"><code>loadCodexAuth</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AuthFileSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AuthFileSchema</strong>
+          <span>schema · line 10 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#AuthFileSchema">Module</a>
+      </div>
+      <pre><code>const AuthFileSchema = z.object({ tokens: z.object({ access_token: z.string() }), })</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>tokens</code></td>
+              <td><code>z.object({ access_token: z.string() })</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="JwtPayloadSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>JwtPayloadSchema</strong>
+          <span>schema · line 14 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#JwtPayloadSchema">Module</a>
+      </div>
+      <pre><code>const JwtPayloadSchema = z.object({ exp: z.number().optional(), &quot;https://api.openai.com/auth&quot;: z .object({ chatgpt_account_id: z.string().optional() }) .optional(), })</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>exp</code></td>
+              <td><code>z.number().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>https://api.openai.com/auth</code></td>
+              <td><code>z .object({ chatgpt_account_id: z.string().optional() }) .optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="CodexAuth" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CodexAuth</strong>
+          <span>type · line 21 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#CodexAuth">Module</a>
+      </div>
+      <pre><code>export type CodexAuth = |</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ available: true; accessToken: SecretString }</code></li>
+
+
+        <li><code>{ available: false; reason: string }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="decodeJwtPayload" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>decodeJwtPayload</strong>
+          <span>function · line 25 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#decodeJwtPayload">Module</a>
+      </div>
+      <pre><code>function decodeJwtPayload( token: string, ): z.infer&lt;typeof JwtPayloadSchema&gt; | undefined</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="loadCodexAuth" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>loadCodexAuth</strong>
+          <span>function · line 46 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#loadCodexAuth">Module</a>
+      </div>
+      <pre><code>export function loadCodexAuth( env: NodeJS.ProcessEnv = process.env, ): CodexAuth</code></pre>
+      <p>Load the local Codex CLI credential cache: `$CODEX_AUTH_PATH` ??
+`$CODEX_HOME/auth.json` ?? `~/.codex/auth.json`. Missing or stale
+credentials are a skip, never a failure. The raw token goes straight into
+`SecretString`; no token material is logged and nothing is written.
+Refreshing tokens is the Codex CLI's job.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>@eos/llm-client/src/secret</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>zod</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth#JwtPayloadSchema</code></td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth#decodeJwtPayload</code></td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth#decodeJwtPayload</code></td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth#JwtPayloadSchema</code></td>
+      <td>25</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

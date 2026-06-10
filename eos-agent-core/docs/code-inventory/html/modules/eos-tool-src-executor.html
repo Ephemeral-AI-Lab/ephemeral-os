@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/executor Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/executor</h1>
+          <p class="lede">packages/tool/src/executor.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>6</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>ToolCallResult, ToolSpec, ToolUseId</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>AgentEvent, ToolExecutor, ToolUseBlock</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./contract.js</code></td>
+      <td>AgentRunSnapshot</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./pipeline.js</code></td>
+      <td>projectContent, type BoundTool</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./run-state.js</code></td>
+      <td>snapshotRunState, type AgentRunState</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>executor.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#MAX_TOOL_CONCURRENCY"><code>MAX_TOOL_CONCURRENCY</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolBatchExecutorInput"><code>ToolBatchExecutorInput</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#toolBatchExecutor"><code>toolBatchExecutor</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#terminalBatchRejection"><code>terminalBatchRejection</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#executeCall"><code>executeCall</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#errorResult"><code>errorResult</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#isAborted"><code>isAborted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#settledOrAborted"><code>settledOrAborted</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="MAX_TOOL_CONCURRENCY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>MAX_TOOL_CONCURRENCY</strong>
+          <span>const · line 9 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#MAX_TOOL_CONCURRENCY">Module</a>
+      </div>
+      <pre><code>const MAX_TOOL_CONCURRENCY = 8</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolBatchExecutorInput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolBatchExecutorInput</strong>
+          <span>interface · line 11 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#ToolBatchExecutorInput">Module</a>
+      </div>
+      <pre><code>export interface ToolBatchExecutorInput</code></pre>
+
+      <div class="tags"><span>dto</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runState</code></td>
+              <td><code>AgentRunState</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>tools</code></td>
+              <td><code>BoundTool[]</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="toolBatchExecutor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolBatchExecutor</strong>
+          <span>function · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#toolBatchExecutor">Module</a>
+      </div>
+      <pre><code>export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor</code></pre>
+      <p>The `ToolExecutor` the engine injects. Per-turn `specs()` filters by
+workspace mode; `executeBatch` keeps the Phase 03 runner semantics -
+fully concurrent under a cap of 8, results in `tool_use` order, thrown
+errors and unknown names mapped to `is_error` results, abort settling
+with straggler-emit suppression - and adds the terminal-solo policy: a
+terminal call with any sibling rejects the WHOLE batch undispatched.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="terminalBatchRejection" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>terminalBatchRejection</strong>
+          <span>function · line 99 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#terminalBatchRejection">Module</a>
+      </div>
+      <pre><code>function terminalBatchRejection( calls: ToolUseBlock[], byName: Map&lt;string, BoundTool&gt;, ): string | undefined</code></pre>
+      <p>Terminal-solo policy (Rust `reject_terminal_batch` parity): a batch with
+a terminal call plus any sibling rejects every call; a solo terminal
+call dispatches normally.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="executeCall" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>executeCall</strong>
+          <span>function · line 115 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#executeCall">Module</a>
+      </div>
+      <pre><code>async function executeCall( call: ToolUseBlock, byName: Map&lt;string, BoundTool&gt;, run: AgentRunSnapshot, signal: AbortSignal, ): Promise&lt;ToolCallResult&gt;</code></pre>
+
+      <div class="tags"><span>abortable</span><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="errorResult" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>errorResult</strong>
+          <span>function · line 136 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#errorResult">Module</a>
+      </div>
+      <pre><code>function errorResult(toolUseId: ToolUseId, content: string): ToolCallResult</code></pre>
+      <p>A settled error result with both clocks at the settling instant.</p>
+      <div class="tags"><span>error</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="isAborted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>isAborted</strong>
+          <span>function · line 149 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#isAborted">Module</a>
+      </div>
+      <pre><code>function isAborted(signal: AbortSignal): boolean</code></pre>
+      <p>Read through a call so control-flow narrowing never caches `aborted`.</p>
+      <div class="tags"><span>abortable</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="settledOrAborted" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>settledOrAborted</strong>
+          <span>function · line 154 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-executor.html#settledOrAborted">Module</a>
+      </div>
+      <pre><code>async function settledOrAborted( workers: Promise&lt;unknown&gt;, signal: AbortSignal, ): Promise&lt;void&gt;</code></pre>
+      <p>Resolve when every worker settles or the signal aborts, whichever first.</p>
+      <div class="tags"><span>abortable</span><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/tool/src/run-state</code></td>
+      <td>6</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

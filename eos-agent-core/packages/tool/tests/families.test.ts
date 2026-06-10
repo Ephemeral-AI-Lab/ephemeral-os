@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toolUseIdFrom, type JsonValue } from "@eos/contracts";
+import { toolUseIdFrom } from "@eos/contracts";
 import { BackgroundSupervisor, NotificationInbox } from "@eos/engine";
 import { scriptedRunState, scriptedSessionHandle } from "@eos/testkit";
 
@@ -135,7 +135,7 @@ describe("submission tool family", () => {
       ctx(),
     );
     expect(afterDelivery.isError ?? false).toBe(false);
-    expect(afterDelivery.content as JsonValue).toEqual({
+    expect(afterDelivery.content).toEqual({
       summary: "all done",
       payload: { commits: 2 },
     });

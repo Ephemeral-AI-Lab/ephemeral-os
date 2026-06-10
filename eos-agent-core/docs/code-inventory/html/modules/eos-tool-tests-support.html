@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/tests/support Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/tests/support</h1>
+          <p class="lede">packages/tool/tests/support.ts</p>
+          <div class="tags"><span>test-only</span><span>test-support</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>11</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>9</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>8</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>toolUseIdFrom, type JsonObject, type ToolCallResult</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>AgentEvent, NotificationInbox, ToolUseBlock</td>
+      <td>type</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/testkit</code></td>
+      <td>scriptedRunState</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/hooks/runner.js</code></td>
+      <td>HookEngine</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/hooks/protocol.js</code></td>
+      <td>HookConfigEntry, HookOutput</td>
+      <td>type</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/pipeline.js</code></td>
+      <td>bindTool, type PipelineResult</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/run-state.js</code></td>
+      <td>snapshotRunState, type AgentRunState</td>
+      <td>value</td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/contract.js</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>13</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>support.ts</code>
+        <small>11 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#toolUse"><code>toolUse</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#live"><code>live</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunPipelineOptions"><code>RunPipelineOptions</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runPipeline"><code>runPipeline</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#preHook"><code>preHook</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#collector"><code>collector</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#resultContent"><code>resultContent</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#hookWarnings"><code>hookWarnings</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#tick"><code>tick</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sleep"><code>sleep</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#must"><code>must</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="toolUse" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolUse</strong>
+          <span>function · line 15 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#toolUse">Module</a>
+      </div>
+      <pre><code>export function toolUse( id: string, name: string, input: JsonObject =</code></pre>
+
+      <div class="tags"><span>exported</span><span>json-boundary</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="live" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>live</strong>
+          <span>const · line 23 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#live">Module</a>
+      </div>
+      <pre><code>export const live = (): AbortSignal =&gt; new AbortController().signal</code></pre>
+
+      <div class="tags"><span>abortable</span><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RunPipelineOptions" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunPipelineOptions</strong>
+          <span>interface · line 25 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#RunPipelineOptions">Module</a>
+      </div>
+      <pre><code>export interface RunPipelineOptions</code></pre>
+
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>input</code></td>
+              <td><code>JsonObject</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>entries</code></td>
+              <td><code>HookConfigEntry[]</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>inbox</code></td>
+              <td><code>NotificationInbox</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>runState</code></td>
+              <td><code>AgentRunState</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="runPipeline" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runPipeline</strong>
+          <span>function · line 34 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#runPipeline">Module</a>
+      </div>
+      <pre><code>export function runPipeline( definition: ToolDefinition, options: RunPipelineOptions =</code></pre>
+      <p>Bind one definition and run a single call through the pipeline.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="preHook" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>preHook</strong>
+          <span>function · line 51 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#preHook">Module</a>
+      </div>
+      <pre><code>export function preHook( run: (payload:</code></pre>
+      <p>A PreToolUse callback entry over one tool name (or all when omitted).</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="collector" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>collector</strong>
+          <span>function · line 62 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#collector">Module</a>
+      </div>
+      <pre><code>export function collector():</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="resultContent" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>resultContent</strong>
+          <span>function · line 75 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#resultContent">Module</a>
+      </div>
+      <pre><code>export function resultContent(result: ToolCallResult | PipelineResult): string</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="hookWarnings" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>hookWarnings</strong>
+          <span>function · line 82 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#hookWarnings">Module</a>
+      </div>
+      <pre><code>export function hookWarnings(result: ToolCallResult | PipelineResult): string</code></pre>
+      <p>The result's `metadata.hook_warnings`, joined for substring assertions.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="tick" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>tick</strong>
+          <span>function · line 91 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#tick">Module</a>
+      </div>
+      <pre><code>export function tick(): Promise&lt;void&gt;</code></pre>
+      <p>One macrotask: every already-queued microtask has run by then.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="sleep" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sleep</strong>
+          <span>function · line 99 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#sleep">Module</a>
+      </div>
+      <pre><code>export function sleep(ms: number): Promise&lt;void&gt;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="must" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>must</strong>
+          <span>function · line 105 · public</span>
+        </div>
+        <a href="../modules/eos-tool-tests-support.html#must">Module</a>
+      </div>
+      <pre><code>export function must&lt;T&gt;(value: T | undefined | null): T</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/run-state</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/hooks/runner</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/support</code></td>
+      <td><code>@eos/tool/src/run-state</code></td>
+      <td>12</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

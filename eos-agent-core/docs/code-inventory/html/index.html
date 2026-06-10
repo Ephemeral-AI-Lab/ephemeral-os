@@ -25,10 +25,10 @@
           <p class="lede">Package boundaries, module surfaces, symbols, Zod contracts, and graph relations generated from the live TypeScript workspace.</p>
         </div>
         <dl class="stat-grid">
-          <div><dt>Packages</dt><dd>7</dd></div>
-          <div><dt>Modules</dt><dd>47</dd></div>
-          <div><dt>Symbols</dt><dd>201</dd></div>
-          <div><dt>Relations</dt><dd>336</dd></div>
+          <div><dt>Packages</dt><dd>8</dd></div>
+          <div><dt>Modules</dt><dd>77</dd></div>
+          <div><dt>Symbols</dt><dd>332</dd></div>
+          <div><dt>Relations</dt><dd>568</dd></div>
         </dl>
       </section>
 
@@ -38,10 +38,18 @@
           <span>pnpm@10.23.0</span>
         </div>
         <div class="package-grid">
+    <a class="package-card search-item" href="packages/eos-agent-runtime.html">
+      <strong>@eos/agent-runtime</strong>
+      <span>packages/agent-runtime</span>
+      <small>0 modules · 0 symbols · 0 relations</small>
+      <div class="tags"><span>empty-package</span></div>
+    </a>
+
+
     <a class="package-card search-item" href="packages/eos-contracts.html">
       <strong>@eos/contracts</strong>
       <span>packages/contracts</span>
-      <small>5 modules · 20 symbols · 28 relations</small>
+      <small>7 modules · 31 symbols · 44 relations</small>
       <div class="tags"><span>contracts</span></div>
     </a>
 
@@ -57,7 +65,7 @@
     <a class="package-card search-item" href="packages/eos-engine.html">
       <strong>@eos/engine</strong>
       <span>packages/engine</span>
-      <small>14 modules · 67 symbols · 91 relations</small>
+      <small>17 modules · 85 symbols · 116 relations</small>
       <div class="tags"><span>runtime</span></div>
     </a>
 
@@ -65,7 +73,7 @@
     <a class="package-card search-item" href="packages/eos-llm-client.html">
       <strong>@eos/llm-client</strong>
       <span>packages/llm-client</span>
-      <small>28 modules · 114 symbols · 217 relations</small>
+      <small>30 modules · 125 symbols · 227 relations</small>
       <div class="tags"><span>provider-boundary</span></div>
     </a>
 
@@ -78,19 +86,19 @@
     </a>
 
 
-    <a class="package-card search-item" href="packages/eos-runtime.html">
-      <strong>@eos/runtime</strong>
-      <span>packages/runtime</span>
-      <small>0 modules · 0 symbols · 0 relations</small>
-      <div class="tags"><span>empty-package</span><span>runtime</span></div>
-    </a>
-
-
     <a class="package-card search-item" href="packages/eos-testkit.html">
       <strong>@eos/testkit</strong>
       <span>packages/testkit</span>
-      <small>0 modules · 0 symbols · 0 relations</small>
-      <div class="tags"><span>empty-package</span><span>testkit</span></div>
+      <small>3 modules · 6 symbols · 10 relations</small>
+      <div class="tags"><span>testkit</span></div>
+    </a>
+
+
+    <a class="package-card search-item" href="packages/eos-tool.html">
+      <strong>@eos/tool</strong>
+      <span>packages/tool</span>
+      <small>20 modules · 85 symbols · 171 relations</small>
+
     </a>
   </div>
       </section>
@@ -105,9 +113,19 @@
 
         <details class="tree-folder tree-package" open>
           <summary>
+            <span class="tree-label">@eos/agent-runtime</span>
+            <a class="tree-action" href="packages/eos-agent-runtime.html">Open</a>
+            <small>0 modules · 0 symbols</small>
+          </summary>
+          <div class="tree-empty">No TypeScript source files found.</div>
+        </details>
+
+
+        <details class="tree-folder tree-package" open>
+          <summary>
             <span class="tree-label">@eos/contracts</span>
             <a class="tree-action" href="packages/eos-contracts.html">Open</a>
-            <small>5 modules · 20 symbols</small>
+            <small>7 modules · 31 symbols</small>
           </summary>
           <div class="tree-nav"><div class="tree-children">
       <details class="tree-folder" open>
@@ -117,8 +135,35 @@
         <div class="tree-children">
     <div class="tree-file search-item">
       <div class="tree-file-row">
+        <a href="modules/eos-contracts-src-agents.html"><code>agents.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-agents.html#AgentKindSchema"><code>AgentKindSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">contract public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-agents.html#AgentKind"><code>AgentKind</code></a>
+          <span>type</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
         <a href="modules/eos-contracts-src-ids.html"><code>ids.ts</code></a>
-        <small>source · 3 symbols</small>
+        <small>source · 10 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
@@ -140,6 +185,55 @@
 
         <li class="tree-symbol search-item">
           <a href="modules/eos-contracts-src-ids.html#toolUseIdFrom"><code>toolUseIdFrom</code></a>
+          <span>function</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#AgentRunIdSchema"><code>AgentRunIdSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">contract public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#AgentRunId"><code>AgentRunId</code></a>
+          <span>type</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#agentRunIdFrom"><code>agentRunIdFrom</code></a>
+          <span>function</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#mintAgentRunId"><code>mintAgentRunId</code></a>
+          <span>function</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#SandboxIdSchema"><code>SandboxIdSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">contract public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#SandboxId"><code>SandboxId</code></a>
+          <span>type</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-ids.html#sandboxIdFrom"><code>sandboxIdFrom</code></a>
           <span>function</span>
           <span class="compact-tags">contract public-api</span>
         </li>
@@ -302,6 +396,33 @@
     </ul>
 
     </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-contracts-src-tool-calls.html"><code>tool-calls.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-tool-calls.html#ToolCallResultSchema"><code>ToolCallResultSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">contract public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-contracts-src-tool-calls.html#ToolCallResult"><code>ToolCallResult</code></a>
+          <span>type</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
   </div>
       </details>
 
@@ -339,7 +460,7 @@
           <summary>
             <span class="tree-label">@eos/engine</span>
             <a class="tree-action" href="packages/eos-engine.html">Open</a>
-            <small>14 modules · 67 symbols</small>
+            <small>17 modules · 85 symbols</small>
           </summary>
           <div class="tree-nav"><div class="tree-children">
       <details class="tree-folder" open>
@@ -347,10 +468,105 @@
           <span class="tree-label">src</span>
         </summary>
         <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">background</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-engine-src-background-session.html"><code>session.ts</code></a>
+        <small>source · 5 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-session.html#SessionRef"><code>SessionRef</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-session.html#SessionStatus"><code>SessionStatus</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-session.html#SessionOutcome"><code>SessionOutcome</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-session.html#SessionHandle"><code>SessionHandle</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api run-handle</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-session.html#SessionRow"><code>SessionRow</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-engine-src-background-supervisor.html"><code>supervisor.ts</code></a>
+        <small>source · 4 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-supervisor.html#SessionEntry"><code>SessionEntry</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-supervisor.html#sessionKey"><code>sessionKey</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-supervisor.html#isSessionRef"><code>isSessionRef</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-background-supervisor.html#BackgroundSupervisor"><code>BackgroundSupervisor</code></a>
+          <span>class</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="modules/eos-engine-src-agent-loop.html"><code>agent-loop.ts</code></a>
-        <small>source · 4 symbols</small>
+        <small>source · 7 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
@@ -367,6 +583,27 @@
           <a href="modules/eos-engine-src-agent-loop.html#runAgentLoop"><code>runAgentLoop</code></a>
           <span>function</span>
           <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-agent-loop.html#waitForWake"><code>waitForWake</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-agent-loop.html#normalizeBatch"><code>normalizeBatch</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-agent-loop.html#projectToolResult"><code>projectToolResult</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
         </li>
 
 
@@ -492,6 +729,40 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
+        <a href="modules/eos-engine-src-notification-inbox.html"><code>notification-inbox.ts</code></a>
+        <small>source · 3 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-notification-inbox.html#InboxEntry"><code>InboxEntry</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-notification-inbox.html#NotificationInbox"><code>NotificationInbox</code></a>
+          <span>class</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-src-notification-inbox.html#systemNotificationMessage"><code>systemNotificationMessage</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
         <a href="modules/eos-engine-src-run-handle.html"><code>run-handle.ts</code></a>
         <small>source · 5 symbols</small>
       </div>
@@ -540,92 +811,23 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="modules/eos-engine-src-tool-runner.html"><code>tool-runner.ts</code></a>
-        <small>source · 6 symbols</small>
+        <a href="modules/eos-engine-src-tool-executor.html"><code>tool-executor.ts</code></a>
+        <small>source · 2 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
     <ul class="tree-symbols">
 
         <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#ToolUseBlock"><code>ToolUseBlock</code></a>
+          <a href="modules/eos-engine-src-tool-executor.html#ToolUseBlock"><code>ToolUseBlock</code></a>
           <span>type</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#MAX_TOOL_CONCURRENCY"><code>MAX_TOOL_CONCURRENCY</code></a>
-          <span>const</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#runToolBatch"><code>runToolBatch</code></a>
-          <span>function</span>
           <span class="compact-tags">public-api</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#isAborted"><code>isAborted</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#executeCall"><code>executeCall</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tool-runner.html#settledOrAborted"><code>settledOrAborted</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
-        <a href="modules/eos-engine-src-tools.html"><code>tools.ts</code></a>
-        <small>source · 4 symbols</small>
-      </div>
-      <div class="tags"><span>source</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tools.html#ToolContext"><code>ToolContext</code></a>
+          <a href="modules/eos-engine-src-tool-executor.html#ToolExecutor"><code>ToolExecutor</code></a>
           <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tools.html#ToolOutput"><code>ToolOutput</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tools.html#ToolDefinition"><code>ToolDefinition</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-src-tools.html#ToolRegistry"><code>ToolRegistry</code></a>
-          <span>type</span>
           <span class="compact-tags">public-api</span>
         </li>
 
@@ -685,9 +887,53 @@
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="modules/eos-engine-tests-agent-loop-test.html"><code>agent-loop.test.ts</code></a>
-        <small>test · 0 symbols</small>
+        <small>test · 1 symbols</small>
       </div>
       <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-agent-loop-test.html#SUBMISSION"><code>SUBMISSION</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-engine-tests-background-supervisor-test.html"><code>background-supervisor.test.ts</code></a>
+        <small>test · 3 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-background-supervisor-test.html#REF"><code>REF</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-background-supervisor-test.html#SPAWNED_BY"><code>SPAWNED_BY</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-background-supervisor-test.html#setup"><code>setup</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
 
     </div>
 
@@ -741,8 +987,28 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
+        <a href="modules/eos-engine-tests-notification-inbox-test.html"><code>notification-inbox.test.ts</code></a>
+        <small>test · 1 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-notification-inbox-test.html#note"><code>note</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
         <a href="modules/eos-engine-tests-support.html"><code>support.ts</code></a>
-        <small>test-support · 29 symbols</small>
+        <small>test-support · 37 symbols</small>
       </div>
       <div class="tags"><span>test-only</span><span>test-support</span></div>
 
@@ -861,9 +1127,65 @@
 
 
         <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-tests-support.html#registryOf"><code>registryOf</code></a>
+          <a href="modules/eos-engine-tests-support.html#ScriptedToolResult"><code>ScriptedToolResult</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#ScriptedToolHandler"><code>ScriptedToolHandler</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api run-handle test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#scriptedExecutor"><code>scriptedExecutor</code></a>
           <span>function</span>
           <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#emptyExecutor"><code>emptyExecutor</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#submitHandler"><code>submitHandler</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api run-handle test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#isAborted"><code>isAborted</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#settleOrAbort"><code>settleOrAbort</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#TestSessionHandle"><code>TestSessionHandle</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api run-handle test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-engine-tests-support.html#sessionHandle"><code>sessionHandle</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api run-handle test-only</span>
         </li>
 
 
@@ -957,33 +1279,6 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="modules/eos-engine-tests-tool-runner-test.html"><code>tool-runner.test.ts</code></a>
-        <small>test · 2 symbols</small>
-      </div>
-      <div class="tags"><span>test</span><span>test-only</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-tests-tool-runner-test.html#collector"><code>collector</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal test-only</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-engine-tests-tool-runner-test.html#live"><code>live</code></a>
-          <span>const</span>
-          <span class="compact-tags">internal test-only</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
         <a href="modules/eos-engine-tests-turn-test.html"><code>turn.test.ts</code></a>
         <small>test · 1 symbols</small>
       </div>
@@ -1010,9 +1305,139 @@
           <summary>
             <span class="tree-label">@eos/llm-client</span>
             <a class="tree-action" href="packages/eos-llm-client.html">Open</a>
-            <small>28 modules · 114 symbols</small>
+            <small>30 modules · 125 symbols</small>
           </summary>
           <div class="tree-nav"><div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">e2e</span>
+        </summary>
+        <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">support</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-llm-client-e2e-support-codex-auth.html"><code>codex-auth.ts</code></a>
+        <small>source · 5 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-support-codex-auth.html#AuthFileSchema"><code>AuthFileSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-support-codex-auth.html#JwtPayloadSchema"><code>JwtPayloadSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-support-codex-auth.html#CodexAuth"><code>CodexAuth</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-support-codex-auth.html#decodeJwtPayload"><code>decodeJwtPayload</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-support-codex-auth.html#loadCodexAuth"><code>loadCodexAuth</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html"><code>codex-coding-plan.e2e.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#auth"><code>auth</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#MODEL"><code>MODEL</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#SYSTEM_PROMPT"><code>SYSTEM_PROMPT</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#token"><code>token</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#corruptedToken"><code>corruptedToken</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#liveClient"><code>liveClient</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal provider-client</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#user"><code>user</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#ECHO_TOOL"><code>ECHO_TOOL</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
+
       <details class="tree-folder" open>
         <summary>
           <span class="tree-label">src</span>
@@ -1383,7 +1808,7 @@
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="modules/eos-llm-client-src-config.html"><code>config.ts</code></a>
-        <small>source · 7 symbols</small>
+        <small>source · 6 symbols</small>
       </div>
       <div class="tags"><span>config</span><span>source</span></div>
 
@@ -1414,13 +1839,6 @@
           <a href="modules/eos-llm-client-src-config.html#StreamGuardConfigSchema"><code>StreamGuardConfigSchema</code></a>
           <span>schema</span>
           <span class="compact-tags">config public-api schema:zod</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-llm-client-src-config.html#StreamGuardConfig"><code>StreamGuardConfig</code></a>
-          <span>type</span>
-          <span class="compact-tags">config public-api</span>
         </li>
 
 
@@ -1721,7 +2139,7 @@
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="modules/eos-llm-client-src-types.html"><code>types.ts</code></a>
-        <small>source · 7 symbols</small>
+        <small>source · 6 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
@@ -1744,13 +2162,6 @@
         <li class="tree-symbol search-item">
           <a href="modules/eos-llm-client-src-types.html#UsageSnapshot"><code>UsageSnapshot</code></a>
           <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="modules/eos-llm-client-src-types.html#totalTokens"><code>totalTokens</code></a>
-          <span>function</span>
           <span class="compact-tags">public-api</span>
         </li>
 
@@ -2168,14 +2579,14 @@
         <li class="tree-symbol search-item">
           <a href="modules/eos-llm-client-tests-support.html#RecordedCall"><code>RecordedCall</code></a>
           <span>interface</span>
-          <span class="compact-tags">public-api test-only</span>
+          <span class="compact-tags">internal test-only</span>
         </li>
 
 
         <li class="tree-symbol search-item">
           <a href="modules/eos-llm-client-tests-support.html#FetchStub"><code>FetchStub</code></a>
           <span>interface</span>
-          <span class="compact-tags">public-api test-only</span>
+          <span class="compact-tags">internal test-only</span>
         </li>
 
 
@@ -2227,21 +2638,991 @@
 
         <details class="tree-folder tree-package" open>
           <summary>
-            <span class="tree-label">@eos/runtime</span>
-            <a class="tree-action" href="packages/eos-runtime.html">Open</a>
-            <small>0 modules · 0 symbols</small>
+            <span class="tree-label">@eos/testkit</span>
+            <a class="tree-action" href="packages/eos-testkit.html">Open</a>
+            <small>3 modules · 6 symbols</small>
           </summary>
-          <div class="tree-empty">No TypeScript source files found.</div>
+          <div class="tree-nav"><div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">src</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-testkit-src-index.html"><code>index.ts</code></a>
+        <small>entrypoint · 0 symbols</small>
+      </div>
+      <div class="tags"><span>entrypoint</span><span>package-entrypoint</span><span>public-api</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-testkit-src-scripted-tools.html"><code>scripted-tools.ts</code></a>
+        <small>source · 5 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-scripted-tools.html#scriptedTool"><code>scriptedTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-scripted-tools.html#scriptedRunState"><code>scriptedRunState</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-scripted-tools.html#ScriptedSessionOutcome"><code>ScriptedSessionOutcome</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-scripted-tools.html#ScriptedSessionHandle"><code>ScriptedSessionHandle</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api run-handle</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-scripted-tools.html#scriptedSessionHandle"><code>scriptedSessionHandle</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api run-handle</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-testkit-src-transcript-fixture.html"><code>transcript-fixture.ts</code></a>
+        <small>source · 1 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-testkit-src-transcript-fixture.html#writeTranscriptFixture"><code>writeTranscriptFixture</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+    </div></div>
         </details>
 
 
         <details class="tree-folder tree-package" open>
           <summary>
-            <span class="tree-label">@eos/testkit</span>
-            <a class="tree-action" href="packages/eos-testkit.html">Open</a>
-            <small>0 modules · 0 symbols</small>
+            <span class="tree-label">@eos/tool</span>
+            <a class="tree-action" href="packages/eos-tool.html">Open</a>
+            <small>20 modules · 85 symbols</small>
           </summary>
-          <div class="tree-empty">No TypeScript source files found.</div>
+          <div class="tree-nav"><div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">src</span>
+        </summary>
+        <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">hooks</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-hooks-protocol.html"><code>protocol.ts</code></a>
+        <small>source · 10 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookEventSchema"><code>HookEventSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">event public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookEvent"><code>HookEvent</code></a>
+          <span>type</span>
+          <span class="compact-tags">event public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookPayload"><code>HookPayload</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookOutputSchema"><code>HookOutputSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookOutput"><code>HookOutput</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookCommand"><code>HookCommand</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookConfigEntry"><code>HookConfigEntry</code></a>
+          <span>interface</span>
+          <span class="compact-tags">config public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#HookConfigEntrySchema"><code>HookConfigEntrySchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">config public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#CombinedHookOutcome"><code>CombinedHookOutcome</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-protocol.html#combineHookOutputs"><code>combineHookOutputs</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-hooks-runner.html"><code>runner.ts</code></a>
+        <small>source · 10 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#DEFAULT_HOOK_TIMEOUT_MS"><code>DEFAULT_HOOK_TIMEOUT_MS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#HookRunResult"><code>HookRunResult</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#HookRunSummary"><code>HookRunSummary</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#HookEngine"><code>HookEngine</code></a>
+          <span>class</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#passthrough"><code>passthrough</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#runHook"><code>runHook</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#runCommandHook"><code>runCommandHook</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#validateHookOutput"><code>validateHookOutput</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#invalidHookOutput"><code>invalidHookOutput</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-hooks-runner.html#errorMessage"><code>errorMessage</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
+
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">tools</span>
+        </summary>
+        <div class="tree-children">
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">background</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-tools-background-cancel-background-session.html"><code>cancel-background-session.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-background-cancel-background-session.html#CancelInputSchema"><code>CancelInputSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-background-cancel-background-session.html#cancelBackgroundSessionTool"><code>cancelBackgroundSessionTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-tools-background-index.html"><code>index.ts</code></a>
+        <small>source · 1 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-background-index.html#backgroundTools"><code>backgroundTools</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-tools-background-list-background-sessions.html"><code>list-background-sessions.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-background-list-background-sessions.html#listBackgroundSessionsTool"><code>listBackgroundSessionsTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-background-list-background-sessions.html#sessionRowContent"><code>sessionRowContent</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
+
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">submission</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-tools-submission-index.html"><code>index.ts</code></a>
+        <small>source · 6 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#SharedOutcomeSchema"><code>SharedOutcomeSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">internal schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#SubmissionInput"><code>SubmissionInput</code></a>
+          <span>type</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#SubmissionRow"><code>SubmissionRow</code></a>
+          <span>interface</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#submissionRow"><code>submissionRow</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#SUBMISSIONS"><code>SUBMISSIONS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-tools-submission-index.html#submissionTool"><code>submissionTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+    </div>
+      </details>
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-contract.html"><code>contract.ts</code></a>
+        <small>source · 7 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolNameSchema"><code>ToolNameSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolName"><code>ToolName</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolOutcome"><code>ToolOutcome</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#AgentRunSnapshot"><code>AgentRunSnapshot</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolCallMeta"><code>ToolCallMeta</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolCallContext"><code>ToolCallContext</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-contract.html#ToolDefinition"><code>ToolDefinition</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-define.html"><code>define.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-define.html#ToolDefinitionInit"><code>ToolDefinitionInit</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-define.html#defineTool"><code>defineTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-executor.html"><code>executor.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#MAX_TOOL_CONCURRENCY"><code>MAX_TOOL_CONCURRENCY</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#ToolBatchExecutorInput"><code>ToolBatchExecutorInput</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#toolBatchExecutor"><code>toolBatchExecutor</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#terminalBatchRejection"><code>terminalBatchRejection</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#executeCall"><code>executeCall</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#errorResult"><code>errorResult</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#isAborted"><code>isAborted</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-executor.html#settledOrAborted"><code>settledOrAborted</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-index.html"><code>index.ts</code></a>
+        <small>entrypoint · 0 symbols</small>
+      </div>
+      <div class="tags"><span>entrypoint</span><span>package-entrypoint</span><span>public-api</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-pipeline.html"><code>pipeline.ts</code></a>
+        <small>source · 7 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#PipelineResult"><code>PipelineResult</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#BindToolDeps"><code>BindToolDeps</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#BoundTool"><code>BoundTool</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#bindTool"><code>bindTool</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#projectContent"><code>projectContent</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#stamp"><code>stamp</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-pipeline.html#issueSummary"><code>issueSummary</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-run-state.html"><code>run-state.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-run-state.html#AgentRunState"><code>AgentRunState</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-run-state.html#snapshotRunState"><code>snapshotRunState</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-src-toolset.html"><code>toolset.ts</code></a>
+        <small>source · 8 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#SANDBOX_TOOLS"><code>SANDBOX_TOOLS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#AGENT_TOOLS"><code>AGENT_TOOLS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#WORKFLOW_TOOLS"><code>WORKFLOW_TOOLS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#BACKGROUND_TOOLS"><code>BACKGROUND_TOOLS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#READ_ONLY_TOOLS"><code>READ_ONLY_TOOLS</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#AGENT_TOOLSET"><code>AGENT_TOOLSET</code></a>
+          <span>const</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#BuildToolExecutorInput"><code>BuildToolExecutorInput</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-src-toolset.html#buildToolExecutor"><code>buildToolExecutor</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+
+
+      <details class="tree-folder" open>
+        <summary>
+          <span class="tree-label">tests</span>
+        </summary>
+        <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-define-test.html"><code>define.test.ts</code></a>
+        <small>test · 0 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-executor-test.html"><code>executor.test.ts</code></a>
+        <small>test · 2 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-executor-test.html#executorOf"><code>executorOf</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-executor-test.html#deferred"><code>deferred</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-families-test.html"><code>families.test.ts</code></a>
+        <small>test · 3 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-families-test.html#setup"><code>setup</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-families-test.html#ctx"><code>ctx</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-families-test.html#register"><code>register</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-hooks-test.html"><code>hooks.test.ts</code></a>
+        <small>test · 3 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-hooks-test.html#nodeHook"><code>nodeHook</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-hooks-test.html#pre"><code>pre</code></a>
+          <span>function</span>
+          <span class="compact-tags">config internal test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-hooks-test.html#probeTool"><code>probeTool</code></a>
+          <span>const</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-pipeline-test.html"><code>pipeline.test.ts</code></a>
+        <small>test · 0 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-support.html"><code>support.ts</code></a>
+        <small>test-support · 11 symbols</small>
+      </div>
+      <div class="tags"><span>test-only</span><span>test-support</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#toolUse"><code>toolUse</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#live"><code>live</code></a>
+          <span>const</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#RunPipelineOptions"><code>RunPipelineOptions</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#runPipeline"><code>runPipeline</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#preHook"><code>preHook</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#collector"><code>collector</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#resultContent"><code>resultContent</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#hookWarnings"><code>hookWarnings</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#tick"><code>tick</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#sleep"><code>sleep</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-support.html#must"><code>must</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="modules/eos-tool-tests-toolset-test.html"><code>toolset.test.ts</code></a>
+        <small>test · 1 symbols</small>
+      </div>
+      <div class="tags"><span>test</span><span>test-only</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="modules/eos-tool-tests-toolset-test.html#assemble"><code>assemble</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal test-only</span>
+        </li>
+
+    </ul>
+
+    </div>
+  </div>
+      </details>
+    </div></div>
         </details>
 
     </div>
@@ -2251,7 +3632,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Graph Relations</h2>
-          <span>showing 240 of 336</span>
+          <span>showing 240 of 568</span>
         </div>
         <div class="table-wrap relation-table">
           <table>
@@ -2274,10 +3655,18 @@
 
 
     <tr class="search-item">
+      <td>extends</td>
+      <td><code>@eos/tool/src/hooks/runner#HookRunSummary</code></td>
+      <td><code>CombinedHookOutcome</code></td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>implements</td>
       <td><code>@eos/engine/src/events#EventStream</code></td>
       <td><code>AsyncIterable</code></td>
-      <td>50</td>
+      <td>56</td>
     </tr>
 
 
@@ -2285,7 +3674,7 @@
       <td>implements</td>
       <td><code>@eos/engine/src/run-handle#RunHandle</code></td>
       <td><code>AgentRunHandle</code></td>
-      <td>57</td>
+      <td>64</td>
     </tr>
 
 
@@ -2293,7 +3682,7 @@
       <td>implements</td>
       <td><code>@eos/engine/tests/support#MockLlmClient</code></td>
       <td><code>LlmClient</code></td>
-      <td>37</td>
+      <td>41</td>
     </tr>
 
 
@@ -2318,6 +3707,14 @@
       <td><code>@eos/llm-client/src/wires/openai-responses#OpenAiDecoder</code></td>
       <td><code>StreamDecoder</code></td>
       <td>154</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/agents</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
     </tr>
 
 
@@ -2356,6 +3753,30 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/contracts/src/messages</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/tool-calls</code></td>
+      <td><code>@eos/contracts/src/ids</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/tool-calls</code></td>
+      <td><code>@eos/contracts/src/json</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/tool-calls</code></td>
       <td><code>zod</code></td>
       <td>1</td>
     </tr>
@@ -2388,7 +3809,7 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
       <td>4</td>
     </tr>
 
@@ -2396,15 +3817,15 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>5</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
       <td>6</td>
     </tr>
 
@@ -2412,15 +3833,15 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
       <td>7</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
       <td>8</td>
     </tr>
 
@@ -2428,8 +3849,40 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/llm-client</code></td>
       <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>3</td>
     </tr>
 
 
@@ -2482,9 +3935,9 @@
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
       <td>5</td>
     </tr>
 
@@ -2492,7 +3945,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -2500,8 +3953,24 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
       <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/run-handle</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td>9</td>
     </tr>
 
 
@@ -2510,6 +3979,14 @@
       <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/llm-client</code></td>
       <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
     </tr>
 
 
@@ -2547,7 +4024,7 @@
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
       <td><code>@eos/contracts</code></td>
       <td>1</td>
     </tr>
@@ -2555,33 +4032,9 @@
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
       <td><code>@eos/engine/src/events</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tools</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
+      <td>3</td>
     </tr>
 
 
@@ -2620,23 +4073,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>10</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/llm-client</code></td>
+      <td><code>@eos/contracts</code></td>
       <td>3</td>
     </tr>
 
@@ -2644,6 +4081,86 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
     </tr>
@@ -2699,6 +4216,30 @@
 
     <tr class="search-item">
       <td>imports</td>
+      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/contracts</code></td>
       <td>3</td>
@@ -2708,8 +4249,24 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/session</code></td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/events</code></td>
-      <td>19</td>
+      <td>23</td>
     </tr>
 
 
@@ -2717,7 +4274,15 @@
       <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>20</td>
+      <td>25</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>24</td>
     </tr>
 
 
@@ -2725,53 +4290,13 @@
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>10</td>
+      <td>12</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/tests/tool-runner.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/tool-runner.test</code></td>
-      <td><code>@eos/engine/src/tool-runner</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/tests/tool-runner.test</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/tool-runner.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/tool-runner.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
     </tr>
@@ -2822,6 +4347,86 @@
       <td><code>@eos/engine/tests/turn.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>@eos/llm-client/src/index</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>@eos/llm-client/src/secret</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
+      <td><code>zod</code></td>
+      <td>5</td>
     </tr>
 
 
@@ -3834,346 +5439,122 @@
 
 
     <tr class="search-item">
-      <td>package-depends-on</td>
+      <td>imports</td>
+      <td><code>@eos/testkit/src/scripted-tools</code></td>
       <td><code>@eos/contracts</code></td>
-      <td><code>zod</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/engine</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/engine</code></td>
-      <td><code>@eos/llm-client</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/llm-client</code></td>
-      <td><code>@anthropic-ai/sdk</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/llm-client</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/llm-client</code></td>
-      <td><code>openai</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>package-depends-on</td>
-      <td><code>@eos/llm-client</code></td>
-      <td><code>zod</code></td>
-      <td></td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/contracts/src/index</code></td>
-      <td><code>@eos/contracts/src/ids</code></td>
-      <td>7</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/contracts/src/index</code></td>
-      <td><code>@eos/contracts/src/json</code></td>
       <td>1</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/contracts/src/index</code></td>
-      <td><code>@eos/contracts/src/messages</code></td>
+      <td>imports</td>
+      <td><code>@eos/testkit/src/scripted-tools</code></td>
+      <td><code>@eos/tool</code></td>
       <td>8</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>9</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>13</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td>14</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/tools</code></td>
-      <td>19</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/client</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/config</code></td>
-      <td>2</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/errors</code></td>
-      <td>11</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/events</code></td>
-      <td>16</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/factory</code></td>
-      <td>17</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/profiles</code></td>
-      <td>18</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/secret</code></td>
-      <td>22</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/llm-client/src/index</code></td>
-      <td><code>@eos/llm-client/src/types</code></td>
-      <td>23</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/contracts/src/ids#ToolUseIdSchema</code></td>
-      <td><code>@eos/contracts/src/ids#ToolUseId</code></td>
-      <td>9</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/contracts/src/messages#ContentBlockSchema</code></td>
-      <td><code>@eos/contracts/src/messages#ContentBlock</code></td>
-      <td>48</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/contracts/src/messages#MessageRoleSchema</code></td>
-      <td><code>@eos/contracts/src/messages#MessageRole</code></td>
-      <td>18</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/contracts/src/messages#MessageSchema</code></td>
-      <td><code>@eos/contracts/src/messages#Message</code></td>
-      <td>55</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/contracts/src/messages#ToolSpecSchema</code></td>
-      <td><code>@eos/contracts/src/messages#ToolSpec</code></td>
-      <td>64</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/llm-client/src/config#RetryConfigSchema</code></td>
-      <td><code>@eos/llm-client/src/config#RetryConfig</code></td>
-      <td>12</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>schema-infers-type</td>
-      <td><code>@eos/llm-client/src/config#StreamGuardConfigSchema</code></td>
-      <td><code>@eos/llm-client/src/config#StreamGuardConfig</code></td>
-      <td>22</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/contracts/tests/contracts.test</code></td>
-      <td><code>@eos/contracts/src/index</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/contracts/tests/contracts.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/index</code></td>
+      <td>imports <small>type</small></td>
+      <td><code>@eos/testkit/src/transcript-fixture</code></td>
+      <td><code>@eos/contracts</code></td>
       <td>5</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
+      <td>imports</td>
+      <td><code>@eos/testkit/src/transcript-fixture</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/testkit/src/transcript-fixture</code></td>
+      <td><code>node:os</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/testkit/src/transcript-fixture</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td><code>zod</code></td>
       <td>10</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/llm-client</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/conversation.test</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/conversation.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/conversation.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/support</code></td>
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/define</code></td>
       <td><code>@eos/contracts</code></td>
-      <td>3</td>
+      <td>1</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>tests <small>type</small></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>19</td>
+      <td>imports</td>
+      <td><code>@eos/tool/src/define</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/define</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/executor</code></td>
+      <td><code>@eos/tool/src/pipeline</code></td>
+      <td>5</td>
     </tr>
   </tbody>
           </table>

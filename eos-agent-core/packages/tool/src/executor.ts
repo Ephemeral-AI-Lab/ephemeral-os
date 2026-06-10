@@ -1,6 +1,7 @@
 import type { ToolCallResult, ToolSpec, ToolUseId } from "@eos/contracts";
 import type { AgentEvent, ToolExecutor, ToolUseBlock } from "@eos/engine";
 
+import type { AgentRunSnapshot } from "./contract.js";
 import { projectContent, type BoundTool } from "./pipeline.js";
 import { snapshotRunState, type AgentRunState } from "./run-state.js";
 
@@ -44,15 +45,7 @@ export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor {
       const run = snapshotRunState(runState);
       const rejection = terminalBatchRejection(calls, byName);
       if (rejection !== undefined) {
-        const at = Date.now();
-        return calls.map((call) => ({
-          tool_use_id: call.tool_use_id,
-          content: rejection,
-          is_error: true,
-          is_terminal: false,
-          tool_start_time: at,
-          tool_end_time: at,
-        }));
+        return calls.map((call) => errorResult(call.tool_use_id, rejection));
       }
       const settled = new Array<ToolCallResult | undefined>(calls.length);
       let cursor = 0;
@@ -92,7 +85,7 @@ export function toolBatchExecutor(input: ToolBatchExecutorInput): ToolExecutor {
       );
       await settledOrAborted(workers, signal);
       return calls.map(
-        (call, index) => settled[index] ?? interrupted(call.tool_use_id),
+        (call, index) => settled[index] ?? errorResult(call.tool_use_id, "interrupted"),
       );
     },
   };
@@ -122,43 +115,29 @@ function terminalBatchRejection(
 async function executeCall(
   call: ToolUseBlock,
   byName: Map<string, BoundTool>,
-  run: ReturnType<typeof snapshotRunState>,
+  run: AgentRunSnapshot,
   signal: AbortSignal,
 ): Promise<ToolCallResult> {
   const tool = byName.get(call.name);
-  if (!tool) {
-    const at = Date.now();
-    return {
-      tool_use_id: call.tool_use_id,
-      content: `tool not found: ${call.name}`,
-      is_error: true,
-      is_terminal: false,
-      tool_start_time: at,
-      tool_end_time: at,
-    };
-  }
+  if (!tool) return errorResult(call.tool_use_id, `tool not found: ${call.name}`);
   try {
     return { tool_use_id: call.tool_use_id, ...(await tool.run(call, run, signal)) };
   } catch (error) {
-    // The pipeline never throws by contract; this keeps a buggy tool from
-    // cascading into siblings all the same.
-    const at = Date.now();
-    return {
-      tool_use_id: call.tool_use_id,
-      content: error instanceof Error ? error.message : String(error),
-      is_error: true,
-      is_terminal: false,
-      tool_start_time: at,
-      tool_end_time: at,
-    };
+    // The pipeline never throws by contract; this keeps a faulting call
+    // from cascading into siblings all the same.
+    return errorResult(
+      call.tool_use_id,
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 
-function interrupted(toolUseId: ToolUseId): ToolCallResult {
+/** A settled error result with both clocks at the settling instant. */
+function errorResult(toolUseId: ToolUseId, content: string): ToolCallResult {
   const at = Date.now();
   return {
     tool_use_id: toolUseId,
-    content: "interrupted",
+    content,
     is_error: true,
     is_terminal: false,
     tool_start_time: at,

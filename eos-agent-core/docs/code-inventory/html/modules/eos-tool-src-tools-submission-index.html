@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/tools/submission/index Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/tools/submission/index</h1>
+          <p class="lede">packages/tool/src/tools/submission/index.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>6</dd></div>
+          <div><dt>Schemas</dt><dd>1</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>5</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObjectSchema, type AgentKind, type JsonObject</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../contract.js</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../define.js</code></td>
+      <td>defineTool</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>index.ts</code>
+        <small>6 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#SharedOutcomeSchema"><code>SharedOutcomeSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SubmissionInput"><code>SubmissionInput</code></a>
+            <span>type</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SubmissionRow"><code>SubmissionRow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#submissionRow"><code>submissionRow</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SUBMISSIONS"><code>SUBMISSIONS</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#submissionTool"><code>submissionTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="SharedOutcomeSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SharedOutcomeSchema</strong>
+          <span>schema · line 8 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#SharedOutcomeSchema">Module</a>
+      </div>
+      <pre><code>const SharedOutcomeSchema = z.object({ /** One-paragraph result the parent reads first. */ summary: z.string().min(1), /** Structured result payload; rides the run outcome as `submission`. */ payload: JsonObjectSchema...</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>summary</code></td>
+              <td><code>z.string().min(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>payload</code></td>
+              <td><code>JsonObjectSchema.optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="SubmissionInput" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SubmissionInput</strong>
+          <span>type · line 14 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#SubmissionInput">Module</a>
+      </div>
+      <pre><code>type SubmissionInput = z.infer&lt;typeof SharedOutcomeSchema&gt;</code></pre>
+
+      <div class="tags"><span>dto</span><span>internal</span><span>type:inferred</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SubmissionRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SubmissionRow</strong>
+          <span>interface · line 16 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#SubmissionRow">Module</a>
+      </div>
+      <pre><code>interface SubmissionRow</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>description</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>input</code></td>
+              <td><code>z.ZodType&lt;SubmissionInput&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="submissionRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>submissionRow</strong>
+          <span>const · line 23 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#submissionRow">Module</a>
+      </div>
+      <pre><code>const submissionRow = (kind: AgentKind): SubmissionRow =&gt; ({ name: `submit_${kind}_outcome`, description: `Submit the final outcome of this ${kind} run. Terminal: a successful call ends the run.`, input: SharedOutcome...</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SUBMISSIONS" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SUBMISSIONS</strong>
+          <span>const · line 30 · internal</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#SUBMISSIONS">Module</a>
+      </div>
+      <pre><code>const SUBMISSIONS: Record&lt;AgentKind, SubmissionRow&gt; = { main: submissionRow(&quot;main&quot;), planner: submissionRow(&quot;planner&quot;), worker: submissionRow(&quot;worker&quot;), advisor: submissionRow(&quot;advisor&quot;), subagent: submissionRow(&quot;suba...</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="submissionTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>submissionTool</strong>
+          <span>function · line 43 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-submission-index.html#submissionTool">Module</a>
+      </div>
+      <pre><code>export function submissionTool( kind: AgentKind, supervisor: BackgroundSupervisor, ): ToolDefinition</code></pre>
+      <p>The terminal tool for one agent kind. Guards &quot;no open sessions before
+submission&quot; in plain code (not a hook): the model cannot submit past a
+running session or a settlement it has not seen yet.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td><code>@eos/tool/src/define</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td><code>zod</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/tool/src/tools/submission/index#SharedOutcomeSchema</code></td>
+      <td><code>@eos/tool/src/tools/submission/index#SubmissionInput</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/tool/src/tools/submission/index#SharedOutcomeSchema</code></td>
+      <td><code>@eos/tool/src/tools/submission/index#JsonObjectSchema</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/tool/src/tools/submission/index#SubmissionInput</code></td>
+      <td><code>@eos/tool/src/tools/submission/index#SharedOutcomeSchema</code></td>
+      <td>14</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -13,7 +13,6 @@ use eos_plugin as _;
 use eos_workspace_runtime as _;
 use serde as _;
 use serde_json::{json, Value};
-use sha2 as _;
 use thiserror as _;
 use tokio as _;
 use tokio_util as _;

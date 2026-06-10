@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>Message</td>
+      <td>JsonValue, Message</td>
       <td>type</td>
       <td>1</td>
     </tr>
@@ -204,7 +204,7 @@
 
     <ul class="variant-list">
 
-        <li><code>{ status: &quot;completed&quot;; final_message: Message; stop_reason?: StopReason }</code></li>
+        <li><code>{ status: &quot;completed&quot;; /** The assistant message that carried the terminal to...</code></li>
 
 
         <li><code>{ status: &quot;cancelled&quot;; reason: string }</code></li>
@@ -222,7 +222,7 @@
       <div class="symbol-head">
         <div>
           <strong>AgentRunOutcome</strong>
-          <span>type · line 25 · public</span>
+          <span>type · line 32 · public</span>
         </div>
         <a href="../modules/eos-engine-src-run-handle.html#AgentRunOutcome">Module</a>
       </div>
@@ -242,7 +242,7 @@ and salvaged partials never land in it.</p>
       <div class="symbol-head">
         <div>
           <strong>AgentRunHandle</strong>
-          <span>interface · line 34 · public</span>
+          <span>interface · line 41 · public</span>
         </div>
         <a href="../modules/eos-engine-src-run-handle.html#AgentRunHandle">Module</a>
       </div>
@@ -310,7 +310,7 @@ and salvaged partials never land in it.</p>
       <div class="symbol-head">
         <div>
           <strong>RunHandle</strong>
-          <span>class · line 57 · public</span>
+          <span>class · line 64 · public</span>
         </div>
         <a href="../modules/eos-engine-src-run-handle.html#RunHandle">Module</a>
       </div>
@@ -363,6 +363,13 @@ turn boundaries, and one atomic finish.</p>
               <td><code>#steers</code></td>
               <td><code>Message[]</code></td>
               <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#steerWakers</code></td>
+              <td><code>new Set&lt;() =&gt; void&gt;()</code></td>
+              <td>readonly</td>
             </tr>
 
 
@@ -435,6 +442,13 @@ turn boundaries, and one atomic finish.</p>
 
 
             <tr>
+              <td><code>waitForSteer</code></td>
+              <td><code>waitForSteer(signal: AbortSignal): Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
               <td><code>finish</code></td>
               <td><code>finish(outcome: AgentRunOutcome): void</code></td>
               <td></td>
@@ -461,7 +475,7 @@ turn boundaries, and one atomic finish.</p>
       <td>implements</td>
       <td><code>@eos/engine/src/run-handle#RunHandle</code></td>
       <td><code>AgentRunHandle</code></td>
-      <td>57</td>
+      <td>64</td>
     </tr>
 
 

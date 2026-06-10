@@ -6,7 +6,6 @@ use crate::isolated::audit::AuditSink;
 use crate::isolated::error::IsolatedError;
 use serde_json::{json, Value};
 
-use super::fault_injection::maybe_inject_phase;
 use super::resources::{
     close_handle_fds, directory_file_bytes, monotonic_seconds, mountinfo_reference_count,
     next_handle_id,
@@ -40,7 +39,6 @@ where
         );
         phase_start = Instant::now();
         self.network.initialize()?;
-        maybe_inject_phase("install_veth")?;
         handle.veth = Some(
             self.network
                 .install_veth(&handle.workspace_handle_id.0, handle.holder_pid)?,
@@ -50,14 +48,12 @@ where
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
-        maybe_inject_phase("mount_overlay")?;
         self.runtime.mount_overlay(handle, &handle.layer_paths)?;
         phases_ms.insert(
             "mount_overlay".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         phase_start = Instant::now();
-        maybe_inject_phase("configure_dns")?;
         let _dns_fallback_applied = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;

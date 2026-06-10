@@ -26,7 +26,7 @@
           <div class="tags"><span>test</span><span>test-only</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>0</dd></div>
+          <div><dt>Symbols</dt><dd>1</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>0</dd></div>
           <div><dt>Functions</dt><dd>0</dd></div>
@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>4</span>
+          <span>7</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -51,26 +51,50 @@
 
 
     <tr class="search-item">
-      <td><code>@eos/llm-client</code></td>
-      <td>ProviderError</td>
+      <td><code>@eos/contracts</code></td>
+      <td>toolUseIdFrom, type ToolCallResult</td>
       <td>value</td>
       <td>3</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>../src/index.js</code></td>
-      <td>startAgentRun, type ToolDefinition, type ToolOutput</td>
+      <td><code>@eos/llm-client</code></td>
+      <td>ProviderError</td>
       <td>value</td>
-      <td>5</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/background/supervisor.js</code></td>
+      <td>BackgroundSupervisor</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/notification-inbox.js</code></td>
+      <td>NotificationInbox, systemNotificationMessage</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/index.js</code></td>
+      <td>startAgentRun, type ToolExecutor</td>
+      <td>value</td>
+      <td>11</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>./support.js</code></td>
-      <td>MockLlmClient, USAGE, asCancelled, asCompleted, asFailed, assistantMessage, collectEvents, complete, deferred, expectProviderValid, failingTurn, gatedTurn, hangingTurn, must, registryOf, reasoningDelta, scriptedTurn, startMockRun, textBlock, textDelta, tick, toolResultBlock, toolUseBlock, toolUseDelta, userText</td>
+      <td>MockLlmClient, USAGE, asCancelled, asCompleted, asFailed, assistantMessage, collectEvents, complete, deferred, emptyExecutor, expectProviderValid, failingTurn, gatedTurn, hangingTurn, must, reasoningDelta, scriptedExecutor, scriptedTurn, sessionHandle, startMockRun, submitHandler, textBlock, textDelta, tick, toolResultBlock, toolUseBlock, toolUseDelta, userText</td>
       <td>value</td>
-      <td>10</td>
+      <td>12</td>
     </tr>
   </tbody>
           </table>
@@ -96,8 +120,41 @@
           <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
         </div>
         <div class="module-symbol-layout">
-          <nav class="symbol-outline"><div class="tree-empty">No top-level symbols found.</div></nav>
-          <div class="symbol-stack"></div>
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>agent-loop.test.ts</code>
+        <small>1 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#SUBMISSION"><code>SUBMISSION</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal test-only</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="SUBMISSION" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SUBMISSION</strong>
+          <span>const · line 43 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-tests-agent-loop-test.html#SUBMISSION">Module</a>
+      </div>
+      <pre><code>const SUBMISSION = { summary: &quot;done&quot;, payload: { answer: 42 } }</code></pre>
+
+      <div class="tags"><span>internal</span><span>test-only</span></div>
+
+
+
+
+    </article>
+  </div>
         </div>
       </section>
 
@@ -110,8 +167,32 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>5</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>7</td>
     </tr>
 
 
@@ -119,7 +200,7 @@
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td>10</td>
+      <td>12</td>
     </tr>
 
 
@@ -127,7 +208,7 @@
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>3</td>
+      <td>4</td>
     </tr>
 
 
@@ -142,8 +223,32 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/background/supervisor</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>5</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td>7</td>
     </tr>
 
 
@@ -151,7 +256,7 @@
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td>10</td>
+      <td>12</td>
     </tr>
 
 
@@ -159,7 +264,7 @@
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>3</td>
+      <td>4</td>
     </tr>
 
 

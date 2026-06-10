@@ -64,6 +64,8 @@ importers:
         specifier: ^4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.0)(tsx@4.22.4))
 
+  packages/agent-runtime: {}
+
   packages/contracts:
     dependencies:
       zod:
@@ -97,8 +99,6 @@ importers:
         version: 4.4.3
 
   packages/observability: {}
-
-  packages/runtime: {}
 
   packages/testkit:
     dependencies:

@@ -4,8 +4,8 @@ import { scriptedRunState, scriptedTool, writeTranscriptFixture } from "@eos/tes
 import { z } from "zod";
 
 import { defineTool } from "../src/define.js";
-import type { HookCommand, HookConfigEntry } from "../src/hooks/protocol.js";
-import { runPipeline } from "./support.js";
+import type { HookCommand, HookConfigEntry, HookOutput } from "../src/hooks/protocol.js";
+import { hookWarnings, runPipeline } from "./support.js";
 
 /** A command hook running an inline node script (double quotes only). */
 function nodeHook(js: string, timeoutMs?: number): HookCommand {
@@ -78,7 +78,7 @@ describe("hook command adapter", () => {
     });
     expect(executed, "non-blocking: the call still ran").toBe(true);
     expect(result.is_error).toBe(false);
-    expect(String(result.metadata?.hook_warnings)).toContain("not JSON");
+    expect(hookWarnings(result)).toContain("not JSON");
   });
 
   it("treats schema-mismatched stdout as passthrough with a warning (§15.13)", async () => {
@@ -88,9 +88,25 @@ describe("hook command adapter", () => {
       ],
     });
     expect(result.is_error).toBe(false);
-    expect(String(result.metadata?.hook_warnings)).toContain(
+    expect(hookWarnings(result)).toContain(
       "did not match HookOutput",
     );
+  });
+
+  it("treats schema-mismatched callback output as passthrough with a warning", async () => {
+    let executed = false;
+    const result = await runPipeline(probeTool(() => (executed = true)), {
+      entries: [
+        pre("probe", {
+          type: "callback",
+          run: () =>
+            Promise.resolve({ additionalContext: 123 } as unknown as HookOutput),
+        }),
+      ],
+    });
+    expect(executed).toBe(true);
+    expect(result.is_error).toBe(false);
+    expect(hookWarnings(result)).toContain("callback hook output did not match HookOutput");
   });
 
   it("treats other nonzero exits as passthrough with a warning, never a deny", async () => {
@@ -102,8 +118,8 @@ describe("hook command adapter", () => {
     });
     expect(executed).toBe(true);
     expect(result.is_error).toBe(false);
-    expect(String(result.metadata?.hook_warnings)).toContain("exited 3");
-    expect(String(result.metadata?.hook_warnings)).toContain("flaky");
+    expect(hookWarnings(result)).toContain("exited 3");
+    expect(hookWarnings(result)).toContain("flaky");
   });
 
   it("kills a hook on its timeout and passes through with a warning", async () => {
@@ -111,7 +127,7 @@ describe("hook command adapter", () => {
       entries: [pre("probe", nodeHook("setInterval(() => {}, 1000);", 250))],
     });
     expect(result.is_error).toBe(false);
-    expect(String(result.metadata?.hook_warnings)).toContain("aborted");
+    expect(hookWarnings(result)).toContain("aborted");
   }, 10_000);
 
   it("skips hooks whose matcher names a different tool", async () => {
