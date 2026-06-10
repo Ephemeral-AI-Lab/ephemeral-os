@@ -3,11 +3,10 @@
 
 use eos_db::{Database, DatabaseConfig, DatabaseUrl};
 use eos_types::{
-    AdvisorVerdict, AgentName, AttemptBudget, AttemptClosure, DeferredGoal, ExecutionNode,
-    ExecutionStatus, IterationCreationReason, IterationStatus, JsonObject, ParentAgentRunAnchor,
-    ParentedAgentRunKind, ParentedOutcome, PlanId, RequestId, RequestStatus, SubmissionOutcome,
-    Task, TaskAgentRunKind, TaskRole, ToolUseId, UtcDateTime, WorkItemId, WorkItemSpec,
-    WorkflowAgentRole, WorkflowCoordinates, WorkflowStatus,
+    format_record_dir, AgentName, AgentType, AttemptBudget, AttemptClosure, DeferredGoal,
+    ExecutionNode, ExecutionStatus, IterationCreationReason, IterationStatus, JsonObject,
+    RequestId, RequestStatus, SubmissionOutcome, ToolUseId, UtcDateTime, WorkItemId, WorkItemSpec,
+    WorkflowStatus,
 };
 use serde_json::json;
 use sqlx::Row;
@@ -45,24 +44,8 @@ fn rid(s: &str) -> RequestId {
     s.parse().expect("request id")
 }
 
-fn tid(s: &str) -> eos_types::TaskId {
-    s.parse().expect("task id")
-}
-
 fn arid(s: &str) -> eos_types::AgentRunId {
     s.parse().expect("agent run id")
-}
-
-fn wid(s: &str) -> eos_types::WorkflowId {
-    s.parse().expect("workflow id")
-}
-
-fn iid(s: &str) -> eos_types::IterationId {
-    s.parse().expect("iteration id")
-}
-
-fn aid(s: &str) -> eos_types::AttemptId {
-    s.parse().expect("attempt id")
 }
 
 fn tool_use_id(s: &str) -> ToolUseId {
@@ -77,60 +60,28 @@ fn work_item_id(s: &str) -> WorkItemId {
     WorkItemId::new(s).expect("work item id")
 }
 
-fn plan_id(s: &str) -> PlanId {
-    PlanId::new(s).expect("plan id")
-}
-
 fn json_obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
     pairs
         .iter()
-        .map(|(k, v)| ((*k).to_owned(), v.clone()))
+        .map(|(key, value)| ((*key).to_owned(), value.clone()))
         .collect()
 }
 
-fn task(id: &str, request_id: &RequestId, role: TaskRole, instruction: &str) -> Task {
-    Task {
-        id: tid(id),
-        request_id: request_id.clone(),
-        role,
-        instruction: instruction.to_owned(),
-        status: ExecutionStatus::Running,
-        agent_name: Some(role.as_str().to_owned()),
-        submission_outcome: None,
-    }
-}
-
 #[tokio::test]
-async fn schema_uses_final_workflow_worker_contract_columns() {
+async fn schema_uses_agent_run_only_contract_columns() {
     let (_dir, db) = open_temp().await;
 
     assert_eq!(
         table_names(&db).await,
         [
             "_sqlx_migrations",
+            "agent_runs",
             "attempts",
             "iterations",
             "model_registrations",
-            "parented_runs",
             "requests",
             "sqlite_sequence",
-            "task_runs",
-            "tasks",
             "workflows",
-        ]
-    );
-    assert_eq!(
-        table_column_names(&db, "tasks").await,
-        [
-            "id",
-            "request_id",
-            "role",
-            "instruction",
-            "status",
-            "agent_name",
-            "submission_outcome",
-            "created_at",
-            "updated_at",
         ]
     );
     assert_eq!(
@@ -138,7 +89,6 @@ async fn schema_uses_final_workflow_worker_contract_columns() {
         [
             "id",
             "request_id",
-            "parent_task_id",
             "parent_agent_run_id",
             "tool_use_id",
             "workflow_goal",
@@ -150,20 +100,22 @@ async fn schema_uses_final_workflow_worker_contract_columns() {
         ]
     );
     assert_eq!(
-        table_column_names(&db, "iterations").await,
+        table_column_names(&db, "agent_runs").await,
         [
-            "id",
-            "workflow_id",
-            "sequence_no",
-            "creation_reason",
-            "workflow_goal",
-            "iteration_goal",
-            "attempt_budget",
+            "agent_run_id",
+            "request_id",
+            "agent_type",
             "status",
-            "attempt_ids",
+            "agent_name",
+            "parent_agent_run_id",
+            "tool_use_id",
+            "terminal_payload",
+            "submission_outcome",
+            "token_count",
+            "error",
             "created_at",
             "updated_at",
-            "closed_at",
+            "finished_at",
         ]
     );
     assert_eq!(
@@ -183,49 +135,10 @@ async fn schema_uses_final_workflow_worker_contract_columns() {
             "closed_at",
         ]
     );
-    assert_eq!(
-        table_column_names(&db, "task_runs").await,
-        [
-            "task_id",
-            "agent_run_id",
-            "request_id",
-            "role",
-            "status",
-            "agent_name",
-            "terminal_payload",
-            "submission_outcome",
-            "token_count",
-            "error",
-            "created_at",
-            "updated_at",
-            "finished_at",
-        ]
-    );
-    assert_eq!(
-        table_column_names(&db, "parented_runs").await,
-        [
-            "task_id",
-            "agent_run_id",
-            "request_id",
-            "status",
-            "parent_agent_run_id",
-            "parent_task_id",
-            "kind",
-            "tool_use_id",
-            "agent_name",
-            "terminal_payload",
-            "parented_outcome",
-            "token_count",
-            "error",
-            "created_at",
-            "updated_at",
-            "finished_at",
-        ]
-    );
 }
 
 #[tokio::test]
-async fn task_workflow_iteration_and_attempt_roundtrip_final_fields() {
+async fn workflow_iteration_attempt_roundtrip_uses_agent_run_bindings() {
     let (_dir, db) = open_temp().await;
     let request_id = rid("req-1");
     db.requests()
@@ -233,38 +146,31 @@ async fn task_workflow_iteration_and_attempt_roundtrip_final_fields() {
         .await
         .expect("create request");
 
-    let worker = task("task-worker", &request_id, TaskRole::Worker, "do work");
-    db.tasks().insert_task(&worker).await.expect("insert task");
-    let outcome = SubmissionOutcome::Worker {
-        is_pass: true,
-        outcome: "done".to_owned(),
-    };
-    let done = db
-        .tasks()
-        .set_task_status_if_current(
-            &worker.id,
-            ExecutionStatus::Running,
-            ExecutionStatus::Done,
-            Some(&outcome),
+    let parent_run_id = arid("run-parent");
+    db.agent_runs()
+        .create_agent_run(
+            &parent_run_id,
+            &request_id,
+            &agent_name("root"),
+            AgentType::Main,
+            None,
+            None,
         )
         .await
-        .expect("finish task")
-        .expect("task");
-    assert_eq!(done.submission_outcome, Some(outcome));
+        .expect("create parent run");
 
     let workflow = db
         .workflows()
         .insert(
             &request_id,
-            &worker.id,
-            &arid("run-parent"),
+            &parent_run_id,
             Some(&tool_use_id("toolu-workflow")),
             "workflow goal",
         )
         .await
         .expect("insert workflow");
     assert_eq!(workflow.workflow_goal, "workflow goal");
-    assert_eq!(workflow.parent_agent_run_id, arid("run-parent"));
+    assert_eq!(workflow.parent_agent_run_id, parent_run_id);
 
     let iteration = db
         .iterations()
@@ -291,52 +197,110 @@ async fn task_workflow_iteration_and_attempt_roundtrip_final_fields() {
         .await
         .expect("insert attempt");
     assert_eq!(attempt.plan_id, attempt.execution_tree.plan_id);
-    assert!(attempt.execution_tree.planner_task_id.is_none());
+    assert!(!attempt.execution_tree.planner_started);
+    assert!(attempt.execution_tree.planner_outcome.is_none());
     assert!(attempt.execution_tree.nodes.is_empty());
 
-    let planner_task_id = tid("task-planner");
-    let planned = db
+    let started = db
         .attempts()
-        .bind_planner_task(&attempt.id, &planner_task_id)
+        .mark_planner_started(&attempt.id)
         .await
-        .expect("bind planner");
-    assert_eq!(
-        planned.execution_tree.planner_task_id,
-        Some(planner_task_id)
-    );
+        .expect("mark planner started");
+    assert!(started.execution_tree.planner_started);
 
+    let work_items = vec![
+        WorkItemSpec {
+            id: work_item_id("w1"),
+            agent_name: agent_name("executor"),
+            work_spec: "do first".to_owned(),
+            needs: Vec::new(),
+        },
+        WorkItemSpec {
+            id: work_item_id("w2"),
+            agent_name: agent_name("executor"),
+            work_spec: "do second".to_owned(),
+            needs: vec![work_item_id("w1")],
+        },
+    ];
+    let planner_outcome = SubmissionOutcome::Planner {
+        plan_spec: "plan spec".to_owned(),
+        work_items: work_items.clone(),
+        deferred_goal_for_next_iteration: Some(
+            DeferredGoal::new("next iteration").expect("deferred goal"),
+        ),
+    };
     let nodes = vec![
         ExecutionNode {
             work_item_id: work_item_id("w1"),
             needs: Vec::new(),
-            task_id: None,
+            agent_run_id: None,
+            status: None,
+            outcome: None,
         },
         ExecutionNode {
             work_item_id: work_item_id("w2"),
             needs: vec![work_item_id("w1")],
-            task_id: None,
+            agent_run_id: None,
+            status: None,
+            outcome: None,
         },
     ];
     let running = db
         .attempts()
-        .record_plan_nodes(&attempt.id, &nodes)
+        .record_plan_outcome(&attempt.id, &planner_outcome, &nodes)
         .await
-        .expect("record nodes");
+        .expect("record planner outcome");
+    assert_eq!(
+        running.execution_tree.planner_outcome,
+        Some(planner_outcome)
+    );
     assert_eq!(running.execution_tree.nodes, nodes);
     assert_eq!(running.stage(), eos_types::AttemptStage::Run);
 
+    let worker_run_id = arid("run-worker");
+    db.agent_runs()
+        .create_agent_run(
+            &worker_run_id,
+            &request_id,
+            &agent_name("executor"),
+            AgentType::Worker,
+            Some(&parent_run_id),
+            Some(&tool_use_id("toolu-worker")),
+        )
+        .await
+        .expect("create worker run");
     let bound = db
         .attempts()
-        .bind_worker_task(&attempt.id, &work_item_id("w1"), &worker.id)
+        .bind_worker_agent_run(&attempt.id, &work_item_id("w1"), &worker_run_id)
         .await
         .expect("bind worker");
-    assert_eq!(
-        bound
-            .execution_tree
-            .node(&work_item_id("w1"))
-            .and_then(|node| node.task_id.as_ref()),
-        Some(&worker.id)
-    );
+    let node = bound
+        .execution_tree
+        .node(&work_item_id("w1"))
+        .expect("node");
+    assert_eq!(node.agent_run_id.as_ref(), Some(&worker_run_id));
+    assert_eq!(node.status, Some(ExecutionStatus::Running));
+
+    let worker_outcome = SubmissionOutcome::Worker {
+        is_pass: true,
+        outcome: "done".to_owned(),
+    };
+    let completed = db
+        .attempts()
+        .record_worker_outcome(
+            &attempt.id,
+            &work_item_id("w1"),
+            ExecutionStatus::Done,
+            &worker_outcome,
+        )
+        .await
+        .expect("record worker outcome");
+    let node = completed
+        .execution_tree
+        .node(&work_item_id("w1"))
+        .expect("node");
+    assert_eq!(node.status, Some(ExecutionStatus::Done));
+    assert_eq!(node.outcome.as_ref(), Some(&worker_outcome));
 
     let closed = db
         .attempts()
@@ -375,7 +339,7 @@ async fn task_workflow_iteration_and_attempt_roundtrip_final_fields() {
 }
 
 #[tokio::test]
-async fn agent_run_typed_outcomes_roundtrip() {
+async fn agent_run_outcomes_and_all_type_lineage_roundtrip() {
     let (_dir, db) = open_temp().await;
     let request_id = rid("req-runs");
     db.requests()
@@ -385,9 +349,24 @@ async fn agent_run_typed_outcomes_roundtrip() {
 
     let root_run = db
         .agent_runs()
-        .create_root_agent_run(&request_id, &arid("run-root"), &agent_name("root"))
+        .create_agent_run(
+            &arid("run-root"),
+            &request_id,
+            &agent_name("root"),
+            AgentType::Main,
+            None,
+            None,
+        )
         .await
         .expect("root run");
+    assert_eq!(
+        root_run.record_target.record_dir,
+        format_record_dir(&eos_types::AgentRunRecordIndex {
+            request_id: request_id.clone(),
+            agent_run_id: arid("run-root"),
+        })
+    );
+
     let root_payload = json_obj(&[
         ("kind", json!("root")),
         ("is_pass", json!(true)),
@@ -399,7 +378,7 @@ async fn agent_run_typed_outcomes_roundtrip() {
     };
     let finished_root = db
         .agent_runs()
-        .finish_task_run(
+        .finish_agent_run(
             &root_run.agent_run_id,
             ExecutionStatus::Done,
             Some(&root_payload),
@@ -413,245 +392,130 @@ async fn agent_run_typed_outcomes_roundtrip() {
     assert_eq!(finished_root.submission_outcome, Some(root_outcome));
     assert_eq!(finished_root.terminal_payload, Some(root_payload));
 
-    let coords = WorkflowCoordinates {
-        workflow_id: wid("wf-runs"),
-        iteration_id: iid("it-runs"),
-        attempt_id: aid("att-runs"),
-    };
-    let work_item_id = work_item_id("w1");
-    let worker_run = db
-        .agent_runs()
-        .create_workflow_agent_run(
-            &request_id,
-            &arid("run-worker"),
-            &coords,
-            WorkflowAgentRole::Worker,
-            &plan_id("plan-1"),
-            Some(&work_item_id),
-            &agent_name("executor"),
-        )
-        .await
-        .expect("worker run");
-    let worker_outcome = SubmissionOutcome::Worker {
-        is_pass: false,
-        outcome: "blocked".to_owned(),
-    };
-    let finished_worker = db
-        .agent_runs()
-        .finish_task_run(
-            &worker_run.agent_run_id,
-            ExecutionStatus::Failed,
-            None,
-            Some(&worker_outcome),
-            3,
-            Some("model stopped"),
-        )
-        .await
-        .expect("finish worker")
-        .expect("worker row");
-    assert_eq!(finished_worker.role, TaskRole::Worker);
-    assert_eq!(finished_worker.submission_outcome, Some(worker_outcome));
-    assert_eq!(finished_worker.error.as_deref(), Some("model stopped"));
+    let child_cases = [
+        ("run-main-child", AgentType::Main, "main-child"),
+        ("run-planner", AgentType::Planner, "planner"),
+        ("run-worker", AgentType::Worker, "worker"),
+        ("run-advisor", AgentType::Advisor, "advisor"),
+        ("run-subagent", AgentType::Subagent, "subagent"),
+    ];
+    for (run_id, agent_type, name) in child_cases {
+        let agent_run_id = arid(run_id);
+        let tool_id = tool_use_id(&format!("toolu-{name}"));
+        let child = db
+            .agent_runs()
+            .create_agent_run(
+                &agent_run_id,
+                &request_id,
+                &agent_name(name),
+                agent_type,
+                Some(&root_run.agent_run_id),
+                Some(&tool_id),
+            )
+            .await
+            .expect("child run");
+        assert_eq!(
+            child.record_target.record_dir,
+            format_record_dir(&eos_types::AgentRunRecordIndex {
+                request_id: request_id.clone(),
+                agent_run_id: agent_run_id.clone(),
+            })
+        );
+        let index = db
+            .agent_runs()
+            .record_index_for_agent_run(&agent_run_id)
+            .await
+            .expect("record index")
+            .expect("record index exists");
+        assert_eq!(index.request_id, request_id);
+        assert_eq!(index.agent_run_id, agent_run_id);
+    }
 
-    let parent = ParentAgentRunAnchor {
-        request_id: request_id.clone(),
-        parent_task_id: root_run.task_id,
-        agent_run_id: arid("run-root"),
-    };
-    let advisor_run = db
+    let all_runs = db
         .agent_runs()
-        .create_parented_agent_run(
-            &arid("run-advisor"),
-            &parent,
-            ParentedAgentRunKind::Advisor,
-            Some(&tool_use_id("toolu-advisor")),
-            &agent_name("advisor"),
-        )
+        .list_agent_runs_for_request(&request_id)
         .await
-        .expect("advisor run");
-    let parented_outcome = ParentedOutcome::Advisor {
-        verdict: AdvisorVerdict::Approve,
-        outcome: "approved".to_owned(),
-    };
-    let finished_parented = db
+        .expect("request runs");
+    assert_eq!(all_runs.len(), 6);
+    assert!(all_runs.iter().any(|run| run.agent_type == AgentType::Main));
+    assert!(all_runs
+        .iter()
+        .any(|run| run.agent_type == AgentType::Planner));
+    assert!(all_runs
+        .iter()
+        .any(|run| run.agent_type == AgentType::Worker));
+    assert!(all_runs
+        .iter()
+        .any(|run| run.agent_type == AgentType::Advisor));
+    assert!(all_runs
+        .iter()
+        .any(|run| run.agent_type == AgentType::Subagent));
+
+    let advisor_run_id = arid("run-advisor");
+    let children = db
         .agent_runs()
-        .finish_parented_run(
-            &advisor_run.agent_run_id,
+        .list_child_agent_runs_for_parent_agent_run(&arid("run-root"), Some(AgentType::Advisor))
+        .await
+        .expect("children");
+    assert_eq!(children.len(), 1);
+    assert_eq!(children[0].agent_run_id, advisor_run_id);
+    assert_eq!(children[0].parent_agent_run_id, Some(arid("run-root")));
+
+    let advisor_payload = json_obj(&[
+        ("kind", json!("advisor")),
+        ("verdict", json!("approve")),
+        ("outcome", json!("approved")),
+    ]);
+    let finished_advisor = db
+        .agent_runs()
+        .finish_agent_run(
+            &advisor_run_id,
             ExecutionStatus::Done,
+            Some(&advisor_payload),
             None,
-            Some(&parented_outcome),
             2,
             None,
         )
         .await
         .expect("finish advisor")
-        .expect("parented row");
-    assert_eq!(finished_parented.parented_outcome, Some(parented_outcome));
+        .expect("advisor row");
+    assert_eq!(finished_advisor.terminal_payload, Some(advisor_payload));
+    assert_eq!(finished_advisor.submission_outcome, None);
 }
 
 #[tokio::test]
-async fn workflow_task_record_index_resolves_from_execution_tree() {
+async fn record_index_resolves_from_flat_agent_run_identity() {
     let (_dir, db) = open_temp().await;
     let request_id = rid("req-record-index");
+    let agent_run_id = arid("run-record");
     db.requests()
         .create_request(&request_id, "/work", None, "record index")
         .await
         .expect("create request");
-    let root_run = db
-        .agent_runs()
-        .create_root_agent_run(&request_id, &arid("run-root-record"), &agent_name("root"))
-        .await
-        .expect("root run");
-    let workflow = db
-        .workflows()
-        .insert(
+    db.agent_runs()
+        .create_agent_run(
+            &agent_run_id,
             &request_id,
-            &root_run.task_id,
-            &root_run.agent_run_id,
+            &agent_name("root"),
+            AgentType::Main,
             None,
-            "workflow goal",
-        )
-        .await
-        .expect("workflow");
-    let iteration = db
-        .iterations()
-        .insert(
-            &workflow.id,
-            1,
-            IterationCreationReason::Initial,
-            &workflow.workflow_goal,
-            "iteration goal",
-            AttemptBudget::try_from_u32(2).expect("budget"),
-        )
-        .await
-        .expect("iteration");
-    let attempt = db
-        .attempts()
-        .insert(&iteration.id, &workflow.id, 1)
-        .await
-        .expect("attempt");
-    let coords = WorkflowCoordinates {
-        workflow_id: workflow.id.clone(),
-        iteration_id: iteration.id.clone(),
-        attempt_id: attempt.id.clone(),
-    };
-    let planner_run = db
-        .agent_runs()
-        .create_workflow_agent_run(
-            &request_id,
-            &arid("run-planner-record"),
-            &coords,
-            WorkflowAgentRole::Planner,
-            &attempt.plan_id,
             None,
-            &agent_name("planner"),
         )
         .await
-        .expect("planner run");
-    db.attempts()
-        .bind_planner_task(&attempt.id, &planner_run.task_id)
-        .await
-        .expect("bind planner");
-    let nodes = vec![ExecutionNode {
-        work_item_id: work_item_id("w1"),
-        needs: Vec::new(),
-        task_id: None,
-    }];
-    db.attempts()
-        .record_plan_nodes(&attempt.id, &nodes)
-        .await
-        .expect("record nodes");
-    let worker_run = db
-        .agent_runs()
-        .create_workflow_agent_run(
-            &request_id,
-            &arid("run-worker-record"),
-            &coords,
-            WorkflowAgentRole::Worker,
-            &attempt.plan_id,
-            Some(&work_item_id("w1")),
-            &agent_name("executor"),
-        )
-        .await
-        .expect("worker run");
-    db.attempts()
-        .bind_worker_task(&attempt.id, &work_item_id("w1"), &worker_run.task_id)
-        .await
-        .expect("bind worker");
+        .expect("agent run");
 
-    let planner_index = db
+    let index = db
         .agent_runs()
-        .record_index_for_agent_run(&planner_run.agent_run_id)
+        .record_index_for_agent_run(&agent_run_id)
         .await
-        .expect("planner index")
-        .expect("planner index exists");
+        .expect("record index")
+        .expect("record index exists");
+    assert_eq!(index.request_id, request_id);
+    assert_eq!(index.agent_run_id, agent_run_id);
     assert_eq!(
-        planner_index.kind,
-        TaskAgentRunKind::Workflow {
-            workflow: coords.clone(),
-            role: WorkflowAgentRole::Planner,
-        }
+        format_record_dir(&index).as_str(),
+        "requests/req-record-index/agent-runs/agent-run-run-record"
     );
-    let worker_index = db
-        .agent_runs()
-        .record_index_for_agent_run(&worker_run.agent_run_id)
-        .await
-        .expect("worker index")
-        .expect("worker index exists");
-    assert_eq!(
-        worker_index.kind,
-        TaskAgentRunKind::Workflow {
-            workflow: coords,
-            role: WorkflowAgentRole::Worker,
-        }
-    );
-}
-
-#[tokio::test]
-async fn planner_outcome_json_roundtrips_through_task_store() {
-    let (_dir, db) = open_temp().await;
-    let request_id = rid("req-plan");
-    db.requests()
-        .create_request(&request_id, "/work", None, "plan")
-        .await
-        .expect("create request");
-    let planner = task("task-planner", &request_id, TaskRole::Planner, "plan");
-    db.tasks()
-        .insert_task(&planner)
-        .await
-        .expect("insert planner");
-
-    let outcome = SubmissionOutcome::Planner {
-        plan_spec: "plan spec".to_owned(),
-        work_items: vec![WorkItemSpec {
-            id: work_item_id("w1"),
-            agent_name: agent_name("executor"),
-            work_spec: "do one thing".to_owned(),
-            needs: Vec::new(),
-        }],
-        deferred_goal_for_next_iteration: Some(
-            DeferredGoal::new("next iteration").expect("deferred goal"),
-        ),
-    };
-    let done = db
-        .tasks()
-        .set_task_status_if_current(
-            &planner.id,
-            ExecutionStatus::Running,
-            ExecutionStatus::Done,
-            Some(&outcome),
-        )
-        .await
-        .expect("finish planner")
-        .expect("planner");
-    assert_eq!(done.submission_outcome, Some(outcome.clone()));
-    let reloaded = db
-        .tasks()
-        .get(&planner.id)
-        .await
-        .expect("reload planner")
-        .expect("planner present");
-    assert_eq!(reloaded.submission_outcome, Some(outcome));
 }
 
 #[tokio::test]

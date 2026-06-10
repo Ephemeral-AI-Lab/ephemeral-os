@@ -73,7 +73,6 @@ covered, notable enumerable gaps · **Weak** = mostly partial / contract gaps.
 | eos-plugin-catalog | 1908 | **Strong** | 7 / 0 / 0 | manifest reject-matrix, path-escape security | — |
 | eos-config | 1493 | **Strong** | 6 / 2 / 0 | invalid-input rejection (providers/models/workflow/db-URL) | 3 `validate()` numeric-range guards lack negative tests |
 | eos-agent-def | 1139 | **Strong** | 5 / 1 / 0 | parse-don't-validate, all enum tokens, real-tree loader guard | malformed-YAML error path |
-| eos-skills | 741 | **Strong** | 4 / 1 / 0 | loader determinism + path-separator rejection | IO error variants |
 | eos-types | 661 | **Strong** | 3 / 0 / 1† | proptest ID round-trips, UTC-normalization invariant | — (`json.rs` is a type alias) |
 | eos-tools | 8356 | **Strong→Mixed** | 14 / 7 / 6 | hooks both-sided, dispatch/exec byte-exact, skill scoping (D7) | `submit_planner_outcome` validation; file-mutation executor bodies |
 | eos-llm-client | 3307 | **Strong→Mixed** | 7 / 5 / 0 | SSE/retry/encode-decode + secret redaction golden | in-stream `error` events swallowed (untested); `open_stream` HTTP only via live smoke |
@@ -191,7 +190,7 @@ Architectural guards: `eos-audit/no_downstream_deps`, `eos-llm-client/no_legacy_
 `eos-plugin-catalog` no-module-import / retired-fragment guards.
 Snapshots (do pin real shapes): `eos-tools` default tool specs, `eos-sandbox-port`
 schema_snapshot (DTO schema only — see P1#5), `eos-state` submission schemas,
-`eos-skills` SkillDefinition, `eos-plugin-catalog` LSP input schemas,
+`eos-plugin-catalog` LSP input schemas,
 `eos-engine` prompt_report golden.
 Live smoke (skip in CI, pin nothing offline): `eos-llm-client` codex / claude
 coding-plan smokes — also the *only* coverage of malformed-JWT branches +

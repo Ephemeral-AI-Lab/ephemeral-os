@@ -284,7 +284,6 @@ the crate's own `tests/` via `#[path]`.**
 | `eos-engine/.../test_support.rs` + `eos-state/src/fakes.rs` — store fakes (`FakeTaskStore`, `FakeRequestStore`) | in-memory Store fakes (`eos-state` Store `Sealed` is `pub`) | engine's → reuse `eos-testkit::MemoryStores`; `eos-state`'s contract fake → **relocate to `eos-state/tests/`** (keep local; moving it would make eos-state's own tests depend on a crate that depends on eos-state) |
 | `eos-sandbox-host/src/testutil.rs` — `MockAdapter` | `ProviderAdapter` mock | **stays in `eos-sandbox-host`** → relocate to `tests/`. **Cannot move:** `ProviderAdapter`'s seal is `pub(crate) mod sealed` (`provider.rs:277`) — unimplementable from another crate |
 | `eos-plugin-catalog/src/test_support.rs` — `temp_root`, `make_plugin` | plugin fixtures | crate-specific → **relocate to `eos-plugin-catalog/tests/`** |
-| `eos-skills/src/test_support.rs` — `Scratch` | temp-dir RAII | crate-specific → **relocate to `eos-skills/tests/`** |
 | `eos-tools` testsupport | tools fixtures | **already compliant** (`#[path]` → `tests/support/`) |
 
 Only the first three rows touch `eos-testkit`; the other four relocate to their
@@ -390,10 +389,10 @@ This is already the state of the crate; the spec freezes it as a requirement. No
 3. Move `eos-workflow/src/testsupport/` into `eos-testkit/src/workflow.rs`
    (`workflow` feature); rewrite `deps()` to the `with_*` builders; generalize
    the waiter to `wait_until`; delete the `src/testsupport/` tree.
-4. Relocate the four crate-specific/sealed §7.1 modules out of `src/` to their
+4. Relocate the three crate-specific/sealed §7.1 modules out of `src/` to their
    own `tests/` via `#[path]` (NOT `eos-testkit`): `eos-sandbox-host`
    `MockAdapter` (sealed — must stay local), `eos-plugin-catalog`
-   `temp_root`/`make_plugin`, `eos-skills` `Scratch`, `eos-state` `FakeTaskStore`.
+   `temp_root`/`make_plugin`, `eos-state` `FakeTaskStore`.
    Carry the engine-local `metadata()` with whatever remains of the engine test
    file. Verify each crate's tests still pass.
 5. Delete `eos-sandbox-host/tests/write_stdin_live.rs` (its scenario lands in

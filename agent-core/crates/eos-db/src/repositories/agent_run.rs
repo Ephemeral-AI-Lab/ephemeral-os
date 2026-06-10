@@ -109,7 +109,10 @@ impl AgentRunStore for SqlAgentRunStore {
         .fetch_optional(&self.pool)
         .await
         .map_err(DbError::from)?;
-        row.map(row_to_record_index).transpose().map_err(Into::into)
+        row.as_ref()
+            .map(row_to_record_index)
+            .transpose()
+            .map_err(Into::into)
     }
 
     async fn get_agent_run(
@@ -236,7 +239,7 @@ fn created_from_index(index: &AgentRunRecordIndex) -> CreatedAgentRun {
     }
 }
 
-fn row_to_record_index(row: AgentRunRecordIndexRow) -> Result<AgentRunRecordIndex, DbError> {
+fn row_to_record_index(row: &AgentRunRecordIndexRow) -> Result<AgentRunRecordIndex, DbError> {
     Ok(AgentRunRecordIndex {
         request_id: parse_id("agent_runs.request_id", &row.request_id)?,
         agent_run_id: parse_id("agent_runs.agent_run_id", &row.agent_run_id)?,

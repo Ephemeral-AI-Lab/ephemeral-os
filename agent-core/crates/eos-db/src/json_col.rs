@@ -1,9 +1,9 @@
 //! JSON-column codec: serialize/deserialize TEXT-of-validated-JSON columns.
 //!
 //! There are two decode paths because the Rust stores disagree on NULL
-//! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors `task_store`'s
-//! `record.x or []` coercion (NULL/empty → `T::default()`); [`decode_opt`]
-//! mirrors task-agent-run nullable columns that must preserve `None`.
+//! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors persisted list
+//! coercion (NULL/empty → `T::default()`); [`decode_opt`] mirrors nullable JSON
+//! columns that must preserve `None`.
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -33,8 +33,8 @@ pub(crate) fn decode_default<T: DeserializeOwned + Default>(
 }
 
 /// Null-preserving decode for nullable JSON columns such as
-/// `task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not
-/// coerce to `[]`.
+/// `agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do
+/// not coerce to `[]`.
 ///
 /// # Errors
 /// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.

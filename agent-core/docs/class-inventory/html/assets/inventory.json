@@ -2568,7 +2568,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Null-preserving decode for nullable JSON columns such as\n`task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not\ncoerce to `[]`.\n\n# Errors\nReturns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.",
+              "docs": "Null-preserving decode for nullable JSON columns such as\n`agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do\nnot coerce to `[]`.\n\n# Errors\nReturns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.",
               "tags": [],
               "file": "crates/eos-db/src/json_col.rs",
               "module": "json_col",

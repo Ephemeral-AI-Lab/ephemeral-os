@@ -10,9 +10,7 @@ fn core_error_from_and_display() {
 
     // The static template fragments are lowercase with no trailing
     // punctuation; the interpolated `kind` is a deliberate type name.
-    let empty = CoreError::EmptyId {
-        kind: "AgentRunId",
-    };
+    let empty = CoreError::EmptyId { kind: "AgentRunId" };
     let msg = empty.to_string();
     assert_eq!(msg, "empty AgentRunId identifier");
     assert!(!msg.ends_with('.'));

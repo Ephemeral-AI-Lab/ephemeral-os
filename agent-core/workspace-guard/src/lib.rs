@@ -31,7 +31,6 @@ pub const RETIRED_CRATES: &[&str] = &[
     "eos-agent-message-records",
     "eos-tools",
     "eos-agent-runner",
-    "eos-skills",
     "eos-plugin-catalog",
     "eos-agent-def",
     "eos-config",
@@ -78,11 +77,6 @@ pub const RETIRED_CRATE_RULES: &[RetiredCrateRule] = &[
         retired: "eos-agent-runner",
         successor: "eos-agent-run",
         target: "rename lifecycle crate to eos-agent-run",
-    },
-    RetiredCrateRule {
-        retired: "eos-skills",
-        successor: "eos-tool",
-        target: "fold skills into eos-tool",
     },
     RetiredCrateRule {
         retired: "eos-plugin-catalog",

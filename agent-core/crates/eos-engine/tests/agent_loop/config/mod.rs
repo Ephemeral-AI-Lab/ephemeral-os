@@ -37,18 +37,6 @@ background_completion_poll_interval_ms: 250
 }
 
 #[test]
-fn engine_runtime_config_accepts_legacy_command_session_alias() {
-    let cfg: EngineRuntimeConfig = serde_yaml::from_str(
-        r#"
-command_session_completion_poll_interval_ms: 500
-"#,
-    )
-    .unwrap();
-
-    assert_eq!(cfg.background_completion_poll_interval_ms, 500);
-}
-
-#[test]
 fn engine_runtime_config_loads_runtime_section_from_yaml_layers() {
     let dir = tempdir().unwrap();
     let prd = dir.path().join("prd.yml");

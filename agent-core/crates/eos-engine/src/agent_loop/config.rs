@@ -16,10 +16,7 @@ pub const DEFAULT_BACKGROUND_COMPLETION_POLL_INTERVAL_MS: u64 = 1000;
 #[non_exhaustive]
 pub struct EngineRuntimeConfig {
     /// Poll interval shared by command, workflow, and subagent completion monitors.
-    #[serde(
-        default = "default_background_completion_poll_interval_ms",
-        alias = "command_session_completion_poll_interval_ms"
-    )]
+    #[serde(default = "default_background_completion_poll_interval_ms")]
     pub background_completion_poll_interval_ms: u64,
 }
 

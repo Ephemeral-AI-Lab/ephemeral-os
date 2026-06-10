@@ -114,13 +114,13 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a> &lt; T : DeserializeOwned &gt; (text : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
-  <p class="docstring">Null-preserving decode for nullable JSON columns such as<br>`task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not<br>coerce to `[]`.<br># Errors<br>Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</p>
+  <p class="docstring">Null-preserving decode for nullable JSON columns such as<br>`agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do<br>not coerce to `[]`.<br># Errors<br>Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Null-preserving decode for nullable JSON columns such as</span>
-<span class="rs-comment">/// `task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not</span>
-<span class="rs-comment">/// coerce to `[]`.</span>
+<span class="rs-comment">/// `agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do</span>
+<span class="rs-comment">/// not coerce to `[]`.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>
@@ -241,9 +241,9 @@
   <pre class="file-source"><code><span class="rs-comment">//! JSON-column codec: serialize/deserialize TEXT-of-validated-JSON columns.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! There are two decode paths because the Rust stores disagree on NULL</span>
-<span class="rs-comment">//! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors `task_store`'s</span>
-<span class="rs-comment">//! `record.x or []` coercion (NULL/empty → `T::default()`); [`decode_opt`]</span>
-<span class="rs-comment">//! mirrors task-agent-run nullable columns that must preserve `None`.</span>
+<span class="rs-comment">//! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors persisted list</span>
+<span class="rs-comment">//! coercion (NULL/empty → `T::default()`); [`decode_opt`] mirrors nullable JSON</span>
+<span class="rs-comment">//! columns that must preserve `None`.</span>
 
 <span class="rs-kw">use</span> serde::{de::<span class="rs-type">DeserializeOwned</span>, <span class="rs-type">Serialize</span>};
 
@@ -273,8 +273,8 @@
 }
 
 <span class="rs-comment">/// Null-preserving decode for nullable JSON columns such as</span>
-<span class="rs-comment">/// `task_runs.terminal_payload`: NULL/empty stays `None` — these columns do not</span>
-<span class="rs-comment">/// coerce to `[]`.</span>
+<span class="rs-comment">/// `agent_runs.terminal_payload`: NULL/empty stays `None` — these columns do</span>
+<span class="rs-comment">/// not coerce to `[]`.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>

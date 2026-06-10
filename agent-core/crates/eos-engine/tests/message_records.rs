@@ -111,18 +111,26 @@ async fn root_start_writes_initial_messages_and_events() {
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0]["type"], json!("initial_message"));
-    assert_eq!(rows[0]["request_id"], json!("req-1"));
-    assert_eq!(rows[0]["agent_run_id"], json!("run-1"));
-    assert_eq!(rows[0]["role"], json!("system"));
-    assert_eq!(rows[0]["content"][0]["text"], json!("system prompt"));
-    assert_eq!(rows[1]["role"], json!("user"));
-    assert!(rows[0].get("task_id").is_none());
-    assert!(rows[0].get("workflow_id").is_none());
-    assert!(rows[0].get("attempt_id").is_none());
-    assert!(rows[0].get("iteration_id").is_none());
-    assert!(rows[0].get("turn").is_none());
-    assert!(rows[0].get("initial_index").is_none());
+    assert_eq!(
+        rows[0],
+        json!({
+            "type": "initial_message",
+            "request_id": "req-1",
+            "agent_run_id": "run-1",
+            "role": "system",
+            "content": [{"type": "text", "text": "system prompt"}],
+        })
+    );
+    assert_eq!(
+        rows[1],
+        json!({
+            "type": "initial_message",
+            "request_id": "req-1",
+            "agent_run_id": "run-1",
+            "role": "user",
+            "content": [{"type": "text", "text": "hello"}],
+        })
+    );
 
     let events = handle.read_record_events(0).await.unwrap();
     assert_eq!(events.len(), 2);
@@ -130,15 +138,18 @@ async fn root_start_writes_initial_messages_and_events() {
     assert_eq!(events[0].agent_run_id, "run-1");
     assert_eq!(events[0].seq, 1);
     assert_eq!(events[0].kind, "node_started");
-    assert_eq!(events[0].payload["type"], json!("agent_run"));
-    assert_eq!(events[0].payload["agent"], json!("root"));
-    assert_eq!(events[0].payload["request_id"], json!("req-1"));
-    assert!(events[0].payload.get("task_id").is_none());
-    assert!(events[0].payload.get("workflow_id").is_none());
-    assert!(events[0].payload.get("iteration_id").is_none());
-    assert!(events[0].payload.get("attempt_id").is_none());
-    assert!(events[0].payload.get("role").is_none());
-    assert!(events[0].payload.get("parent_agent_run_id").is_none());
+    assert_eq!(
+        events[0].payload,
+        json!({
+            "type": "agent_run",
+            "agent_run_id": "run-1",
+            "agent": "root",
+            "request_id": "req-1",
+        })
+        .as_object()
+        .unwrap()
+        .clone()
+    );
     assert_eq!(events[1].kind, "messages_initialized");
     assert_eq!(events[1].payload["count"], json!(2));
     assert!(events[1].payload["messages_end_byte"].as_u64().unwrap() > 0);
@@ -173,12 +184,18 @@ async fn agent_records_use_flat_request_layout_and_payload() {
         assert_eq!(events[0].payload["agent_run_id"], json!(run_value));
         assert_eq!(events[0].payload["request_id"], json!("req-workflow"));
         assert_eq!(events[0].payload["agent"], json!(agent_name));
-        assert!(events[0].payload.get("task_id").is_none());
-        assert!(events[0].payload.get("workflow_id").is_none());
-        assert!(events[0].payload.get("iteration_id").is_none());
-        assert!(events[0].payload.get("attempt_id").is_none());
-        assert!(events[0].payload.get("role").is_none());
-        assert!(events[0].payload.get("parent_agent_run_id").is_none());
+        assert_eq!(
+            events[0].payload,
+            json!({
+                "type": "agent_run",
+                "agent_run_id": run_value,
+                "agent": agent_name,
+                "request_id": "req-workflow",
+            })
+            .as_object()
+            .unwrap()
+            .clone()
+        );
     }
 }
 

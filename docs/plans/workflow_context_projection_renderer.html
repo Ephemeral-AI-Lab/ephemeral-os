@@ -1,0 +1,1390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow Context Projection Renderer</title>
+<style>
+  :root {
+    --bg: #151619;
+    --surface: #202328;
+    --surface-2: #282c32;
+    --surface-3: #303640;
+    --ink: #f4f1e8;
+    --muted: #b9b2a6;
+    --line: #48443c;
+    --line-strong: #70695d;
+    --teal: #2eb7a7;
+    --teal-ink: #d9fbf6;
+    --amber: #d7a545;
+    --red: #dd7068;
+    --green: #75ba71;
+    --blue: #79aede;
+    --violet: #b8a0e8;
+    --code: #101215;
+    --shadow: 0 16px 34px rgba(0, 0, 0, .24);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  button {
+    min-height: 40px;
+    padding: 0 12px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background .16s ease, border-color .16s ease, transform .16s ease;
+  }
+
+  button:hover {
+    background: #2d3937;
+    border-color: var(--teal);
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+  }
+
+  button.primary {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #061716;
+  }
+
+  button.primary:hover {
+    background: #45d1c2;
+  }
+
+  button.danger {
+    border-color: rgba(221, 112, 104, .8);
+    color: #ffe0dd;
+  }
+
+  button.ghost {
+    background: transparent;
+  }
+
+  button.compact {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 10px 11px;
+    outline: none;
+  }
+
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  .app {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(32, 35, 40, .92);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    letter-spacing: 0;
+  }
+
+  h1 {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 15px;
+  }
+
+  h3 {
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .subhead {
+    margin-top: 4px;
+    color: var(--muted);
+    max-width: 820px;
+  }
+
+  .status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: rgba(255, 255, 255, .03);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .pill.running {
+    color: var(--teal-ink);
+    border-color: rgba(46, 183, 167, .65);
+  }
+
+  .pill.success {
+    color: #ddffd8;
+    border-color: rgba(117, 186, 113, .65);
+  }
+
+  .pill.failed {
+    color: #ffdeda;
+    border-color: rgba(221, 112, 104, .7);
+  }
+
+  .pill.not-started {
+    color: #ffe8bd;
+    border-color: rgba(215, 165, 69, .68);
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(320px, 410px) minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .left,
+  .right {
+    min-width: 0;
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+
+  .panel {
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, .025);
+  }
+
+  .panel-body {
+    padding: 14px;
+  }
+
+  .stack {
+    display: grid;
+    gap: 10px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .files {
+    display: grid;
+    grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .file-tree {
+    max-height: calc(100vh - 198px);
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--code);
+  }
+
+  .fs-folder {
+    display: grid;
+    gap: 7px;
+  }
+
+  .fs-folder + .fs-folder {
+    margin-top: 8px;
+  }
+
+  .fs-folder-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .fs-folder-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .fs-children {
+    margin-left: 11px;
+    padding-left: 11px;
+    border-left: 1px solid var(--line-strong);
+    display: grid;
+    gap: 5px;
+  }
+
+  .fs-file {
+    min-width: 0;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .fs-file:hover,
+  .fs-file:focus-visible {
+    border-color: var(--teal);
+    background: #243532;
+    outline: none;
+  }
+
+  .fs-file.selected {
+    border-color: var(--teal);
+    background: #243532;
+  }
+
+  .fs-file-kind {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+  }
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .file-view {
+    min-height: 520px;
+    max-height: calc(100vh - 198px);
+    overflow: auto;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--code);
+  }
+
+  .db-log {
+    max-height: 220px;
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+  }
+
+  .log-entry {
+    border-left: 3px solid var(--teal);
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, .035);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .error {
+    display: none;
+    color: #ffe2de;
+    border: 1px solid rgba(221, 112, 104, .6);
+    background: rgba(221, 112, 104, .12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .error.show {
+    display: block;
+  }
+
+  .note {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 1120px) {
+    main,
+    .files {
+      grid-template-columns: 1fr;
+    }
+
+    .file-tree,
+    .file-view {
+      max-height: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    header {
+      grid-template-columns: 1fr;
+      padding: 14px;
+    }
+
+    .status-strip {
+      justify-content: flex-start;
+    }
+
+    main {
+      padding: 10px;
+    }
+
+    .two,
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Workflow Context Projection Renderer</h1>
+      <div class="subhead">A DB-backed emulator for inline <code>render_spec</code> and <code>render_brief</code> projections across workflow, iteration, attempt, plan, and work item entities.</div>
+    </div>
+    <div class="status-strip" id="statusStrip"></div>
+  </header>
+
+  <main>
+    <section class="left">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Lifecycle</h2>
+          <span class="pill" id="versionPill">version 0</span>
+        </div>
+        <div class="panel-body stack">
+          <label>
+            workflow_goal
+            <textarea id="workflowGoal"></textarea>
+          </label>
+          <div class="row">
+            <button type="button" class="primary" id="delegateWorkflow">Delegate workflow</button>
+            <button type="button" id="seedDemo">Seed demo</button>
+            <button type="button" class="ghost" id="resetEmpty">Reset empty</button>
+          </div>
+          <div class="row">
+            <button type="button" id="launchPlanner">Launch planner</button>
+            <button type="button" id="launchWorker">Launch next worker</button>
+          </div>
+          <div class="error" id="flowError"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>submit_plan_outcome</h2>
+          <span class="pill running" id="activeAttemptPill">none</span>
+        </div>
+        <div class="panel-body stack">
+          <label>
+            plan_spec
+            <textarea id="planSpec"></textarea>
+          </label>
+          <label>
+            planner_summary
+            <textarea id="plannerSummary"></textarea>
+          </label>
+          <label>
+            deferred_goal_for_next_iteration
+            <textarea id="deferredGoal"></textarea>
+          </label>
+          <label>
+            work_items JSON
+            <textarea id="workItemsJson"></textarea>
+          </label>
+          <button type="button" class="primary" id="submitPlan">Submit planner outcome</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>submit_worker_outcome</h2>
+          <span class="pill" id="activeWorkerPill">none</span>
+        </div>
+        <div class="panel-body stack">
+          <label>
+            worker
+            <select id="workerSelect"></select>
+          </label>
+          <label>
+            worker_summary
+            <textarea id="workerSummary"></textarea>
+          </label>
+          <label>
+            worker_outcome
+            <textarea id="workerOutcome"></textarea>
+          </label>
+          <div class="row">
+            <button type="button" class="primary" id="submitWorkerSuccess">Submit success</button>
+            <button type="button" class="danger" id="submitWorkerFailure">Submit failure</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>DB Events</h2>
+          <span class="pill" id="eventCount">0 events</span>
+        </div>
+        <div class="panel-body db-log" id="dbLog"></div>
+      </section>
+    </section>
+
+    <section class="right">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Projected Files</h2>
+          <span class="pill">rendered from latest DB snapshot</span>
+        </div>
+        <div class="panel-body files">
+          <div class="file-tree" id="fileTree"></div>
+          <div>
+            <div class="panel-head" style="border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0;">
+              <h3 id="selectedFileTitle">No file selected</h3>
+              <button type="button" class="compact ghost" id="copyFile">Copy</button>
+            </div>
+            <pre class="file-view" id="fileView"></pre>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+const Status = Object.freeze({
+  NotStarted: "NotStarted",
+  Running: "Running",
+  Success: "Success",
+  Failed: "Failed"
+});
+
+const db = {
+  version: 0,
+  workflow: null,
+  events: []
+};
+
+const selected = {
+  path: "",
+  workerId: ""
+};
+
+const els = {
+  statusStrip: document.getElementById("statusStrip"),
+  versionPill: document.getElementById("versionPill"),
+  workflowGoal: document.getElementById("workflowGoal"),
+  delegateWorkflow: document.getElementById("delegateWorkflow"),
+  seedDemo: document.getElementById("seedDemo"),
+  resetEmpty: document.getElementById("resetEmpty"),
+  launchPlanner: document.getElementById("launchPlanner"),
+  launchWorker: document.getElementById("launchWorker"),
+  flowError: document.getElementById("flowError"),
+  activeAttemptPill: document.getElementById("activeAttemptPill"),
+  planSpec: document.getElementById("planSpec"),
+  plannerSummary: document.getElementById("plannerSummary"),
+  deferredGoal: document.getElementById("deferredGoal"),
+  workItemsJson: document.getElementById("workItemsJson"),
+  submitPlan: document.getElementById("submitPlan"),
+  activeWorkerPill: document.getElementById("activeWorkerPill"),
+  workerSelect: document.getElementById("workerSelect"),
+  workerSummary: document.getElementById("workerSummary"),
+  workerOutcome: document.getElementById("workerOutcome"),
+  submitWorkerSuccess: document.getElementById("submitWorkerSuccess"),
+  submitWorkerFailure: document.getElementById("submitWorkerFailure"),
+  eventCount: document.getElementById("eventCount"),
+  dbLog: document.getElementById("dbLog"),
+  fileTree: document.getElementById("fileTree"),
+  selectedFileTitle: document.getElementById("selectedFileTitle"),
+  fileView: document.getElementById("fileView"),
+  copyFile: document.getElementById("copyFile")
+};
+
+function base(id, status, folderPath) {
+  return { id, status, folderPath };
+}
+
+function workflowFolder(id) {
+  return id;
+}
+
+function iterationFolder(workflow, id) {
+  return `${workflow.base.folderPath}/${id}`;
+}
+
+function attemptFolder(iteration, id) {
+  return `${iteration.base.folderPath}/${id}`;
+}
+
+function planFolder(attempt, id) {
+  return `${attempt.base.folderPath}/${id}`;
+}
+
+function workItemFolder(attempt, id) {
+  return `${attempt.base.folderPath}/${id}`;
+}
+
+function defaultGoal() {
+  return "Implement DB-backed workflow context projections where every entity renders deterministic spec.md and brief.md files from the latest workflow aggregate.";
+}
+
+function samplePlanSpec() {
+  return [
+    "Use the workflow aggregate loaded after the DB commit as the only rendering input.",
+    "Render leaf plan and work item files first, then aggregate attempt, iteration, and workflow files.",
+    "Keep brief.md compact and add Reference lines for spec escalation."
+  ].join("\n");
+}
+
+function samplePlannerSummary() {
+  return "The planner split projection work into schema, renderer, writer, and verification tasks. The plan keeps DB state authoritative and treats files as replaceable projections.";
+}
+
+function sampleDeferredGoal() {
+  return "Add context retrieval tools over projected workflow files with path and line-range reads.";
+}
+
+function sampleWorkItems() {
+  return [
+    {
+      work_item_id: "work_item_schema",
+      work_item_spec: "Define WorkflowEntityBase, status enum, entity IDs, folder paths, and denormalized parent references.",
+      needs: []
+    },
+    {
+      work_item_id: "work_item_renderers",
+      work_item_spec: "Implement render_spec and render_brief for workflow, iteration, attempt, plan, and work item entities.",
+      needs: ["work_item_schema"]
+    },
+    {
+      work_item_id: "work_item_projector",
+      work_item_spec: "Write rendered files atomically to the context filesystem after each committed mutation.",
+      needs: ["work_item_schema"]
+    },
+    {
+      work_item_id: "work_item_verification",
+      work_item_spec: "Add projection tests for pending state, leaf-only attempt briefs, references, and retry attempt creation.",
+      needs: ["work_item_renderers", "work_item_projector"]
+    }
+  ];
+}
+
+function createWorkflow(goal) {
+  const workflow = {
+    base: base("workflow_wf_context_projection", Status.Running, workflowFolder("workflow_wf_context_projection")),
+    goal,
+    iterations: []
+  };
+  const iteration = createIteration(workflow, "iteration_it_initial", goal, Status.Running);
+  const attempt = createAttempt(workflow, iteration, "attempt_att_initial", Status.NotStarted);
+  iteration.attempts.push(attempt);
+  workflow.iterations.push(iteration);
+  return workflow;
+}
+
+function createIteration(workflow, id, goal, status) {
+  return {
+    base: base(id, status, iterationFolder(workflow, id)),
+    workflowId: workflow.base.id,
+    goal,
+    attempts: []
+  };
+}
+
+function createAttempt(workflow, iteration, id, status) {
+  return {
+    base: base(id, status, attemptFolder(iteration, id)),
+    workflowId: workflow.base.id,
+    iterationId: iteration.base.id,
+    plan: null,
+    workItems: []
+  };
+}
+
+function createPlan(workflow, iteration, attempt, id, status) {
+  return {
+    base: base(id, status, planFolder(attempt, id)),
+    workflowId: workflow.base.id,
+    iterationId: iteration.base.id,
+    attemptId: attempt.base.id,
+    planSpec: null,
+    plannerSummary: null,
+    deferredGoalForNextIteration: null
+  };
+}
+
+function createWorkItem(workflow, iteration, attempt, plan, input) {
+  const id = input.work_item_id;
+  return {
+    base: base(id, Status.NotStarted, workItemFolder(attempt, id)),
+    workflowId: workflow.base.id,
+    iterationId: iteration.base.id,
+    attemptId: attempt.base.id,
+    planId: plan.base.id,
+    workItemSpec: input.work_item_spec,
+    needs: Array.isArray(input.needs) ? input.needs.slice() : [],
+    workerSummary: null,
+    workerOutcome: null
+  };
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function loadFreshWorkflowAggregate() {
+  return db.workflow ? clone(db.workflow) : null;
+}
+
+function commit(label) {
+  db.version += 1;
+  db.events.unshift({ version: db.version, label });
+  db.events = db.events.slice(0, 20);
+}
+
+function setError(message) {
+  els.flowError.textContent = message || "";
+  els.flowError.classList.toggle("show", Boolean(message));
+}
+
+function statusClass(status) {
+  if (status === Status.Running) return "running";
+  if (status === Status.Success) return "success";
+  if (status === Status.Failed) return "failed";
+  return "not-started";
+}
+
+function statusLine(status) {
+  return `Status: ${status}`;
+}
+
+function isNotStarted(entity) {
+  return entity.base.status === Status.NotStarted;
+}
+
+function isTerminal(entity) {
+  return entity.base.status === Status.Success || entity.base.status === Status.Failed;
+}
+
+function appendReference(parts, entity) {
+  if (isTerminal(entity)) {
+    parts.push("", `Reference: ${specRef(entity)}`);
+  }
+}
+
+function pendingOr(value) {
+  return value && value.trim() ? value : "Pending to Run";
+}
+
+function specRef(entity) {
+  return `${entity.base.folderPath}/spec.md`;
+}
+
+function shiftHeadings(markdown) {
+  return markdown
+    .split("\n")
+    .map(line => line.startsWith("#") ? "#" + line : line)
+    .join("\n");
+}
+
+function mdJoin(parts) {
+  return parts.filter(part => part !== null && part !== undefined).join("\n");
+}
+
+function renderWorkflowSpec(workflow) {
+  const parts = [
+    statusLine(workflow.base.status),
+    "",
+    "# Workflow Goal",
+    workflow.goal
+  ];
+  workflow.iterations.forEach(iteration => {
+    parts.push("", `# Iteration ${iteration.base.id}`, shiftHeadings(renderIterationSpec(iteration)));
+  });
+  return mdJoin(parts);
+}
+
+function renderWorkflowBrief(workflow) {
+  if (isNotStarted(workflow)) return statusLine(workflow.base.status);
+  const parts = [
+    statusLine(workflow.base.status)
+  ];
+  workflow.iterations.forEach(iteration => {
+    parts.push("", `# Iteration ${iteration.base.id}`, shiftHeadings(renderIterationBrief(iteration)));
+  });
+  appendReference(parts, workflow);
+  return mdJoin(parts);
+}
+
+function renderIterationSpec(iteration) {
+  const parts = [
+    statusLine(iteration.base.status),
+    "",
+    "# Iteration Goal",
+    iteration.goal
+  ];
+  iteration.attempts.forEach(attempt => {
+    parts.push("", `# Attempt ${attempt.base.id}`, shiftHeadings(renderAttemptSpec(attempt)));
+  });
+  return mdJoin(parts);
+}
+
+function renderIterationBrief(iteration) {
+  if (isNotStarted(iteration)) return statusLine(iteration.base.status);
+  const parts = [
+    statusLine(iteration.base.status)
+  ];
+  iteration.attempts.forEach(attempt => {
+    parts.push("", `# Attempt ${attempt.base.id}`, shiftHeadings(renderAttemptBrief(attempt)));
+  });
+  appendReference(parts, iteration);
+  return mdJoin(parts);
+}
+
+function renderAttemptSpec(attempt) {
+  if (isNotStarted(attempt) && !attempt.plan && attempt.workItems.length === 0) {
+    return statusLine(attempt.base.status);
+  }
+  const parts = [
+    statusLine(attempt.base.status),
+    "",
+    "# Plan"
+  ];
+  if (attempt.plan) {
+    parts.push(shiftHeadings(renderPlanSpec(attempt.plan)));
+  } else {
+    parts.push("Pending to Run");
+  }
+  attempt.workItems.forEach(item => {
+    parts.push("", `# Work Item ${item.base.id}`, renderWorkItemBrief(item));
+  });
+  return mdJoin(parts);
+}
+
+function renderAttemptBrief(attempt) {
+  if (isNotStarted(attempt)) return statusLine(attempt.base.status);
+  const parts = [
+    statusLine(attempt.base.status),
+    "",
+    "# Plan"
+  ];
+  if (attempt.plan) {
+    parts.push(renderPlanBrief(attempt.plan));
+  } else {
+    parts.push("Pending to Run");
+  }
+  leafWorkItems(attempt).forEach(item => {
+    parts.push("", `# Work Item ${item.base.id}`, renderWorkItemBrief(item));
+  });
+  appendReference(parts, attempt);
+  return mdJoin(parts);
+}
+
+function renderPlanSpec(plan) {
+  if (isNotStarted(plan) && !plan.planSpec) return statusLine(plan.base.status);
+  return mdJoin([
+    statusLine(plan.base.status),
+    "",
+    "# Plan Spec",
+    pendingOr(plan.planSpec),
+    "",
+    "# Deferred Goal For Next Iteration",
+    plan.deferredGoalForNextIteration || ""
+  ]);
+}
+
+function renderPlanBrief(plan) {
+  if (isNotStarted(plan)) return statusLine(plan.base.status);
+  const parts = [
+    statusLine(plan.base.status),
+    "",
+    pendingOr(plan.plannerSummary)
+  ];
+  appendReference(parts, plan);
+  return mdJoin(parts);
+}
+
+function renderWorkItemSpec(item) {
+  return mdJoin([
+    statusLine(item.base.status),
+    "",
+    "# Spec",
+    item.workItemSpec,
+    "",
+    "# Outcome",
+    isNotStarted(item) ? "" : pendingOr(item.workerOutcome)
+  ]);
+}
+
+function renderWorkItemBrief(item) {
+  if (isNotStarted(item)) return statusLine(item.base.status);
+  const parts = [
+    statusLine(item.base.status),
+    "",
+    pendingOr(item.workerSummary)
+  ];
+  appendReference(parts, item);
+  return mdJoin(parts);
+}
+
+function leafWorkItems(attempt) {
+  return attempt.workItems.filter(candidate => (
+    !attempt.workItems.some(other => other.needs.includes(candidate.base.id))
+  ));
+}
+
+function allWorkItems(workflow) {
+  return workflow.iterations.flatMap(iteration => iteration.attempts.flatMap(attempt => attempt.workItems));
+}
+
+function allAttempts(workflow) {
+  return workflow.iterations.flatMap(iteration => iteration.attempts);
+}
+
+function activeIteration(workflow) {
+  return workflow.iterations.find(iteration => iteration.base.status === Status.Running)
+    || workflow.iterations[workflow.iterations.length - 1]
+    || null;
+}
+
+function activeAttempt(workflow) {
+  const iteration = activeIteration(workflow);
+  if (!iteration) return null;
+  return iteration.attempts.find(attempt => attempt.base.status === Status.NotStarted || attempt.base.status === Status.Running)
+    || iteration.attempts[iteration.attempts.length - 1]
+    || null;
+}
+
+function findWorkflowParts(workflow, attemptId) {
+  for (const iteration of workflow.iterations) {
+    for (const attempt of iteration.attempts) {
+      if (attempt.base.id === attemptId) return { workflow, iteration, attempt };
+    }
+  }
+  return null;
+}
+
+function findWorkItem(workflow, itemId) {
+  for (const iteration of workflow.iterations) {
+    for (const attempt of iteration.attempts) {
+      for (const item of attempt.workItems) {
+        if (item.base.id === itemId) return { iteration, attempt, item };
+      }
+    }
+  }
+  return null;
+}
+
+function generatedFiles(workflow) {
+  if (!workflow) return [];
+  const files = [
+    file(workflow, "spec", "workflow", renderWorkflowSpec(workflow)),
+    file(workflow, "brief", "workflow", renderWorkflowBrief(workflow))
+  ];
+  workflow.iterations.forEach(iteration => {
+    files.push(file(iteration, "spec", "iteration", renderIterationSpec(iteration)));
+    files.push(file(iteration, "brief", "iteration", renderIterationBrief(iteration)));
+    iteration.attempts.forEach(attempt => {
+      files.push(file(attempt, "spec", "attempt", renderAttemptSpec(attempt)));
+      files.push(file(attempt, "brief", "attempt", renderAttemptBrief(attempt)));
+      if (attempt.plan) {
+        files.push(file(attempt.plan, "spec", "plan", renderPlanSpec(attempt.plan)));
+        files.push(file(attempt.plan, "brief", "plan", renderPlanBrief(attempt.plan)));
+      }
+      attempt.workItems.forEach(item => {
+        files.push(file(item, "spec", "work_item", renderWorkItemSpec(item)));
+        files.push(file(item, "brief", "work_item", renderWorkItemBrief(item)));
+      });
+    });
+  });
+  return files;
+}
+
+function file(entity, kind, entityKind, content) {
+  return {
+    path: `${entity.base.folderPath}/${kind}.md`,
+    kind,
+    entityKind,
+    status: entity.base.status,
+    content
+  };
+}
+
+function renderFileTree(workflow, files) {
+  if (!workflow) return '<div class="note">No workflow delegated.</div>';
+  const fileByPath = new Map(files.map(file => [file.path, file]));
+  return renderFolder(workflow.base.id, workflow, fileByPath, [
+    ...workflow.iterations.map(iteration => renderFolder(iteration.base.id, iteration, fileByPath, [
+      ...iteration.attempts.map(attempt => renderFolder(attempt.base.id, attempt, fileByPath, [
+        attempt.plan ? renderFolder(attempt.plan.base.id, attempt.plan, fileByPath, []) : "",
+        ...attempt.workItems.map(item => renderFolder(item.base.id, item, fileByPath, []))
+      ]))
+    ]))
+  ]);
+}
+
+function renderFolder(name, entity, fileByPath, children) {
+  return `
+    <div class="fs-folder">
+      <div class="fs-folder-label">
+        <span class="fs-folder-name">${escapeHtml(name)}/</span>
+        ${pill(entity.base.status, statusClass(entity.base.status))}
+      </div>
+      <div class="fs-children">
+        ${renderFileLink(entity, "spec", fileByPath)}
+        ${renderFileLink(entity, "brief", fileByPath)}
+        ${children.filter(Boolean).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFileLink(entity, kind, fileByPath) {
+  const path = `${entity.base.folderPath}/${kind}.md`;
+  const file = fileByPath.get(path);
+  if (!file) return "";
+  return `
+    <a href="#fileView" class="fs-file ${path === selected.path ? "selected" : ""}" data-path="${escapeAttr(path)}">
+      <span>${escapeHtml(kind)}.md</span>
+      <span class="fs-file-kind">${escapeHtml(file.entityKind)}</span>
+    </a>
+  `;
+}
+
+function delegateWorkflow() {
+  setError("");
+  const goal = els.workflowGoal.value.trim() || defaultGoal();
+  db.workflow = createWorkflow(goal);
+  selected.path = `${db.workflow.base.folderPath}/spec.md`;
+  commit("delegate_workflow initialized workflow, first iteration, and first attempt");
+  render();
+}
+
+function resetEmpty() {
+  db.version = 0;
+  db.workflow = null;
+  db.events = [];
+  selected.path = "";
+  selected.workerId = "";
+  els.workflowGoal.value = defaultGoal();
+  commit("reset empty DB");
+  render();
+}
+
+function seedDemo() {
+  db.workflow = createWorkflow(defaultGoal());
+  const workflow = db.workflow;
+  const iteration = workflow.iterations[0];
+  const attempt = iteration.attempts[0];
+  attempt.base.status = Status.Running;
+  attempt.plan = createPlan(workflow, iteration, attempt, "plan_pln_initial", Status.Success);
+  attempt.plan.planSpec = samplePlanSpec();
+  attempt.plan.plannerSummary = samplePlannerSummary();
+  attempt.plan.deferredGoalForNextIteration = sampleDeferredGoal();
+  attempt.workItems = sampleWorkItems().map(input => createWorkItem(workflow, iteration, attempt, attempt.plan, input));
+  attempt.workItems[0].base.status = Status.Success;
+  attempt.workItems[0].workerSummary = "Schema fields and parent references were modeled with a shared base value and typed IDs.";
+  attempt.workItems[0].workerOutcome = "Defined WorkflowEntityBase and denormalized back-references for iteration, attempt, plan, and work item entities.";
+  attempt.workItems[1].base.status = Status.Running;
+  selected.path = `${attempt.base.folderPath}/brief.md`;
+  commit("seeded demo aggregate with planner outcome and worker progress");
+  render();
+}
+
+function launchPlanner() {
+  setError("");
+  const workflow = db.workflow;
+  if (!workflow) return setError("delegate_workflow must run first.");
+  const parts = findWorkflowParts(workflow, activeAttempt(workflow)?.base.id);
+  if (!parts) return setError("No active attempt is available.");
+  if (parts.attempt.plan) return setError("The active attempt already has a plan.");
+  parts.attempt.plan = createPlan(workflow, parts.iteration, parts.attempt, `plan_pln_${db.version + 1}`, Status.Running);
+  parts.attempt.base.status = Status.Running;
+  commit("planner launched; plan initialized as Running");
+  selected.path = `${parts.attempt.plan.base.folderPath}/brief.md`;
+  render();
+}
+
+function submitPlanOutcome() {
+  setError("");
+  const workflow = db.workflow;
+  if (!workflow) return setError("delegate_workflow must run first.");
+  const attempt = activeAttempt(workflow);
+  if (!attempt) return setError("No active attempt is available.");
+  const parts = findWorkflowParts(workflow, attempt.base.id);
+  if (!parts) return setError("No active attempt is available.");
+  if (!parts.attempt.plan) return setError("Launch planner before submitting planner outcome.");
+  if (parts.attempt.plan.base.status === Status.Success) return setError("Planner outcome was already submitted for this attempt.");
+
+  let workItems;
+  try {
+    workItems = JSON.parse(els.workItemsJson.value);
+  } catch (error) {
+    return setError(`work_items JSON is invalid: ${error.message}`);
+  }
+  if (!Array.isArray(workItems) || workItems.length === 0) {
+    return setError("work_items JSON must be a non-empty array.");
+  }
+  const ids = new Set();
+  for (const item of workItems) {
+    if (!item.work_item_id || !item.work_item_spec) {
+      return setError("Each work item needs work_item_id and work_item_spec.");
+    }
+    if (ids.has(item.work_item_id)) {
+      return setError(`Duplicate work_item_id: ${item.work_item_id}`);
+    }
+    ids.add(item.work_item_id);
+  }
+  for (const item of workItems) {
+    for (const need of item.needs || []) {
+      if (!ids.has(need)) return setError(`${item.work_item_id} needs unknown work item ${need}.`);
+    }
+  }
+
+  const plan = parts.attempt.plan;
+  plan.base.status = Status.Success;
+  plan.planSpec = els.planSpec.value.trim() || samplePlanSpec();
+  plan.plannerSummary = els.plannerSummary.value.trim() || samplePlannerSummary();
+  plan.deferredGoalForNextIteration = els.deferredGoal.value.trim();
+  parts.attempt.workItems = workItems.map(input => createWorkItem(workflow, parts.iteration, parts.attempt, plan, input));
+  parts.attempt.base.status = Status.Running;
+  commit("submit_plan_outcome created work items and reprojected context files");
+  selected.path = `${parts.attempt.base.folderPath}/spec.md`;
+  render();
+}
+
+function launchNextWorker() {
+  setError("");
+  const workflow = db.workflow;
+  if (!workflow) return setError("delegate_workflow must run first.");
+  const attempt = activeAttempt(workflow);
+  if (!attempt || attempt.base.status !== Status.Running) {
+    return setError("No running attempt can launch workers.");
+  }
+  const ready = attempt.workItems.find(item => item.base.status === Status.NotStarted && dependenciesComplete(attempt, item));
+  if (!ready) return setError("No not-started work item has all dependencies complete.");
+  ready.base.status = Status.Running;
+  selected.workerId = ready.base.id;
+  selected.path = `${ready.base.folderPath}/brief.md`;
+  commit(`worker launched for ${ready.base.id}`);
+  render();
+}
+
+function dependenciesComplete(attempt, item) {
+  return item.needs.every(needId => {
+    const dependency = attempt.workItems.find(candidate => candidate.base.id === needId);
+    return dependency && dependency.base.status === Status.Success;
+  });
+}
+
+function submitWorkerOutcome(isSuccess) {
+  setError("");
+  const workflow = db.workflow;
+  if (!workflow) return setError("delegate_workflow must run first.");
+  const workerId = els.workerSelect.value;
+  const found = findWorkItem(workflow, workerId);
+  if (!found) return setError("Select a worker item.");
+  if (found.item.base.status !== Status.Running) {
+    return setError("Launch this work item before submitting its outcome.");
+  }
+  found.item.base.status = isSuccess ? Status.Success : Status.Failed;
+  found.item.workerSummary = els.workerSummary.value.trim() || (isSuccess
+    ? "Worker completed the assigned context projection work."
+    : "Worker could not complete the assigned context projection work.");
+  found.item.workerOutcome = els.workerOutcome.value.trim() || (isSuccess
+    ? "The requested artifact was produced and can be rendered from the latest DB aggregate."
+    : "The worker found a blocking issue and the attempt needs a retry.");
+
+  recomputeAfterWorker(workflow, found.iteration, found.attempt);
+  commit(`submit_worker_outcome recorded ${found.item.base.id} as ${found.item.base.status}`);
+  selected.path = `${found.item.base.folderPath}/spec.md`;
+  render();
+}
+
+function recomputeAfterWorker(workflow, iteration, attempt) {
+  if (attempt.workItems.some(item => item.base.status === Status.Failed)) {
+    attempt.base.status = Status.Failed;
+    if (!iteration.attempts.some(candidate => candidate.base.status === Status.NotStarted)) {
+      const retryIndex = iteration.attempts.length + 1;
+      const retry = createAttempt(workflow, iteration, `attempt_att_retry_${retryIndex}`, Status.NotStarted);
+      iteration.attempts.push(retry);
+    }
+    return;
+  }
+
+  if (attempt.workItems.length > 0 && attempt.workItems.every(item => item.base.status === Status.Success)) {
+    attempt.base.status = Status.Success;
+    iteration.base.status = Status.Success;
+    const deferred = attempt.plan?.deferredGoalForNextIteration?.trim();
+    if (deferred) {
+      const nextIndex = workflow.iterations.length + 1;
+      const nextIteration = createIteration(workflow, `iteration_it_${nextIndex}`, deferred, Status.Running);
+      nextIteration.attempts.push(createAttempt(workflow, nextIteration, `attempt_att_${nextIndex}_initial`, Status.NotStarted));
+      workflow.iterations.push(nextIteration);
+      workflow.base.status = Status.Running;
+    } else {
+      workflow.base.status = Status.Success;
+    }
+    return;
+  }
+
+  attempt.base.status = Status.Running;
+}
+
+function render() {
+  const workflow = loadFreshWorkflowAggregate();
+  renderHeader(workflow);
+  renderForms(workflow);
+  renderFiles(workflow);
+  renderEvents();
+}
+
+function renderHeader(workflow) {
+  els.versionPill.textContent = `version ${db.version}`;
+  const counts = workflow ? {
+    iterations: workflow.iterations.length,
+    attempts: allAttempts(workflow).length,
+    plans: allAttempts(workflow).filter(attempt => attempt.plan).length,
+    workItems: allWorkItems(workflow).length
+  } : { iterations: 0, attempts: 0, plans: 0, workItems: 0 };
+  const workflowStatus = workflow ? workflow.base.status : Status.NotStarted;
+  els.statusStrip.innerHTML = [
+    pill(`workflow ${workflowStatus}`, statusClass(workflowStatus)),
+    pill(`${counts.iterations} iterations`, "running"),
+    pill(`${counts.attempts} attempts`, "running"),
+    pill(`${counts.plans} plans`, "success"),
+    pill(`${counts.workItems} work items`, "not-started")
+  ].join("");
+}
+
+function pill(text, klass) {
+  return `<span class="pill ${klass || ""}">${escapeHtml(text)}</span>`;
+}
+
+function renderForms(workflow) {
+  if (!workflow) {
+    els.activeAttemptPill.textContent = "none";
+    els.activeWorkerPill.textContent = "none";
+    els.workerSelect.innerHTML = "";
+    return;
+  }
+  els.workflowGoal.value = workflow.goal;
+  const attempt = activeAttempt(workflow);
+  els.activeAttemptPill.textContent = attempt ? attempt.base.id : "none";
+  els.activeAttemptPill.className = `pill ${attempt ? statusClass(attempt.base.status) : ""}`;
+  els.planSpec.value = attempt?.plan?.planSpec || samplePlanSpec();
+  els.plannerSummary.value = attempt?.plan?.plannerSummary || samplePlannerSummary();
+  els.deferredGoal.value = attempt?.plan?.deferredGoalForNextIteration || sampleDeferredGoal();
+  els.workItemsJson.value = JSON.stringify(
+    attempt?.workItems?.length
+      ? attempt.workItems.map(item => ({ work_item_id: item.base.id, work_item_spec: item.workItemSpec, needs: item.needs }))
+      : sampleWorkItems(),
+    null,
+    2
+  );
+
+  const items = allWorkItems(workflow);
+  els.workerSelect.innerHTML = items.map(item => {
+    return `<option value="${escapeAttr(item.base.id)}">${escapeHtml(item.base.id)} (${escapeHtml(item.base.status)})</option>`;
+  }).join("");
+  const preferred = items.find(item => item.base.status === Status.Running)
+    || items.find(item => item.base.status === Status.NotStarted)
+    || items[0];
+  if (preferred) {
+    if (!selected.workerId || !items.some(item => item.base.id === selected.workerId)) {
+      selected.workerId = preferred.base.id;
+    }
+    els.workerSelect.value = selected.workerId;
+  }
+  const selectedItem = selected.workerId ? findWorkItem(workflow, selected.workerId)?.item : null;
+  els.activeWorkerPill.textContent = selectedItem ? selectedItem.base.id : "none";
+  els.activeWorkerPill.className = `pill ${selectedItem ? statusClass(selectedItem.base.status) : ""}`;
+  els.workerSummary.value = selectedItem?.workerSummary || "Worker completed the assigned context projection work.";
+  els.workerOutcome.value = selectedItem?.workerOutcome || "The worker produced the requested projection behavior and left the context files regenerable from DB state.";
+}
+
+function renderFiles(workflow) {
+  const files = generatedFiles(workflow);
+  if (!files.length) {
+    els.fileTree.innerHTML = '<div class="note">No projected files.</div>';
+    els.selectedFileTitle.textContent = "No file selected";
+    els.fileView.textContent = "";
+    return;
+  }
+  if (!selected.path || !files.some(file => file.path === selected.path)) {
+    selected.path = files[0].path;
+  }
+  els.fileTree.innerHTML = renderFileTree(workflow, files);
+  els.fileTree.querySelectorAll("[data-path]").forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      selected.path = link.getAttribute("data-path");
+      render();
+    });
+  });
+  const selectedFile = files.find(file => file.path === selected.path);
+  els.selectedFileTitle.textContent = selectedFile ? selectedFile.path : "No file selected";
+  els.fileView.textContent = selectedFile ? selectedFile.content : "";
+}
+
+function renderEvents() {
+  els.eventCount.textContent = `${db.events.length} events`;
+  els.dbLog.innerHTML = db.events.map(event => `
+    <div class="log-entry">v${escapeHtml(String(event.version))}: ${escapeHtml(event.label)}</div>
+  `).join("") || '<div class="note">No events yet.</div>';
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/'/g, "&#39;");
+}
+
+els.delegateWorkflow.addEventListener("click", delegateWorkflow);
+els.resetEmpty.addEventListener("click", resetEmpty);
+els.seedDemo.addEventListener("click", seedDemo);
+els.launchPlanner.addEventListener("click", launchPlanner);
+els.submitPlan.addEventListener("click", submitPlanOutcome);
+els.launchWorker.addEventListener("click", launchNextWorker);
+els.submitWorkerSuccess.addEventListener("click", () => submitWorkerOutcome(true));
+els.submitWorkerFailure.addEventListener("click", () => submitWorkerOutcome(false));
+els.workerSelect.addEventListener("change", () => {
+  selected.workerId = els.workerSelect.value;
+  render();
+});
+els.copyFile.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(els.fileView.textContent);
+  } catch (_error) {
+    setError("Clipboard access is not available from this file URL.");
+  }
+});
+
+els.workflowGoal.value = defaultGoal();
+db.workflow = createWorkflow(defaultGoal());
+selected.path = "workflow_wf_context_projection/spec.md";
+commit("initial page load delegated a workflow");
+render();
+</script>
+</body>
+</html>

@@ -327,21 +327,26 @@ mod tests {
                 request_id: request_id.clone(),
                 agent_run_id: agent_run_id.clone(),
             };
+            let now = UtcDateTime::now();
             lock(&self.indexes).insert(agent_run_id.clone(), index.clone());
             lock(&self.runs).insert(
                 agent_run_id.clone(),
-                agent_run_from_index(
-                    &index,
+                AgentRun {
+                    agent_run_id: index.agent_run_id.clone(),
+                    request_id: index.request_id.clone(),
                     agent_type,
-                    agent_name.clone(),
-                    parent_agent_run_id.cloned(),
-                    tool_use_id.cloned(),
-                    ExecutionStatus::Running,
-                    None,
-                    None,
-                    0,
-                    None,
-                ),
+                    status: ExecutionStatus::Running,
+                    agent_name: agent_name.clone(),
+                    parent_agent_run_id: parent_agent_run_id.cloned(),
+                    tool_use_id: tool_use_id.cloned(),
+                    terminal_payload: None,
+                    submission_outcome: None,
+                    token_count: 0,
+                    error: None,
+                    created_at: now,
+                    updated_at: now,
+                    finished_at: None,
+                },
             );
             Ok(created_from_index(&index))
         }
@@ -449,36 +454,6 @@ mod tests {
                 agent_run_id: index.agent_run_id.clone(),
                 record_dir: format_record_dir(index),
             },
-        }
-    }
-
-    fn agent_run_from_index(
-        index: &AgentRunRecordIndex,
-        agent_type: AgentType,
-        agent_name: AgentName,
-        parent_agent_run_id: Option<AgentRunId>,
-        tool_use_id: Option<ToolUseId>,
-        status: ExecutionStatus,
-        terminal_payload: Option<&JsonObject>,
-        submission_outcome: Option<&SubmissionOutcome>,
-        token_count: i64,
-        error: Option<&str>,
-    ) -> AgentRun {
-        AgentRun {
-            agent_run_id: index.agent_run_id.clone(),
-            request_id: index.request_id.clone(),
-            agent_type,
-            status,
-            agent_name,
-            parent_agent_run_id,
-            tool_use_id,
-            terminal_payload: terminal_payload.cloned(),
-            submission_outcome: submission_outcome.cloned(),
-            token_count,
-            error: error.map(str::to_owned),
-            created_at: UtcDateTime::now(),
-            updated_at: UtcDateTime::now(),
-            finished_at: status.is_terminal().then_some(UtcDateTime::now()),
         }
     }
 
