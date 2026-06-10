@@ -12,13 +12,13 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
-use serde_json::{json, Value};
+use serde_json::json;
 
 use crate::client::{is_success, ProtocolClient};
 use crate::docker::{
     docker, docker_exec_args, parse_published_addr, path_str, put_archive_bytes, put_archive_file,
 };
-use crate::wire::READY_OP;
+use crate::wire::HEARTBEAT_OP;
 
 /// How long a container outlives its `DaemonContainer` handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -412,17 +412,17 @@ fn placeholder_addr() -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], 1))
 }
 
-/// The SPEC §5 ready gate: poll `sandbox.runtime.ready` (fixture-pinned legacy
-/// spelling) until the daemon reports `ready: true`, with exponential backoff.
+/// The bring-up ready gate: poll heartbeat until the daemon answers with
+/// success, with exponential backoff. `sandbox.runtime.ready` cannot gate
+/// provisioning — its `control_plane` probe requires a seeded workspace base
+/// (see [`crate::wire::HEARTBEAT_OP`]).
 fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     let deadline = Instant::now() + budget;
     let mut delay = Duration::from_millis(150);
     loop {
-        let observed = match client.request_unstamped(READY_OP, "ready-probe", &json!({})) {
-            Ok(resp) if is_success(&resp) && resp.get("ready") == Some(&Value::Bool(true)) => {
-                return Ok(())
-            }
-            Ok(resp) => format!("not ready: {resp}"),
+        let observed = match client.request(HEARTBEAT_OP, "ready-probe", &json!({})) {
+            Ok(resp) if is_success(&resp) => return Ok(()),
+            Ok(resp) => format!("non-success heartbeat: {resp}"),
             Err(err) => err.to_string(),
         };
         if Instant::now() >= deadline {

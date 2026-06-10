@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 02.5 Provider Composition and Live E2E
 
-Status: Proposed
+Status: Completed
 Date: 2026-06-10
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -530,11 +530,11 @@ Phase 02.5 is accepted when:
 
 | Step | Status | Required proof |
 | --- | --- | --- |
-| Mechanical wire/stream-client split | Pending | `pnpm run check` green with zero assertion changes |
-| Access contract + api-key + header threading | Pending | Header passthrough test green |
-| Wire options (system prefix, codex dialect) | Pending | Encode tests pin both shapes |
-| Coding-plan access schemes | Pending | Claim parsing + header shape tests green |
-| Profiles + factory + class removal | Pending | Factory + substitutability tests green |
-| Contract kit + unit bindings | Pending | `pnpm run check` green; golden assertions present in `exact` bindings |
-| Live e2e harness + codex auth loader | Pending | Codex suite (contract in structural mode) live-green locally; clean-skip proof |
-| Index updated | Pending | Phase 02.5 row present in `index.md` |
+| Mechanical wire/stream-client split | Completed | `wires/{wire,anthropic-messages,openai-responses}.ts` + `stream-client.ts` carry the Phase 02 codec/runner bodies verbatim; every Phase 02 assertion survives in `tests/wires/*.test.ts` + `tests/contract.test.ts` (moves only); `pnpm run check` green |
+| Access contract + api-key + header threading | Completed | "passes transport headers() output on each attempt" green in both `tests/wires/*.test.ts` (per-attempt counter observed on the wire) |
+| Wire options (system prefix, codex dialect) | Completed | `tests/wires/anthropic-messages.test.ts` pins the system-prefix block shape; `tests/wires/openai-responses.test.ts` pins the codex dialect (no cap, forced-tool clamp) |
+| Coding-plan access schemes | Completed | `tests/access/coding-plan.test.ts`: header shapes, jwt claim parsing (7 failure cases with the Rust crate's messages), fedramp flag green |
+| Profiles + factory + class removal | Completed | `tests/factory.test.ts`: profile selection, custom `base_url`, §4.5 fixture substitutability and encode-delta proofs green; `AnthropicApiClient`/`OpenAiResponsesClient` removed with zero external consumers |
+| Contract kit + unit bindings | Completed | `tests/contract/llm-client-contract.ts` + `tests/contract.test.ts` bind both wires with the Phase 02 golden `exact` values; `pnpm run check` green (105 llm-client tests, 158 workspace) |
+| Live e2e harness + codex auth loader | Completed | `pnpm run test:e2e` runs the 6-scenario contract live against the codex backend on this machine (auto-loaded `~/.codex/auth.json`, model `gpt-5.5`) and clean-skips with `CODEX_AUTH_PATH=/nonexistent`; the backend requires `instructions`, so the live binding sends a `system_prompt` on every scenario |
+| Index updated | Completed | Phase 02.5 row in `index.md` marked Completed |

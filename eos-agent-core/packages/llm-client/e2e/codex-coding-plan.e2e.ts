@@ -14,6 +14,8 @@ import { loadCodexAuth } from "./support/codex-auth.js";
 const auth = loadCodexAuth();
 /** Defaults to the local Codex CLI's configured model at implementation time. */
 const MODEL = process.env.CODEX_E2E_MODEL ?? "gpt-5.5";
+/** The codex backend requires `instructions`; every scenario sends one. */
+const SYSTEM_PROMPT = "You are a terse test assistant.";
 
 if (!auth.available) {
   console.warn(`codex e2e skipped: ${auth.reason}`);
@@ -63,6 +65,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(token()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           messages: [user("Reply with exactly one word: pong")],
         }),
       }),
@@ -70,6 +73,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(token()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           tools: [ECHO_TOOL],
           tool_choice: "any",
           messages: [
@@ -81,6 +85,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(token()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           tools: [ECHO_TOOL],
           messages: [
             user('Call the echo tool exactly once with the text "hello".'),
@@ -113,6 +118,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(token()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           reasoning_effort: "low",
           messages: [user("What is 17 + 25? Reply with just the number.")],
         }),
@@ -121,6 +127,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(token()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           messages: [user("Count from 1 to 200, one number per line.")],
         }),
       }),
@@ -128,6 +135,7 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         client: liveClient(corruptedToken()),
         request: buildLlmRequest({
           model: MODEL,
+          system_prompt: SYSTEM_PROMPT,
           messages: [user("Reply with exactly one word: pong")],
         }),
       }),

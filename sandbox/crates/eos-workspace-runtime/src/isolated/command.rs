@@ -138,7 +138,7 @@ pub fn finalize_isolated_command(
     let changes = eos_overlay::capture_upperdir(&context.upperdir)
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
     let capture_s = capture_start.elapsed().as_secs_f64();
-    let path_kinds = path_changes_to_wire(&changes);
+    let path_kinds = layer_changes_to_wire(&changes);
     let changed_paths: Vec<String> = path_kinds.iter().map(|(path, _)| path.clone()).collect();
     let changed_path_kinds = path_kinds.into_iter().collect::<ChangedPathKinds>();
     let mut timings = context.base_timings;
@@ -246,7 +246,7 @@ fn finalize_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("isolated_command_finalize_failed", error.to_string())
 }
 
-fn path_changes_to_wire(changes: &[LayerChange]) -> Vec<(String, String)> {
+fn layer_changes_to_wire(changes: &[LayerChange]) -> Vec<(String, String)> {
     changes
         .iter()
         .map(|change| (change.path().as_str().to_owned(), change.kind().to_owned()))
