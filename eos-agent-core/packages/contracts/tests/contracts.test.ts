@@ -31,9 +31,13 @@ describe("message dtos", () => {
   });
 
   it("rejects the system role", () => {
-    expect(MessageRoleSchema.safeParse("system").success).toBe(false);
+    expect(
+      MessageRoleSchema.safeParse("system").success,
+      "role schema",
+    ).toBe(false);
     expect(
       MessageSchema.safeParse({ role: "system", content: [] }).success,
+      "message schema",
     ).toBe(false);
   });
 
@@ -63,17 +67,19 @@ describe("message dtos", () => {
       metadata: { secret: "nope" },
       is_terminal: true,
     });
-    expect("metadata" in block).toBe(false);
-    expect("is_terminal" in block).toBe(false);
+    expect("metadata" in block, "metadata is stripped").toBe(false);
+    expect("is_terminal" in block, "is_terminal is stripped").toBe(false);
   });
 
   it("rejects the cut thinking alias and system_notification variant", () => {
     expect(
       ContentBlockSchema.safeParse({ type: "thinking", text: "x" }).success,
+      "thinking alias",
     ).toBe(false);
     expect(
       ContentBlockSchema.safeParse({ type: "system_notification", text: "x" })
         .success,
+      "system_notification variant",
     ).toBe(false);
   });
 

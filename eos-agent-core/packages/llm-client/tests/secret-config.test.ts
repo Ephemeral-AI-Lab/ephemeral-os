@@ -14,11 +14,11 @@ describe("secret string", () => {
   const secret = new SecretString("sk-super-secret");
 
   it("redacts string conversion, json, and inspect", () => {
-    expect(String(secret)).toBe("[redacted]");
+    expect(String(secret), "String conversion").toBe("[redacted]");
     expect(JSON.stringify({ api_key: secret })).toBe(
       '{"api_key":"[redacted]"}',
     );
-    expect(inspect(secret)).toBe("[redacted]");
+    expect(inspect(secret), "util.inspect").toBe("[redacted]");
     expect(inspect({ nested: secret })).not.toContain("sk-super-secret");
   });
 
@@ -38,12 +38,14 @@ describe("retry config", () => {
   });
 
   it("rejects negative delays", () => {
-    expect(RetryConfigSchema.safeParse({ base_delay_s: -1 }).success).toBe(
-      false,
-    );
-    expect(RetryConfigSchema.safeParse({ max_delay_s: -0.5 }).success).toBe(
-      false,
-    );
+    expect(
+      RetryConfigSchema.safeParse({ base_delay_s: -1 }).success,
+      "negative base_delay_s",
+    ).toBe(false);
+    expect(
+      RetryConfigSchema.safeParse({ max_delay_s: -0.5 }).success,
+      "negative max_delay_s",
+    ).toBe(false);
   });
 });
 
@@ -74,6 +76,9 @@ describe("provider configs", () => {
     expect(
       AnthropicApiConfigSchema.parse({ api_key: wrapped }).api_key.expose(),
     ).toBe("pre-wrapped");
-    expect(AnthropicApiConfigSchema.safeParse({}).success).toBe(false);
+    expect(
+      AnthropicApiConfigSchema.safeParse({}).success,
+      "api_key is required",
+    ).toBe(false);
   });
 });

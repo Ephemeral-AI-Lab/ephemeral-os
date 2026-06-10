@@ -61,7 +61,7 @@ describe("retry gate", () => {
     expect(events).toEqual([text("hello")]);
     expect(error).toBeInstanceOf(ProviderError);
     expect((error as ProviderError).kind).toBe("transport");
-    expect(calls()).toBe(1);
+    expect(calls(), "no retry after visible output").toBe(1);
   });
 
   it("retries only before visible output", async () => {
@@ -72,7 +72,7 @@ describe("retry gate", () => {
     ]);
     const events = await collect(retryStream(FAST, factory));
     expect(events).toEqual([text("a"), text("b"), complete()]);
-    expect(calls()).toBe(3);
+    expect(calls(), "two retryable failures, then success").toBe(3);
   });
 
   it("does not retry a non-retryable auth error", async () => {
@@ -81,7 +81,7 @@ describe("retry gate", () => {
     ]);
     const { error } = await collectUntilError(retryStream(FAST, factory));
     expect((error as ProviderError).kind).toBe("authentication");
-    expect(calls()).toBe(1);
+    expect(calls(), "auth errors are not retried").toBe(1);
   });
 
   it("exhausts the retry budget at 1 + max_retries attempts", async () => {
@@ -91,7 +91,7 @@ describe("retry gate", () => {
     const { factory, calls } = scripted(attempts);
     const { error } = await collectUntilError(retryStream(FAST, factory));
     expect((error as ProviderError).kind).toBe("rate_limit");
-    expect(calls()).toBe(4);
+    expect(calls(), "1 + max_retries attempts").toBe(4);
   });
 
   it("treats tool_use_delta as visible output", async () => {
@@ -109,7 +109,7 @@ describe("retry gate", () => {
     );
     expect(events).toEqual([tool]);
     expect((error as ProviderError).kind).toBe("server");
-    expect(calls()).toBe(1);
+    expect(calls(), "no retry after a tool_use_delta").toBe(1);
   });
 
   it("skips the sleep on a degenerate delay instead of hanging", async () => {
@@ -126,8 +126,11 @@ describe("retry gate", () => {
     const started = Date.now();
     const events = await collect(retryStream(cfg, factory));
     expect(events).toHaveLength(2);
-    expect(calls()).toBe(2);
-    expect(Date.now() - started).toBeLessThan(1000);
+    expect(calls(), "one retry after the degenerate delay").toBe(2);
+    expect(
+      Date.now() - started,
+      "degenerate delay must skip the sleep",
+    ).toBeLessThan(1000);
   });
 
   it("retries a truncated stream but never a parse-failure decode", async () => {
@@ -138,7 +141,7 @@ describe("retry gate", () => {
     await expect(
       collect(retryStream(FAST, truncatedThenOk.factory)),
     ).resolves.toEqual([complete()]);
-    expect(truncatedThenOk.calls()).toBe(2);
+    expect(truncatedThenOk.calls(), "truncated stream retries once").toBe(2);
 
     const parseFailure = scripted([
       [new ProviderError("decode", "bad frame")],
@@ -147,7 +150,7 @@ describe("retry gate", () => {
       retryStream(FAST, parseFailure.factory),
     );
     expect((error as ProviderError).kind).toBe("decode");
-    expect(parseFailure.calls()).toBe(1);
+    expect(parseFailure.calls(), "parse-failure decode is not retried").toBe(1);
   });
 
   it("stops immediately when aborted during backoff", async () => {
@@ -165,8 +168,11 @@ describe("retry gate", () => {
     const { error } = await pending;
     expect(controller.signal.aborted).toBe(true);
     expect(error).toBe(controller.signal.reason);
-    expect(calls()).toBe(1);
-    expect(Date.now() - started).toBeLessThan(1500);
+    expect(calls(), "no second attempt after abort").toBe(1);
+    expect(
+      Date.now() - started,
+      "abort must cut the backoff sleep short",
+    ).toBeLessThan(1500);
   });
 
   it("honors retry-after over the exponential delay, capped by max_delay_s", async () => {
@@ -180,8 +186,11 @@ describe("retry gate", () => {
     const cappedCfg: RetryConfig = { ...FAST, base_delay_s: 5, max_delay_s: 0.01 };
     let started = Date.now();
     await collect(retryStream(cappedCfg, capped.factory));
-    expect(capped.calls()).toBe(2);
-    expect(Date.now() - started).toBeLessThan(1500);
+    expect(capped.calls(), "capped scenario retries once").toBe(2);
+    expect(
+      Date.now() - started,
+      "max_delay_s must cap the retry-after sleep",
+    ).toBeLessThan(1500);
 
     // base_delay_s would wait 5s; retry-after overrides it down to 20ms.
     const overridden = scripted([
@@ -191,7 +200,10 @@ describe("retry gate", () => {
     const overrideCfg: RetryConfig = { ...FAST, base_delay_s: 5, max_delay_s: 30 };
     started = Date.now();
     await collect(retryStream(overrideCfg, overridden.factory));
-    expect(overridden.calls()).toBe(2);
-    expect(Date.now() - started).toBeLessThan(1500);
+    expect(overridden.calls(), "override scenario retries once").toBe(2);
+    expect(
+      Date.now() - started,
+      "retry-after must override the longer base delay",
+    ).toBeLessThan(1500);
   });
 });

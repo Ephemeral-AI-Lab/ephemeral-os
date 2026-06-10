@@ -108,7 +108,7 @@ in-memory writer but keeps the disk file readable;
 
 | Kind | Runs where | Output | Kill path |
 | --- | --- | --- | --- |
-| `local_bash` | Child process (tree) | Disk file via append queue | SIGTERM → SIGKILL (tree-kill) |
+| `local_bash` | Child process (tree) | Disk file via append queue | tree-kill SIGKILL; exit code 137 kill / 143 timeout (see `background-task-spawn-and-cancellation.md`) |
 | `local_agent` | Same process, separate query loop | Symlink to agent transcript | `abortController.abort()` |
 | `in_process_teammate` | Same process, AsyncLocalStorage identity | Capped `messages` mirror (50 entries) | graceful `shutdownRequested` or hard abort |
 | `remote_agent` | Remote daemon, polled | Polled events; persisted to sidecar for restore | archive remote session |

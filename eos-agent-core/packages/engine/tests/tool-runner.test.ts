@@ -167,13 +167,15 @@ describe("runToolBatch", () => {
       toolResultBlock("tu_fast", "fast ok"),
       toolResultBlock("tu_slow", "interrupted", true),
     ]);
-    // The straggler settling later must not emit after the batch closed.
     slowRelease.resolve();
     await tick();
     const completions = events.filter(
       (event) => event.type === "tool_execution_completed",
     );
-    expect(completions).toHaveLength(1);
+    expect(
+      completions,
+      "a straggler settling later must not emit after the batch closed",
+    ).toHaveLength(1);
     expect(must(completions.at(0))).toMatchObject({ tool_use_id: "tu_fast" });
   });
 

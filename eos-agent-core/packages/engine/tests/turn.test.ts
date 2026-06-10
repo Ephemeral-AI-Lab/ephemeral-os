@@ -165,6 +165,9 @@ describe("addUsage", () => {
       output_tokens: 8,
       cache_read_input_tokens: 11,
     });
-    expect(addUsage(base, base)).toEqual({ input_tokens: 20, output_tokens: 10 });
+    expect(
+      addUsage(base, base),
+      "cache fields stay absent when never reported",
+    ).toEqual({ input_tokens: 20, output_tokens: 10 });
   });
 });

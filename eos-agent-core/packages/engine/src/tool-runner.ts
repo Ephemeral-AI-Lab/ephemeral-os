@@ -40,7 +40,7 @@ export async function runToolBatch(
       const output = await executeCall(call, tools, signal);
       // The batch already settled with a synthetic result; drop the straggler
       // so no event lands after run_finished.
-      if (signal.aborted) return;
+      if (isAborted(signal)) return;
       const isError = output.is_error ?? false;
       settled[index] = {
         type: "tool_result",
@@ -72,6 +72,11 @@ export async function runToolBatch(
         is_error: true,
       },
   );
+}
+
+/** Read through a call so control-flow narrowing never caches `aborted`. */
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted;
 }
 
 async function executeCall(

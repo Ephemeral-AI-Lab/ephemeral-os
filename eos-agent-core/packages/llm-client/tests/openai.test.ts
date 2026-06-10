@@ -10,7 +10,7 @@ import {
   OpenAiResponsesClient,
   encodeOpenAiRequest,
 } from "../src/providers/openai.js";
-import { buildLlmRequest } from "../src/types.js";
+import { buildLlmRequest, type ReasoningEffort } from "../src/types.js";
 import {
   collect,
   collectUntilError,
@@ -368,16 +368,20 @@ describe("openai encode projection (§5 column)", () => {
     ).toBe("required");
   });
 
-  it("clamps the effort vocabulary per the §5 table", () => {
-    const effortOf = (effort: "minimal" | "low" | "medium" | "high" | "max") =>
+  const effortClamps: [ReasoningEffort, string][] = [
+    ["minimal", "minimal"],
+    ["low", "low"],
+    ["medium", "medium"],
+    ["high", "high"],
+    ["max", "high"],
+  ];
+
+  it.each(effortClamps)("clamps effort %s to %s per the §5 table", (effort, clamped) => {
+    expect(
       encodeOpenAiRequest(
         buildLlmRequest({ model: "m", reasoning_effort: effort }),
-      ).reasoning?.effort;
-    expect(effortOf("minimal")).toBe("minimal");
-    expect(effortOf("low")).toBe("low");
-    expect(effortOf("medium")).toBe("medium");
-    expect(effortOf("high")).toBe("high");
-    expect(effortOf("max")).toBe("high");
+      ).reasoning?.effort,
+    ).toBe(clamped);
   });
 
   it("sends bearer credentials to the responses endpoint", async () => {

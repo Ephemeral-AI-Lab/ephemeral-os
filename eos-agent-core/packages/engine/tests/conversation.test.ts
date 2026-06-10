@@ -39,6 +39,7 @@ describe("Conversation divergence policy", () => {
     );
     expect(
       conversation.displayedMessages().every((entry) => entry.partial === undefined),
+      "no displayed entry is flagged partial",
     ).toBe(true);
   });
 
@@ -84,8 +85,14 @@ describe("Conversation divergence policy", () => {
     const displayed = conversation.displayedMessages();
     expect(displayed.map((entry) => entry.seq)).toEqual([0, 1, 2]);
     for (const entry of displayed) {
-      expect(Number.isNaN(Date.parse(entry.created_at))).toBe(false);
-      expect(entry.created_at).toBe(new Date(entry.created_at).toISOString());
+      expect(
+        Number.isNaN(Date.parse(entry.created_at)),
+        `entry ${String(entry.seq)} created_at parses as a date`,
+      ).toBe(false);
+      expect(
+        entry.created_at,
+        `entry ${String(entry.seq)} created_at is canonical ISO`,
+      ).toBe(new Date(entry.created_at).toISOString());
     }
   });
 });

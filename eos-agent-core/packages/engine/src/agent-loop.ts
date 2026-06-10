@@ -38,7 +38,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
   };
   try {
     for (;;) {
-      if (handle.signal.aborted) {
+      if (isAborted(handle.signal)) {
         finish({ status: "cancelled", reason: handle.cancelReason });
         return;
       }
@@ -47,7 +47,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
           status: "failed",
           failure: {
             kind: "max_turns",
-            message: `run spent its ${ctx.maxTurns}-turn budget without completing`,
+            message: `run spent its ${String(ctx.maxTurns)}-turn budget without completing`,
           },
         });
         return;
@@ -75,7 +75,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       }
       const results = await runToolBatch(calls, ctx.tools, handle.signal, handle.emit);
       conversation.appendToolResults(results);
-      if (handle.signal.aborted) {
+      if (isAborted(handle.signal)) {
         finish({ status: "cancelled", reason: handle.cancelReason });
         return;
       }
@@ -90,6 +90,11 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       });
     }
   }
+}
+
+/** Read through a call so control-flow narrowing never caches `aborted`. */
+function isAborted(signal: AbortSignal): boolean {
+  return signal.aborted;
 }
 
 function classifyLoopError(error: unknown, handle: RunHandle): AgentRunStatus {

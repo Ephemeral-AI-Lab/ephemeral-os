@@ -46,10 +46,10 @@ export class MockLlmClient implements LlmClient {
     request: LlmRequest,
     options?: LlmStreamOptions,
   ): AsyncIterable<LlmStreamEvent> {
-    const script = this.#turns[this.requests.length];
+    const script = this.#turns.at(this.requests.length);
     this.requests.push(request);
     if (!script) {
-      throw new Error(`unscripted provider call ${this.requests.length}`);
+      throw new Error(`unscripted provider call ${String(this.requests.length)}`);
     }
     return script(request, options?.signal);
   }

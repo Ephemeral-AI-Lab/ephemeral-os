@@ -66,6 +66,11 @@ In scope:
   `factory.ts` (`createLlmClient`),
 - removal of the `AnthropicApiClient` / `OpenAiResponsesClient` classes
   (zero consumers outside this package's tests; the factory replaces them),
+- the shared client-contract kit
+  (`tests/contract/llm-client-contract.ts`): the iteration-contract
+  scenarios written once over the bare `LlmClient` interface and consumed
+  by **both** the unit fixture bindings (with golden `exact` pinning) and
+  the live suite (structural mode) — §6.3,
 - the live e2e workspace: `vitest.e2e.config.ts`, `test:e2e` script,
   `packages/llm-client/e2e/` with the Codex auth loader and
   `codex-coding-plan.e2e.ts` — the **only** live suite this phase,
@@ -81,9 +86,9 @@ Out of scope (named seams, additive later):
   per-attempt `headers()` hook in the Access contract is the seam it plugs
   into),
 - live suites for `anthropic_api`, `openai_api`, and `claude_coding_plan` —
-  no credentials for those approaches are available today. `scenarios.ts`
-  stays profile-agnostic so each future suite is one env-gated file (§6.4);
-  none is created in this phase,
+  no credentials for those approaches are available today. The contract kit
+  stays profile-agnostic so each future suite is one env-gated binding file
+  (§6.4); none is created in this phase,
 - OAuth refresh for either coding plan (the e2e loader detects an expired
   token and skips with an actionable message; refreshing is the Codex/Claude
   CLI's job),
@@ -128,10 +133,18 @@ packages/llm-client/
 │   └── index.ts                       # factory, connection types, contracts re-exports
 ├── tests/                             # unit tests: no network, run by `pnpm run check`
 │   ├── support.ts                     # fetch doubles, collect helpers         (unchanged)
+│   ├── contract/
+│   │   └── llm-client-contract.ts     # the base: describeLlmClientContract(binding) —
+│   │                                  #   iteration-contract scenarios + structural
+│   │                                  #   assertions over the bare LlmClient; optional
+│   │                                  #   `exact` block for golden pinning (§6.3)
+│   ├── contract.test.ts               # unit bindings: fixture-fetch clients for both
+│   │                                  #   wires with `exact` golden values (absorbs the
+│   │                                  #   happy-path decode tests)
 │   ├── retry.test.ts / errors.test.ts / secret-config.test.ts        (unchanged)
 │   ├── wires/
-│   │   ├── anthropic-messages.test.ts # golden decode + encode column   (moved, content same)
-│   │   └── openai-responses.test.ts   # same battery + substitutability (moved, content same)
+│   │   ├── anthropic-messages.test.ts # encode column + failure modes    (moved; happy
+│   │   └── openai-responses.test.ts   #   path lives in contract.test.ts)
 │   ├── access/
 │   │   └── coding-plan.test.ts        # header shapes, jwt claims, fedramp flag       (new)
 │   ├── factory.test.ts                # profile selection, compatible-url override,
@@ -140,11 +153,11 @@ packages/llm-client/
 └── e2e/                               # live tests: network + real credentials,
     │                                  #   excluded from `pnpm run check`
     ├── support/
-    │   ├── codex-auth.ts              # ~/.codex/auth.json loader (§6.2)
-    │   └── scenarios.ts               # shared live scenarios over any LlmClient (§6.3)
-    └── codex-coding-plan.e2e.ts       # the only live suite this phase; auto-loads
-                                       #   laptop codex credentials (other profiles
-                                       #   deferred, §6.4)
+    │   └── codex-auth.ts              # ~/.codex/auth.json loader (§6.2)
+    └── codex-coding-plan.e2e.ts       # the only live suite this phase; binds the same
+                                       #   contract kit to the live codex profile
+                                       #   (structural mode, no `exact`); auto-loads
+                                       #   laptop credentials (others deferred, §6.4)
 
 eos-agent-core/ (root)
 ├── vitest.config.ts                   # unchanged (unit tests)
@@ -289,9 +302,11 @@ plus one registry entry.
 - `LlmStreamClient` implements the Phase 02 §4.5 iteration contract
   verbatim (single pass, exactly one terminus, truncated-stream decode,
   abort rethrown as-is, retry gate semantics, idle guard).
-- All Phase 02 golden-fixture, encode-projection, retry, error-mapping,
-  truncation, idle, and `maxRetries: 0` tests survive as **moves** (import
-  paths only).
+- Every Phase 02 assertion survives. Happy-path golden decode assertions
+  relocate into the contract kit's unit bindings (`exact` mode, §6.3);
+  encode-projection, retry, error-mapping, truncation, idle, and
+  `maxRetries: 0` tests survive as **moves** (import paths only). No
+  assertion is deleted or weakened.
 - New substitutability proofs in `factory.test.ts`:
   - `claude_coding_plan` replaying the Anthropic fixtures yields the
     identical event sequence as `anthropic_api`,
@@ -351,13 +366,58 @@ the Codex CLI is logged in:
    Refreshing tokens is out of scope (§2) — the CLI owns its cache.
 
 Model selection for live runs: `$CODEX_E2E_MODEL` overrides a default model
-key pinned in `e2e/support/scenarios.ts` (set at implementation time to the
-Codex CLI's current default; the spec deliberately does not hardcode one).
+key pinned in `e2e/codex-coding-plan.e2e.ts` (set at implementation time to
+the Codex CLI's current default; the spec deliberately does not hardcode
+one).
 
-### 6.3 Scenario matrix (unit-mocked -> live)
+### 6.3 The client-contract kit (one suite body, two bindings)
 
-`e2e/support/scenarios.ts` exports the scenarios parameterized over any
-`LlmClient`, so every profile suite runs the same battery:
+The behaviors that are meaningful both mocked and live are exactly the
+`LlmClient` iteration contract (Phase 02 §4.5): delta grammar, exactly one
+terminus, tool-call assembly, abort classification, error kinds. Those are
+written **once** in `tests/contract/llm-client-contract.ts`:
+
+```ts
+export function describeLlmClientContract(binding: {
+  name: string;
+  scenarios: {
+    // each returns { client, request }; bindings decide how the behavior
+    // is induced (fixture-fetch client vs live profile + eliciting prompt)
+    text: () => Scenario;
+    toolCall: () => Scenario;          // offers an `echo` tool
+    toolRoundTrip?: () => Scenario;    // history with tool_use + tool_result
+    reasoning?: () => Scenario;
+    abort?: () => Scenario;
+    authFailure?: () => Scenario;
+  };
+  /** golden pinning for deterministic bindings; omitted by live bindings */
+  exact?: { text?: string; reasoning?: string; toolInput?: JsonObject;
+            usage?: UsageSnapshot };
+}): void;
+```
+
+- Structural assertions always run (event ordering, exactly one
+  `assistant_message_complete`, assembled object `input`, `stop_reason`
+  kind, single-pass iteration, abort classified by `signal.aborted`).
+- The `exact` block adds byte-precise golden assertions; only
+  deterministic bindings supply it. There is no `if (live)` branching
+  inside scenario bodies — strictness is data.
+- Unit binding (`tests/contract.test.ts`, runs in `pnpm run check`):
+  fixture-fetch clients for both wires with `exact` set to the Phase 02
+  golden values. The Phase 02 happy-path decode tests collapse into this
+  binding with their assertions preserved.
+- Live binding (`e2e/codex-coding-plan.e2e.ts`): the same contract bound to
+  `createLlmClient({ provider: "codex_coding_plan", ... })`, no `exact`.
+
+Decision recorded: plugging a real client into the **whole** unit suite was
+considered and rejected. Golden decode tests pin exact bytes-to-events
+mappings a live model never reproduces; encode tests are pure functions;
+retry/error/secret tests involve no HTTP; truncation/idle/malformed/backoff
+tests force transport states a healthy live endpoint cannot produce.
+Sharing is therefore scoped to the contract kit, where the same assertions
+are honest in both modes.
+
+Scenario matrix:
 
 | Scenario (unit counterpart) | Live assertion | Codex live? |
 | --- | --- | --- |
@@ -377,10 +437,10 @@ kinds, ids), never on response text.
 ### 6.4 Deferred profiles (named seam, no code this phase)
 
 Only the codex coding plan has usable credentials today, so
-`codex-coding-plan.e2e.ts` is the only live suite created. The scenarios in
-`scenarios.ts` are written against the bare `LlmClient` interface, so when
-credentials for another approach become available, its suite is one new
-file binding the same battery behind a skip-if-absent env credential:
+`codex-coding-plan.e2e.ts` is the only live suite created. Because the
+contract kit is written against the bare `LlmClient` interface, when
+credentials for another approach become available its suite is one new
+~10-line binding file behind a skip-if-absent env credential:
 `ANTHROPIC_API_KEY` (`anthropic_api`), `OPENAI_API_KEY` (`openai_api`),
 `CLAUDE_CODE_OAUTH_TOKEN` (`claude_coding_plan`).
 
@@ -407,11 +467,17 @@ file binding the same battery behind a skip-if-absent env credential:
 5. `profiles.ts` + `factory.ts` + class removal + `index.ts` exports ->
    verify: `factory.test.ts` (selection, custom `base_url`, fixture
    substitutability per §4.5); `pnpm run check` green.
-6. E2E harness: `vitest.e2e.config.ts`, `test:e2e` script,
-   `codex-auth.ts`, `scenarios.ts`, `codex-coding-plan.e2e.ts` -> verify:
-   `pnpm run test:e2e` runs the codex suite live on this machine, and
-   skips cleanly when `CODEX_AUTH_PATH=/nonexistent`.
-7. Update the migration `index.md` row for this phase.
+6. Contract kit: extract `tests/contract/llm-client-contract.ts` from the
+   wires' happy-path tests; `tests/contract.test.ts` binds fixture-fetch
+   clients for both wires with `exact` golden values -> verify:
+   `pnpm run check` green; the Phase 02 golden assertions all present in
+   the unit bindings.
+7. E2E harness: `vitest.e2e.config.ts`, `test:e2e` script,
+   `codex-auth.ts`, `codex-coding-plan.e2e.ts` binding the same contract
+   in structural mode -> verify: `pnpm run test:e2e` runs the codex suite
+   live on this machine, and skips cleanly when
+   `CODEX_AUTH_PATH=/nonexistent`.
+8. Update the migration `index.md` row for this phase.
 
 ## 9. Coexistence and Rollback
 
@@ -445,8 +511,11 @@ Phase 02.5 is accepted when:
   `base_url` on the api profiles,
 - codex JWT claim parsing matches §4.4 including the fedramp header and
   `request`-kind failures,
-- every Phase 02 unit test survives as a move (no assertion deletions),
-  and the §4.5 substitutability proofs pass,
+- every Phase 02 assertion survives (happy-path golden values inside the
+  contract kit's unit bindings, the rest as moves), and the §4.5
+  substitutability proofs pass,
+- the contract kit is the single source of the shared scenarios: the live
+  suite contains no assertion logic of its own, only the binding,
 - `pnpm run check` is green with no network I/O; `*.e2e.ts` files are
   excluded from it but still type-checked,
 - `pnpm run test:e2e` on a machine with a logged-in Codex CLI runs the §6.3
@@ -466,5 +535,6 @@ Phase 02.5 is accepted when:
 | Wire options (system prefix, codex dialect) | Pending | Encode tests pin both shapes |
 | Coding-plan access schemes | Pending | Claim parsing + header shape tests green |
 | Profiles + factory + class removal | Pending | Factory + substitutability tests green |
-| Live e2e harness + codex auth loader | Pending | Codex suite live-green locally; clean-skip proof |
+| Contract kit + unit bindings | Pending | `pnpm run check` green; golden assertions present in `exact` bindings |
+| Live e2e harness + codex auth loader | Pending | Codex suite (contract in structural mode) live-green locally; clean-skip proof |
 | Index updated | Pending | Phase 02.5 row present in `index.md` |

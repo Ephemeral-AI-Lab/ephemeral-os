@@ -40,12 +40,12 @@ describe("status mapping", () => {
   it("keeps transport and truncated decode status-free", () => {
     const transport = ProviderError.transport("connection reset");
     expect(transport.kind).toBe("transport");
-    expect(transport.status_code).toBeUndefined();
+    expect(transport.status_code, "transport carries no status").toBeUndefined();
     expect(transport.truncated).toBe(false);
 
     const truncated = ProviderError.truncatedStream("req-9");
     expect(truncated.kind).toBe("decode");
-    expect(truncated.status_code).toBeUndefined();
+    expect(truncated.status_code, "truncated carries no status").toBeUndefined();
     expect(truncated.request_id).toBe("req-9");
     expect(truncated.truncated).toBe(true);
   });
@@ -107,12 +107,14 @@ describe("sdk error mapping", () => {
         new AnthropicAPIConnectionError({ message: "socket hang up" }),
         "stream",
       ).kind,
+      "anthropic connection error",
     ).toBe("transport");
     expect(
       toProviderError(
         new OpenAiAPIConnectionError({ message: "socket hang up" }),
         "open",
       ).kind,
+      "openai connection error",
     ).toBe("transport");
   });
 

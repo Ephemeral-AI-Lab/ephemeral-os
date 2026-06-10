@@ -9,7 +9,7 @@ import {
 
 import { ProviderError } from "../src/errors.js";
 import { encodeAnthropicRequest, AnthropicApiClient } from "../src/providers/anthropic.js";
-import { buildLlmRequest } from "../src/types.js";
+import { buildLlmRequest, type ReasoningEffort } from "../src/types.js";
 import {
   collect,
   collectUntilError,
@@ -140,7 +140,7 @@ describe("anthropic golden decode (real sdk parser via injected fetch)", () => {
     expect(provider.kind).toBe("decode");
     expect(provider.truncated).toBe(false);
     expect(provider.request_id).toBe("req-test");
-    expect(stub.calls).toHaveLength(1);
+    expect(stub.calls, "non-retryable decode is not retried").toHaveLength(1);
   });
 
   it("treats a stream without message_stop as a retryable truncated stream", async () => {
@@ -166,8 +166,10 @@ describe("anthropic golden decode (real sdk parser via injected fetch)", () => {
     expect(provider.kind).toBe("decode");
     expect(provider.truncated).toBe(true);
     expect(provider.request_id).toBe("req-trunc");
-    // Truncated streams are retryable pre-visible: 1 + max_retries attempts.
-    expect(stub.calls).toHaveLength(2);
+    expect(
+      stub.calls,
+      "truncated is retryable pre-visible: 1 + max_retries attempts",
+    ).toHaveLength(2);
   });
 
   it("surfaces an in-stream error event as decode with the provider message", async () => {
@@ -234,8 +236,10 @@ describe("anthropic transport reliability", () => {
       gateClient.streamMessage(buildLlmRequest({ model: "m" })),
     );
     expect((error as ProviderError).kind).toBe("server");
-    // 1 + max_retries fetches; any sdk-internal retry would inflate this.
-    expect(stub.calls).toHaveLength(2);
+    expect(
+      stub.calls,
+      "1 + max_retries fetches; an sdk-internal retry would inflate this",
+    ).toHaveLength(2);
   });
 
   it("rethrows the abort error as-is when the caller cancels mid-stream", async () => {
@@ -336,16 +340,20 @@ describe("anthropic encode projection (§5 column)", () => {
     expect(any.tool_choice).toEqual({ type: "any" });
   });
 
-  it("clamps the effort vocabulary per the §5 table", () => {
-    const effortOf = (effort: "minimal" | "low" | "medium" | "high" | "max") =>
+  const effortClamps: [ReasoningEffort, string][] = [
+    ["minimal", "low"],
+    ["low", "low"],
+    ["medium", "medium"],
+    ["high", "high"],
+    ["max", "max"],
+  ];
+
+  it.each(effortClamps)("clamps effort %s to %s per the §5 table", (effort, clamped) => {
+    expect(
       encodeAnthropicRequest(
         buildLlmRequest({ model: "m", reasoning_effort: effort }),
-      ).output_config?.effort;
-    expect(effortOf("minimal")).toBe("low");
-    expect(effortOf("low")).toBe("low");
-    expect(effortOf("medium")).toBe("medium");
-    expect(effortOf("high")).toBe("high");
-    expect(effortOf("max")).toBe("max");
+      ).output_config?.effort,
+    ).toBe(clamped);
   });
 
   it("omits optional fields and sends explicit credentials on the wire", async () => {

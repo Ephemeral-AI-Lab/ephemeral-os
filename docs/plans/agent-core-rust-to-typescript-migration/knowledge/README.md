@@ -13,3 +13,7 @@ anchors plus EOS migration takeaways.
 | `abort-and-interrupt-handling.md` | AbortController tree, abort-reason semantics, what survives an interrupt (background tasks, subagents, todos), synthetic tool_results |
 | `message-steering.md` | Prioritized command queue, mid-turn vs idle drains, steer-vs-abort asymmetry, subagent inboxes |
 | `event-stream-and-sse.md` | Inbound provider SSE consumption, internal event union, outbound SDKMessage surface, side event queue |
+| `tool-definition-and-registry.md` | `Tool` contract, runtime metadata predicates, `buildTool` fail-closed defaults, registry/pool assembly, `ToolUseContext` |
+| `tool-execution-pipeline.md` | Per-tool pipeline stages, batch partitioning + concurrency cap, `StreamingToolExecutor`, sync vs async tool shapes |
+| `tool-hooks.md` | Hook events/definition shapes, runner mechanics (stdin JSON, exit codes, parallelism), PreToolUse permission precedence, PostToolUse output rewrite, async hooks |
+| `background-task-spawn-and-cancellation.md` | Foreground→background promotion, per-type kill paths, signal/exit-code semantics, interrupt-survival matrix, TaskStop |
