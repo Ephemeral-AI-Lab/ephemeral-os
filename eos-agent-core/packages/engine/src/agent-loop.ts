@@ -111,11 +111,22 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
   }
 }
 
-/** Race the inbox against the steer queue; both waits resolve on abort. */
+/**
+ * Race the inbox against the steer queue; both waits resolve on abort.
+ * The race loser would otherwise stay registered (waker + abort listener)
+ * until an unrelated wake event, so a race-scoped signal unhooks it as
+ * soon as the winner settles.
+ */
 async function waitForWake(ctx: AgentLoopContext): Promise<void> {
-  const waits = [ctx.handle.waitForSteer(ctx.handle.signal)];
-  if (ctx.notifications) waits.push(ctx.notifications.waitForNext(ctx.handle.signal));
-  await Promise.race(waits);
+  const settled = new AbortController();
+  const signal = AbortSignal.any([ctx.handle.signal, settled.signal]);
+  const waits = [ctx.handle.waitForSteer(signal)];
+  if (ctx.notifications) waits.push(ctx.notifications.waitForNext(signal));
+  try {
+    await Promise.race(waits);
+  } finally {
+    settled.abort();
+  }
 }
 
 /**

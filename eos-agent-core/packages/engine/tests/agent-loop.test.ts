@@ -1,9 +1,12 @@
+import { getEventListeners } from "node:events";
+
 import { describe, expect, it } from "vitest";
 
 import { toolUseIdFrom, type ToolCallResult } from "@eos/contracts";
 import { ProviderError } from "@eos/llm-client";
 
 import { BackgroundSupervisor } from "../src/background/supervisor.js";
+import { RunHandle } from "../src/run-handle.js";
 import {
   NotificationInbox,
   systemNotificationMessage,
@@ -619,6 +622,47 @@ describe("agent loop", () => {
       SUBMISSION,
     );
     expectProviderValid(outcome.llm);
+  });
+
+  it("leaves no abort listener on the run signal across repeated park/wake cycles", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSupervisor(inbox);
+    const session = sessionHandle();
+    supervisor.register(
+      { type: "command", id: "c1" },
+      toolUseIdFrom("tu_bg"),
+      session.handle,
+    );
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("waiting")))]),
+        scriptedTurn([complete(assistantMessage(textBlock("still waiting")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools, notifications: inbox, background: supervisor },
+    );
+    if (!(handle instanceof RunHandle)) throw new Error("expected a RunHandle");
+    await tick();
+    await tick();
+    expect(client.requests, "first park").toHaveLength(1);
+    expect(
+      getEventListeners(handle.signal, "abort"),
+      "parked waits register on a race-scoped signal, not the run signal",
+    ).toHaveLength(0);
+    handle.steer(userText("first wake"));
+    await tick();
+    await tick();
+    expect(client.requests, "second park after the steer turn").toHaveLength(2);
+    handle.steer(userText("second wake"));
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns).toBe(3);
+    expect(
+      getEventListeners(handle.signal, "abort"),
+      "no race loser survives the parks",
+    ).toHaveLength(0);
   });
 
   it("tears down running sessions on finish without awaiting teardown (§15.22)", async () => {

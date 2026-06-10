@@ -20,7 +20,9 @@ export class NotificationInbox {
 
   /**
    * Queue a rendered message. A pending entry with the same `key` is
-   * replaced in place; `tag` is handed back opaquely on drain.
+   * replaced in place (original queue position, latest message); the
+   * replaced entry's tag is dropped without firing `onDrained`, so tags
+   * must be idempotent per key. `tag` is handed back opaquely on drain.
    */
   publish(message: Message, opts?: { key?: string; tag?: unknown }): void {
     const entry: InboxEntry = { message, key: opts?.key, tag: opts?.tag };
@@ -49,7 +51,11 @@ export class NotificationInbox {
     return drained.map((entry) => entry.message);
   }
 
-  /** Delivery bookkeeping for publishers (the supervisor self-subscribes). */
+  /**
+   * Delivery bookkeeping for publishers (the supervisor self-subscribes).
+   * Subscriptions live as long as the inbox, and callbacks run inside
+   * `drain()`'s synchronous block, so they must not throw.
+   */
   onDrained(callback: (tags: unknown[]) => void): void {
     this.#drainedCallbacks.push(callback);
   }
@@ -81,14 +87,19 @@ export class NotificationInbox {
  * `<system_notification>{json}</system_notification>`. Rendering happens at
  * publish; the inbox stores plain messages, so new publishers never require
  * inbox or engine changes.
+ *
+ * Every `<` in the serialized payload is escaped to its unicode JSON
+ * escape sequence (still valid JSON), so untrusted text (command output,
+ * subagent summaries) can never spoof the tag boundary.
  */
 export function systemNotificationMessage(payload: JsonObject): Message {
+  const json = JSON.stringify(payload).replaceAll("<", "\\u003c");
   return {
     role: "user",
     content: [
       {
         type: "text",
-        text: `<system_notification>${JSON.stringify(payload)}</system_notification>`,
+        text: `<system_notification>${json}</system_notification>`,
       },
     ],
   };
