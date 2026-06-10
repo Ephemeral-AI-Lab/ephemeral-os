@@ -37,21 +37,12 @@ function decodeJwtPayload(
 }
 
 /**
- * Load the local Codex CLI credential cache: `$CODEX_AUTH_PATH` ??
- * `$CODEX_HOME/auth.json` ?? `~/.codex/auth.json`. Missing or stale
- * credentials are a skip, never a failure. The raw token goes straight into
- * `SecretString`; no token material is logged and nothing is written.
- * Refreshing tokens is the Codex CLI's job.
+ * Load one Codex CLI credential cache. Missing or stale credentials are a
+ * skip, never a failure. The raw token goes straight into `SecretString`;
+ * no token material is logged and nothing is written. Refreshing tokens is
+ * the Codex CLI's job.
  */
-export function loadCodexAuth(
-  env: NodeJS.ProcessEnv = process.env,
-): CodexAuth {
-  const path =
-    env.CODEX_AUTH_PATH ??
-    (env.CODEX_HOME !== undefined
-      ? join(env.CODEX_HOME, "auth.json")
-      : join(homedir(), ".codex", "auth.json"));
-
+export function loadCodexAuthFromPath(path: string): CodexAuth {
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
@@ -83,4 +74,17 @@ export function loadCodexAuth(
     };
   }
   return { available: true, accessToken: new SecretString(accessToken) };
+}
+
+/** Resolve the default local Codex CLI credential cache path. */
+export function loadCodexAuth(
+  env: NodeJS.ProcessEnv = process.env,
+): CodexAuth {
+  const path =
+    env.CODEX_AUTH_PATH ??
+    (env.CODEX_HOME !== undefined
+      ? join(env.CODEX_HOME, "auth.json")
+      : join(homedir(), ".codex", "auth.json"));
+
+  return loadCodexAuthFromPath(path);
 }

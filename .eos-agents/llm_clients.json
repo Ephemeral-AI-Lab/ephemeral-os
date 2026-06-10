@@ -4,6 +4,7 @@
       "id": "codex_coding_plan",
       "provider": "codex_coding_plan",
       "model_id": "gpt-5.5",
+      "reasoning_effort": "medium",
       "base_url": "https://chatgpt.com/backend-api/codex",
       "auth": {
         "kind": "codex_cli_auth_file",

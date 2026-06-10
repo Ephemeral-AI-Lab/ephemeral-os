@@ -1,43 +1,44 @@
-import { describe } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { toolUseIdFrom, type Message, type ToolSpec } from "@eos/contracts";
 
 import {
   buildLlmRequest,
-  createLlmClient,
-  SecretString,
   type LlmClient,
+  type LlmRequestInit,
 } from "../src/index.js";
 import { describeLlmClientContract } from "../tests/contract/llm-client-contract.js";
-import { loadCodexAuth } from "./support/codex-auth.js";
+import { loadConfiguredCodexClient } from "./support/llm-clients-config.js";
 
-const auth = loadCodexAuth();
-/** Defaults to the local Codex CLI's configured model at implementation time. */
-const MODEL = process.env.CODEX_E2E_MODEL ?? "gpt-5.5";
+const codex = loadConfiguredCodexClient();
 /** The codex backend requires `instructions`; every scenario sends one. */
 const SYSTEM_PROMPT = "You are a terse test assistant.";
 
-if (!auth.available) {
-  console.warn(`codex e2e skipped: ${auth.reason}`);
+if (!codex.available) {
+  console.warn(`codex e2e skipped: ${codex.reason}`);
 }
 
-function token(): SecretString {
-  if (!auth.available) {
+function config() {
+  if (!codex.available) {
     throw new Error("unreachable: the suite is skipped without credentials");
   }
-  return auth.accessToken;
+  return codex;
 }
 
-/** The real token with its signature destroyed: claims parse, the edge 401s. */
-function corruptedToken(): SecretString {
-  const [header, payload] = token().expose().split(".");
-  return new SecretString(`${header}.${payload}.invalidsignature`);
+function liveClient(): LlmClient {
+  return config().createClient();
 }
 
-function liveClient(accessToken: SecretString): LlmClient {
-  return createLlmClient({
-    provider: "codex_coding_plan",
-    access_token: accessToken,
+function corruptedClient(): LlmClient {
+  return config().createCorruptedClient();
+}
+
+function request(init: Omit<LlmRequestInit, "model">) {
+  const clientConfig = config();
+  return buildLlmRequest({
+    model: clientConfig.model,
+    reasoning_effort: clientConfig.reasoningEffort,
+    ...init,
   });
 }
 
@@ -57,22 +58,28 @@ const ECHO_TOOL: ToolSpec = {
 
 // Budget guard: at most ~6 small one-word-answer requests per run; every
 // assertion is structural (event shapes, kinds, ids), never on model prose.
-describe.skipIf(!auth.available)("codex coding plan (live)", () => {
+describe.skipIf(!codex.available)("codex coding plan (live)", () => {
+  it("loads codex_coding_plan from llm_clients.json with medium effort", () => {
+    const clientConfig = config();
+    expect(clientConfig.id).toBe("codex_coding_plan");
+    expect(clientConfig.model).toBeTruthy();
+    expect(clientConfig.reasoningEffort).toBe("medium");
+    expect(liveClient()).toBeTruthy();
+  });
+
   describeLlmClientContract({
     name: "codex_coding_plan live",
     scenarios: {
       text: () => ({
-        client: liveClient(token()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: liveClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
           messages: [user("Reply with exactly one word: pong")],
         }),
       }),
       toolCall: () => ({
-        client: liveClient(token()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: liveClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
           tools: [ECHO_TOOL],
           tool_choice: "any",
@@ -82,9 +89,8 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         }),
       }),
       toolRoundTrip: () => ({
-        client: liveClient(token()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: liveClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
           tools: [ECHO_TOOL],
           messages: [
@@ -115,26 +121,22 @@ describe.skipIf(!auth.available)("codex coding plan (live)", () => {
         }),
       }),
       reasoning: () => ({
-        client: liveClient(token()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: liveClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
-          reasoning_effort: "low",
           messages: [user("What is 17 + 25? Reply with just the number.")],
         }),
       }),
       abort: () => ({
-        client: liveClient(token()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: liveClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
           messages: [user("Count from 1 to 200, one number per line.")],
         }),
       }),
       authFailure: () => ({
-        client: liveClient(corruptedToken()),
-        request: buildLlmRequest({
-          model: MODEL,
+        client: corruptedClient(),
+        request: request({
           system_prompt: SYSTEM_PROMPT,
           messages: [user("Reply with exactly one word: pong")],
         }),

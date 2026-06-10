@@ -10,6 +10,7 @@ allowed_tools:
   - edit_file
   - exec_command
   - write_stdin
+  - ask_advisor
 ---
 
 You are the worker for one assigned work item.

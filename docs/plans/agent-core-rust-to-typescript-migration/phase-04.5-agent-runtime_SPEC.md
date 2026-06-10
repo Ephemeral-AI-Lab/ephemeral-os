@@ -85,10 +85,10 @@ live; nothing under `agent-core/` changes.
    LLM client id, system prompt, max turns, allowed tools, and derived
    terminal tool. The runtime resolves `llm_client_id` through
    `.eos-agents/llm_clients.json` to get the configured client, auth
-   source, and model id. Tool selection is assembled by the runtime from
-   that resolved profile and available tool definitions before
+   source, model id, and reasoning effort. Tool selection is assembled by
+   the runtime from that resolved profile and available tool definitions before
    `startAgentRun`; the engine receives only a resolved `systemPrompt`,
-   LLM client, model id, turn limit, and `ToolExecutor`.
+   LLM client, model id, reasoning effort, turn limit, and `ToolExecutor`.
 9. **Initial messages are ordered user messages.** `initialMessages` is a
    non-empty list because some call sites need separable user messages
    (for example transcript-as-evidence, then an instruction about that
@@ -215,6 +215,7 @@ allowed_tools:
   - edit_file
   - exec_command
   - write_stdin
+  - ask_advisor
 ---
 
 You are the worker for one assigned work item.
@@ -245,6 +246,7 @@ interface LlmClientBinding {
   id: string;
   provider: ProviderConnection["provider"];
   model_id: string;
+  reasoning_effort: ReasoningEffort;
   client: LlmClient;
 }
 
@@ -263,6 +265,7 @@ Config file format:
       "id": "codex_coding_plan",
       "provider": "codex_coding_plan",
       "model_id": "gpt-5.5",
+      "reasoning_effort": "medium",
       "base_url": "https://chatgpt.com/backend-api/codex",
       "auth": {
         "kind": "codex_cli_auth_file",
@@ -336,6 +339,7 @@ function startRun(params: StartRunParams, context: StartRunContext = {}): Starte
     notifications: inbox,
     background: supervisor,
     model: llm.model_id,
+    reasoningEffort: llm.reasoning_effort,
     systemPrompt: profile.systemPrompt,
     maxTurns: profile.max_turns,
     signal: params.signal,
@@ -383,7 +387,8 @@ function startRun(params: StartRunParams, context: StartRunContext = {}): Starte
    tools = buildToolExecutor({ runState, definitions, inbox, hookEngine })
 9. handle = startAgentRun({ llmClient: llm.client, tools, notifications: inbox,
      background: supervisor, systemPrompt: profile.systemPrompt,
-     model: llm.model_id, maxTurns: profile.max_turns,
+     model: llm.model_id, reasoningEffort: llm.reasoning_effort,
+     maxTurns: profile.max_turns,
      initialMessages, ... })
 10. broadcaster = createEventBroadcaster(handle.events) // sole consumer
    broadcaster.subscribe(transcriptWriter)
