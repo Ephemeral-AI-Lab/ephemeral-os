@@ -1,34 +1,91 @@
-use std::path::PathBuf;
+//! Settled-command vocabulary: the typed outcome a finished command session
+//! produces before the daemon wire layer shapes the envelope.
+
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::contract::mode::WorkspaceMode;
-use crate::contract::response::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
+/// Workspace mode that produced a result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkspaceMode {
+    /// Shared publish-capable workspace path.
+    #[default]
+    Ephemeral,
+    /// Caller-private no-publish workspace path.
+    Isolated,
+}
 
-/// Input needed for a workspace-mode module to prepare command execution.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PrepareCommandRequest {
-    pub caller_id: String,
-    pub command_session_id: String,
-    pub invocation_id: String,
-    pub cmd: String,
+impl WorkspaceMode {
+    /// Stable daemon/API string for this mode.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ephemeral => "ephemeral",
+            Self::Isolated => "isolated",
+        }
+    }
+}
+
+/// Timing/telemetry map keyed by stable wire strings.
+pub type WorkspaceTimings = BTreeMap<String, Value>;
+
+/// `path -> kind` map for captured changes (wire-stable kind strings).
+pub type ChangedPathKinds = BTreeMap<String, String>;
+
+/// A per-path publish conflict surfaced on the response envelope.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkspaceConflict {
+    pub reason: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub timeout_seconds: Option<f64>,
+    pub conflict_file: Option<String>,
+    pub message: String,
 }
 
-/// Prepared workspace context returned to daemon-owned command-session control.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PreparedCommandWorkspace {
-    pub run_request: Value,
-    pub request_path: PathBuf,
-    pub output_path: PathBuf,
-    pub final_path: PathBuf,
-    pub session_dir: PathBuf,
-    pub transcript_path: PathBuf,
+impl WorkspaceConflict {
+    #[must_use]
+    pub fn path(reason: &str, conflict_file: &str, message: &str) -> Self {
+        Self {
+            reason: reason.to_owned(),
+            conflict_file: Some(conflict_file.to_owned()),
+            message: message.to_owned(),
+        }
+    }
 }
 
-/// Input needed for mode-specific command workspace finalization.
+/// Command-tier API error carrying a stable wire kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceApiError {
+    pub kind: String,
+    pub message: String,
+}
+
+impl WorkspaceApiError {
+    #[must_use]
+    pub fn new(kind: &str, message: String) -> Self {
+        Self {
+            kind: kind.to_owned(),
+            message,
+        }
+    }
+}
+
+impl std::fmt::Display for WorkspaceApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for WorkspaceApiError {}
+
+impl From<WorkspaceApiError> for eos_command_session::CommandSessionError {
+    fn from(error: WorkspaceApiError) -> Self {
+        Self::Workspace(error.to_string())
+    }
+}
+
+/// Input needed for mode-specific command settle.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FinalizeCommandRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]

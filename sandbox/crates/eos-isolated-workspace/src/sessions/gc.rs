@@ -1,6 +1,5 @@
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 
 use crate::caps::HANDLE_PREFIX;
 use crate::error::IsolatedError;
@@ -79,8 +78,7 @@ impl IsolatedSessions {
         }
 
         kill_cgroup_pids(&cgroup_path);
-        let remove_result = std::fs::remove_dir(&cgroup_path);
-        let _ = remove_result;
+        let _ = std::fs::remove_dir(&cgroup_path);
     }
 
     fn reap_persisted_scratch(&self, row: &Value) {
@@ -91,8 +89,7 @@ impl IsolatedSessions {
             return;
         }
 
-        let remove_result = std::fs::remove_dir_all(&scratch_dir);
-        let _ = remove_result;
+        let _ = std::fs::remove_dir_all(&scratch_dir);
     }
 
     pub(super) fn reap_named_orphans(&mut self) {
@@ -110,9 +107,7 @@ impl IsolatedSessions {
             if !name.starts_with(HANDLE_PREFIX) {
                 continue;
             }
-            let timer = Instant::now();
             self.network.teardown_host_veth(&name);
-            self.emit_gc_orphan("veth", name, timer, &[]);
         }
     }
 
@@ -126,14 +121,8 @@ impl IsolatedSessions {
             if !name.starts_with(HANDLE_PREFIX) || !path.is_dir() {
                 continue;
             }
-            let timer = Instant::now();
             kill_cgroup_pids(&path);
-            let remove_result = std::fs::remove_dir(&path);
-            let mut extra = Vec::new();
-            if let Err(error) = remove_result {
-                extra.push(("error", json!(error.to_string())));
-            }
-            self.emit_gc_orphan("cgroup", name, timer, &extra);
+            let _ = std::fs::remove_dir(&path);
         }
     }
 
@@ -147,13 +136,7 @@ impl IsolatedSessions {
             if name == "manager.json" || !path.is_dir() {
                 continue;
             }
-            let timer = Instant::now();
-            let remove_result = std::fs::remove_dir_all(&path);
-            let mut extra = Vec::new();
-            if let Err(error) = remove_result {
-                extra.push(("error", json!(error.to_string())));
-            }
-            self.emit_gc_orphan("scratch", name, timer, &extra);
+            let _ = std::fs::remove_dir_all(&path);
         }
     }
 
@@ -178,13 +161,6 @@ fn persisted_ipv4(row: &Value, key: &str) -> Option<Ipv4Addr> {
 
 fn persisted_path(row: &Value, key: &str) -> Option<PathBuf> {
     persisted_string(row, key).map(PathBuf::from)
-}
-
-fn path_identifier(path: &Path) -> String {
-    path.file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.is_empty())
-        .map_or_else(|| path.to_string_lossy().into_owned(), ToOwned::to_owned)
 }
 
 fn kill_cgroup_pids(cgroup_path: &Path) {

@@ -23,7 +23,7 @@ pub(crate) struct TreeResourceStats {
 
 impl TreeResourceStats {
     pub(crate) fn from_ephemeral(
-        stats: &eos_workspace_runtime::ephemeral::TreeResourceStats,
+        stats: &eos_ephemeral_workspace::TreeResourceStats,
     ) -> Self {
         let file_entries = stats.files.saturating_add(stats.symlinks);
         let entry_count = file_entries.saturating_add(stats.dirs);

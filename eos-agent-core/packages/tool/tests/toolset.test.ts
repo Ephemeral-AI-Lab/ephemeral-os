@@ -90,5 +90,37 @@ describe("toolset assembly", () => {
       definitions.every((definition) => definition.isTerminal),
       "every inventory entry is terminal",
     ).toBe(true);
+    expect(
+      Object.fromEntries(
+        definitions.map((definition) => [
+          definition.name,
+          {
+            isAdvisoryRequired: definition.isAdvisoryRequired,
+            hasAdvisorPrompt: definition.advisorPrompt !== undefined,
+          },
+        ]),
+      ),
+    ).toEqual({
+      submit_main_outcome: {
+        isAdvisoryRequired: true,
+        hasAdvisorPrompt: true,
+      },
+      submit_planner_outcome: {
+        isAdvisoryRequired: true,
+        hasAdvisorPrompt: true,
+      },
+      submit_worker_outcome: {
+        isAdvisoryRequired: true,
+        hasAdvisorPrompt: true,
+      },
+      submit_advisor_outcome: {
+        isAdvisoryRequired: false,
+        hasAdvisorPrompt: false,
+      },
+      submit_subagent_outcome: {
+        isAdvisoryRequired: false,
+        hasAdvisorPrompt: false,
+      },
+    });
   });
 });

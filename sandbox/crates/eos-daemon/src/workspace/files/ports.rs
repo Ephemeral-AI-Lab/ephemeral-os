@@ -179,7 +179,6 @@ fn changeset_outcome(
 #[derive(Debug, Clone)]
 pub(crate) struct IsolatedFilePorts {
     handle: crate::workspace::isolated::IsolatedCommandHandle,
-    started_at: Instant,
 }
 
 #[cfg(target_os = "linux")]
@@ -187,14 +186,11 @@ impl IsolatedFilePorts {
     pub(crate) fn new(
         handle: crate::workspace::isolated::IsolatedCommandHandle,
     ) -> Self {
-        Self {
-            handle,
-            started_at: Instant::now(),
-        }
+        Self { handle }
     }
 
     pub(crate) fn record_read_file(&self) {
-        record_isolated_tool_call(&self.handle, "read_file", "ok", &[], self.started_at);
+        crate::workspace::isolated::touch_isolated(&self.handle.caller_id);
     }
 }
 
@@ -242,16 +238,7 @@ impl WorkspaceMutationSink for IsolatedFilePorts {
         let layer_path = parse_layer_path(&request.path.path)?;
         write_isolated_upper(&self.handle, &layer_path, &request.content)?;
         let changed_paths = vec![layer_path.as_str().to_owned()];
-        record_isolated_tool_call(
-            &self.handle,
-            match request.kind {
-                WorkspaceMutationKind::Write => "write_file",
-                WorkspaceMutationKind::Edit => "edit_file",
-            },
-            "committed",
-            &changed_paths,
-            self.started_at,
-        );
+        crate::workspace::isolated::touch_isolated(&self.handle.caller_id);
         Ok(WorkspaceMutationOutcome {
             mode: WorkspaceMode::Isolated,
             success: true,
@@ -358,32 +345,4 @@ fn isolated_timings(changed_path_count: usize) -> WorkspaceTimings {
         "resource.command_exec.changed_path_count".to_owned(),
         json!(usize_to_f64_saturating(changed_path_count)),
     )])
-}
-
-#[cfg(target_os = "linux")]
-fn record_isolated_tool_call(
-    handle: &crate::workspace::isolated::IsolatedCommandHandle,
-    tool_name: &str,
-    status: &str,
-    changed_paths: &[String],
-    total_start: Instant,
-) {
-    let duration_s = total_start.elapsed().as_secs_f64();
-    crate::workspace::isolated::record_tool_call(
-        &handle.caller_id,
-        json!({
-            "tool_name": tool_name,
-            "workspace_handle_id": handle.workspace_handle_id,
-            "argv0": tool_name,
-            "exit_code": 0,
-            "status": status,
-            "changed_paths": changed_paths,
-            "published": false,
-            "duration_s": duration_s,
-            "total_ms": duration_s * 1000.0,
-            "phases_ms": {
-                "exec": duration_s * 1000.0,
-            },
-        }),
-    );
 }

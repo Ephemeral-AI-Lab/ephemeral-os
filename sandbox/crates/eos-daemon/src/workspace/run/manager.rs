@@ -1,4 +1,4 @@
-//! The `WorkspaceRunManager` singleton, its daemon configuration cell, and the
+//! The `CommandOps` singleton, its daemon configuration cell, and the
 //! caller-keyed lifecycle backstops (cleanup, sweep, startup recovery) that
 //! transport timers and the cancel coordinator drive.
 
@@ -11,21 +11,16 @@ use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 #[cfg(target_os = "linux")]
 use eos_command_session::{CommandResponse, CommandSessionCompletion};
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::run::WorkspaceRunManager;
+use eos_command_ops::CommandOps;
 #[cfg(target_os = "linux")]
 use serde_json::Value;
 
 use crate::config::CommandSessionConfig;
 
 #[cfg(target_os = "linux")]
-pub(super) fn workspace_run_manager() -> &'static WorkspaceRunManager {
-    static MANAGER: OnceLock<WorkspaceRunManager> = OnceLock::new();
-    MANAGER.get_or_init(|| {
-        WorkspaceRunManager::new(
-            runtime_command_session_config(),
-            std::sync::Arc::new(super::host_ports::DaemonRunHostPorts),
-        )
-    })
+pub(super) fn command_ops() -> &'static CommandOps {
+    static OPS: OnceLock<CommandOps> = OnceLock::new();
+    OPS.get_or_init(|| CommandOps::new(runtime_command_session_config()))
 }
 
 pub(crate) fn configure_command_sessions(config: &CommandSessionConfig) {
@@ -78,7 +73,7 @@ pub(crate) fn active_command_sessions_for_caller(caller_id: &str) -> usize {
     if caller_id.is_empty() {
         return 0;
     }
-    workspace_run_manager().count_by_caller(Some(caller_id))
+    command_ops().count_by_caller(Some(caller_id))
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -90,7 +85,7 @@ pub(crate) const fn active_command_sessions_for_caller(_caller_id: &str) -> usiz
 /// Best-effort lifecycle backstop for callers that bypass the model-facing
 /// `RequireNoBackgroundSessions` hook.
 pub(crate) fn cleanup_command_sessions_for_caller(caller_id: &str, grace_s: Option<f64>) -> usize {
-    workspace_run_manager().cleanup_caller(caller_id, grace_s)
+    command_ops().cleanup_caller(caller_id, grace_s)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -105,7 +100,7 @@ pub(crate) const fn cleanup_command_sessions_for_caller(
 /// whole-sandbox cancel sweep). Returns the number cancelled.
 #[cfg(target_os = "linux")]
 pub(crate) fn cancel_all_command_sessions(grace_s: Option<f64>) -> usize {
-    workspace_run_manager().cancel_all(grace_s)
+    command_ops().cancel_all(grace_s)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -122,7 +117,7 @@ pub(crate) const fn cancel_all_command_sessions(_grace_s: Option<f64>) -> usize 
 /// wall-clock cap so it can never run forever.
 #[cfg(target_os = "linux")]
 pub(crate) fn command_session_reaper_sweep() {
-    workspace_run_manager().sweep_expired(Instant::now());
+    command_ops().sweep_expired(Instant::now());
 }
 
 /// Startup recovery (sense-2 §2.4): a previous daemon may have left ephemeral
@@ -167,7 +162,7 @@ pub(crate) fn recover_orphaned_command_sessions() {
                         workspace_mode: None,
                         metadata: Value::Null,
                     };
-                    workspace_run_manager().push_completed(CommandSessionCompletion {
+                    command_ops().push_completed(CommandSessionCompletion {
                         command_session_id: id.to_owned(),
                         caller_id: caller_id.to_owned(),
                         command: command.to_owned(),

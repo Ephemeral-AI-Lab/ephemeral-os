@@ -11,19 +11,15 @@ use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
-#[cfg(any(target_os = "linux", test))]
-use eos_workspace_runtime::contract::u64_to_f64_saturating;
 #[cfg(target_os = "linux")]
-use eos_workspace_runtime::run::StartTarget;
-#[cfg(all(target_os = "linux", test))]
-use eos_workspace_runtime::run::WorkspaceRunManager;
+use eos_command_ops::ExecTarget;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
 #[cfg(target_os = "linux")]
-use super::manager::{command_session_config, command_session_scratch_root, workspace_run_manager};
+use super::manager::{command_session_config, command_session_scratch_root, command_ops};
 #[cfg(not(target_os = "linux"))]
 use super::wire::command_result;
 #[cfg(any(target_os = "linux", test))]
@@ -49,15 +45,15 @@ pub(crate) fn op_exec_command(
         let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
         let yield_time_ms =
             optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
-        if let Some(handle) = crate::workspace::isolated::command_handle_for_args(args) {
+        if let Some(binding) = crate::workspace::isolated::command_handle_for_args(args) {
             return start_manager_command_session(
                 args,
                 &cmd,
                 timeout_seconds,
                 yield_time_ms,
-                handle.caller_id.clone(),
-                StartTarget::Isolated {
-                    handle: Box::new(handle),
+                binding.caller_id.clone(),
+                ExecTarget::Isolated {
+                    binding: Box::new(binding),
                 },
             );
         }
@@ -69,7 +65,7 @@ pub(crate) fn op_exec_command(
             timeout_seconds,
             yield_time_ms,
             caller_id_arg(args).to_owned(),
-            StartTarget::Ephemeral {
+            ExecTarget::Ephemeral {
                 root,
                 workspace_root: PathBuf::from(binding.workspace_root),
                 scratch_root: command_session_scratch_root(),
@@ -96,6 +92,11 @@ pub(crate) fn op_exec_command(
             None,
         ))
     }
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn u64_to_f64_saturating(value: u64) -> f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
 
 #[cfg(any(target_os = "linux", test))]
@@ -185,7 +186,7 @@ pub(crate) fn op_command_collect_completed(
 ) -> Result<Value, DaemonError> {
     #[cfg(target_os = "linux")]
     {
-        let response = workspace_run_manager().collect_completed(&collect_completed_request(args));
+        let response = command_ops().collect_completed(&collect_completed_request(args));
         let completions = response
             .completions
             .into_iter()
@@ -217,7 +218,7 @@ pub(crate) fn op_command_session_count(
     #[cfg(target_os = "linux")]
     {
         let count =
-            workspace_run_manager().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
+            command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
         Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
     }
     #[cfg(not(target_os = "linux"))]
@@ -233,7 +234,7 @@ fn start_manager_command_session(
     timeout_seconds: Option<f64>,
     yield_time_ms: u64,
     caller_id: String,
-    target: StartTarget,
+    target: ExecTarget,
 ) -> Result<Value, DaemonError> {
     let request = StartCommandSession {
         invocation_id: args
@@ -246,8 +247,8 @@ fn start_manager_command_session(
         timeout_seconds,
         yield_time_ms,
     };
-    let response = workspace_run_manager()
-        .start(request, target)
+    let response = command_ops()
+        .exec_command(request, target)
         .map_err(command_session_error)?;
     let wire = command_response_to_wire(response);
     if wire
@@ -269,7 +270,7 @@ fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
         yield_time_ms: optional_u64(args, "yield_time_ms")
             .unwrap_or(command_session_config().default_yield_time_ms),
     };
-    command_session_response_to_wire(workspace_run_manager().write_stdin(request))
+    command_session_response_to_wire(command_ops().write_stdin(request))
 }
 
 #[cfg(target_os = "linux")]
@@ -281,7 +282,7 @@ fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
             .try_into()
             .map_err(|_| DaemonError::InvalidEnvelope("last_n_lines is too large".to_owned()))?,
     };
-    command_session_response_to_wire(workspace_run_manager().read_progress(request))
+    command_session_response_to_wire(command_ops().read_command_progress(request))
 }
 
 #[cfg(target_os = "linux")]
@@ -289,7 +290,7 @@ fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,
     };
-    command_session_response_to_wire(workspace_run_manager().cancel(request))
+    command_session_response_to_wire(command_ops().cancel(request))
 }
 
 #[cfg(target_os = "linux")]

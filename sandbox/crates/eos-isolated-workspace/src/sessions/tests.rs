@@ -1,20 +1,14 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
-
-use serde_json::Value;
 
 use super::capacity::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
     parse_memavailable_kib, required_host_capacity_bytes,
 };
 use super::resources::next_handle_id;
-use super::{
-    IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
-};
-use crate::contract::{CallerId, SnapshotLease};
-use crate::audit::AuditSink;
+use super::{IsolatedSessions, IsolatedSnapshot};
 use crate::caps::ResourceCaps;
+use crate::error::IsolatedError;
 
 #[test]
 fn parses_memavailable_from_proc_meminfo() {
@@ -63,136 +57,80 @@ fn next_handle_id_puts_counter_in_veth_name_prefix() {
     assert_ne!(&first[..6], &second[..6]);
 }
 
-#[test]
-fn isolated_exit_discards_upperdir_and_exposes_no_publish_path(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let scratch_root = unique_temp_dir("isolated-no-publish");
-    let caps = ResourceCaps {
+fn snapshot() -> IsolatedSnapshot {
+    IsolatedSnapshot {
+        lease_id: "lease-1".to_owned(),
+        manifest_version: 7,
+        manifest_root_hash: "root-hash".to_owned(),
+        layer_paths: vec![PathBuf::from("/lower")],
+    }
+}
+
+fn enabled_caps() -> ResourceCaps {
+    ResourceCaps {
         enabled: true,
         total_cap: 2,
         eos_workspace_root: "/workspace".to_owned(),
         ..ResourceCaps::default()
-    };
-    let layer_stack = RecordingLayerStack::default();
-    let runtime = NoopRuntime;
-    let audit = RecordingAudit::default();
-    let mut session =
-        IsolatedSession::with_scratch_root(caps, layer_stack, runtime, audit, scratch_root.clone());
-    let agent = CallerId("caller-1".to_owned());
+    }
+}
 
-    let handle = session.enter(&agent)?;
+#[test]
+fn isolated_exit_discards_upperdir_and_returns_lease_for_release(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-no-publish");
+    let mut sessions = IsolatedSessions::stubbed(enabled_caps(), scratch_root.clone());
+    let caller = "caller-1";
+
+    let handle = sessions.enter(caller, snapshot())?;
     let upperdir = handle.upperdir.clone();
     std::fs::write(upperdir.join("private.txt"), b"private bytes")?;
 
-    let exit = session.exit(&agent, Some(0.0))?;
+    let exit = sessions.exit(caller, Some(0.0))?;
 
-    assert!(!upperdir.exists());
+    assert!(!upperdir.exists(), "upperdir is discarded on exit");
     assert_eq!(
-        session.layer_stack.released.borrow().as_slice(),
-        ["lease-1".to_owned()]
+        exit.lease_id, "lease-1",
+        "exit hands the lease back for the caller to release"
     );
-    assert!(session.by_caller.is_empty());
-    assert!(session.handles.is_empty());
-    assert_eq!(exit["evicted_upperdir_bytes"], serde_json::json!(13));
-    let events = session.audit.events.borrow();
-    assert!(events
-        .iter()
-        .any(|(kind, _)| kind == "sandbox_isolated_workspace_enter"));
-    assert!(events.iter().any(|(kind, payload)| {
-        kind == "sandbox_isolated_workspace_exit"
-            && payload["upperdir_bytes_discarded"] == serde_json::json!(13)
-            && payload["scratch_removed"] == serde_json::json!(true)
-    }));
+    assert_eq!(exit.evicted_upperdir_bytes, 13);
+    assert!(sessions.list_open_callers().is_empty());
+    assert!(sessions.get_handle(caller).is_none());
 
     let _ = std::fs::remove_dir_all(scratch_root);
     Ok(())
 }
 
-#[derive(Default)]
-struct RecordingLayerStack {
-    released: RefCell<Vec<String>>,
-}
+#[test]
+fn ttl_sweep_skips_callers_with_active_command_sessions(
+) -> Result<(), Box<dyn std::error::Error>> {
+    let scratch_root = unique_temp_dir("isolated-ttl");
+    let caps = ResourceCaps {
+        ttl_s: 0.000_001,
+        ..enabled_caps()
+    };
+    let mut sessions = IsolatedSessions::stubbed(caps, scratch_root.clone());
+    sessions.enter("busy", snapshot())?;
+    sessions.enter(
+        "idle",
+        IsolatedSnapshot {
+            lease_id: "lease-2".to_owned(),
+            ..snapshot()
+        },
+    )?;
+    std::thread::sleep(std::time::Duration::from_millis(5));
 
-impl LayerStackSnapshotPort for RecordingLayerStack {
-    fn acquire_snapshot(&self, _request_id: &str) -> Result<SnapshotLease, IsolatedError> {
-        Ok(SnapshotLease {
-            lease_id: "lease-1".to_owned(),
-            manifest_version: 7,
-            manifest_root_hash: "root-hash".to_owned(),
-            layer_paths: vec![PathBuf::from("/lower")],
-        })
-    }
+    let mut protected = HashSet::new();
+    protected.insert("busy".to_owned());
+    let evicted = sessions.ttl_sweep(&protected);
 
-    fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError> {
-        self.released.borrow_mut().push(lease_id.to_owned());
-        Ok(true)
-    }
+    assert_eq!(evicted.len(), 1, "only the idle caller is evicted");
+    assert_eq!(evicted[0].caller_id, "idle");
+    assert_eq!(evicted[0].lease_id, "lease-2");
+    assert!(sessions.get_handle("busy").is_some());
 
-    fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
-        Ok(Some(0))
-    }
-}
-
-struct NoopRuntime;
-
-impl NamespaceRuntimePort for NoopRuntime {
-    fn spawn_ns_holder(
-        &self,
-        _handle: &mut WorkspaceHandle,
-        _setup_timeout_s: f64,
-    ) -> Result<i32, IsolatedError> {
-        Ok(0)
-    }
-
-    fn open_ns_fds(&self, _holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError> {
-        Ok(HashMap::new())
-    }
-
-    fn mount_overlay(
-        &self,
-        _handle: &WorkspaceHandle,
-        _layer_paths: &[PathBuf],
-    ) -> Result<(), IsolatedError> {
-        Ok(())
-    }
-
-    fn configure_dns(
-        &self,
-        _handle: &WorkspaceHandle,
-        _fallback_dns: &str,
-    ) -> Result<bool, IsolatedError> {
-        Ok(false)
-    }
-
-    fn signal_net_ready(
-        &self,
-        _handle: &WorkspaceHandle,
-        _setup_timeout_s: f64,
-    ) -> Result<(), IsolatedError> {
-        Ok(())
-    }
-
-    fn create_cgroup(&self, _handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
-        Ok(PathBuf::new())
-    }
-
-    fn kill_holder(&self, _holder_pid: i32, _grace_s: f64) -> Result<(), IsolatedError> {
-        Ok(())
-    }
-}
-
-#[derive(Default)]
-struct RecordingAudit {
-    events: RefCell<Vec<(String, Value)>>,
-}
-
-impl AuditSink for RecordingAudit {
-    fn emit(&self, event_type: &str, payload: Value) -> Result<(), IsolatedError> {
-        self.events
-            .borrow_mut()
-            .push((event_type.to_owned(), payload));
-        Ok(())
-    }
+    let _ = std::fs::remove_dir_all(scratch_root);
+    Ok(())
 }
 
 fn unique_temp_dir(prefix: &str) -> PathBuf {

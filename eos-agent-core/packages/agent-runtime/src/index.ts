@@ -17,4 +17,9 @@ export {
   type StartedRun,
   type UserMessage,
 } from "./runtime.js";
-export type { TranscriptLine, TranscriptRead } from "./transcript.js";
+export type {
+  EventLine,
+  ResultLine,
+  TranscriptLine,
+  TranscriptRead,
+} from "./transcript.js";

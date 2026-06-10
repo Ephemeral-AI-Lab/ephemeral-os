@@ -208,6 +208,42 @@ describe("tool pipeline", () => {
     expect(executed).toBe(false);
   });
 
+  it("passes advisory requirements to pre-hooks", async () => {
+    const tool = defineTool({
+      name: "submit_main_outcome",
+      description: "submit",
+      input: z.object({ summary: z.string().min(1) }),
+      isTerminal: true,
+      isAdvisoryRequired: true,
+      advisorPrompt: "Review the final submission.",
+      execute: () => Promise.resolve({ content: { summary: "done" } }),
+    });
+    let seen: unknown;
+    const result = await runPipeline(tool, {
+      input: { summary: "done" },
+      entries: [
+        {
+          event: "PreToolUse",
+          matcher: "submit_main_outcome",
+          hooks: [
+            {
+              type: "callback",
+              run: (payload) => {
+                seen = payload.advisory_requirement;
+                return Promise.resolve({});
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.is_error).toBe(false);
+    expect(seen).toEqual({
+      required: true,
+      advisor_prompt: "Review the final submission.",
+    });
+  });
+
   it("applies a single updatedInput re-validated through the same schema (§15.12)", async () => {
     const received: number[] = [];
     const tool = defineTool({

@@ -136,7 +136,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    configure_isolated_workspace_for_test(false, None, None)?;
+    configure_isolated_workspace_for_test(false, None)?;
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     let _ = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.test_reset".to_owned(),
@@ -220,7 +220,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         "iws-exit",
         json!({"caller_id": "caller-enabled"}),
     );
-    assert_isolated_exit(&exit, &handle_scratch, &env.audit_path)?;
+    assert_isolated_exit(&exit, &handle_scratch)?;
     assert_isolated_status_closed(&table);
     assert_isolated_test_reset(&table, "iws-reset-end");
     Ok(())
@@ -231,7 +231,7 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    configure_isolated_workspace_for_test(false, None, None)?;
+    configure_isolated_workspace_for_test(false, None)?;
     let response = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.enter".to_owned(),
         invocation_id: "iws-enter-missing-agent".to_owned(),
@@ -547,7 +547,6 @@ fn rebuild_workspace_base(
 struct IsolatedLifecycleEnv {
     root: PathBuf,
     scratch: PathBuf,
-    audit_path: PathBuf,
 }
 
 impl IsolatedLifecycleEnv {
@@ -555,14 +554,9 @@ impl IsolatedLifecycleEnv {
         let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
         let base = root.parent().ok_or("layer root parent")?;
         let scratch = base.join("isolated-scratch");
-        let audit_path = base.join("isolated-audit.jsonl");
-        configure_isolated_workspace_for_test(true, Some(&scratch), Some(&audit_path))?;
+        configure_isolated_workspace_for_test(true, Some(&scratch))?;
         std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-        Ok(Self {
-            root,
-            scratch,
-            audit_path,
-        })
+        Ok(Self { root, scratch })
     }
 }
 
@@ -578,7 +572,6 @@ impl Drop for IsolatedLifecycleEnv {
 fn configure_isolated_workspace_for_test(
     enabled: bool,
     scratch_root: Option<&Path>,
-    audit_path: Option<&Path>,
 ) -> TestResult {
     let doc = eos_config::load_prd()?;
     let daemon = doc.section::<eos_config::configs::daemon::DaemonConfig>("daemon")?;
@@ -590,9 +583,6 @@ fn configure_isolated_workspace_for_test(
     isolated.enabled = enabled;
     if let Some(scratch_root) = scratch_root {
         isolated.scratch_root = scratch_root.to_path_buf();
-    }
-    if let Some(audit_path) = audit_path {
-        isolated.audit_jsonl_path = audit_path.to_path_buf();
     }
     isolated.validate()?;
     let server_config = ServerConfig {
@@ -649,7 +639,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
     assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }
 
-fn assert_isolated_exit(exit: &Value, handle_scratch: &Path, audit_path: &Path) -> TestResult {
+fn assert_isolated_exit(exit: &Value, handle_scratch: &Path) -> TestResult {
     assert_eq!(exit["success"], Value::Bool(true));
     assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
     assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
@@ -663,34 +653,6 @@ fn assert_isolated_exit(exit: &Value, handle_scratch: &Path, audit_path: &Path) 
     assert_eq!(exit["inspection"]["workdir_exists_after"], json!(false));
     assert_eq!(exit["inspection"]["cgroup_exists_after"], Value::Null);
     assert!(!handle_scratch.exists());
-    assert!(audit_path.exists());
-    assert_isolated_exit_audit(audit_path)
-}
-
-fn assert_isolated_exit_audit(audit_path: &Path) -> TestResult {
-    let audit_events = std::fs::read_to_string(audit_path)?
-        .lines()
-        .map(serde_json::from_str::<Value>)
-        .collect::<Result<Vec<_>, _>>()?;
-    assert_eq!(
-        audit_events
-            .iter()
-            .map(|event| event["type"].as_str().unwrap_or_default())
-            .collect::<Vec<_>>(),
-        vec![
-            "sandbox_isolated_workspace_enter",
-            "sandbox_isolated_workspace_exit"
-        ]
-    );
-    let exit_audit = audit_events.last().ok_or("exit audit event")?;
-    assert_eq!(
-        exit_audit["payload"]["inspection"]["scratch_exists_after"],
-        json!(false)
-    );
-    assert_eq!(
-        exit_audit["payload"]["inspection"]["active_leases_after"],
-        json!(0)
-    );
     Ok(())
 }
 

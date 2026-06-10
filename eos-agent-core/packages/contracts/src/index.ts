@@ -1,5 +1,9 @@
 export { AgentKindSchema, type AgentKind } from "./agents.js";
 export {
+  AdvisoryVerdictSchema,
+  type AdvisoryVerdict,
+} from "./advisory.js";
+export {
   JsonObjectSchema,
   JsonValueSchema,
   type JsonObject,

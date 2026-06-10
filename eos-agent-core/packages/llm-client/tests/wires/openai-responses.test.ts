@@ -110,7 +110,7 @@ describe("openai responses decode (real sdk parser via injected fetch)", () => {
     expect(filtered.stop_reason).toBe("content_filter");
   });
 
-  it("maps cached input tokens into cache_read_input_tokens", async () => {
+  it("normalizes cached input tokens out of input_tokens", async () => {
     const stub = fetchStub([
       () =>
         sseResponse(
@@ -133,7 +133,7 @@ describe("openai responses decode (real sdk parser via injected fetch)", () => {
       throw new Error("expected a completion event");
     }
     expect(complete.usage).toEqual({
-      input_tokens: 50,
+      input_tokens: 20,
       output_tokens: 7,
       cache_read_input_tokens: 30,
     });

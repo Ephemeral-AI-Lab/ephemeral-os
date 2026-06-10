@@ -2,6 +2,7 @@ import type { ToolExecutor } from "@eos/engine";
 
 import type { ToolDefinition } from "./contract.js";
 import { toolBatchExecutor } from "./executor.js";
+import type { HookAdvisoryRequirement } from "./hooks/protocol.js";
 import { HookEngine } from "./hooks/runner.js";
 import { bindTool, type HookPayloadFacts } from "./pipeline.js";
 import type { AgentRunState } from "./run-state.js";
@@ -30,14 +31,34 @@ export interface BuildToolExecutorInput {
  */
 export function buildToolExecutor(input: BuildToolExecutorInput): ToolExecutor {
   const hooks = input.hookEngine ?? new HookEngine([]);
+  const advisoryByTool = advisoryRequirements(input.definitions);
   const tools = input.definitions
     .slice()
     .sort((a, b) => (a.name < b.name ? -1 : 1))
     .map((definition) =>
       bindTool(definition, {
         hooks,
+        advisoryRequirement: advisoryByTool.get(definition.name) ?? { required: false },
         hookPayloadFacts: input.hookPayloadFacts,
       }),
     );
   return toolBatchExecutor({ runState: input.runState, tools });
+}
+
+function advisoryRequirements(
+  definitions: readonly ToolDefinition[],
+): ReadonlyMap<string, HookAdvisoryRequirement> {
+  const requirements = new Map<string, HookAdvisoryRequirement>();
+  for (const definition of definitions) {
+    if (!definition.isAdvisoryRequired) {
+      requirements.set(definition.name, { required: false });
+      continue;
+    }
+    const requirement: HookAdvisoryRequirement = { required: true };
+    if (definition.advisorPrompt !== undefined) {
+      requirement.advisor_prompt = definition.advisorPrompt;
+    }
+    requirements.set(definition.name, requirement);
+  }
+  return requirements;
 }

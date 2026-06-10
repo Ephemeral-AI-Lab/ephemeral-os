@@ -17,7 +17,6 @@ use crate::configs::validate::{
 pub struct IsolatedWorkspaceConfig {
     pub enabled: bool,
     pub scratch_root: PathBuf,
-    pub audit_jsonl_path: PathBuf,
     pub ttl_s: f64,
     pub total_cap: u32,
     pub upperdir_bytes: u64,
@@ -44,10 +43,6 @@ impl IsolatedWorkspaceConfig {
     /// Returns an error when a field violates isolated-workspace runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.scratch_root, "isolated_workspace.scratch_root")?;
-        require_absolute(
-            &self.audit_jsonl_path,
-            "isolated_workspace.audit_jsonl_path",
-        )?;
         require_f64_gt(self.ttl_s, 0.0, "isolated_workspace.ttl_s")?;
         if self.enabled {
             require_u32_at_least(self.total_cap, 1, "isolated_workspace.total_cap")?;

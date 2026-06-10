@@ -2,13 +2,13 @@ import type { AgentKind } from "@eos/contracts";
 
 import type { ToolDefinition } from "../../contract.js";
 import { submitAdvisorOutcomeTool } from "./submit_advisor_outcome.js";
-import { submitMainAgentOutcomeTool } from "./submit_main_agent_outcome.js";
+import { submitMainOutcomeTool } from "./submit_main_outcome.js";
 import { submitPlannerOutcomeTool } from "./submit_planner_outcome.js";
 import { submitSubagentOutcomeTool } from "./submit_subagent_outcome.js";
 import { submitWorkerOutcomeTool } from "./submit_worker_outcome.js";
 
 export { submitAdvisorOutcomeTool } from "./submit_advisor_outcome.js";
-export { submitMainAgentOutcomeTool } from "./submit_main_agent_outcome.js";
+export { submitMainOutcomeTool } from "./submit_main_outcome.js";
 export { submitPlannerOutcomeTool } from "./submit_planner_outcome.js";
 export { submitSubagentOutcomeTool } from "./submit_subagent_outcome.js";
 export { submitWorkerOutcomeTool } from "./submit_worker_outcome.js";
@@ -28,7 +28,7 @@ export const TERMINAL_TOOL_NAMES = [
  */
 export function terminalToolDefinitions(): ToolDefinition[] {
   return [
-    submitMainAgentOutcomeTool(),
+    submitMainOutcomeTool(),
     submitPlannerOutcomeTool(),
     submitWorkerOutcomeTool(),
     submitAdvisorOutcomeTool(),
@@ -43,7 +43,7 @@ export function terminalToolDefinitions(): ToolDefinition[] {
 export function submissionTool(kind: AgentKind): ToolDefinition {
   switch (kind) {
     case "main":
-      return submitMainAgentOutcomeTool();
+      return submitMainOutcomeTool();
     case "planner":
       return submitPlannerOutcomeTool();
     case "worker":

@@ -41,6 +41,14 @@ export function runPipeline(
 ): Promise<PipelineResult> {
   const bound = bindTool(definition, {
     hooks: new HookEngine(options.entries ?? []),
+    advisoryRequirement: definition.isAdvisoryRequired
+      ? {
+          required: true,
+          ...(definition.advisorPrompt !== undefined && {
+            advisor_prompt: definition.advisorPrompt,
+          }),
+        }
+      : { required: false },
     hookPayloadFacts: options.hookPayloadFacts,
   });
   const runState = options.runState ?? scriptedRunState();

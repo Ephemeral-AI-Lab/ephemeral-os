@@ -50,6 +50,13 @@ export function noOpenBackgroundSessionsHookPath(): string {
   );
 }
 
+export function requireAdvisoryPassHookPath(): string {
+  return join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../../../.eos-agents/hooks/require-advisory-pass.cjs",
+  );
+}
+
 export function noOpenBackgroundSessionsHookEntries(): HookConfigEntry[] {
   const command = `node ${JSON.stringify(noOpenBackgroundSessionsHookPath())}`;
   return TERMINAL_SUBMISSION_TOOL_NAMES.map((matcher) => ({
@@ -57,6 +64,16 @@ export function noOpenBackgroundSessionsHookEntries(): HookConfigEntry[] {
     matcher,
     hooks: [{ type: "command", command }],
   }));
+}
+
+export function requireAdvisoryPassHookEntries(): HookConfigEntry[] {
+  const command = `node ${JSON.stringify(requireAdvisoryPassHookPath())}`;
+  return [
+    {
+      event: "PreToolUse",
+      hooks: [{ type: "command", command }],
+    },
+  ];
 }
 
 /** A subagent that settles immediately with a fixed summary. */

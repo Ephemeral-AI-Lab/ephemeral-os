@@ -1,17 +1,11 @@
-//! Linux workspace-run lifecycle: start/settle command sessions over the
-//! caller-keyed registry.
+//! The command lifecycle: start/yield, stdin, poll, cancel, sweep, settle.
 //!
-//! The manager owns no policy. It acquires the snapshot lease (ephemeral),
-//! builds the runner request via the workspace modules' lifecycle free functions,
-//! spawns the PTY substrate, and on settlement either **publishes** (ephemeral
-//! complete), **records for audit** (isolated complete), or **discards** (cancel
-//! — never reaching the OCC merge). Each run owns its overlay/namespace state
-//! directly, so the publish-vs-discard branch is structural, not a flag check.
-//!
-//! The OCC publish, snapshot lease acquire/release, per-finalize resource
-//! telemetry, and isolated-audit sink are daemon-resident; they are injected via
-//! [`WorkspaceRunHostPorts`] so this crate keeps no `eos-occ` or
-//! `eos-layerstack` edge and no daemon-global state.
+//! Lease custody and the publish decision live here, concretely: an ephemeral
+//! run acquires its snapshot from `eos_layerstack::service` at start and the
+//! settle path publishes (complete) or discards (cancel/timeout) before
+//! releasing the lease. There are no injected ports — storage is a direct
+//! dependency, the workspaces are plain values, and the PTY substrate is the
+//! `eos-command-session` mechanism crate.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -27,60 +21,49 @@ use eos_command_session::{
     CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
-use crate::contract::{
-    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
-};
-use crate::ephemeral::{
-    discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
-    PreparedEphemeralCommand,
-};
-use crate::isolated::{
-    finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
-    IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
-};
-use eos_overlay::overlay_writable_root;
+use eos_ephemeral_workspace::EphemeralWorkspace;
+use eos_layerstack::service;
 
-use super::isolated_command_handle::IsolatedCommandHandle;
-use super::ports::WorkspaceRunHostPorts;
-use super::registry::{EphemeralRun, IsolatedRun, WorkspaceRun, WorkspaceRunRegistry};
+use crate::binding::CommandBinding;
+use crate::outcome::{FinalizeCommandRequest, WorkspaceCommandOutcome, WorkspaceMode};
+use crate::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
+use crate::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
+use crate::settle::{settle_ephemeral, settle_isolated};
 
-/// Which workspace a starting command session belongs to. The daemon picks the
-/// kind from the caller's current mode and supplies the inputs the manager needs
-/// to lay out the run: the LayerStack roots (ephemeral) or the caller's isolated
-/// namespace handle (isolated).
-pub enum StartTarget {
+/// Which workspace a starting command runs on. The daemon picks the kind from
+/// the caller's current mode and supplies the inputs needed to lay out the
+/// run: the layer-stack roots (ephemeral) or the caller's isolated binding.
+pub enum ExecTarget {
     Ephemeral {
         root: PathBuf,
         workspace_root: PathBuf,
         scratch_root: PathBuf,
     },
     Isolated {
-        // Boxed: `IsolatedCommandHandle` is far larger than the ephemeral variant,
+        // Boxed: `CommandBinding` is far larger than the ephemeral variant,
         // and this enum is only a short-lived dispatch value.
-        handle: Box<IsolatedCommandHandle>,
+        binding: Box<CommandBinding>,
     },
 }
 
-pub struct WorkspaceRunManager {
+pub struct CommandOps {
     config: CommandSessionConfig,
-    registry: Arc<WorkspaceRunRegistry>,
-    ports: Arc<dyn WorkspaceRunHostPorts>,
+    registry: Arc<CommandRegistry>,
 }
 
-impl WorkspaceRunManager {
+impl CommandOps {
     #[must_use]
-    pub fn new(config: CommandSessionConfig, ports: Arc<dyn WorkspaceRunHostPorts>) -> Self {
+    pub fn new(config: CommandSessionConfig) -> Self {
         Self {
             config,
-            registry: Arc::new(WorkspaceRunRegistry::new()),
-            ports,
+            registry: Arc::new(CommandRegistry::new()),
         }
     }
 
-    pub fn start(
+    pub fn exec_command(
         &self,
         request: StartCommandSession,
-        target: StartTarget,
+        target: ExecTarget,
     ) -> Result<CommandResponse, CommandSessionError> {
         if request.cmd.trim().is_empty() {
             return Err(CommandSessionError::InvalidRequest(
@@ -88,43 +71,42 @@ impl WorkspaceRunManager {
             ));
         }
         let id = self.registry.next_id();
-        let prepare_request = crate::contract::PrepareCommandRequest {
-            caller_id: request.caller_id.clone(),
-            command_session_id: id.clone(),
-            invocation_id: request.invocation_id.clone(),
-            cmd: request.cmd.clone(),
-            timeout_seconds: request.timeout_seconds,
-        };
         let yield_time_ms = request.yield_time_ms;
         let spec = CommandSessionSpec {
-            id,
-            caller_id: request.caller_id,
-            command: request.cmd,
+            id: id.clone(),
+            caller_id: request.caller_id.clone(),
+            command: request.cmd.clone(),
             timeout_seconds: request.timeout_seconds,
         };
         match target {
-            StartTarget::Ephemeral {
+            ExecTarget::Ephemeral {
                 root,
                 workspace_root,
                 scratch_root,
             } => self.start_ephemeral(
                 spec,
-                prepare_request,
+                &request,
+                &id,
                 root,
                 workspace_root,
                 scratch_root,
                 yield_time_ms,
             ),
-            StartTarget::Isolated { handle } => {
-                self.start_isolated(spec, prepare_request, handle, yield_time_ms)
+            ExecTarget::Isolated { binding } => {
+                self.start_isolated(spec, &request, &id, binding, yield_time_ms)
             }
         }
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "start inputs are one-shot plumbing from the typed target"
+    )]
     fn start_ephemeral(
         &self,
         spec: CommandSessionSpec,
-        prepare_request: crate::contract::PrepareCommandRequest,
+        request: &StartCommandSession,
+        command_id: &str,
         root: PathBuf,
         workspace_root: PathBuf,
         scratch_root: PathBuf,
@@ -132,40 +114,54 @@ impl WorkspaceRunManager {
     ) -> Result<CommandResponse, CommandSessionError> {
         let request_id = format!(
             "command_session:{}:{}",
-            prepare_request.caller_id, prepare_request.invocation_id
+            request.caller_id, request.invocation_id
         );
-        let snapshot = self.ports.acquire_snapshot(&root, &request_id)?;
-        let lease_id = snapshot.lease_id.clone();
-        let session_dir = scratch_root.join(&spec.id);
-        let context = EphemeralCommandPrepareContext {
-            layer_stack_root: root.clone(),
-            workspace_root,
-            writable_root: overlay_writable_root().map_err(workspace_api_error)?,
-            final_path: session_dir.join("final.json"),
-            session_dir,
-        };
-        let prepared = match prepare_ephemeral_command(context, snapshot, prepare_request) {
-            Ok(prepared) => prepared,
+        let snapshot = service::acquire_snapshot(&root, &request_id)
+            .map_err(|error| CommandSessionError::Workspace(error.to_string()))?;
+        let writable_root = eos_overlay::overlay_writable_root()
+            .map_err(|error| CommandSessionError::Workspace(error.to_string()));
+        let result = writable_root.and_then(|writable_root| {
+            let workspace = EphemeralWorkspace::create(
+                &writable_root.join("runtime"),
+                "sandbox-overlay",
+                &request.invocation_id,
+                workspace_root,
+                snapshot.layer_paths.clone(),
+            )
+            .map_err(|error| CommandSessionError::Workspace(error.to_string()))?;
+            let prepared = prepare_ephemeral(
+                PrepareInputs {
+                    caller_id: &request.caller_id,
+                    command_id,
+                    invocation_id: &request.invocation_id,
+                    cmd: &request.cmd,
+                    timeout_seconds: request.timeout_seconds,
+                    session_dir: scratch_root.join(command_id),
+                    workspace_label: "ephemeral",
+                },
+                workspace.mount_plan(),
+                &workspace.dirs().run_dir,
+            )?;
+            let session = self.spawn_session(spec, prepared)?;
+            Ok((workspace, session))
+        });
+        let (workspace, session) = match result {
+            Ok(parts) => parts,
             Err(error) => {
-                self.ports.release_lease(&root, &lease_id);
-                return Err(error.into());
-            }
-        };
-        let PreparedEphemeralCommand {
-            prepared,
-            workspace,
-        } = prepared;
-        let session = match self.spawn_session(spec, prepared) {
-            Ok(session) => session,
-            Err(error) => {
-                discard_ephemeral_command(&workspace.dirs);
-                self.ports.release_lease(&root, &lease_id);
+                // The workspace (if created) dropped with the error path and
+                // removed its dirs; only the lease needs explicit release.
+                let _ = service::release_lease(&root, &snapshot.lease_id);
                 return Err(error);
             }
         };
         Ok(
             self.register_and_wait(session, yield_time_ms, move |session| {
-                WorkspaceRun::Ephemeral(EphemeralRun { session, workspace })
+                ActiveCommand::Ephemeral(EphemeralRun {
+                    session,
+                    root,
+                    snapshot,
+                    workspace,
+                })
             }),
         )
     }
@@ -173,26 +169,28 @@ impl WorkspaceRunManager {
     fn start_isolated(
         &self,
         spec: CommandSessionSpec,
-        prepare_request: crate::contract::PrepareCommandRequest,
-        handle: Box<IsolatedCommandHandle>,
+        request: &StartCommandSession,
+        command_id: &str,
+        binding: Box<CommandBinding>,
         yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
-        let context = IsolatedCommandPrepareContext {
-            workspace_handle_id: handle.workspace_handle_id.clone(),
-            workspace_root: handle.workspace_root.clone(),
-            scratch_dir: handle.scratch_dir.clone(),
-            layer_paths: handle.layer_paths.clone(),
-            upperdir: handle.upperdir.clone(),
-            workdir: handle.workdir.clone(),
-            ns_fds: handle.ns_fds.clone(),
-            cgroup_path: handle.cgroup_path.clone(),
-        };
-        let prepared = prepare_isolated_command(context, prepare_request)?;
+        let prepared = prepare_isolated(
+            PrepareInputs {
+                caller_id: &request.caller_id,
+                command_id,
+                invocation_id: &request.invocation_id,
+                cmd: &request.cmd,
+                timeout_seconds: request.timeout_seconds,
+                session_dir: binding.scratch_dir.join("sessions").join(command_id),
+                workspace_label: "isolated",
+            },
+            &binding,
+        )?;
         let session = self.spawn_session(spec, prepared)?;
-        let handle = *handle;
+        let binding = *binding;
         Ok(
             self.register_and_wait(session, yield_time_ms, move |session| {
-                WorkspaceRun::Isolated(IsolatedRun { session, handle })
+                ActiveCommand::Isolated(IsolatedRun { session, binding })
             }),
         )
     }
@@ -200,7 +198,7 @@ impl WorkspaceRunManager {
     fn spawn_session(
         &self,
         spec: CommandSessionSpec,
-        prepared: crate::contract::PreparedCommandWorkspace,
+        prepared: PreparedCommand,
     ) -> Result<CommandSession, CommandSessionError> {
         let process = spawn_current_exe_ns_runner(
             &prepared.request_path,
@@ -225,7 +223,7 @@ impl WorkspaceRunManager {
         &self,
         session: CommandSession,
         yield_time_ms: u64,
-        make_run: impl FnOnce(CommandSession) -> WorkspaceRun,
+        make_run: impl FnOnce(CommandSession) -> ActiveCommand,
     ) -> CommandResponse {
         let id = session.id().to_owned();
         let run = Arc::new(make_run(session));
@@ -271,7 +269,7 @@ impl WorkspaceRunManager {
         }
     }
 
-    pub fn read_progress(
+    pub fn read_command_progress(
         &self,
         request: ReadCommandProgress,
     ) -> Result<CommandResponse, CommandSessionError> {
@@ -336,8 +334,8 @@ impl WorkspaceRunManager {
     }
 
     /// Cancel and discard every command session owned by `caller_id` (the
-    /// per-caller workspace-run teardown). Cancelled sessions discard their
-    /// overlay and push no completion (the caller initiated the cancel).
+    /// per-caller teardown). Cancelled sessions discard their overlay and push
+    /// no completion (the caller initiated the cancel).
     #[must_use]
     pub fn cleanup_caller(&self, caller_id: &str, grace_s: Option<f64>) -> usize {
         let caller_id = caller_id.trim();
@@ -357,7 +355,7 @@ impl WorkspaceRunManager {
 
     /// Cancel every run, then reap+discard within `grace`, finalizing any
     /// stragglers. Returns the number of runs that were live at entry.
-    fn cancel_and_drain(&self, runs: Vec<Arc<WorkspaceRun>>, grace_s: Option<f64>) -> usize {
+    fn cancel_and_drain(&self, runs: Vec<Arc<ActiveCommand>>, grace_s: Option<f64>) -> usize {
         if runs.is_empty() {
             return 0;
         }
@@ -387,10 +385,10 @@ impl WorkspaceRunManager {
             } else {
                 // The kill could not reap the child within grace (e.g. an
                 // uninterruptible D-state task). Teardown must NOT depend on a
-                // successful reap (spec §3.3): force the run out of the registry
-                // and release its overlay lease + dirs, or a stuck process would
-                // leak the snapshot lease the whole-sandbox assert-no-leases gate
-                // checks. Never publishes — this is the discard branch.
+                // successful reap: force the run out of the registry and
+                // release its overlay lease + dirs, or a stuck process would
+                // leak the snapshot lease the whole-sandbox assert-no-leases
+                // gate checks. Never publishes — this is the discard branch.
                 self.force_discard(&run);
             }
         }
@@ -398,32 +396,29 @@ impl WorkspaceRunManager {
     }
 
     /// Reap-independent teardown for a run the cancel grace could not reap.
-    /// Releases an ephemeral run's overlay lease + dirs (best-effort: a still-live
-    /// process may leave its dirs for the orphan reaper, but the lease is freed);
-    /// an isolated session only needs its registry entry dropped, since the
-    /// namespace + lease are torn down by `exit_isolated`.
-    fn force_discard(&self, run: &Arc<WorkspaceRun>) {
+    /// Dropping the registry's ephemeral run releases its overlay dirs (the
+    /// workspace's drop) and the lease is freed here; an isolated session only
+    /// needs its registry entry dropped, since the namespace + lease are torn
+    /// down by `exit`.
+    fn force_discard(&self, run: &Arc<ActiveCommand>) {
         if self.registry.remove(run.session().id()).is_none() {
             // A concurrent reap already finalized + discarded it.
             return;
         }
-        if let WorkspaceRun::Ephemeral(ephemeral) = &**run {
-            discard_ephemeral_command(&ephemeral.workspace.dirs);
-            self.ports.release_lease(
-                &ephemeral.workspace.layer_stack_root.0,
-                &ephemeral.workspace.snapshot.lease_id,
-            );
+        if let ActiveCommand::Ephemeral(ephemeral) = &**run {
+            let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
         }
     }
 
-    /// Periodic reaper: enforce the per-session timeout backstop and finalize any
-    /// session whose child has exited without a live poller, parking the
+    /// Periodic reaper: enforce the per-session timeout backstop and finalize
+    /// any session whose child has exited without a live poller, parking the
     /// completion for the heartbeat.
     ///
-    /// A past-deadline session is killed as a **timeout** (not a user cancel), so
-    /// its completion is still parked — a fire-and-forget session that hits its
-    /// timeout must reach the heartbeat, or its agent-core background session is
-    /// stuck Running forever. Only a caller-initiated cancel parks nothing.
+    /// A past-deadline session is killed as a **timeout** (not a user cancel),
+    /// so its completion is still parked — a fire-and-forget session that hits
+    /// its timeout must reach the heartbeat, or its agent-core background
+    /// session is stuck Running forever. Only a caller-initiated cancel parks
+    /// nothing.
     pub fn sweep_expired(&self, now: Instant) {
         for run in self.registry.live() {
             if run
@@ -439,13 +434,13 @@ impl WorkspaceRunManager {
         }
     }
 
-    /// Turn a reaped command into its final response: the run publishes (normal
-    /// completion) or discards (cancel) via the workspace lifecycle helpers, then
-    /// persists the final response. Routing cancel to the discard branch is the
-    /// structural guarantee that a cancelled command never reaches the OCC merge.
+    /// Turn a reaped command into its final response: the run publishes
+    /// (normal completion) or discards (cancel/timeout), then persists the
+    /// final response. Routing cancel to the discard branch is the structural
+    /// guarantee that a cancelled command never reaches the shared merge.
     fn finish_reaped(
         &self,
-        run: Arc<WorkspaceRun>,
+        run: Arc<ActiveCommand>,
         reaped: ReapedCommand,
         publish_completion: bool,
     ) -> CommandResponse {
@@ -458,25 +453,39 @@ impl WorkspaceRunManager {
             stderr: String::new(),
             command_session_id: Some(run.session().id().to_owned()),
         };
-        // A kill of EITHER reason (cancel or timeout) DISCARDS — only a natural
-        // exit (`kill == None`) takes the publish branch in `settle_*`.
-        self.finalize_run(run, request, reaped.kill.is_some(), publish_completion)
-    }
-
-    fn finalize_run(
-        &self,
-        run: Arc<WorkspaceRun>,
-        request: FinalizeCommandRequest,
-        cancelled: bool,
-        publish_completion: bool,
-    ) -> CommandResponse {
-        let ports = &*self.ports;
+        // A kill of EITHER reason (cancel or timeout) DISCARDS — only a
+        // natural exit (`kill == None`) takes the publish branch.
+        let cancelled = reaped.kill.is_some();
         let outcome = match &*run {
-            WorkspaceRun::Ephemeral(ephemeral) => {
-                settle_ephemeral(ports, ephemeral, request, cancelled)
+            ActiveCommand::Ephemeral(ephemeral) => {
+                let outcome = if cancelled {
+                    Ok(WorkspaceCommandOutcome::discarded(
+                        WorkspaceMode::Ephemeral,
+                        request,
+                    ))
+                } else {
+                    settle_ephemeral(
+                        &ephemeral.root,
+                        &ephemeral.snapshot,
+                        &ephemeral.workspace,
+                        request,
+                    )
+                };
+                // ALWAYS release the lease — completion, cancel, and even a
+                // failed settle. The workspace dirs are removed when the run
+                // drops out of the registry below.
+                let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
+                outcome
             }
-            WorkspaceRun::Isolated(isolated) => {
-                settle_isolated(ports, isolated, request, cancelled)
+            ActiveCommand::Isolated(isolated) => {
+                if cancelled {
+                    Ok(WorkspaceCommandOutcome::discarded(
+                        WorkspaceMode::Isolated,
+                        request,
+                    ))
+                } else {
+                    settle_isolated(&isolated.binding, request)
+                }
             }
         };
         let response = match outcome {
@@ -500,69 +509,6 @@ impl WorkspaceRunManager {
     }
 }
 
-/// Complete (publish) or discard (cancel) an ephemeral overlay run. Both paths
-/// remove the run dirs and release the snapshot lease; only the complete path
-/// captures + publishes the upperdir, so a cancelled command never OCC-merges.
-fn settle_ephemeral(
-    ports: &dyn WorkspaceRunHostPorts,
-    run: &EphemeralRun,
-    request: FinalizeCommandRequest,
-    cancelled: bool,
-) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
-    let root = run.workspace.layer_stack_root.0.clone();
-    let lease_id = run.workspace.snapshot.lease_id.clone();
-    // Compute the outcome, then ALWAYS remove the run dirs + release the lease —
-    // on completion (after publish), on cancel (discard, never published), and
-    // even if shaping the completion errors. Cleanup must not depend on success.
-    let outcome = if cancelled {
-        Ok(WorkspaceCommandOutcome::discarded(
-            WorkspaceMode::Ephemeral,
-            request,
-        ))
-    } else {
-        ports.base_timings(&root).and_then(|base_timings| {
-            ports.finalize_ephemeral(&root, run.workspace.clone(), base_timings, request)
-        })
-    };
-    discard_ephemeral_command(&run.workspace.dirs);
-    ports.release_lease(&root, &lease_id);
-    outcome
-}
-
-/// Complete (capture for audit) or discard (cancel) one isolated command
-/// session. Isolated writes are never published; the upperdir is torn down with
-/// the namespace on exit, so discard is a no-op beyond the cancelled outcome.
-fn settle_isolated(
-    ports: &dyn WorkspaceRunHostPorts,
-    run: &IsolatedRun,
-    request: FinalizeCommandRequest,
-    cancelled: bool,
-) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
-    if cancelled {
-        return Ok(WorkspaceCommandOutcome::discarded(
-            WorkspaceMode::Isolated,
-            request,
-        ));
-    }
-    let base_timings = ports.base_timings(&run.handle.layer_stack_root)?;
-    let context = IsolatedCommandFinalizeContext {
-        caller_id: run.handle.caller_id.clone(),
-        workspace_handle_id: run.handle.workspace_handle_id.clone(),
-        manifest_version: run.handle.manifest_version,
-        manifest_root_hash: run.handle.manifest_root_hash.clone(),
-        upperdir: run.handle.upperdir.clone(),
-        base_timings,
-    };
-    let mut outcome = finalize_isolated_command(context, request)?;
-    let audit = take_isolated_audit(&mut outcome);
-    ports.record_tool_call(&run.handle.caller_id, audit);
-    Ok(outcome)
-}
-
-fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
-    WorkspaceApiError::new("daemon_command_workspace_error", error.to_string())
-}
-
 fn is_teardown_control(chars: &str) -> bool {
     matches!(chars, "\u{3}" | "\u{4}")
 }
@@ -573,9 +519,7 @@ fn contains_teardown_control(chars: &str) -> bool {
 
 /// Shape a settled [`WorkspaceCommandOutcome`] into the substrate's
 /// [`CommandResponse`], folding workspace policy fields into `metadata`.
-pub(crate) fn command_response_from_outcome(
-    outcome: crate::contract::WorkspaceCommandOutcome,
-) -> CommandResponse {
+fn command_response_from_outcome(outcome: WorkspaceCommandOutcome) -> CommandResponse {
     CommandResponse {
         status: outcome.status,
         exit_code: outcome.exit_code,

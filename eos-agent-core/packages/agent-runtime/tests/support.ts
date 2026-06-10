@@ -19,7 +19,11 @@ import type {
 
 import type { LlmClientRegistry } from "../src/llm-client-registry.js";
 import type { UserMessage } from "../src/runtime.js";
-import type { TranscriptLine } from "../src/transcript.js";
+import type {
+  EventLine,
+  ResultLine,
+  TranscriptLine,
+} from "../src/transcript.js";
 
 // --- scripted provider client (local copy of the engine's double) -------------
 
@@ -240,11 +244,23 @@ export function codexJwtPayload(
 
 // --- transcript assertions ----------------------------------------------------
 
-export function readTranscriptLines(path: string): TranscriptLine[] {
+function readJsonLines<T>(path: string): T[] {
   return readFileSync(path, "utf8")
     .split("\n")
     .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as TranscriptLine);
+    .map((line) => JSON.parse(line) as T);
+}
+
+export function readTranscriptLines(path: string): TranscriptLine[] {
+  return readJsonLines<TranscriptLine>(path);
+}
+
+export function readEventLines(path: string): EventLine[] {
+  return readJsonLines<EventLine>(path);
+}
+
+export function readResultLines(path: string): ResultLine[] {
+  return readJsonLines<ResultLine>(path);
 }
 
 export function must<T>(value: T | undefined | null): T {

@@ -1,0 +1,360 @@
+//! Settle: turn a reaped command + its bound workspace into the typed outcome.
+//!
+//! Ephemeral completion captures the overlay delta and publishes it through
+//! the per-root single writer; the publish result is the typed
+//! [`ChangesetResult`] — no JSON round-trips. Isolated completion shapes
+//! response metadata only (the workspace is retained untouched). Cancel never
+//! reaches either: the caller routes it to the discard branch.
+
+use std::path::Path;
+
+use eos_ephemeral_workspace::{path_changes_to_wire, EphemeralWorkspace, TreeResourceStats};
+use eos_layerstack::service::Snapshot;
+use eos_layerstack::{service, FileResult};
+use serde_json::{json, Value};
+
+use crate::binding::CommandBinding;
+use crate::outcome::{
+    ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
+    WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+};
+
+/// Capture the run's upperdir, publish it against its snapshot, and shape the
+/// command outcome. COMPLETE branch only.
+pub(crate) fn settle_ephemeral(
+    root: &Path,
+    snapshot: &Snapshot,
+    workspace: &EphemeralWorkspace,
+    request: FinalizeCommandRequest,
+) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+    let mut timings = base_timings(root)?;
+    let captured = workspace.capture().map_err(finalize_error)?;
+    let publish_start = std::time::Instant::now();
+    let changeset = service::publish_capture(
+        root,
+        snapshot.manifest_version,
+        &snapshot.layer_paths,
+        &captured.changes,
+    )
+    .map_err(finalize_error)?;
+    let publish_s = publish_start.elapsed().as_secs_f64();
+
+    let path_kinds = path_changes_to_wire(&captured.path_kinds);
+    let changed_path_kinds = path_kinds.into_iter().collect::<ChangedPathKinds>();
+    let first_conflict = changeset.first_conflict();
+    let command_success = request.command_succeeded();
+    let publish_success = changeset.success();
+
+    timings.insert(
+        "resource.command_exec.changed_path_count".to_owned(),
+        json!(usize_to_f64_saturating(changed_path_kinds.len())),
+    );
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &captured.stats,
+    );
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.run_dir",
+        &TreeResourceStats::collect(&workspace.dirs().run_dir),
+    );
+    for (key, value) in &changeset.timings {
+        timings.insert(key.clone(), json!(value));
+    }
+    let occ_s = changeset
+        .timings
+        .get("occ.commit.total_s")
+        .copied()
+        .unwrap_or(publish_s);
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(captured.capture_s),
+    );
+    timings.insert("command_exec.occ_apply_s".to_owned(), json!(occ_s));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        "api.exec_command.dispatch_total_s".to_owned(),
+        json!(request.command_elapsed_s),
+    );
+
+    Ok(WorkspaceCommandOutcome {
+        mode: WorkspaceMode::Ephemeral,
+        success: command_success && publish_success,
+        status: request.status,
+        exit_code: request.exit_code,
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths: changeset.published_paths(),
+        changed_path_kinds,
+        mutation_source: "overlay_capture".to_owned(),
+        conflict: first_conflict.map(conflict_from_file),
+        conflict_reason: first_conflict.map(|file| conflict_message(file).to_owned()),
+        timings,
+        metadata: Value::Null,
+    })
+}
+
+/// Capture the isolated command's upperdir (response metadata only — never
+/// published) and shape the command outcome.
+pub(crate) fn settle_isolated(
+    binding: &CommandBinding,
+    request: FinalizeCommandRequest,
+) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+    let mut timings = base_timings(&binding.layer_stack_root)?;
+    let capture_start = std::time::Instant::now();
+    let changes = eos_overlay::capture_upperdir(&binding.upperdir)
+        .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
+    let capture_s = capture_start.elapsed().as_secs_f64();
+    let changed_path_kinds = changes
+        .iter()
+        .map(|change| {
+            let kind = match change {
+                eos_overlay::LayerChange::Write { .. } => "write",
+                eos_overlay::LayerChange::Delete { .. } => "delete",
+                eos_overlay::LayerChange::Symlink { .. } => "symlink",
+                eos_overlay::LayerChange::OpaqueDir { .. } => "opaque_dir",
+            };
+            (change.path().as_str().to_owned(), kind.to_owned())
+        })
+        .collect::<ChangedPathKinds>();
+    let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
+    merge_runner_timings(&mut timings, request.runner_result.as_ref());
+    timings.insert(
+        "resource.command_exec.changed_path_count".to_owned(),
+        json!(usize_to_f64_saturating(changed_paths.len())),
+    );
+    timings.insert(
+        "command_exec.capture_upperdir_s".to_owned(),
+        json!(capture_s),
+    );
+    timings.insert("command_exec.occ_apply_s".to_owned(), json!(0.0));
+    timings.insert(
+        "command_exec.total_s".to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        "api.exec_command.total_s".to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.insert(
+        "api.exec_command.dispatch_total_s".to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    Ok(WorkspaceCommandOutcome {
+        mode: WorkspaceMode::Isolated,
+        success: request.command_succeeded(),
+        status: request.status.clone(),
+        exit_code: Some(request.exit_code.unwrap_or(1)),
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths,
+        changed_path_kinds,
+        mutation_source: "isolated_workspace".to_owned(),
+        conflict: None,
+        conflict_reason: None,
+        timings,
+        metadata: json!({
+            "isolated_workspace": {
+                "caller_id": binding.caller_id,
+                "workspace_handle_id": binding.workspace_handle_id,
+                "manifest_version": binding.manifest_version,
+                "manifest_root_hash": binding.manifest_root_hash,
+                "published": false,
+            },
+            "warnings": [],
+        }),
+    })
+}
+
+/// Latest-state resource telemetry sampled at settle: manifest depth plus the
+/// zero-seeded tree counters the wire contract always carries (the per-run
+/// upperdir/run-dir counters overwrite their seeds on the ephemeral path).
+fn base_timings(root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
+    let manifest = service::active_manifest(root)
+        .map_err(|error| WorkspaceApiError::new("daemon_command_workspace_error", error.to_string()))?;
+    let mut timings = WorkspaceTimings::new();
+    timings.insert(
+        "resource.command_exec.changed_path_count".to_owned(),
+        json!(0.0),
+    );
+    timings.insert(
+        "resource.layer_stack.manifest_depth".to_owned(),
+        json!(usize_to_f64_saturating(manifest.depth())),
+    );
+    timings.insert(
+        "resource.layer_stack.manifest_path_count".to_owned(),
+        json!(usize_to_f64_saturating(manifest.depth())),
+    );
+    for key in [
+        "resource.command_exec.run_dir_tree_exists",
+        "resource.command_exec.run_dir_tree_bytes",
+        "resource.command_exec.run_dir_tree_file_count",
+        "resource.command_exec.run_dir_tree_dir_count",
+        "resource.command_exec.run_dir_tree_entry_count",
+        "resource.command_exec.run_dir_tree_truncated",
+        "resource.command_exec.workspace_tree_exists",
+        "resource.command_exec.workspace_tree_bytes",
+        "resource.command_exec.workspace_tree_file_count",
+        "resource.command_exec.workspace_tree_dir_count",
+        "resource.command_exec.workspace_tree_entry_count",
+        "resource.command_exec.workspace_tree_truncated",
+        "resource.command_exec.upperdir_tree_exists",
+        "resource.command_exec.upperdir_tree_bytes",
+        "resource.command_exec.upperdir_tree_file_count",
+        "resource.command_exec.upperdir_tree_dir_count",
+        "resource.command_exec.upperdir_tree_entry_count",
+        "resource.command_exec.upperdir_tree_truncated",
+    ] {
+        timings.insert(key.to_owned(), json!(0.0));
+    }
+    insert_cgroup_resource_timings(&mut timings);
+    insert_process_resource_timings(&mut timings);
+    Ok(timings)
+}
+
+/// Daemon-process cgroup gauges (cpu/memory/io). Absent on hosts without
+/// cgroup v2 files.
+fn insert_cgroup_resource_timings(timings: &mut WorkspaceTimings) {
+    if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/cpu.stat") {
+        for line in raw.lines() {
+            let mut parts = line.split_whitespace();
+            let Some(name) = parts.next() else {
+                continue;
+            };
+            let Some(value) = parts.next().and_then(|raw| raw.parse::<f64>().ok()) else {
+                continue;
+            };
+            timings.insert(format!("resource.cgroup.cpu_{name}"), json!(value));
+        }
+    }
+
+    for (path, key) in [
+        (
+            "/sys/fs/cgroup/memory.current",
+            "resource.cgroup.memory_current_bytes",
+        ),
+        (
+            "/sys/fs/cgroup/memory.peak",
+            "resource.cgroup.memory_peak_bytes",
+        ),
+    ] {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            if let Ok(value) = raw.trim().parse::<f64>() {
+                timings.insert(key.to_owned(), json!(value));
+            }
+        }
+    }
+
+    let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") else {
+        return;
+    };
+    let mut totals = std::collections::BTreeMap::<&str, f64>::from([
+        ("rbytes", 0.0),
+        ("wbytes", 0.0),
+        ("rios", 0.0),
+        ("wios", 0.0),
+        ("dbytes", 0.0),
+        ("dios", 0.0),
+    ]);
+    for line in raw.lines() {
+        for token in line.split_whitespace().skip(1) {
+            let Some((name, raw_value)) = token.split_once('=') else {
+                continue;
+            };
+            let Some(total) = totals.get_mut(name) else {
+                continue;
+            };
+            if let Ok(value) = raw_value.parse::<f64>() {
+                *total += value;
+            }
+        }
+    }
+    for (name, value) in totals {
+        timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
+    }
+}
+
+/// Daemon process memory gauges from `/proc/self/status` (bytes); absent on
+/// non-Linux dev hosts.
+fn insert_process_resource_timings(timings: &mut WorkspaceTimings) {
+    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
+        return;
+    };
+    for line in status.lines() {
+        let key = match line.split(':').next() {
+            Some("VmRSS") => "resource.process.rss_bytes",
+            Some("VmHWM") => "resource.process.max_rss_bytes",
+            _ => continue,
+        };
+        if let Some(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::<f64>().ok())
+        {
+            timings.insert(key.to_owned(), json!(kib * 1024.0));
+        }
+    }
+}
+
+fn merge_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Value>) {
+    let Some(runner_timings) = runner_result
+        .and_then(|result| result.get("timings"))
+        .and_then(Value::as_object)
+    else {
+        return;
+    };
+    for (key, value) in runner_timings {
+        timings.entry(key.clone()).or_insert_with(|| value.clone());
+    }
+}
+
+fn conflict_from_file(file: &FileResult) -> WorkspaceConflict {
+    let reason = file.status.wire_str();
+    WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
+}
+
+fn conflict_message(file: &FileResult) -> &str {
+    file.conflict_message(file.status.wire_str())
+}
+
+/// Emit `<prefix>_tree_*` resource counters for a captured scratch tree.
+fn insert_tree_resource_timings(
+    timings: &mut WorkspaceTimings,
+    prefix: &str,
+    stats: &TreeResourceStats,
+) {
+    let file_entries = stats.files.saturating_add(stats.symlinks);
+    let entry_count = file_entries.saturating_add(stats.dirs);
+    insert_resource_timing(
+        timings,
+        &format!("{prefix}_tree_exists"),
+        entry_count.min(1),
+    );
+    insert_resource_timing(timings, &format!("{prefix}_tree_bytes"), stats.bytes);
+    insert_resource_timing(timings, &format!("{prefix}_tree_file_count"), file_entries);
+    insert_resource_timing(timings, &format!("{prefix}_tree_dir_count"), stats.dirs);
+    insert_resource_timing(timings, &format!("{prefix}_tree_entry_count"), entry_count);
+    insert_resource_timing(timings, &format!("{prefix}_tree_truncated"), 0);
+}
+
+fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64) {
+    timings.insert(key.to_owned(), json!(u64_to_f64_saturating(value)));
+}
+
+fn u64_to_f64_saturating(value: u64) -> f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+}
+
+fn usize_to_f64_saturating(value: usize) -> f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+}
+
+fn finalize_error(error: impl std::fmt::Display) -> WorkspaceApiError {
+    WorkspaceApiError::new("command_finalize_failed", error.to_string())
+}

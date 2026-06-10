@@ -56,7 +56,14 @@ const fn path_change_kind_wire(kind: PathChangeKind) -> &'static str {
 }
 
 /// Capture an upperdir delta and classify path change kinds.
-pub(crate) fn capture_upperdir(
+///
+/// Standalone entry for callers that hold raw overlay dirs (the plugin
+/// overlay path); [`crate::EphemeralWorkspace::capture`] wraps it.
+///
+/// # Errors
+///
+/// Returns [`EphemeralWorkspaceError::CaptureFailed`] when the walk fails.
+pub fn capture_upperdir(
     upperdir: &Path,
 ) -> Result<CapturedChanges, EphemeralWorkspaceError> {
     let start = std::time::Instant::now();

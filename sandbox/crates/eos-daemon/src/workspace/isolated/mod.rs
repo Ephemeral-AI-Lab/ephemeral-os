@@ -6,22 +6,20 @@
 //! runtime details live in child modules so this file stays a routing
 //! surface.
 
-#[cfg(target_os = "linux")]
-mod ns_runner;
-mod runtime;
 mod state;
 
 use std::collections::HashSet;
-#[cfg(test)]
+#[cfg(any(test, target_os = "linux"))]
 use std::path::Path;
 use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
-use eos_workspace_runtime::contract::CallerId;
-use eos_workspace_runtime::isolated::IsolatedError;
+use eos_isolated_workspace::{ExitOutcome, IsolatedError};
 #[cfg(target_os = "linux")]
-pub(crate) use eos_workspace_runtime::run::IsolatedCommandHandle;
+use eos_isolated_workspace::WorkspaceHandle;
+#[cfg(target_os = "linux")]
+pub(crate) use eos_command_ops::CommandBinding as IsolatedCommandHandle;
 use serde_json::{json, Value};
 
 use crate::workspace::run;
@@ -29,8 +27,6 @@ use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
 use super::{error_json, require_arg};
-#[cfg(target_os = "linux")]
-use runtime::command_handle_from;
 pub(crate) use state::configure_isolated_workspace;
 #[cfg(test)]
 use state::default_isolated_workspace_config;
@@ -61,14 +57,24 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             json!({"active_command_sessions": active_command_sessions}),
         ));
     }
-    match ensure_state(&root)
-        .and_then(|()| with_state(|state| state.session.enter(&CallerId(caller_id))))
-    {
+    match ensure_state(&root).and_then(|()| {
+        with_state(|state| {
+            let snapshot = state.acquire_snapshot(&caller_id)?;
+            let lease_id = snapshot.lease_id.clone();
+            match state.sessions.enter(&caller_id, snapshot) {
+                Ok(handle) => Ok(handle),
+                Err(error) => {
+                    let _ = state.release_lease(&lease_id);
+                    Err(error)
+                }
+            }
+        })
+    }) {
         Ok(handle) => Ok(json!({
             "success": true,
             "manifest_version": handle.manifest_version,
             "manifest_root_hash": handle.manifest_root_hash,
-            "workspace_handle_id": handle.workspace_handle_id.0,
+            "workspace_handle_id": handle.workspace_id.0,
             "workspace_root": handle.workspace_root,
         })),
         Err(error) => Ok(error_payload(&error)),
@@ -100,7 +106,7 @@ pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<V
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
     };
-    match with_state(|state| Ok(state.session.get_handle(&CallerId(caller_id)))) {
+    match with_state(|state| Ok(state.sessions.get_handle(&caller_id))) {
         Ok(Some(handle)) => Ok(json!({
             "success": true,
             "open": true,
@@ -125,7 +131,7 @@ pub(crate) fn op_list_open(
     _args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    match with_state(|state| Ok(state.session.list_open_callers())) {
+    match with_state(|state| Ok(state.sessions.list_open_callers())) {
         Ok(open_caller_ids) => Ok(json!({"success": true, "open_caller_ids": open_caller_ids})),
         Err(IsolatedError::FeatureDisabled) => Ok(json!({"success": true, "open_caller_ids": []})),
         Err(error) => Ok(error_payload(&error)),
@@ -152,11 +158,13 @@ pub(crate) fn op_test_reset(
     let exited_callers = {
         let mut guard = lock_state_cell();
         let exited_callers = if let Some(state) = guard.as_mut() {
-            let callers = state.session.list_open_callers();
+            let callers = state.sessions.list_open_callers();
             for caller_id in &callers {
-                let _ = state.session.exit(&CallerId(caller_id.clone()), Some(0.0));
+                if let Ok(outcome) = state.sessions.exit(caller_id, Some(0.0)) {
+                    let _ = state.release_lease(&outcome.lease_id);
+                }
             }
-            state.session.reap_orphan_resources();
+            state.sessions.reap_orphan_resources();
             callers
         } else {
             Vec::new()
@@ -183,12 +191,33 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<IsolatedCommandHan
         let guard = lock_state_cell();
         guard.as_ref().and_then(|state| {
             state
-                .session
-                .get_handle(&CallerId(caller_id))
+                .sessions
+                .get_handle(&caller_id)
                 .map(|handle| (state.layer_stack_root.clone(), handle))
         })
     }?;
     Some(command_handle_from(&layer_stack_root, handle))
+}
+
+#[cfg(target_os = "linux")]
+fn command_handle_from(
+    layer_stack_root: &Path,
+    handle: WorkspaceHandle,
+) -> IsolatedCommandHandle {
+    IsolatedCommandHandle {
+        caller_id: handle.caller_id,
+        workspace_handle_id: handle.workspace_id.0,
+        layer_stack_root: layer_stack_root.to_path_buf(),
+        manifest_version: handle.manifest_version,
+        manifest_root_hash: handle.manifest_root_hash,
+        workspace_root: PathBuf::from(handle.workspace_root),
+        scratch_dir: handle.scratch_dir,
+        upperdir: handle.upperdir,
+        workdir: handle.workdir,
+        layer_paths: handle.layer_paths,
+        ns_fds: handle.ns_fds,
+        cgroup_path: handle.cgroup_path,
+    }
 }
 
 pub(crate) fn caller_has_active_handle(caller_id: &str) -> bool {
@@ -199,7 +228,7 @@ pub(crate) fn caller_has_active_handle(caller_id: &str) -> bool {
     let guard = lock_state_cell();
     guard
         .as_ref()
-        .and_then(|state| state.session.get_handle(&CallerId(caller_id.to_owned())))
+        .and_then(|state| state.sessions.get_handle(caller_id))
         .is_some()
 }
 
@@ -209,7 +238,30 @@ pub(crate) fn caller_has_active_handle(caller_id: &str) -> bool {
 /// surface. Returns `Err(IsolatedError::NotOpen)` when the caller is not
 /// isolated (the cancel surface treats that as a no-op).
 pub(crate) fn exit_isolated(caller_id: &str, grace_s: Option<f64>) -> Result<Value, IsolatedError> {
-    with_state(|state| state.session.exit(&CallerId(caller_id.to_owned()), grace_s))
+    with_state(|state| {
+        let outcome = state.sessions.exit(caller_id, grace_s)?;
+        Ok(exit_response(state, outcome))
+    })
+}
+
+/// Release the exited workspace's lease and shape the stable exit response,
+/// splicing the lease fields into the teardown inspection.
+fn exit_response(state: &mut state::DaemonIsolatedState, outcome: ExitOutcome) -> Value {
+    let lease_released = state.release_lease(&outcome.lease_id);
+    let active_leases_after = state.active_lease_count();
+    let mut inspection = outcome.inspection;
+    if let Some(object) = inspection.as_object_mut() {
+        object.insert("lease_released".to_owned(), json!(lease_released));
+        object.insert("active_leases_after".to_owned(), json!(active_leases_after));
+    }
+    json!({
+        "success": true,
+        "evicted_upperdir_bytes": outcome.evicted_upperdir_bytes,
+        "lifetime_s": outcome.lifetime_s,
+        "total_ms": outcome.total_ms,
+        "phases_ms": outcome.phases_ms,
+        "inspection": inspection,
+    })
 }
 
 /// Exit every open isolated workspace and reap orphaned resources (the
@@ -219,11 +271,13 @@ pub(crate) fn exit_all_and_reap(grace_s: Option<f64>) -> usize {
     let Some(state) = guard.as_mut() else {
         return 0;
     };
-    let callers = state.session.list_open_callers();
+    let callers = state.sessions.list_open_callers();
     for caller in &callers {
-        let _ = state.session.exit(&CallerId(caller.clone()), grace_s);
+        if let Ok(outcome) = state.sessions.exit(caller, grace_s) {
+            let _ = state.release_lease(&outcome.lease_id);
+        }
     }
-    state.session.reap_orphan_resources();
+    state.sessions.reap_orphan_resources();
     callers.len()
 }
 
@@ -236,21 +290,25 @@ pub(crate) fn ttl_sweep() -> usize {
     // command-session registry is the authority for this now that the isolated
     // side-map is gone (lock order: isolated state -> command-session registry).
     let active_callers = state
-        .session
+        .sessions
         .list_open_callers()
         .into_iter()
         .filter(|caller| run::active_command_sessions_for_caller(caller) > 0)
         .collect::<HashSet<_>>();
-    state.session.ttl_sweep(&active_callers)
+    let evicted = state.sessions.ttl_sweep(&active_callers);
+    let count = evicted.len();
+    for outcome in evicted {
+        let _ = state.release_lease(&outcome.lease_id);
+    }
+    count
 }
 
+/// Bump the caller's isolated-workspace TTL liveness (file/command activity).
 #[cfg(target_os = "linux")]
-pub(crate) fn record_tool_call(caller_id: &str, payload: Value) {
+pub(crate) fn touch_isolated(caller_id: &str) {
     let mut guard = lock_state_cell();
     if let Some(state) = guard.as_mut() {
-        state
-            .session
-            .record_tool_call(&CallerId(caller_id.to_owned()), payload);
+        state.sessions.touch(caller_id);
     }
 }
 
@@ -302,10 +360,6 @@ fn env_true(key: &str) -> bool {
         .unwrap_or_default()
         .trim()
         .eq_ignore_ascii_case("true")
-}
-
-fn test_runtime_stub_enabled() -> bool {
-    env_true(TEST_HARNESS_ENV)
 }
 
 #[cfg(test)]

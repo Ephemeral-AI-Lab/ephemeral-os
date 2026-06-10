@@ -10,12 +10,11 @@ fn sample_completion(id: &str) -> CommandSessionCompletion {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
+fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use std::path::PathBuf;
 
-    use crate::contract::{CallerId, InvocationId, SnapshotLease};
-    use crate::ephemeral::{EphemeralRunDirs, LayerStackRoot};
     use eos_command_session::session::CommandSessionSpec;
+    use eos_layerstack::service::Snapshot;
 
     let session = CommandSession::new(CommandSessionSpec {
         id: id.to_owned(),
@@ -23,30 +22,35 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<WorkspaceRun> {
         command: "sleep 1".to_owned(),
         timeout_seconds: None,
     });
-    let workspace = EphemeralWorkspace {
-        layer_stack_root: LayerStackRoot(PathBuf::from("/layers")),
-        workspace_root: PathBuf::from("/workspace"),
-        caller_id: CallerId(caller.to_owned()),
-        invocation_id: InvocationId("inv".to_owned()),
-        snapshot: SnapshotLease {
+    let scratch = std::env::temp_dir().join(format!(
+        "eos-command-ops-registry-{}-{id}-{caller}",
+        std::process::id()
+    ));
+    let workspace = EphemeralWorkspace::create(
+        &scratch,
+        "test",
+        id,
+        PathBuf::from("/workspace"),
+        Vec::new(),
+    )
+    .expect("scaffold workspace");
+    Arc::new(ActiveCommand::Ephemeral(EphemeralRun {
+        session,
+        root: PathBuf::from("/layers"),
+        snapshot: Snapshot {
             lease_id: "lease".to_owned(),
             manifest_version: 1,
-            manifest_root_hash: "hash".to_owned(),
+            root_hash: "hash".to_owned(),
             layer_paths: Vec::new(),
         },
-        dirs: EphemeralRunDirs {
-            run_dir: PathBuf::from("/run"),
-            upperdir: PathBuf::from("/upper"),
-            workdir: PathBuf::from("/work"),
-        },
-    };
-    Arc::new(WorkspaceRun::Ephemeral(EphemeralRun { session, workspace }))
+        workspace,
+    }))
 }
 
 #[cfg(not(target_os = "linux"))]
 #[test]
 fn insert_get_count_remove_track_caller_runs() {
-    let registry = WorkspaceRunRegistry::new();
+    let registry = CommandRegistry::new();
     registry.insert(ephemeral_run("cmd_1", "caller"));
     registry.insert(ephemeral_run("cmd_2", "caller"));
     registry.insert(ephemeral_run("cmd_3", "other"));
@@ -66,7 +70,7 @@ fn insert_get_count_remove_track_caller_runs() {
 
 #[test]
 fn push_completed_evicts_oldest_beyond_cap() {
-    let registry = WorkspaceRunRegistry::new();
+    let registry = CommandRegistry::new();
     let overflow = 5;
     for index in 0..(MAX_COMPLETED_ENTRIES + overflow) {
         registry.push_completed(sample_completion(&format!("cmd_{index}")));

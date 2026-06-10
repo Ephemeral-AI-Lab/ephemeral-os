@@ -20,6 +20,11 @@ export interface HookBackgroundSession {
   description?: string;
 }
 
+export interface HookAdvisoryRequirement {
+  required: boolean;
+  advisor_prompt?: string;
+}
+
 /**
  * What a hook receives (JSON over stdin for command hooks). snake_case:
  * crosses the process boundary. Hooks receive snapshots only, never live
@@ -33,6 +38,8 @@ export interface HookPayload {
   run: AgentRunSnapshot;
   /** Running plus settled-but-undelivered sessions for this run. */
   background_sessions?: readonly HookBackgroundSession[];
+  /** PreToolUse policy fact for hooks that gate advisory-required tools. */
+  advisory_requirement?: HookAdvisoryRequirement;
   /** PostToolUse only (string projection of the outcome content). */
   tool_response?: string;
   /** PostToolUseFailure only. */

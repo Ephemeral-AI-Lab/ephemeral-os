@@ -15,6 +15,8 @@ describe("defineTool", () => {
     expect(tool.isTerminal).toBe(false);
     expect(tool.isBatchExecutionForbidden).toBe(false);
     expect(tool.availableInIsolatedWorkspace).toBe(false);
+    expect(tool.isAdvisoryRequired).toBe(false);
+    expect(tool.advisorPrompt).toBeUndefined();
   });
 
   it.each([
@@ -65,5 +67,29 @@ describe("defineTool", () => {
         execute: () => Promise.resolve({ content: "ok" }),
       }),
     ).toThrow();
+  });
+
+  it("requires a non-empty advisorPrompt for advisory tools", () => {
+    expect(() =>
+      defineTool({
+        name: "submit",
+        description: "submit",
+        input: z.object({}),
+        isAdvisoryRequired: true,
+        execute: () => Promise.resolve({ content: "ok" }),
+      }),
+    ).toThrow(/requires a non-empty advisorPrompt/);
+  });
+
+  it("rejects advisorPrompt without the advisory flag", () => {
+    expect(() =>
+      defineTool({
+        name: "probe",
+        description: "probe",
+        input: z.object({}),
+        advisorPrompt: "review this",
+        execute: () => Promise.resolve({ content: "ok" }),
+      }),
+    ).toThrow(/advisorPrompt without isAdvisoryRequired/);
   });
 });

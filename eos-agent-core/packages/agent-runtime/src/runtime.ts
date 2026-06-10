@@ -37,9 +37,8 @@ import {
 } from "./llm-client-registry.js";
 import { RunRegistry, type RunSummary } from "./run-registry.js";
 import {
-  TranscriptWriter,
+  RunLog,
   readTranscriptFile as readTranscriptBytes,
-  runTranscriptPath,
   type TranscriptRead,
 } from "./transcript.js";
 
@@ -175,7 +174,17 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     const runId = mintAgentRunId();
     const inbox = new NotificationInbox();
     const supervisor = new BackgroundSupervisor(inbox);
-    const transcriptPath = runTranscriptPath(ctx.dataDir, runId);
+    const runLog = new RunLog(ctx.dataDir, {
+      run_id: runId,
+      agent_name: profile.name,
+      agent_kind: profile.agent_kind,
+      ...(context.parent !== undefined && { parent: context.parent }),
+      llm_client_id: profile.llm_client_id,
+      model_id: llm.model_id,
+      reasoning_effort: llm.reasoning_effort,
+      max_turns: profile.max_turns,
+    });
+    const transcriptPath = runLog.transcriptPath;
 
     const runState: AgentRunState = {
       run_id: runId,
@@ -188,6 +197,8 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       workspace: { isIsolated: false },
     };
 
+    const terminalDefinitions = terminalToolDefinitions();
+    const advisorPrompts = advisorPromptLookup([...ctx.baseTools, ...terminalDefinitions]);
     const availableDefinitions = [
       ...ctx.baseTools,
       ...agentTools(
@@ -195,13 +206,15 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
           startRun: (next) => startRun(next, { parent: runId }),
           transcriptPathOf: (target) => registry.transcriptPathOf(target),
           readTranscriptFile,
+          advisorPromptFor: (toolName) => advisorPrompts.get(toolName),
         },
         supervisor,
       ),
       ...backgroundTools(supervisor),
-      ...terminalToolDefinitions(),
+      ...terminalDefinitions,
     ];
     const definitions = selectProfileDefinitions(profile, availableDefinitions);
+    validateAdvisorySelection(profile, definitions);
 
     // No inbox parameter (decision 11): hook context rides result metadata
     // and the engine publishes it; tools and the executor never see the inbox.
@@ -227,19 +240,18 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       initialMessages: [...params.initialMessages],
     });
 
-    const transcriptWriter = new TranscriptWriter(transcriptPath);
     for (const message of params.initialMessages) {
-      transcriptWriter.appendUser("initial", message);
+      runLog.appendUser("initial", message);
     }
     let finished = false;
     // Decision 5: the runtime is the stream's single consumer.
     const consumed = (async () => {
-      for await (const event of handle.events) transcriptWriter.append(event);
+      for await (const event of handle.events) runLog.append(event);
     })();
     transcriptBarriers.set(transcriptPath, async () => {
       // After finish the buffered tail may still be draining off the stream.
       if (finished) await consumed;
-      await transcriptWriter.flush();
+      await runLog.flush();
     });
     registry.add(runState, handle);
     void handle.outcome.finally(() => {
@@ -247,7 +259,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       // The one authoritative flush trigger (§6): the stream's whole tail
       // is on disk before the registry reports the run finished.
       void consumed
-        .then(() => transcriptWriter.flush())
+        .then(() => runLog.flush())
         // A write failure resurfaces on the next read; finishing is bookkeeping.
         .catch(() => undefined)
         .finally(() => {
@@ -262,6 +274,35 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     startRun: (params) => startRun(params),
     listRuns: () => registry.list(),
   };
+}
+
+function advisorPromptLookup(
+  definitions: readonly ToolDefinition[],
+): ReadonlyMap<string, string> {
+  const prompts = new Map<string, string>();
+  for (const definition of definitions) {
+    if (!definition.isAdvisoryRequired) continue;
+    if (definition.advisorPrompt === undefined) {
+      throw new Error(`tool ${definition.name} requires advisory but has no advisorPrompt`);
+    }
+    prompts.set(definition.name, definition.advisorPrompt);
+  }
+  return prompts;
+}
+
+function validateAdvisorySelection(
+  profile: { name: string; agent_kind: string },
+  definitions: readonly ToolDefinition[],
+): void {
+  if (profile.agent_kind === "advisor") return;
+  const requiresAdvisory = definitions.some(
+    (definition) => definition.isAdvisoryRequired,
+  );
+  if (!requiresAdvisory) return;
+  if (definitions.some((definition) => definition.name === "ask_advisor")) return;
+  throw new Error(
+    `profile "${profile.name}" selects advisory-required tools but cannot call ask_advisor`,
+  );
 }
 
 function backgroundSessionForHook(row: {

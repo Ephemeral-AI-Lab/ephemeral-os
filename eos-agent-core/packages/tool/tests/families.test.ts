@@ -111,6 +111,21 @@ describe("submission tool family", () => {
     expect(tool.availableInIsolatedWorkspace).toBe(false);
   });
 
+  it("marks only planner, worker, and main submissions as advisory-required", () => {
+    for (const kind of ["main", "planner", "worker"] as const) {
+      const tool = submissionTool(kind);
+      expect(tool.isAdvisoryRequired, kind).toBe(true);
+      expect(typeof tool.advisorPrompt, kind).toBe("string");
+      expect(tool.advisorPrompt?.length, kind).toBeGreaterThan(0);
+    }
+    expect(submissionTool("advisor")).toMatchObject({
+      isAdvisoryRequired: false,
+    });
+    expect(submissionTool("subagent")).toMatchObject({
+      isAdvisoryRequired: false,
+    });
+  });
+
   it("returns the parsed outcome object as the terminal content", async () => {
     const submit = submissionTool("planner");
     const outcome = await submit.execute({ summary: "plan ready" }, ctx());
@@ -135,11 +150,6 @@ describe("submission tool family", () => {
       { summary: "all done", payload: { commits: 2 } },
       ctx(),
     );
-    expect(afterDelivery.isError ?? false).toBe(false);
-    expect(afterDelivery.content).toEqual({
-      summary: "all done",
-      payload: { commits: 2 },
-    });
     expect(afterDelivery.isError ?? false).toBe(false);
     expect(afterDelivery.content).toEqual({
       summary: "all done",

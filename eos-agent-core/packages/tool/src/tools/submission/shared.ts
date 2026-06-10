@@ -16,17 +16,23 @@ type SubmissionInput = z.infer<typeof SubmissionInputSchema>;
 interface SubmissionToolInit {
   name: string;
   description: string;
+  isAdvisoryRequired?: boolean;
+  advisorPrompt?: string;
 }
 
 export function defineSubmissionTool({
   name,
   description,
+  isAdvisoryRequired,
+  advisorPrompt,
 }: SubmissionToolInit): ToolDefinition {
   return defineTool({
     name,
     description,
     input: SubmissionInputSchema,
     isTerminal: true,
+    isAdvisoryRequired,
+    advisorPrompt,
     execute: (input: SubmissionInput) => {
       const content: JsonObject = { summary: input.summary };
       if (input.payload !== undefined) content.payload = input.payload;

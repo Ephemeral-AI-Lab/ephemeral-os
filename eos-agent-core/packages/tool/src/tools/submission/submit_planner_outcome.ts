@@ -6,5 +6,8 @@ export function submitPlannerOutcomeTool(): ToolDefinition {
     name: "submit_planner_outcome",
     description:
       "Submit the final outcome of this planner run. Terminal: a successful call ends the run.",
+    isAdvisoryRequired: true,
+    advisorPrompt:
+      "Review whether the planner's terminal submission is coherent, complete, and safe to hand off.",
   });
 }

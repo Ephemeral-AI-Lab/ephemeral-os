@@ -1,26 +1,25 @@
+//! The concrete namespace envelope: ns-holder spawn, ns FDs, in-namespace
+//! overlay mount, DNS, the net-ready handshake, cgroups, and holder teardown.
+//!
+//! One concrete runtime with a `stub` switch (the e2e harness env var or unit
+//! tests) — not a port: this crate owns the envelope end to end. The kernel
+//! work happens in dedicated single-threaded children (`eosd ns-holder`,
+//! `eosd ns-runner`) spawned from the current executable; the multithreaded
+//! caller never enters a namespace itself.
+
 use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd};
 use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
 #[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use super::IsolatedCommandHandle;
-#[cfg(target_os = "linux")]
-use eos_namespace::protocol::Intent;
-#[cfg(target_os = "linux")]
-use eos_namespace::protocol::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
-use eos_layerstack::LayerStack;
-use eos_workspace_runtime::contract::SnapshotLease;
-use eos_workspace_runtime::isolated::{
-    IsolatedError, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
-};
+use eos_namespace::protocol::{Intent, RunMode, RunRequest, ToolCall, WorkspaceRoot};
 #[cfg(target_os = "linux")]
 use nix::fcntl::OFlag;
 #[cfg(target_os = "linux")]
@@ -30,63 +29,58 @@ use nix::unistd::{close, pipe2, Pid};
 #[cfg(target_os = "linux")]
 use serde_json::json;
 
+use crate::error::IsolatedError;
+use crate::sessions::WorkspaceHandle;
+
 #[cfg(target_os = "linux")]
-use super::ns_runner::{
+mod ns_runner;
+#[cfg(target_os = "linux")]
+use ns_runner::{
     clear_cloexec, expect_line, lock_holder_children, ns_fds_from_map, open_inheritable_fd,
     run_ns_runner_configure_dns_child, run_ns_runner_mount_overlay_child, set_nonblocking,
     write_all_fd,
 };
-use super::{setup_error, test_runtime_stub_enabled};
 
-#[derive(Clone)]
-pub(super) struct DaemonLayerStackPort {
-    pub(super) stack: Arc<Mutex<LayerStack>>,
-}
+/// Harness switch: when `true`, every kernel-touching step no-ops.
+pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
-impl LayerStackSnapshotPort for DaemonLayerStackPort {
-    fn acquire_snapshot(&self, request_id: &str) -> Result<SnapshotLease, IsolatedError> {
-        let lease = {
-            let stack = self
-                .stack
-                .lock()
-                .map_err(|_| setup_error("layer stack lock poisoned"))?;
-            stack.acquire_snapshot(request_id).map_err(setup_error)?
-        };
-        Ok(SnapshotLease {
-            lease_id: lease.lease_id,
-            manifest_version: lease.manifest_version,
-            manifest_root_hash: lease.root_hash,
-            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
-        })
-    }
-
-    fn release_lease(&self, lease_id: &str) -> Result<bool, IsolatedError> {
-        let mut stack = self
-            .stack
-            .lock()
-            .map_err(|_| setup_error("layer stack lock poisoned"))?;
-        stack.release_lease(lease_id).map_err(setup_error)
-    }
-
-    fn active_lease_count(&self) -> Result<Option<usize>, IsolatedError> {
-        let stack = self
-            .stack
-            .lock()
-            .map_err(|_| setup_error("layer stack lock poisoned"))?;
-        Ok(Some(stack.active_lease_count()))
+pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
+    IsolatedError::SetupFailed {
+        step: error.to_string(),
     }
 }
 
-#[derive(Default)]
-pub(super) struct DaemonNamespaceRuntime;
+fn env_true(key: &str) -> bool {
+    std::env::var(key)
+        .unwrap_or_default()
+        .trim()
+        .eq_ignore_ascii_case("true")
+}
 
-impl NamespaceRuntimePort for DaemonNamespaceRuntime {
-    fn spawn_ns_holder(
+/// Kernel-touching namespace operations, stubbed for harness/unit-test runs.
+pub(crate) struct NamespaceRuntime {
+    stub: bool,
+}
+
+impl NamespaceRuntime {
+    pub(crate) fn from_env() -> Self {
+        Self {
+            stub: env_true(TEST_HARNESS_ENV),
+        }
+    }
+
+    pub(crate) fn stubbed() -> Self {
+        Self { stub: true }
+    }
+
+    /// Spawn `eosd ns-holder`, wait for the `ns-up` handshake token, and
+    /// return its PID.
+    pub(crate) fn spawn_ns_holder(
         &self,
         handle: &mut WorkspaceHandle,
         setup_timeout_s: f64,
     ) -> Result<i32, IsolatedError> {
-        if test_runtime_stub_enabled() {
+        if self.stub {
             return Ok(0);
         }
         #[cfg(not(target_os = "linux"))]
@@ -141,8 +135,9 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
     }
 
-    fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError> {
-        if test_runtime_stub_enabled() || holder_pid <= 0 {
+    /// Open `/proc/<pid>/ns/{user,mnt,pid,net}` FDs for `holder_pid`.
+    pub(crate) fn open_ns_fds(&self, holder_pid: i32) -> Result<HashMap<String, i32>, IsolatedError> {
+        if self.stub || holder_pid <= 0 {
             return Ok(HashMap::new());
         }
         #[cfg(not(target_os = "linux"))]
@@ -165,12 +160,13 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
     }
 
-    fn mount_overlay(
+    /// Mount the overlay inside the namespace (via `eosd ns-runner` setns).
+    pub(crate) fn mount_overlay(
         &self,
         handle: &WorkspaceHandle,
         layer_paths: &[PathBuf],
     ) -> Result<(), IsolatedError> {
-        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
+        if self.stub || handle.holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -182,8 +178,8 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
             let request = RunRequest {
                 mode: RunMode::SetNs,
                 tool_call: ToolCall {
-                    invocation_id: format!("isolated-mount-{}", handle.workspace_handle_id.0),
-                    caller_id: handle.caller_id.0.clone(),
+                    invocation_id: format!("isolated-mount-{}", handle.workspace_id.0),
+                    caller_id: handle.caller_id.clone(),
                     verb: "setns_overlay_mount".into(),
                     intent: Intent::WriteAllowed,
                     args: json!({}),
@@ -202,12 +198,13 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         Ok(())
     }
 
-    fn configure_dns(
+    /// Configure DNS inside the namespace; returns whether the fallback applied.
+    pub(crate) fn configure_dns(
         &self,
         handle: &WorkspaceHandle,
         fallback_dns: &str,
     ) -> Result<bool, IsolatedError> {
-        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
+        if self.stub || handle.holder_pid <= 0 {
             return Ok(false);
         }
         #[cfg(not(target_os = "linux"))]
@@ -220,11 +217,8 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
             let request = RunRequest {
                 mode: RunMode::SetNs,
                 tool_call: ToolCall {
-                    invocation_id: format!(
-                        "isolated-configure-dns-{}",
-                        handle.workspace_handle_id.0
-                    ),
-                    caller_id: handle.caller_id.0.clone(),
+                    invocation_id: format!("isolated-configure-dns-{}", handle.workspace_id.0),
+                    caller_id: handle.caller_id.clone(),
                     verb: "configure_dns".into(),
                     intent: Intent::ReadOnly,
                     args: json!({"fallback_dns": fallback_dns}),
@@ -242,12 +236,13 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         }
     }
 
-    fn signal_net_ready(
+    /// Send `net-ready` and await the `ready` token (handshake steps 2-3).
+    pub(crate) fn signal_net_ready(
         &self,
         handle: &WorkspaceHandle,
         setup_timeout_s: f64,
     ) -> Result<(), IsolatedError> {
-        if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
+        if self.stub || handle.holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -263,8 +258,8 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                         "net-ready {} {} {} {}\n",
                         veth.ns_name,
                         veth.ns_ip,
-                        eos_workspace_runtime::isolated::BRIDGE_PREFIX_LEN,
-                        eos_workspace_runtime::isolated::GATEWAY
+                        crate::network::BRIDGE_PREFIX_LEN,
+                        crate::network::GATEWAY
                     )
                 },
             );
@@ -274,21 +269,23 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         Ok(())
     }
 
-    fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
-        if test_runtime_stub_enabled() {
+    /// Create the per-workspace cgroup and return its path.
+    pub(crate) fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
+        if self.stub {
             return Ok(PathBuf::new());
         }
-        let path = PathBuf::from(eos_workspace_runtime::isolated::CGROUP_ROOT).join(format!(
+        let path = PathBuf::from(crate::caps::CGROUP_ROOT).join(format!(
             "{}{}",
-            eos_workspace_runtime::isolated::HANDLE_PREFIX,
-            handle.workspace_handle_id.0
+            crate::caps::HANDLE_PREFIX,
+            handle.workspace_id.0
         ));
         std::fs::create_dir_all(&path).map_err(setup_error)?;
         Ok(path)
     }
 
-    fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError> {
-        if test_runtime_stub_enabled() || holder_pid <= 0 {
+    /// SIGTERM (then SIGKILL after `grace_s`) the ns-holder and reap children.
+    pub(crate) fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError> {
+        if self.stub || holder_pid <= 0 {
             return Ok(());
         }
         #[cfg(not(target_os = "linux"))]
@@ -315,26 +312,5 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
             }
         }
         Ok(())
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub(super) fn command_handle_from(
-    layer_stack_root: &std::path::Path,
-    handle: WorkspaceHandle,
-) -> IsolatedCommandHandle {
-    IsolatedCommandHandle {
-        caller_id: handle.caller_id.0,
-        workspace_handle_id: handle.workspace_handle_id.0,
-        layer_stack_root: layer_stack_root.to_path_buf(),
-        manifest_version: handle.manifest_version,
-        manifest_root_hash: handle.manifest_root_hash,
-        workspace_root: PathBuf::from(handle.workspace_root),
-        scratch_dir: handle.scratch_dir,
-        upperdir: handle.upperdir,
-        workdir: handle.workdir,
-        layer_paths: handle.layer_paths,
-        ns_fds: handle.ns_fds,
-        cgroup_path: handle.cgroup_path,
     }
 }

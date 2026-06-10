@@ -46,6 +46,8 @@ export interface AgentRunCalls {
     offset: number,
     maxBytes: number,
   ): Promise<AgentToolTranscriptRead>;
+  /** Advisory prompt for the target tool, if that tool is advisory-gated. */
+  advisorPromptFor(toolName: string): string | undefined;
 }
 
 /** The agent family, one bound definition per `AGENT_TOOL_NAMES` entry. */

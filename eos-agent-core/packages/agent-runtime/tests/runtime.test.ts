@@ -1,12 +1,12 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
 import { toolUseIdFrom } from "@eos/contracts";
 import { systemNotificationMessage } from "@eos/engine";
 import type { LlmClient } from "@eos/llm-client";
-import type { ToolDefinition } from "@eos/tool";
+import { terminalToolDefinitions, type ToolDefinition } from "@eos/tool";
 import { scriptedTool } from "@eos/testkit";
 
 import { createAgentRuntime, type AgentRuntime } from "../src/runtime.js";
@@ -24,6 +24,8 @@ import {
   llmRegistry,
   must,
   readTranscriptLines,
+  readEventLines,
+  readResultLines,
   scriptedTurn,
   tempDir,
   textBlock,
@@ -39,6 +41,7 @@ const ROOT: ProfileSpec = {
   llmClientId: "root_llm",
   allowed: [
     "run_subagent",
+    "ask_advisor",
     "read_agent_run_transcript",
     "list_background_sessions",
     "cancel_background_session",
@@ -263,6 +266,28 @@ describe("agent runtime", () => {
     ).toThrow('unknown llm client id "ghost_llm"');
   });
 
+  it("rejects starting a non-advisor profile that selects advisory tools without ask_advisor", () => {
+    const { runtime } = runtimeFixture({
+      profiles: [
+        {
+          name: "unsafe_worker",
+          kind: "worker",
+          llmClientId: "unsafe_llm",
+          allowed: [],
+        },
+      ],
+      clients: { unsafe_llm: new MockLlmClient([]) },
+    });
+    expect(() =>
+      runtime.startRun({
+        agentName: "unsafe_worker",
+        initialMessages: [userMessage("finish")],
+      }),
+    ).toThrow(
+      'profile "unsafe_worker" selects advisory-required tools but cannot call ask_advisor',
+    );
+  });
+
   it("carries the terminal submission onto the outcome and the run_finished line (§13.4)", async () => {
     const client = new MockLlmClient([
       scriptedTurn([
@@ -397,7 +422,12 @@ describe("agent runtime", () => {
           assistantMessage(
             toolUseBlock("tu_as", "submit_advisor_outcome", {
               summary: "approve",
-              payload: { verdict: "ok" },
+              payload: {
+                verdict: "pass",
+                tool_name: "submit_worker_outcome",
+                payload: { summary: "done" },
+                reason: "matches the transcript",
+              },
             }),
           ),
           "tool_use",
@@ -440,7 +470,15 @@ describe("agent runtime", () => {
     expect(
       lastToolResultJson(must(askerClient.requests.at(1))),
       "the advisor submission is the tool result",
-    ).toEqual({ summary: "approve", payload: { verdict: "ok" } });
+    ).toEqual({
+      summary: "approve",
+      payload: {
+        verdict: "pass",
+        tool_name: "submit_worker_outcome",
+        payload: { summary: "done" },
+        reason: "matches the transcript",
+      },
+    });
 
     const advisorRequest = must(advisorClient.requests.at(0));
     expect(
@@ -454,9 +492,15 @@ describe("agent runtime", () => {
       evidenceText.text,
       "the caller transcript includes the in-flight ask_advisor call",
     ).toContain('"ask_advisor"');
+    const workerSubmission = must(
+      terminalToolDefinitions().find(
+        (definition) => definition.name === "submit_worker_outcome",
+      ),
+    );
+    const advisorPrompt = must(workerSubmission.advisorPrompt);
     expect(instruction).toEqual(
       userMessage(
-        "Read the transcript and verify if the caller submitted the payload correctly.",
+        `${advisorPrompt} Please verify against the below tool name + payload\n{"payload":{"summary":"done"},"tool_name":"submit_worker_outcome"}`,
       ),
     );
 
@@ -719,7 +763,7 @@ process.stdin.on("end", () => {
           name: "scribe",
           kind: "worker",
           llmClientId: "scribe_llm",
-          allowed: ["read_note", "write_note"],
+          allowed: ["read_note", "write_note", "ask_advisor"],
         },
       ],
       clients: { scribe_llm: client },
@@ -781,6 +825,13 @@ process.stdin.on("end", () => {
     await waitForFinished(runtime, "root");
 
     const lines = readTranscriptLines(run.transcriptPath);
+    const events = readEventLines(join(dirname(run.transcriptPath), "events.jsonl"));
+    const result = readResultLines(join(dirname(run.transcriptPath), "result.jsonl"));
+    expect(readdirSync(dirname(run.transcriptPath)).sort()).toEqual([
+      "events.jsonl",
+      "result.jsonl",
+      "transcript.jsonl",
+    ]);
     expect(lines.map((line) => line.kind)).toEqual([
       "user",
       "user",
@@ -789,14 +840,27 @@ process.stdin.on("end", () => {
       "tool_result",
       "run_finished",
     ]);
+    const transcriptSeqs = lines.map((line) => line.seq);
     expect(
-      lines.map((line) => line.seq),
-      "seq stays dense across user, assistant, and tool lines",
-    ).toEqual([0, 1, 2, 3, 4, 5]);
+      transcriptSeqs,
+      "transcript seq is ordered but sparse because run audit files share the counter",
+    ).toEqual([...transcriptSeqs].sort((a, b) => a - b));
+    expect(transcriptSeqs[0]).toBeGreaterThan(0);
     expect(lines[0]).toMatchObject({
       kind: "user",
       origin: "initial",
       message: userMessage("first"),
     });
+    expect(
+      events.filter((line) => line.type === "turn_completed"),
+      "each completed turn records usage in events.jsonl",
+    ).toHaveLength(2);
+    expect(result).toEqual([
+      expect.objectContaining({
+        run_id: run.runId,
+        status: "completed",
+        usage: outcome.usage,
+      }),
+    ]);
   });
 });

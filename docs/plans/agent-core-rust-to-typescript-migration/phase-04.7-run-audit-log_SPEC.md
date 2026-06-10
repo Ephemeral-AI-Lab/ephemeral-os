@@ -45,10 +45,17 @@ closes exactly those three gaps. No engine changes.
 
 2. **One run directory, three files, one shared `seq`.**
    `<dataDir>/runs/<run_id>/{events,transcript,result}.jsonl`. A single
-   run-global sequence counter stamps every line across all three files,
-   so per-file `seq` is sparse but a merge of the files sorts into the
-   exact write order. One append queue serializes all three files and
-   keeps the single latched-failure/`flush()` contract of Phase 04.5 §6.
+   run-global `RunLog` counter stamps every line before append; no file
+   "owns" the sequence. Per-file `seq` is sparse, but merging the three
+   files by `seq` reconstructs the exact durable write order. One append
+   queue serializes all three files and keeps the single
+   latched-failure/`flush()` contract of Phase 04.5 §6. The same counter
+   is the future per-run transport resume cursor: per-run SSE can use
+   `id: <seq>`, replay durable lines with `seq > Last-Event-ID`, and
+   bridge to live by dropping already-replayed durable lines. A
+   multiplexed dashboard stream must use a composite cursor such as
+   `<run_id>:<seq>` or a separate global cursor; per-run `seq` values are
+   intentionally not globally unique.
 
 3. **`transcript.jsonl` keeps its name, path, and schema.** The line
    union (`TranscriptLine`), `runTranscriptPath`, the `transcript_path`
@@ -67,20 +74,22 @@ closes exactly those three gaps. No engine changes.
    (abort mid-stream or provider error) — exactly the engine's existing
    semantics, recorded for free.
 
-5. **`events.jsonl` is the lifecycle timeline, not the byte stream:
-   deltas are excluded.** Recording `assistant_text_delta` /
+5. **`events.jsonl` is the lifecycle timeline, not the SSE delta log:
+   deltas are excluded from disk.** Recording `assistant_text_delta` /
    `reasoning_delta` / `tool_use_delta` would write one enveloped line
-   per SSE chunk — hundreds of lines per turn that are mostly `seq`/`ts`
-   wrapper — to persist text `transcript.jsonl` already stores
-   assembled, and token accounting never derives from delta text (usage
-   is the provider-reported snapshot on `assistant_message_complete`).
-   Live tailing of an in-flight turn is the broadcaster/server phase's
-   concern, not the audit file's. Tool lines record compact facts
-   (`name`, ids, flags, `duration_ms`) while the full output stays in
-   the `transcript.jsonl` `tool_result` line. No content is stored
-   twice. The one cost of exclusion: partial output of a turn that dies
-   mid-stream stays memory-only (`outcome.displayed`) — recorded in
-   decision 9 as a deferred seam, not a reason to log every chunk.
+   per provider chunk — hundreds of lines per turn that are mostly
+   `seq`/`ts` wrapper — to persist text `transcript.jsonl` already
+   stores assembled, and token accounting never derives from delta text
+   (usage is the provider-reported snapshot on
+   `assistant_message_complete`). This does not mean a future SSE UI has
+   no deltas: normalized live deltas are in-memory broadcaster events,
+   not audit-file lines and not provider-native SSE frames. Tool lines
+   record compact facts (`name`, ids, flags, `duration_ms`) while the
+   full output stays in the `transcript.jsonl` `tool_result` line. No
+   content is stored twice. The one cost of exclusion: partial output of
+   a turn that dies mid-stream stays memory-only (`outcome.displayed`) —
+   recorded in decision 9 as a deferred seam, not a reason to log every
+   chunk.
 
 6. **One `UsageSnapshot` semantic, therefore one cache-hit formula.**
    Anthropic reports `input_tokens` net of cache reads/creations; the
@@ -109,13 +118,30 @@ closes exactly those three gaps. No engine changes.
    in the queue. The per-run read barrier in `startRun` keeps awaiting
    the same `flush()`.
 
-9. **Steer, notification, and died-turn salvage lines stay deferred.**
-   Steer and notification entries still have no live event source
-   (Phase 04.5 §6); the `transcript.jsonl` union keeps carrying them for
-   recorders, and the broadcaster phase wires them. A salvage line for a
-   died turn's partial text would need a new engine event (salvage
-   currently lands only in `outcome.displayed`), so it is a named seam
-   for the phase that first needs it.
+9. **Steer, notification, and died-turn salvage lines are explicit
+   transport seams.** Phase 04.7 still has no server ingestion path, so
+   steered user messages and notification lines have no live event source
+   to record here (Phase 04.5 §6). Once a UI can send a second request
+   into a live run, accepting that request must be atomic from the user's
+   perspective: append the `transcript.jsonl` `user` line with
+   `origin: "steer"`, broadcast that durable line, then queue
+   `handle.steer(message)`; if append fails, reject the request rather
+   than showing input that will disappear after reconnect. Notification
+   recording follows the same rule at the publisher boundary. A salvage
+   line for a died turn's partial text would need a new engine event
+   (salvage currently lands only in `outcome.displayed`), so it is a
+   named seam for the phase that first needs crash-proof partial output.
+
+10. **No physical SSE, raw-provider-SSE, or aggregate timeline file.**
+    The three run files are the durable system of record. SSE is a
+    transport projection: durable JSONL-derived events get replayable
+    cursors, while live deltas and current-turn snapshots are in-memory
+    broadcaster state. A raw provider-SSE file is provider-specific
+    trace/debug data, not a UX artifact. A `timeline.jsonl` aggregate
+    would either duplicate payloads or become a fourth source of truth;
+    the timeline is the derived merge of the three files by `seq`.
+    If replay performance later requires it, add a rebuildable
+    `seq -> file + byte offset` index, not a duplicate payload log.
 
 ## 3. Scope
 
@@ -134,8 +160,29 @@ Out of scope (named seams, unchanged):
 - Process/structured logging (`pino`) and OpenTelemetry spans — separate
   observability phase; `packages/observability` stays a stub.
 - SQLite persistence of runs/usage — Phase 05 introduces `@eos/db` for
-  workflow state; run audit stays file-based this phase.
-- Event broadcaster / server transport; steer + notification recording.
+  workflow state; run audit stays file-based this phase. A
+  dashboard-scale run index (list/search across `<dataDir>/runs/*/`) is
+  a later derived, rebuildable table over these files; the JSONL run
+  directory stays the system of record.
+- Event broadcaster / server transport (SSE). The audit files are the
+  durable resume store, not the whole SSE stream and not a physical
+  `sse.jsonl`: a subscriber attaches with a cursor, the server replays
+  durable lines from `events.jsonl`/`transcript.jsonl`/`result.jsonl`,
+  then bridges to in-memory live deltas and durable live lines. Durable
+  lines carry replayable cursors; live-only deltas and snapshots do not.
+  Per-subscriber queues stay bounded and droppable because any client
+  re-replays durable state from its cursor. Two obligations are inherited
+  by that phase:
+  - **Live-attach snapshot.** A subscriber attaching mid-turn cannot
+    see text streamed before attach (deltas are never persisted,
+    decision 5). The broadcaster keeps an in-memory current-turn
+    accumulator and emits one synthetic snapshot per new subscriber;
+    the turn-boundary `assistant_message_complete` self-heals the rest.
+  - **Steer + notification recording** (decision 9) stops being
+    optional once a UI renders runs: a steered user message currently
+    reaches the conversation but neither disk nor stream. The natural
+    wiring is the server's own ingestion endpoint writing and
+    broadcasting the line at POST time.
 - Surfacing usage on `RunSummary`/`listRuns()` (callers already have
   `handle.outcome.usage`; transport surfaces arrive with the server
   phase).
@@ -207,6 +254,63 @@ Event-to-file mapping (one queue, shared `seq`):
 | `tool_execution_started` | `tool_started` | — | — |
 | `tool_execution_completed` | `tool_completed` (flags, duration_ms) | `tool_result` (full result) | — |
 | `run_finished` | `run_finished` (status only) | `run_finished` (status, reason, submission) | the rollup line |
+
+When one source event writes more than one durable line, `RunLog` uses
+the same append queue and stamps `seq` in this order:
+
+- `assistant_message_complete`: `transcript.jsonl` `assistant`, then
+  `events.jsonl` `turn_completed`.
+- `tool_execution_completed`: `events.jsonl` `tool_completed`, then
+  `transcript.jsonl` `tool_result`.
+- `run_finished`: `events.jsonl` `run_finished`, then
+  `transcript.jsonl` `run_finished`, then the `result.jsonl` rollup.
+
+### Derived timeline and future SSE projection
+
+No aggregate timeline file is created. A durable timeline reader derives
+the ordered view by reading the three files, parsing JSONL lines, and
+merging them by the run-global `seq` stamped by `RunLog`:
+
+```
+events.jsonl      seq 0, 3, 5, ...
+transcript.jsonl  seq 1, 4, 7, ...
+result.jsonl      seq 9
+        │
+        ▼
+derived timeline: 0, 1, 3, 4, 5, 7, 9
+```
+
+That derived reader is the durable replay source for future per-run SSE.
+The server-side workflow should be:
+
+1. The client stores one durable cursor per `run_id`.
+2. On connect or reconnect, `Last-Event-ID` is interpreted as the last
+   durable per-run `seq` the client rendered.
+3. The server replays merged durable lines with `seq > Last-Event-ID`,
+   emitting them as SSE events with `id: <seq>`.
+4. The server attaches to the live broadcaster and drops any durable live
+   line whose `seq` was already replayed.
+5. If the run is mid-turn, the broadcaster emits one synthetic
+   `current_turn_snapshot` for the subscriber so switching back to a live
+   run does not show a blank partial.
+6. While the provider stream is active, the broadcaster emits normalized
+   live delta events (`assistant_text_delta`, `reasoning_delta`,
+   `tool_use_delta`) for UI rendering. These live-only events do not get
+   durable `id:` cursors and are not written to disk.
+7. When the turn completes, the resulting durable `assistant` and
+   `turn_completed` lines are written by `RunLog` and broadcast with
+   replayable `seq` ids.
+
+A UI that switches between runs repeats the same per-run workflow with a
+separate cursor per run. A multiplexed dashboard stream cannot use raw
+`seq` alone because each run has its own counter; it must use a composite
+event id such as `<run_id>:<seq>` or a separate global cursor.
+
+When a user sends another request into a live run, the server ingestion
+endpoint must first append and broadcast the durable
+`transcript.jsonl` `user` line with `origin: "steer"` and only then queue
+`handle.steer(message)`. If the append fails, the request fails. That
+keeps UI rendering, reconnect replay, and model steering aligned.
 
 ### Line schemas
 
@@ -331,7 +435,7 @@ one expanded assertion (per-turn `cache_hit_rate` present and within
 | 6 | deltas excluded | delta events produce no lines in any file |
 | 7 | tool lines compact | `tool_started`/`tool_completed` carry flags + `duration_ms = tool_end_time − tool_start_time`; full output appears only in the `transcript.jsonl` `tool_result` line |
 | 8 | transcript behavior preserved | Phase 04.5 §6 cases survive: kinds, ordering, `run_finished` payload, latched write failure resurfacing at `flush()`; `seq` values become sparse (shared counter) but stay strictly increasing |
-| 9 | shared seq | merging the three files and sorting by `seq` is strictly increasing with no duplicates |
+| 9 | shared seq and file set | merging the three files and sorting by `seq` is strictly increasing with no duplicates; the run directory contains no `timeline.jsonl`, `sse.jsonl`, or raw provider-SSE file |
 | 10 | result rollup | exactly one `result.jsonl` line; `usage` equals `outcome.usage`; `cache_hit_rate` matches the formula; `turns`, identity fields, and `duration_ms = finished_at − started_at` sanity |
 | 11 | integration unchanged | runtime suite: hooks still read `transcript_path`; `read_agent_run_transcript` offset reads keep working; `listRuns` flush ordering intact |
 
@@ -348,6 +452,8 @@ reverting the phase commit.
 
 - Every run directory contains `events.jsonl`, `transcript.jsonl`, and
   (after a clean finish) `result.jsonl` with the §5 schemas (req. c).
+- Those are the only physical run-log files this phase creates; any
+  ordered timeline is a derived merge by `seq`, not an aggregate file.
 - Each completed assistant turn produces one `turn_completed` line with
   that turn's `UsageSnapshot` and `cache_hit_rate` (req. a).
 - Each finished run produces one `result.jsonl` line whose `usage` is

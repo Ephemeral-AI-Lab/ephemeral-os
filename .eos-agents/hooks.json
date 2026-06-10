@@ -1,6 +1,15 @@
 [
   {
     "event": "PreToolUse",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "node .eos-agents/hooks/require-advisory-pass.cjs"
+      }
+    ]
+  },
+  {
+    "event": "PreToolUse",
     "matcher": "submit_main_outcome",
     "hooks": [
       {

@@ -9,6 +9,7 @@ import type {
   ToolOutcome,
 } from "./contract.js";
 import type {
+  HookAdvisoryRequirement,
   HookBackgroundSession,
   HookEvent,
   HookPayload,
@@ -24,6 +25,7 @@ export type PipelineResult = Omit<ToolCallResult, "tool_use_id">;
 /** Run-level dependencies closed over at executor build. */
 export interface BindToolDeps {
   hooks: HookEngine;
+  advisoryRequirement: HookAdvisoryRequirement;
   hookPayloadFacts?: () => HookPayloadFacts;
 }
 
@@ -100,6 +102,7 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       tool_input: wireInput,
       tool_use_id: meta.tool_use_id,
       run: meta.run,
+      advisory_requirement: deps.advisoryRequirement,
       ...deps.hookPayloadFacts?.(),
       ...extra,
     });

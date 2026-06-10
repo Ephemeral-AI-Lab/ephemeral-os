@@ -17,7 +17,9 @@ function executorOf(
   const hooks = new HookEngine([]);
   return toolBatchExecutor({
     runState,
-    tools: definitions.map((definition) => bindTool(definition, { hooks })),
+    tools: definitions.map((definition) =>
+      bindTool(definition, { hooks, advisoryRequirement: { required: false } }),
+    ),
   });
 }
 

@@ -1,4 +1,8 @@
-import { JsonObjectSchema } from "@eos/contracts";
+import {
+  JsonObjectSchema,
+  type JsonObject,
+  type JsonValue,
+} from "@eos/contracts";
 import type { AgentRunOutcome } from "@eos/engine";
 import { z } from "zod";
 
@@ -28,19 +32,28 @@ export function askAdvisorTool(calls: AgentRunCalls): ToolDefinition {
     description:
       "Ask the advisor to review this run's transcript and the terminal payload you intend to submit (pass tool_name and the exact payload). Blocks until the advisor answers; the result is the advisor's submission.",
     input: AskAdvisorInputSchema,
-    // The call input itself is not forwarded: this call's tool_use already
-    // sits in the transcript the advisor reads, payload included.
-    execute: async (_input, ctx) => {
+    execute: async (input, ctx) => {
+      const advisorPrompt = calls.advisorPromptFor(input.tool_name);
+      if (advisorPrompt === undefined) {
+        return {
+          content: `tool ${input.tool_name} does not have an advisor prompt`,
+          isError: true,
+        };
+      }
       const callerTranscript = await readWholeTranscript(
         calls,
         ctx.meta.run.transcript_path,
       );
+      const target: JsonObject = {
+        tool_name: input.tool_name,
+        payload: input.payload ?? {},
+      };
       const advisor = calls.startRun({
         agentName: ADVISOR_AGENT_NAME,
         initialMessages: [
           userText(callerTranscript),
           userText(
-            "Read the transcript and verify if the caller submitted the payload correctly.",
+            `${advisorPrompt} Please verify against the below tool name + payload\n${canonicalJson(target)}`,
           ),
         ],
         // The advisor dies with this tool call's own execution scope (§13.6).
@@ -49,6 +62,17 @@ export function askAdvisorTool(calls: AgentRunCalls): ToolDefinition {
       return mapAdvisorOutcome(await advisor.handle.outcome);
     },
   });
+}
+
+function canonicalJson(value: JsonValue): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 async function readWholeTranscript(

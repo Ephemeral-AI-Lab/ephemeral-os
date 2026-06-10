@@ -70,7 +70,6 @@ impl TestIsolatedWorkspaceConfig {
         let mut config = default_isolated_workspace_config();
         config.enabled = true;
         config.scratch_root = scratch_root.to_path_buf();
-        config.audit_jsonl_path = scratch_root.join("audit.jsonl");
         config.workspace_root = workspace_root.to_path_buf();
         crate::workspace::isolated::configure_isolated_workspace(&config);
         Self { _guard: guard }
@@ -89,7 +88,6 @@ fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
     IsolatedWorkspaceConfig {
         enabled: false,
         scratch_root: PathBuf::from("/eos/scratch/isolated"),
-        audit_jsonl_path: PathBuf::from("/eos/scratch/isolated/audit.jsonl"),
         ttl_s: 1800.0,
         total_cap: 5,
         upperdir_bytes: 1_073_741_824,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AgentKindSchema,
+  AdvisoryVerdictSchema,
   ContentBlockSchema,
   DEFAULT_MAX_TOKENS,
   MessageRoleSchema,
@@ -163,6 +164,32 @@ describe("tool call results", () => {
         tool_end_time: 2,
       }).success,
       "is_error has no default; the executor must normalize it",
+    ).toBe(false);
+  });
+});
+
+describe("advisory verdicts", () => {
+  it("accepts exact pass/fail verdict payloads", () => {
+    expect(
+      AdvisoryVerdictSchema.parse({
+        verdict: "pass",
+        tool_name: "submit_worker_outcome",
+        payload: { summary: "done" },
+        reason: "matches the transcript",
+      }),
+    ).toEqual({
+      verdict: "pass",
+      tool_name: "submit_worker_outcome",
+      payload: { summary: "done" },
+      reason: "matches the transcript",
+    });
+    expect(
+      AdvisoryVerdictSchema.safeParse({
+        verdict: "maybe",
+        tool_name: "submit_worker_outcome",
+        payload: { summary: "done" },
+        reason: "unknown",
+      }).success,
     ).toBe(false);
   });
 });

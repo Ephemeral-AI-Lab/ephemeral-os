@@ -215,7 +215,6 @@ fn configure_test_isolated_workspace(scratch_root: &Path, workspace_root: &Path)
     let mut config = default_isolated_workspace_config();
     config.enabled = true;
     config.scratch_root = scratch_root.to_path_buf();
-    config.audit_jsonl_path = scratch_root.join("audit.jsonl");
     config.workspace_root = workspace_root.to_path_buf();
     configure_isolated_workspace(&config);
 }

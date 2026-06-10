@@ -20,7 +20,7 @@ use crate::commit::{
     CommitQueue, CommitService, CommitTransaction,
 };
 use crate::route::{insert_route_timings, route_metrics, StackRouteProvider};
-use crate::LayerStackError;
+use crate::{LayerStack, LayerStackError};
 
 type RootService = Arc<CommitService<CommitTransaction>>;
 
@@ -229,6 +229,50 @@ pub(crate) fn normalize_root_key(root: &Path) -> String {
         .unwrap_or_else(|_| root.to_path_buf())
         .to_string_lossy()
         .into_owned()
+}
+
+/// A leased snapshot of one root: the frozen layer paths plus the lease that
+/// pins them. Lease custody stays with whoever acquired it — workspaces only
+/// ever see the plain fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Snapshot {
+    pub lease_id: String,
+    pub manifest_version: i64,
+    pub root_hash: String,
+    pub layer_paths: Vec<PathBuf>,
+}
+
+/// Acquire a snapshot lease on `root` for `request_id`.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the stack cannot be opened or leased.
+pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, LayerStackError> {
+    let lease = LayerStack::open(root.to_path_buf())?.acquire_snapshot(request_id)?;
+    Ok(Snapshot {
+        lease_id: lease.lease_id,
+        manifest_version: lease.manifest_version,
+        root_hash: lease.root_hash,
+        layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+    })
+}
+
+/// Best-effort lease release on `root`; returns whether the lease was held.
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the stack cannot be opened.
+pub fn release_lease(root: &Path, lease_id: &str) -> Result<bool, LayerStackError> {
+    LayerStack::open(root.to_path_buf())?.release_lease(lease_id)
+}
+
+/// Read the active manifest of `root` (latest-state resource telemetry input).
+///
+/// # Errors
+///
+/// Returns [`LayerStackError`] when the stack or manifest cannot be read.
+pub fn active_manifest(root: &Path) -> Result<Manifest, LayerStackError> {
+    LayerStack::open(root.to_path_buf())?.read_active_manifest()
 }
 
 /// Commit `changes` against the latest state of `root` through the per-root

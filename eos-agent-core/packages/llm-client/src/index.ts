@@ -21,6 +21,7 @@ export {
 export { SecretString } from "./secret.js";
 export {
   buildLlmRequest,
+  cacheHitRate,
   type LlmRequest,
   type LlmRequestInit,
   type ReasoningEffort,

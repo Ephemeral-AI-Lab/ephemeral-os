@@ -1,30 +1,20 @@
-//! Neutral workspace-mode contracts shared by daemon adapters and the
-//! concrete workspace-runtime modules in this crate.
+//! Neutral file-operation contracts shared by the daemon adapters and the
+//! per-mode `WorkspaceFileOps` implementations in this crate.
 //!
-//! This module deliberately references no daemon, LayerStack, or OCC types. It
-//! is the common typed boundary for symmetric file and command workspace
-//! capabilities; concrete publish, read, audit, and runtime mechanics stay
-//! injected by the daemon or the owning runtime module.
+//! This module deliberately references no daemon or storage types. Everything
+//! command-shaped moved to `eos-command-ops`; what remains is the file tool
+//! family's typed boundary until `eos-file-ops` takes it over.
 
-pub(crate) mod command;
 pub(crate) mod file_ops;
-pub mod ids;
-pub(crate) mod lease;
 pub(crate) mod mode;
 pub(crate) mod mutation;
 pub(crate) mod read_view;
 pub(crate) mod response;
 
-pub use command::{
-    FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace,
-    WorkspaceCommandOutcome,
-};
 pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
 };
-pub use ids::{CallerId, InvocationId, WorkspaceHandleId};
-pub use lease::SnapshotLease;
 pub use mode::WorkspaceMode;
 pub use mutation::{
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,
@@ -32,6 +22,6 @@ pub use mutation::{
 };
 pub use read_view::{ResolvedWorkspacePath, WorkspaceReadBytes, WorkspaceReadView};
 pub use response::{
-    u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, WorkspaceApiError,
-    WorkspaceConflict, WorkspaceTimings,
+    u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, WorkspaceApiError, WorkspaceConflict,
+    WorkspaceTimings,
 };

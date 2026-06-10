@@ -1,8 +1,12 @@
+import { dirname, join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   asString,
   must,
+  readEventLines,
+  readResultLines,
   readTranscriptLines,
   tempDir,
   userMessage,
@@ -82,10 +86,13 @@ describe.skipIf(!codex.available)("agent loop over live codex (e2e)", () => {
       const row = await finishedRun(runtime, "sage");
       expect(row.agent_kind).toBe("main");
       const lines = readTranscriptLines(run.transcriptPath);
+      const events = readEventLines(join(dirname(run.transcriptPath), "events.jsonl"));
+      const result = readResultLines(join(dirname(run.transcriptPath), "result.jsonl"));
+      const transcriptSeqs = lines.map((line) => line.seq);
       expect(
-        lines.map((line) => line.seq),
-        "seq stays dense across the live run",
-      ).toEqual(lines.map((_, index) => index));
+        transcriptSeqs,
+        "transcript seq stays ordered but can be sparse across the live run",
+      ).toEqual([...transcriptSeqs].sort((a, b) => a - b));
       expect(must(lines.at(0))).toMatchObject({ kind: "user", origin: "initial" });
       expect(
         lines.filter((line) => line.kind === "run_finished"),
@@ -97,6 +104,19 @@ describe.skipIf(!codex.available)("agent loop over live codex (e2e)", () => {
       });
       expect(lines.some((line) => line.kind === "assistant"), "assistant lines recorded").toBe(true);
       expect(lines.some((line) => line.kind === "tool_result"), "tool lines recorded").toBe(true);
+      const completedTurns = events.filter((line) => line.type === "turn_completed");
+      expect(completedTurns.length, "turn usage appears in the audit events").toBeGreaterThan(0);
+      for (const line of completedTurns) {
+        expect(line.cache_hit_rate, "per-turn cache hit rate is bounded").toBeGreaterThanOrEqual(0);
+        expect(line.cache_hit_rate, "per-turn cache hit rate is bounded").toBeLessThanOrEqual(1);
+      }
+      expect(result).toEqual([
+        expect.objectContaining({
+          run_id: run.runId,
+          status: "completed",
+          usage: outcome.usage,
+        }),
+      ]);
     },
   );
 

@@ -53,21 +53,18 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 #[test]
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
-    let manager = WorkspaceRunManager::new(
-        eos_command_session::CommandSessionConfig::default(),
-        std::sync::Arc::new(NoopRunHostPorts),
-    );
+    let manager = eos_command_ops::CommandOps::new(eos_command_session::CommandSessionConfig::default());
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
     manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
 
-    let result = manager.read_progress(ReadCommandProgress {
+    let result = manager.read_command_progress(ReadCommandProgress {
         command_session_id: "cmd_done".to_owned(),
         last_n_lines: 1,
     })?;
     assert_eq!(result.status, "ok");
     assert_eq!(result.stdout, "done\n");
 
-    let redelivered = manager.read_progress(ReadCommandProgress {
+    let redelivered = manager.read_command_progress(ReadCommandProgress {
         command_session_id: "cmd_done".to_owned(),
         last_n_lines: 2,
     })?;
@@ -108,14 +105,14 @@ fn command_session_count_uses_runtime_manager() -> TestResult {
 fn command_session_read_progress_returns_completed_result_when_live_session_is_gone() -> TestResult
 {
     let id = "cmd_progress_done_unit";
-    workspace_run_manager().push_completed(test_completion(id, "caller", "written\n"));
+    command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
     let response =
         command_session_read_progress(&json!({"command_session_id": id, "last_n_lines": 1}))?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "written\n");
-    let remaining = workspace_run_manager().collect_completed(&CollectCompleted {
+    let remaining = command_ops().collect_completed(&CollectCompleted {
         command_session_ids: Some(vec![id.to_owned()]),
         caller_id: None,
     });
@@ -127,7 +124,7 @@ fn command_session_read_progress_returns_completed_result_when_live_session_is_g
 #[cfg(target_os = "linux")]
 fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult {
     let id = "cmd_stdin_done_unit";
-    workspace_run_manager().push_completed(test_completion(id, "caller", "written\n"));
+    command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
     let response =
         command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
@@ -141,68 +138,18 @@ fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult 
 #[cfg(target_os = "linux")]
 fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -> TestResult {
     let id = "command_session_cancel_done_unit";
-    workspace_run_manager().push_completed(test_completion(id, "caller", "already-finished\n"));
+    command_ops().push_completed(test_completion(id, "caller", "already-finished\n"));
 
     let response = command_session_cancel(&json!({"command_session_id": id}))?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "already-finished\n");
-    let remaining = workspace_run_manager().collect_completed(&CollectCompleted {
+    let remaining = command_ops().collect_completed(&CollectCompleted {
         command_session_ids: Some(vec![id.to_owned()]),
         caller_id: None,
     });
     assert_eq!(remaining.completions.len(), 0);
     Ok(())
-}
-
-// The completion-queue unit test drives only push/read/collect, which never
-// reach the settle path, so the injected host ports are never called.
-#[cfg(target_os = "linux")]
-struct NoopRunHostPorts;
-
-#[cfg(target_os = "linux")]
-impl eos_workspace_runtime::run::WorkspaceRunHostPorts for NoopRunHostPorts {
-    fn acquire_snapshot(
-        &self,
-        _root: &std::path::Path,
-        _request_id: &str,
-    ) -> Result<
-        eos_workspace_runtime::contract::SnapshotLease,
-        eos_workspace_runtime::contract::WorkspaceApiError,
-    > {
-        unimplemented!("settle path is not exercised by completion-queue unit tests")
-    }
-
-    fn release_lease(&self, _root: &std::path::Path, _lease_id: &str) {
-        unimplemented!("settle path is not exercised by completion-queue unit tests")
-    }
-
-    fn base_timings(
-        &self,
-        _root: &std::path::Path,
-    ) -> Result<
-        eos_workspace_runtime::contract::WorkspaceTimings,
-        eos_workspace_runtime::contract::WorkspaceApiError,
-    > {
-        unimplemented!("settle path is not exercised by completion-queue unit tests")
-    }
-
-    fn finalize_ephemeral(
-        &self,
-        _root: &std::path::Path,
-        _workspace: eos_workspace_runtime::ephemeral::EphemeralWorkspace,
-        _base_timings: eos_workspace_runtime::contract::WorkspaceTimings,
-        _request: eos_workspace_runtime::contract::FinalizeCommandRequest,
-    ) -> Result<
-        eos_workspace_runtime::contract::WorkspaceCommandOutcome,
-        eos_workspace_runtime::contract::WorkspaceApiError,
-    > {
-        unimplemented!("settle path is not exercised by completion-queue unit tests")
-    }
-
-    fn record_tool_call(&self, _caller_id: &str, _audit: serde_json::Value) {
-        unimplemented!("settle path is not exercised by completion-queue unit tests")
-    }
 }
 
 #[cfg(target_os = "linux")]

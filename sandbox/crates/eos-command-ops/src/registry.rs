@@ -7,42 +7,49 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use std::path::PathBuf;
+
 use eos_command_session::session::CommandSession;
 use eos_command_session::{
     CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSessionCompletion,
 };
-use crate::ephemeral::EphemeralWorkspace;
+use eos_ephemeral_workspace::EphemeralWorkspace;
+use eos_layerstack::service::Snapshot;
 
-use super::isolated_command_handle::IsolatedCommandHandle;
+use crate::binding::CommandBinding;
 
-/// One ephemeral workspace run: exactly **one** command session paired with the
-/// fresh overlay it owns (snapshot lease + run dirs). The run owns the overlay
-/// state directly — there is no policy indirection — so completion publishes the
-/// captured upperdir and cancellation discards it, structurally.
+/// One ephemeral overlay run: exactly **one** command session paired with the
+/// overlay transaction it owns and the snapshot lease bracketing it. The run
+/// owns the overlay state directly — there is no policy indirection — so
+/// completion publishes the captured upperdir and cancellation discards it,
+/// structurally. Dropping the run drops the workspace, which removes its
+/// scratch dirs.
 pub(crate) struct EphemeralRun {
     pub(crate) session: CommandSession,
+    pub(crate) root: PathBuf,
+    pub(crate) snapshot: Snapshot,
     pub(crate) workspace: EphemeralWorkspace,
 }
 
-/// One command session running inside a caller's isolated workspace. It carries
-/// the per-session [`IsolatedCommandHandle`] (namespace fds, scratch dirs, lease/manifest
-/// coordinates) needed to finalize the session for AUDIT (never published); the
-/// namespace + lease themselves are owned by the isolated-session subsystem and
-/// torn down on `exit`.
+/// One command session running inside a caller's isolated workspace, bound by
+/// a [`CommandBinding`] (namespace fds, scratch dirs, lease/manifest
+/// coordinates). The namespace + lease themselves are owned by the
+/// isolated-session subsystem and torn down on `exit`.
 pub(crate) struct IsolatedRun {
     pub(crate) session: CommandSession,
-    pub(crate) handle: IsolatedCommandHandle,
+    pub(crate) binding: CommandBinding,
 }
 
-/// A single workspace run: an ephemeral overlay run or one session of the
-/// caller's isolated run. The variant carries the per-kind state the daemon needs
-/// to publish (ephemeral complete), discard (cancel), or audit (isolated).
-pub(crate) enum WorkspaceRun {
+/// A single active command: an ephemeral overlay run or one session of the
+/// caller's isolated workspace. The variant carries the per-kind state needed
+/// to publish (ephemeral complete), retain (isolated complete), or discard
+/// (cancel).
+pub(crate) enum ActiveCommand {
     Ephemeral(EphemeralRun),
     Isolated(IsolatedRun),
 }
 
-impl WorkspaceRun {
+impl ActiveCommand {
     pub(crate) fn session(&self) -> &CommandSession {
         match self {
             Self::Ephemeral(run) => &run.session,
@@ -54,19 +61,19 @@ impl WorkspaceRun {
 /// A caller's command-session runs, keyed by command-session id. A caller holds
 /// many ephemeral workspace runs (each one session) **or** its one isolated run's
 /// many sessions; the ephemeral-vs-isolated XOR is enforced by the isolated
-/// enter/exit gate, not here. Each [`WorkspaceRun`] is self-describing
+/// enter/exit gate, not here. Each [`ActiveCommand`] is self-describing
 /// (`Ephemeral`/`Isolated`), so cancel/settle dispatch on the run, and the
 /// registry needs no per-caller variant tag — one map holds whichever kind the
 /// caller currently runs.
 #[derive(Default)]
-struct CallerRuns(HashMap<String, Arc<WorkspaceRun>>);
+struct CallerRuns(HashMap<String, Arc<ActiveCommand>>);
 
 impl CallerRuns {
-    fn runs(&self) -> Vec<Arc<WorkspaceRun>> {
+    fn runs(&self) -> Vec<Arc<ActiveCommand>> {
         self.0.values().cloned().collect()
     }
 
-    fn get(&self, session_id: &str) -> Option<Arc<WorkspaceRun>> {
+    fn get(&self, session_id: &str) -> Option<Arc<ActiveCommand>> {
         self.0.get(session_id).cloned()
     }
 
@@ -74,13 +81,13 @@ impl CallerRuns {
         self.0.len()
     }
 
-    fn insert(&mut self, session_id: String, run: Arc<WorkspaceRun>) {
+    fn insert(&mut self, session_id: String, run: Arc<ActiveCommand>) {
         self.0.insert(session_id, run);
     }
 
     /// Remove `session_id`, returning the removed run and whether this caller is
     /// now empty (so the registry can drop the caller entry).
-    fn take(&mut self, session_id: &str) -> (Option<Arc<WorkspaceRun>>, bool) {
+    fn take(&mut self, session_id: &str) -> (Option<Arc<ActiveCommand>>, bool) {
         let removed = self.0.remove(session_id);
         (removed, self.0.is_empty())
     }
@@ -105,14 +112,14 @@ struct CompletedEntry {
 /// sessions). Session-targeted ops resolve by scanning runs for the session id
 /// (caller count is small).
 #[derive(Default)]
-pub(crate) struct WorkspaceRunRegistry {
+pub(crate) struct CommandRegistry {
     runs: Mutex<HashMap<String, CallerRuns>>,
     completed: Mutex<HashMap<String, CompletedEntry>>,
     counter: AtomicU64,
     completed_seq: AtomicU64,
 }
 
-impl WorkspaceRunRegistry {
+impl CommandRegistry {
     #[must_use]
     pub(crate) fn new() -> Self {
         Self {
@@ -130,7 +137,7 @@ impl WorkspaceRunRegistry {
 
     /// File a started run under its caller, keyed by command-session id. Total by
     /// construction — a freshly spawned run is never silently dropped.
-    pub(crate) fn insert(&self, run: Arc<WorkspaceRun>) {
+    pub(crate) fn insert(&self, run: Arc<ActiveCommand>) {
         let caller_id = run.session().caller_id().to_owned();
         let session_id = run.session().id().to_owned();
         lock(&self.runs)
@@ -140,11 +147,11 @@ impl WorkspaceRunRegistry {
     }
 
     #[must_use]
-    pub(crate) fn get(&self, id: &str) -> Option<Arc<WorkspaceRun>> {
+    pub(crate) fn get(&self, id: &str) -> Option<Arc<ActiveCommand>> {
         lock(&self.runs).values().find_map(|run| run.get(id))
     }
 
-    pub(crate) fn remove(&self, id: &str) -> Option<Arc<WorkspaceRun>> {
+    pub(crate) fn remove(&self, id: &str) -> Option<Arc<ActiveCommand>> {
         let mut runs = lock(&self.runs);
         let caller = runs
             .iter()
@@ -170,7 +177,7 @@ impl WorkspaceRunRegistry {
     }
 
     #[must_use]
-    pub(crate) fn live(&self) -> Vec<Arc<WorkspaceRun>> {
+    pub(crate) fn live(&self) -> Vec<Arc<ActiveCommand>> {
         lock(&self.runs)
             .values()
             .flat_map(CallerRuns::runs)
@@ -179,7 +186,7 @@ impl WorkspaceRunRegistry {
 
     /// All live runs owned by `caller_id` (drives per-caller cleanup).
     #[must_use]
-    pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<WorkspaceRun>> {
+    pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<ActiveCommand>> {
         lock(&self.runs)
             .get(caller_id)
             .map(CallerRuns::runs)

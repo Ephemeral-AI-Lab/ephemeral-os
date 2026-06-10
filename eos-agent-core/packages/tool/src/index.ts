@@ -16,6 +16,7 @@ export {
   HookConfigEntrySchema,
   HookEventSchema,
   HookOutputSchema,
+  type HookAdvisoryRequirement,
   type HookCommand,
   type HookBackgroundSession,
   type HookConfigEntry,

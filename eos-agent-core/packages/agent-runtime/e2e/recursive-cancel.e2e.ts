@@ -342,6 +342,7 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
           },
         ],
         baseTools: [wait.definition],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const chief = runtime.startRun({
         agentName: "chief",

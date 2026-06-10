@@ -257,11 +257,14 @@ class OpenAiDecoder
           input_tokens_details?: { cached_tokens?: number };
         }
       | undefined;
+    const cached = reported?.input_tokens_details?.cached_tokens;
     const usage: UsageSnapshot = {
-      input_tokens: reported?.input_tokens ?? 0,
+      input_tokens: Math.max(
+        0,
+        (reported?.input_tokens ?? 0) - (cached ?? 0),
+      ),
       output_tokens: reported?.output_tokens ?? 0,
     };
-    const cached = reported?.input_tokens_details?.cached_tokens;
     if (typeof cached === "number") {
       usage.cache_read_input_tokens = cached;
     }

@@ -1,26 +1,56 @@
 //! Daemon-local isolated-workspace session state.
+//!
+//! The daemon is the composition root: it owns the layer stack (lease
+//! acquire/release) and the [`IsolatedSessions`] registry, which never touches
+//! storage itself — snapshots go in as plain fields and `lease_id`s come back
+//! out at exit for release here.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
-use eos_layerstack::{read_workspace_binding, LayerStack};
-use eos_workspace_runtime::isolated::{
-    IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
+use eos_isolated_workspace::{
+    IsolatedError, IsolatedSessions, IsolatedSnapshot, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress,
 };
+use eos_layerstack::{read_workspace_binding, LayerStack};
 
 use super::setup_error;
-use super::runtime::{DaemonLayerStackPort, DaemonNamespaceRuntime};
-
-type DaemonSession = IsolatedSession<DaemonLayerStackPort, DaemonNamespaceRuntime, JsonlAuditSink>;
 
 pub(super) struct DaemonIsolatedState {
-    #[cfg(target_os = "linux")]
     pub(super) layer_stack_root: PathBuf,
-    pub(super) session: DaemonSession,
+    pub(super) stack: LayerStack,
+    pub(super) sessions: IsolatedSessions,
+}
+
+impl DaemonIsolatedState {
+    /// Acquire a snapshot lease for `caller_id` and shape it for `enter`.
+    pub(super) fn acquire_snapshot(
+        &self,
+        caller_id: &str,
+    ) -> Result<IsolatedSnapshot, IsolatedError> {
+        let lease = self
+            .stack
+            .acquire_snapshot(&format!("isolated-{caller_id}"))
+            .map_err(setup_error)?;
+        Ok(IsolatedSnapshot {
+            lease_id: lease.lease_id,
+            manifest_version: lease.manifest_version,
+            manifest_root_hash: lease.root_hash,
+            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+        })
+    }
+
+    /// Best-effort lease release; returns whether the lease was held.
+    pub(super) fn release_lease(&mut self, lease_id: &str) -> Option<bool> {
+        self.stack.release_lease(lease_id).ok()
+    }
+
+    pub(super) fn active_lease_count(&self) -> usize {
+        self.stack.active_lease_count()
+    }
 }
 
 pub(crate) fn configure_isolated_workspace(config: &IsolatedWorkspaceConfig) {
@@ -34,7 +64,6 @@ pub(super) fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
     let root = normalized_root(root);
     {
         let mut guard = lock_state_cell();
-        #[cfg(target_os = "linux")]
         if let Some(state) = guard.as_mut() {
             if state.layer_stack_root != root {
                 // Block rebinding to a new root only while an isolated workspace
@@ -42,7 +71,7 @@ pub(super) fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
                 // (Isolated command sessions belong to an open caller, so this
                 // already covers them; ephemeral command sessions are unrelated
                 // to the isolated manager's binding and must not block a rebind.)
-                let open_callers = state.session.list_open_callers();
+                let open_callers = state.sessions.list_open_callers();
                 if !open_callers.is_empty() {
                     return Err(IsolatedError::SetupFailed {
                         step: format!(
@@ -51,7 +80,7 @@ pub(super) fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
                         ),
                     });
                 }
-                state.session.reap_orphan_resources();
+                state.sessions.reap_orphan_resources();
                 *guard = None;
             }
         }
@@ -64,21 +93,16 @@ pub(super) fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
             if let Some(binding) = read_workspace_binding(&root).map_err(setup_error)? {
                 caps.eos_workspace_root = binding.workspace_root;
             }
-            let stack = LayerStack::open(root.clone()).map_err(setup_error)?;
-            let mut session = IsolatedSession::with_scratch_root(
-                caps,
-                DaemonLayerStackPort {
-                    stack: Arc::new(Mutex::new(stack)),
-                },
-                DaemonNamespaceRuntime,
-                JsonlAuditSink::new(&config.audit_jsonl_path),
-                config.scratch_root,
-            );
-            session.initialize()?;
+            let mut stack = LayerStack::open(root.clone()).map_err(setup_error)?;
+            let mut sessions = IsolatedSessions::with_scratch_root(caps, config.scratch_root);
+            let orphan_lease_ids = sessions.initialize()?;
+            for lease_id in orphan_lease_ids {
+                let _ = stack.release_lease(&lease_id);
+            }
             *guard = Some(DaemonIsolatedState {
-                #[cfg(target_os = "linux")]
                 layer_stack_root: root,
-                session,
+                stack,
+                sessions,
             });
         }
     }
@@ -105,7 +129,6 @@ pub(super) fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
     IsolatedWorkspaceConfig {
         enabled: false,
         scratch_root: PathBuf::from("/eos/scratch/isolated"),
-        audit_jsonl_path: PathBuf::from("/eos/scratch/isolated/audit.jsonl"),
         ttl_s: 1800.0,
         total_cap: 5,
         upperdir_bytes: 1_073_741_824,

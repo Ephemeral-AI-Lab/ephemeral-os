@@ -79,6 +79,10 @@ export interface ToolDefinition<I = unknown> {
   readonly isBatchExecutionForbidden: boolean;
   /** Sandbox family only: callable while the workspace is isolated. */
   readonly availableInIsolatedWorkspace: boolean;
+  /** Advisory-gated tools need an exact advisor pass before execution. */
+  readonly isAdvisoryRequired: boolean;
+  /** Prompt used by `ask_advisor`; present only when advisory is required. */
+  readonly advisorPrompt?: string;
   /** Wire declaration derived once by `defineTool`. */
   readonly spec: ToolSpec;
   execute(input: I, ctx: ToolCallContext): Promise<ToolOutcome>;

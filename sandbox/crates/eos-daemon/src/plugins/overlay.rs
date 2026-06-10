@@ -12,19 +12,10 @@ use eos_namespace::protocol::Intent;
 use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_plugin::ServiceMode;
-use eos_workspace_runtime::contract::{
-    u64_to_f64_saturating, CallerId, InvocationId, SnapshotLease,
-};
-use eos_workspace_runtime::ephemeral::{
-    finalize_publishable_workspace, path_changes_to_wire, EphemeralRunDirs, EphemeralWorkspace,
-    FinalizeRequest, LayerStackRoot,
-};
+use eos_ephemeral_workspace::{capture_upperdir, path_changes_to_wire, OverlayDirs};
 use serde_json::{json, Value};
 
-use crate::overlay::{
-    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, run_ns_runner_child,
-    DaemonPublisherPort, RunDirCleanup,
-};
+use crate::overlay::{overlay_run_dirs, run_ns_runner_child, OverlayDirsGuard};
 use crate::error::DaemonError;
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
@@ -160,7 +151,7 @@ fn run_plugin_overlay_once(
     lease: &Lease,
 ) -> Result<PluginOverlayRunOutcome, DaemonError> {
     let dirs = plugin_overlay_dirs(&spec.invocation_id)?;
-    let _cleanup = RunDirCleanup::new(dirs.run_dir.clone());
+    let _cleanup = OverlayDirsGuard::new(dirs.run_dir.clone());
     let request_path = dirs.run_dir.join("plugin-overlay-request.json");
     let result_path = dirs.run_dir.join("plugin-overlay-result.json");
     write_plugin_overlay_request(spec, args, binding, lease, &request_path, &result_path)?;
@@ -169,35 +160,25 @@ fn run_plugin_overlay_once(
         plugin_overlay_run_request(spec, binding, lease, &dirs, &request_path, &result_path);
     let runner = run_ns_runner_child(&request, None)?;
     let plugin_result = read_plugin_overlay_result(&result_path)?;
-    let finalize = finalize_publishable_workspace(
-        &DaemonPublisherPort::new(&spec.layer_stack_root),
-        FinalizeRequest {
-            workspace: EphemeralWorkspace {
-                layer_stack_root: LayerStackRoot(spec.layer_stack_root.clone()),
-                workspace_root: PathBuf::from(&binding.workspace_root),
-                caller_id: CallerId(spec.caller_id.clone()),
-                invocation_id: InvocationId(spec.invocation_id.clone()),
-                snapshot: SnapshotLease {
-                    lease_id: lease.lease_id.clone(),
-                    manifest_version: lease.manifest_version,
-                    manifest_root_hash: lease.root_hash.clone(),
-                    layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
-                },
-                dirs: dirs.clone(),
-            },
-        },
-    )
-    .map_err(ephemeral_daemon_error)?;
-    let changeset = changeset_from_publish_outcome(&finalize.publish)?;
-    let path_kinds = path_changes_to_wire(&finalize.capture.path_kinds);
-    let upperdir_stats = TreeResourceStats::from_ephemeral(&finalize.capture.stats);
-    let capture_s = finalize.capture.capture_s;
+    let captured = capture_upperdir(&dirs.upperdir)
+        .map_err(|err| DaemonError::OverlayPipeline(err.to_string()))?;
+    let publish_start = Instant::now();
+    let layer_paths: Vec<PathBuf> = lease.layer_paths.iter().map(PathBuf::from).collect();
+    let changeset = eos_layerstack::service::publish_capture(
+        &spec.layer_stack_root,
+        lease.manifest_version,
+        &layer_paths,
+        &captured.changes,
+    )?;
+    let publish_s = publish_start.elapsed().as_secs_f64();
+    let path_kinds = path_changes_to_wire(&captured.path_kinds);
+    let upperdir_stats = TreeResourceStats::from_ephemeral(&captured.stats);
+    let capture_s = captured.capture_s;
     let occ_s = changeset
         .timings
         .get("occ.commit.total_s")
         .copied()
-        .or(finalize.timings.publish_s)
-        .unwrap_or_default();
+        .unwrap_or(publish_s);
     Ok(PluginOverlayRunOutcome {
         runner,
         changeset,
@@ -303,7 +284,7 @@ fn apply_plugin_overlay_status(
     }
 }
 
-fn plugin_overlay_dirs(invocation_id: &str) -> Result<EphemeralRunDirs, DaemonError> {
+fn plugin_overlay_dirs(invocation_id: &str) -> Result<OverlayDirs, DaemonError> {
     overlay_run_dirs("plugin-overlay", invocation_id)
 }
 
@@ -339,7 +320,7 @@ fn plugin_overlay_run_request(
     spec: &PluginOverlayCommand,
     binding: &WorkspaceBinding,
     lease: &Lease,
-    dirs: &EphemeralRunDirs,
+    dirs: &OverlayDirs,
     request_path: &Path,
     result_path: &Path,
 ) -> RunRequest {
@@ -380,6 +361,10 @@ fn plugin_overlay_run_request(
         cgroup_path: None,
         timeout_seconds: spec.timeout_seconds,
     }
+}
+
+fn u64_to_f64_saturating(value: u64) -> f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
 }
 
 fn read_plugin_overlay_result(path: &Path) -> Result<Option<Value>, DaemonError> {
