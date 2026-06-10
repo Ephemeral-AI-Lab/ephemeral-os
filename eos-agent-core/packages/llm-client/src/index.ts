@@ -5,7 +5,6 @@ export {
   type ProviderClientOptions,
   type RetryConfig,
   type RetryConfigInput,
-  type StreamGuardConfig,
   type StreamGuardConfigInput,
 } from "./config.js";
 export {
@@ -22,7 +21,6 @@ export {
 export { SecretString } from "./secret.js";
 export {
   buildLlmRequest,
-  totalTokens,
   type LlmRequest,
   type LlmRequestInit,
   type ReasoningEffort,

@@ -4,7 +4,7 @@
 //! conversions use `#[from]`; messages are lowercase with no trailing
 //! punctuation. The lower-crate error types fold in via `#[from]` so a handler
 //! can `?`-propagate them; the dispatcher maps a [`DaemonError`] onto the wire
-//! [`eos_protocol::ErrorKind`] error envelope.
+//! [`crate::wire::ErrorKind`] error envelope.
 
 use thiserror::Error;
 
@@ -15,7 +15,7 @@ use thiserror::Error;
 pub enum DaemonError {
     /// A framed wire message could not be encoded/decoded.
     #[error(transparent)]
-    Protocol(#[from] eos_protocol::ProtocolError),
+    Protocol(#[from] crate::wire::ProtocolError),
 
     /// A transport / listener I/O operation failed.
     #[error("daemon io error: {0}")]
@@ -25,7 +25,7 @@ pub enum DaemonError {
     #[error("invalid envelope: {0}")]
     InvalidEnvelope(String),
 
-    /// A request line exceeded [`eos_protocol::MAX_REQUEST_BYTES`].
+    /// A request line exceeded [`crate::wire::MAX_REQUEST_BYTES`].
     #[error("request exceeds {limit} byte limit")]
     RequestTooLarge {
         /// The configured per-request byte ceiling.
@@ -70,10 +70,10 @@ impl DaemonError {
     ///
     /// The dispatcher uses this to build the structured error envelope; an
     /// otherwise-unclassified handler failure becomes
-    /// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.
+    /// [`crate::wire::ErrorKind::InternalError`] with a generated `error_id`.
     #[must_use]
-    pub const fn wire_kind(&self) -> eos_protocol::ErrorKind {
-        use eos_protocol::ErrorKind;
+    pub const fn wire_kind(&self) -> crate::wire::ErrorKind {
+        use crate::wire::ErrorKind;
         match self {
             Self::Protocol(_) => ErrorKind::BadJson,
             Self::InvalidEnvelope(_) => ErrorKind::InvalidEnvelope,
@@ -97,7 +97,12 @@ impl From<eos_plugin::host::PpcError> for DaemonError {
         use eos_plugin::host::PpcError;
         match err {
             PpcError::Plugin(source) => Self::Plugin(source),
-            PpcError::Protocol(source) => Self::Protocol(source),
+            // The plugin channel frames with its own copy of the wire framing
+            // (no shared protocol crate); a PPC parse failure re-wraps as a
+            // plugin-channel error rather than a daemon-wire `bad_json`.
+            PpcError::Protocol(source) => {
+                Self::Plugin(eos_plugin::PluginError::Ppc(source.to_string()))
+            }
             PpcError::Io(source) => Self::Io(source),
             PpcError::LockPoisoned(what) => Self::StateLockPoisoned(what),
             PpcError::Callback(message) => Self::Plugin(eos_plugin::PluginError::Ppc(message)),

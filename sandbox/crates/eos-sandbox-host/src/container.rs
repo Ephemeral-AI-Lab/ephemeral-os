@@ -94,7 +94,11 @@ impl DaemonContainer {
     ///
     /// # Errors
     /// Returns an error if any docker step fails or the daemon never becomes ready.
-    pub fn start(container: &ContainerSpec, daemon: &DaemonSpec, auth_token: String) -> Result<Self> {
+    pub fn start(
+        container: &ContainerSpec,
+        daemon: &DaemonSpec,
+        auth_token: String,
+    ) -> Result<Self> {
         let keep = container.lifetime == ContainerLifetime::Keep;
         let mut run = vec![
             "run".to_owned(),
@@ -178,6 +182,33 @@ impl DaemonContainer {
                 drop(handle);
                 Err(err.context(format!("daemon bringup failed; log tail:\n{log}")))
             }
+        }
+    }
+
+    /// A non-owning handle over a registry-tracked container, for engine
+    /// exec/respawn paths. Never removes the container on drop and performs
+    /// no liveness checks; `endpoint` seeds the wire client when known.
+    #[must_use]
+    pub fn for_engine(
+        name: String,
+        auth_token: String,
+        daemon: &DaemonSpec,
+        endpoint: Option<SocketAddr>,
+    ) -> Self {
+        Self {
+            name,
+            client: ProtocolClient::new(
+                endpoint.unwrap_or_else(placeholder_addr),
+                Some(auth_token.clone()),
+                daemon.request_timeout,
+            ),
+            daemon_log_path: daemon
+                .remote_daemon_dir
+                .join("runtime.log")
+                .to_string_lossy()
+                .into_owned(),
+            token: auth_token,
+            keep: true,
         }
     }
 
@@ -364,7 +395,12 @@ impl DaemonContainer {
     }
 
     /// Re-exec the daemon in place with this container's original spawn flags.
-    fn respawn_daemon(&self, daemon_dir: &str, remote_eosd_path: &str, tcp_port: u16) -> Result<String> {
+    fn respawn_daemon(
+        &self,
+        daemon_dir: &str,
+        remote_eosd_path: &str,
+        tcp_port: u16,
+    ) -> Result<String> {
         self.exec(&[
             "-d",
             remote_eosd_path,

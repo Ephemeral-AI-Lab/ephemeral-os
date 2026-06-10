@@ -101,7 +101,12 @@ impl ProtocolClient {
     ///
     /// # Errors
     /// Returns an error on connect/write/read failure or undecodable response.
-    pub fn request(&self, op: &str, invocation_id: &str, args: &Value) -> Result<Value, ClientError> {
+    pub fn request(
+        &self,
+        op: &str,
+        invocation_id: &str,
+        args: &Value,
+    ) -> Result<Value, ClientError> {
         let mut line = stamped_envelope_bytes(op, invocation_id, args, self.auth_token.as_deref());
         line.push(b'\n');
         self.request_raw(&line)

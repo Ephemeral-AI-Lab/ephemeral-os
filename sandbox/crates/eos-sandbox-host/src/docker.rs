@@ -246,6 +246,19 @@ fn percent_encode(value: &str) -> String {
     encoded
 }
 
+/// One-shot `docker port` resolution for a container's published TCP port.
+pub(crate) fn resolve_published_addr(
+    container: &str,
+    container_port: u16,
+) -> Result<Option<SocketAddr>> {
+    let out = docker(&[
+        "port".to_owned(),
+        container.to_owned(),
+        format!("{container_port}/tcp"),
+    ])?;
+    Ok(parse_published_addr(&out))
+}
+
 /// Parse `docker port` output (`0.0.0.0:54321` / `127.0.0.1:54321`, possibly
 /// multiple lines) into a loopback `SocketAddr`.
 pub(crate) fn parse_published_addr(output: &str) -> Option<SocketAddr> {

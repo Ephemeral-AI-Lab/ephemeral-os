@@ -33,3 +33,7 @@ pub const HEARTBEAT_OP: &str = "api.v1.heartbeat";
 /// `layer_stack_root` arg; used for status embedding and recovery diagnostics,
 /// not the provision gate.
 pub const READY_OP: &str = "api.runtime.ready";
+
+/// The conventional in-box layer-stack root the host stamps when a request
+/// carries none (and the root the status readiness probe reports against).
+pub const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";

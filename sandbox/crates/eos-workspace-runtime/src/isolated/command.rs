@@ -10,12 +10,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use eos_protocol::LayerChange;
 use crate::contract::{
     usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest, PrepareCommandRequest,
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
     WorkspaceTimings,
 };
+use eos_cas::LayerChange;
 use serde_json::{json, Value};
 
 /// Daemon-supplied facts needed to prepare an isolated command workspace.

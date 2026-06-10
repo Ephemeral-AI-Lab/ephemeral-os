@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/eos-protocol",
+    "crates/eos-cas",
     "crates/eos-config",
     "crates/eosd",
     "crates/eos-daemon",
@@ -15,6 +15,7 @@ members = [
     "crates/eos-occ",
     "crates/eos-plugin",
     "crates/eos-sandbox-host",
+    "crates/eos-api",
     "crates/eos-e2e-test",
     "xtask",
 ]
@@ -52,7 +53,7 @@ netlink-sys = "0.8"
 toml = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
-eos-protocol = { path = "crates/eos-protocol" }
+eos-cas = { path = "crates/eos-cas" }
 eos-config = { path = "crates/eos-config" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
@@ -66,6 +67,7 @@ eos-checkpoint = { path = "crates/eos-checkpoint" }
 eos-occ-layerstack = { path = "crates/eos-occ-layerstack" }
 eosd = { path = "crates/eosd" }
 eos-sandbox-host = { path = "crates/eos-sandbox-host" }
+eos-api = { path = "crates/eos-api" }
 eos-e2e-test = { path = "crates/eos-e2e-test" }
 xtask = { path = "xtask" }
 

@@ -2,8 +2,8 @@
 //!
 //! This is the primary daemon tokio surface. It listens on an `AF_UNIX`
 //! socket AND (optionally) a 127.0.0.1 TCP port, reads ONE newline-delimited
-//! compact-JSON request per connection (capped at [`eos_protocol::MAX_REQUEST_BYTES`],
-//! read-timed at [`eos_protocol::REQUEST_READ_TIMEOUT_S`]), pops the TCP-only
+//! compact-JSON request per connection (capped at [`crate::wire::MAX_REQUEST_BYTES`],
+//! read-timed at [`crate::wire::REQUEST_READ_TIMEOUT_S`]), pops the TCP-only
 //! auth token before dispatch, routes through the [`crate::dispatcher::OpTable`],
 //! and writes back one framed response.
 //!
@@ -30,11 +30,11 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
 use tokio_util::sync::CancellationToken;
 
+use crate::wire::{decode_value, encode, Envelope, ErrorKind, Request};
 use eos_config::configs::{
     daemon::{AuditConfig, DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
-use eos_protocol::{decode_value, encode, Envelope, ErrorKind, Request};
 
 use super::framing::{read_request_line, signal_shutdown, MAX_REQUEST_BYTES};
 use super::tool_call_events::{caller_id_from_args, emit_tool_call_event};
@@ -307,7 +307,7 @@ impl DaemonServer {
             Err(err) => {
                 return crate::dispatcher::error_envelope(
                     ErrorKind::BadJson,
-                    &eos_protocol::ProtocolError::from(err).to_string(),
+                    &crate::wire::ProtocolError::from(err).to_string(),
                     serde_json::json!({}),
                 );
             }
@@ -416,7 +416,7 @@ impl DaemonServer {
         };
         let token = value
             .as_object_mut()
-            .and_then(|object| object.remove(eos_protocol::DAEMON_AUTH_FIELD))
+            .and_then(|object| object.remove(crate::wire::DAEMON_AUTH_FIELD))
             .and_then(|value| value.as_str().map(str::to_owned));
         if token.as_deref() != Some(expected) {
             return Err(DaemonError::Unauthorized);
@@ -426,8 +426,8 @@ impl DaemonServer {
 }
 fn default_file_limits() -> FileLimitsConfig {
     FileLimitsConfig {
-        max_read_bytes: eos_protocol::models::MAX_READ_BYTES,
-        max_write_bytes: eos_protocol::models::MAX_FILE_BYTES,
+        max_read_bytes: eos_cas::models::MAX_READ_BYTES,
+        max_write_bytes: eos_cas::models::MAX_FILE_BYTES,
     }
 }
 

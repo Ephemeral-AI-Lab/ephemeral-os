@@ -7,13 +7,13 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use eos_cas::{LayerChange, LayerPath};
+#[cfg(target_os = "linux")]
+use eos_cas::{LayerRef, Manifest};
 #[cfg(target_os = "linux")]
 use eos_layerstack::MergedView;
 use eos_layerstack::{require_workspace_binding, LayerStack, WorkspaceBinding};
 use eos_occ::ChangesetResult;
-use eos_protocol::{LayerChange, LayerPath};
-#[cfg(target_os = "linux")]
-use eos_protocol::{LayerRef, Manifest};
 #[cfg(target_os = "linux")]
 use eos_workspace_runtime::contract::usize_to_f64_saturating;
 use eos_workspace_runtime::contract::{

@@ -27,7 +27,7 @@
 //!   crash knob) — `eos_ns_holder::NsHolderError::{CONTROL_CLOSED_EXIT,
 //!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.
 //! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`
-//!   (`IO_FAILED`) — `eos_protocol::{CONNECT_FAILED, IO_FAILED}`.
+//!   (`IO_FAILED`) — `eos_daemon::wire::{CONNECT_FAILED, IO_FAILED}`.
 #![forbid(unsafe_code)]
 
 mod daemon;
@@ -52,7 +52,7 @@ fn main() -> Result<()> {
         // The committed `contract/ops.json`; `cargo xtask check-contract`
         // fails when this output drifts from the checked-in artifact.
         Some("dump-ops") => {
-            print!("{}", eos_protocol::ops::ops_json_document());
+            print!("{}", eos_daemon::wire::ops::ops_json_document());
             Ok(())
         }
         Some(other) => Err(anyhow!(

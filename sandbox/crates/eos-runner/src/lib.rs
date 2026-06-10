@@ -35,7 +35,7 @@
 //! on the macOS dev host. Raw syscall sites carry focused `// SAFETY:` notes, and
 //! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline enforced.
 //!
-//! Internal deps: `eos-protocol` (verb [`Intent`](eos_protocol::Intent)); `eos-overlay`
+//! Internal deps: `eos-protocol` (verb [`Intent`](eos_cas::Intent)); `eos-overlay`
 //! (kernel overlay mount and upper-dir capture primitives).
 #![deny(unsafe_op_in_unsafe_fn)]
 

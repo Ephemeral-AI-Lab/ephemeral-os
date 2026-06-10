@@ -165,7 +165,7 @@ mod tests {
     use super::{plugin_service_argv, shell_argv};
     use crate::path::normalize_lexical;
     use crate::request::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
-    use eos_protocol::Intent;
+    use eos_cas::Intent;
     use std::path::Path;
 
     type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;

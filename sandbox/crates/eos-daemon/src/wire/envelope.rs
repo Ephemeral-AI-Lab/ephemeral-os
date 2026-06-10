@@ -3,7 +3,7 @@
 //! Invariant: one compact JSON object per message + a single trailing `\n`
 //! (`json.dumps(obj, separators=(",",":")) + "\n"`). [`encode`]/[`decode`] are
 //! byte-stable for requests and error envelopes; responses are heterogeneous
-//! `Value`s compared at the canonical bar (see [`crate::canonical`]).
+//! `Value`s compared at the canonical bar (see [`super::canonical`]).
 //!
 //! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`
 //! and the daemon NEVER reads it (an inert versioning hook). We reproduce its

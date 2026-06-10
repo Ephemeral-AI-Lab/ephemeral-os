@@ -15,6 +15,9 @@
 //! - [`client`] — the box-hop wire client (loopback TCP, one request per
 //!   connection).
 //! - [`wire`] — the host-side protocol constants and envelope builders.
+//! - [`registry`] / [`lifecycle`] / [`endpoint`] / [`forward`] / [`recovery`]
+//!   — the fleet engine behind `eos-api`: provision, destroy, rebuild from
+//!   docker labels, and the normative SPEC §6 recovery ladder.
 //!
 //! This crate must never parse op semantics beyond catalog metadata.
 #![forbid(unsafe_code)]
@@ -22,5 +25,13 @@
 pub mod client;
 pub mod container;
 pub mod docker;
+mod endpoint;
+mod forward;
+pub mod lifecycle;
+pub mod recovery;
+pub mod registry;
 mod tar;
 pub mod wire;
+
+pub use lifecycle::{HostConfig, SandboxHost, SandboxStatus};
+pub use recovery::ForwardError;

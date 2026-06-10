@@ -21,8 +21,8 @@ mod route;
 
 use std::path::Path;
 
+use eos_cas::{LayerChange, LayerPath};
 use eos_layerstack::{LayerStackError, Manifest, MergedView};
-use eos_protocol::{LayerChange, LayerPath};
 use sha2::{Digest, Sha256};
 
 pub use publish::{configure_auto_squash_max_depth, LayerStackCommitTransaction};

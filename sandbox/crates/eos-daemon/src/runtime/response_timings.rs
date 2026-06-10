@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use eos_cas::Manifest;
 use eos_occ::ChangesetResult;
-use eos_protocol::Manifest;
 use eos_runner::RunResult;
 use eos_workspace_runtime::contract::{
     u64_to_f64_saturating, usize_to_f64_saturating, WorkspaceTimings,

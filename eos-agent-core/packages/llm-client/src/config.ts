@@ -19,7 +19,6 @@ export type RetryConfigInput = z.input<typeof RetryConfigSchema>;
 export const StreamGuardConfigSchema = z.object({
   idle_timeout_s: z.number().min(0).default(90),
 });
-export type StreamGuardConfig = z.infer<typeof StreamGuardConfigSchema>;
 export type StreamGuardConfigInput = z.input<typeof StreamGuardConfigSchema>;
 
 /** Construction options shared by every provider client (never serialized). */

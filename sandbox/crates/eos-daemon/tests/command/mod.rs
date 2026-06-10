@@ -165,8 +165,10 @@ impl eos_workspace_runtime::WorkspaceRunHostPorts for NoopRunHostPorts {
     fn base_timings(
         &self,
         _root: &std::path::Path,
-    ) -> Result<eos_workspace_runtime::contract::WorkspaceTimings, eos_workspace_runtime::contract::WorkspaceApiError>
-    {
+    ) -> Result<
+        eos_workspace_runtime::contract::WorkspaceTimings,
+        eos_workspace_runtime::contract::WorkspaceApiError,
+    > {
         unimplemented!("settle path is not exercised by completion-queue unit tests")
     }
 

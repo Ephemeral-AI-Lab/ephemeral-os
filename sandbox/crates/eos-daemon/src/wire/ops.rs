@@ -12,7 +12,7 @@
 
 use serde::Serialize;
 
-use crate::version::DAEMON_PROTOCOL_VERSION;
+use super::version::DAEMON_PROTOCOL_VERSION;
 
 /// Functional owner for a catalog op.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]

@@ -7,8 +7,8 @@ use super::*;
 use support::*;
 
 use crate::dispatcher::OpTable;
+use crate::wire::Request;
 use eos_layerstack::LayerStack;
-use eos_protocol::Request;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};

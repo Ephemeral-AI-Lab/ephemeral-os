@@ -45,7 +45,7 @@ pub mod workspace_binding;
 
 // CAS types are owned by eos-protocol; re-export so downstream crates use ONE
 // set of hashes/types and never redefine them.
-pub use eos_protocol::{
+pub use eos_cas::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef,
     Manifest,
 };

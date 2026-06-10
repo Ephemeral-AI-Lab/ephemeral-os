@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 
 use crate::support::{

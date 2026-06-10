@@ -1,4 +1,4 @@
-use eos_protocol::LayerChange;
+use eos_cas::LayerChange;
 
 use crate::contract::SnapshotLease;
 use crate::ephemeral::error::EphemeralWorkspaceError;

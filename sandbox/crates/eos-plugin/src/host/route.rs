@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use eos_protocol::Intent;
+use eos_cas::Intent;
 use sha2::{Digest, Sha256};
 
 use crate::{PluginError, PluginServiceKey, ServiceMode};

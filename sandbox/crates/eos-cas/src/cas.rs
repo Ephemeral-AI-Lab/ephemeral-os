@@ -19,7 +19,11 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::version::MANIFEST_SCHEMA_VERSION;
+/// On-disk layer-stack manifest schema version. Stamped into every persisted
+/// manifest; a reader that does not understand it must refuse the load. NOT
+/// part of the `manifest_root_hash` payload, so bumping it does not invalidate
+/// layer hashes (see `docs/contract/02-cas-byte-identity.md`).
+pub const MANIFEST_SCHEMA_VERSION: i64 = 1;
 
 const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
 

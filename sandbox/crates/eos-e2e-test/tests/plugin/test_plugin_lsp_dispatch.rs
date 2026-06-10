@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 

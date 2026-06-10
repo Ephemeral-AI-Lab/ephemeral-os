@@ -11,7 +11,7 @@
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 
-use eos_protocol::Intent;
+use eos_cas::Intent;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 

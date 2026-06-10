@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use eos_cas::MANIFEST_SCHEMA_VERSION;
 use eos_layerstack::{
     build_workspace_base, ensure_workspace_base, LayerChange, LayerPath, LayerRef, LayerStack,
     WorkspaceBinding, ACTIVE_MANIFEST_FILE, WORKSPACE_BINDING_FILE,
 };
-use eos_protocol::MANIFEST_SCHEMA_VERSION;
 use serde_json::json;
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;

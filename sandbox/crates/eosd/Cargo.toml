@@ -15,7 +15,6 @@ eos-daemon.workspace = true
 eos-runner.workspace = true
 eos-ns-holder.workspace = true
 eos-overlay.workspace = true
-eos-protocol.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

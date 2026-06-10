@@ -2,8 +2,8 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use anyhow::Result;
+use eos_daemon::wire::ops;
 use eos_e2e_test::{next_invocation_id, unique_suffix};
-use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{

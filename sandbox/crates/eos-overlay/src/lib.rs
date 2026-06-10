@@ -10,7 +10,7 @@
 //!
 //! This is a one-way leaf below occ: overlay has NO `eos-occ` dependency, so the
 //! `occ → overlay` edge is acyclic. The `OverlayPathChange ->
-//! eos_protocol::LayerChange` conversion lives here precisely because occ
+//! eos_cas::LayerChange` conversion lives here precisely because occ
 //! consumes it one-way.
 //!
 //! # Build-time guarantee / platform

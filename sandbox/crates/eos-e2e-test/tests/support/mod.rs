@@ -5,8 +5,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use eos_daemon::wire::ops;
 use eos_e2e_test::{live_pool_with_config, NodeLease, NodePool};
-use eos_protocol::ops;
 use serde_json::{json, Value};
 
 pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {

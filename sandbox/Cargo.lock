@@ -151,6 +151,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "eos-sandbox-host",
+ "serde_json",
+]
+
+[[package]]
+name = "eos-cas"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "proptest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "eos-checkpoint"
 version = "0.1.0"
 dependencies = [
@@ -175,6 +196,7 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
+ "eos-cas",
  "eos-checkpoint",
  "eos-config",
  "eos-layerstack",
@@ -182,10 +204,10 @@ dependencies = [
  "eos-occ-layerstack",
  "eos-overlay",
  "eos-plugin",
- "eos-protocol",
  "eos-runner",
  "eos-workspace-runtime",
  "nix 0.29.0",
+ "proptest",
  "serde",
  "serde_json",
  "sha2",
@@ -200,8 +222,9 @@ name = "eos-e2e-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "eos-cas",
  "eos-config",
- "eos-protocol",
+ "eos-daemon",
  "eos-sandbox-host",
  "serde_json",
  "sha2",
@@ -211,7 +234,7 @@ dependencies = [
 name = "eos-layerstack"
 version = "0.1.0"
 dependencies = [
- "eos-protocol",
+ "eos-cas",
  "rustix 0.38.44",
  "serde",
  "serde_json",
@@ -233,7 +256,7 @@ dependencies = [
 name = "eos-occ"
 version = "0.1.0"
 dependencies = [
- "eos-protocol",
+ "eos-cas",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -242,9 +265,9 @@ dependencies = [
 name = "eos-occ-layerstack"
 version = "0.1.0"
 dependencies = [
+ "eos-cas",
  "eos-layerstack",
  "eos-occ",
- "eos-protocol",
  "ignore",
  "serde_json",
  "sha2",
@@ -254,7 +277,7 @@ dependencies = [
 name = "eos-overlay"
 version = "0.1.0"
 dependencies = [
- "eos-protocol",
+ "eos-cas",
  "libc",
  "rustix 0.38.44",
  "sha2",
@@ -265,7 +288,7 @@ dependencies = [
 name = "eos-plugin"
 version = "0.1.0"
 dependencies = [
- "eos-protocol",
+ "eos-cas",
  "serde",
  "serde_json",
  "sha2",
@@ -274,24 +297,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-protocol"
-version = "0.1.0"
-dependencies = [
- "base64",
- "proptest",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "eos-runner"
 version = "0.1.0"
 dependencies = [
+ "eos-cas",
  "eos-config",
  "eos-overlay",
- "eos-protocol",
  "libc",
  "rustix 0.38.44",
  "serde",
@@ -312,10 +323,10 @@ dependencies = [
 name = "eos-workspace-runtime"
 version = "0.1.0"
 dependencies = [
+ "eos-cas",
  "eos-config",
  "eos-layerstack",
  "eos-overlay",
- "eos-protocol",
  "futures-util",
  "libc",
  "netlink-sys",
@@ -338,7 +349,6 @@ dependencies = [
  "eos-daemon",
  "eos-ns-holder",
  "eos-overlay",
- "eos-protocol",
  "eos-runner",
  "serde_json",
  "tokio",
@@ -1541,7 +1551,7 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "eos-protocol",
+ "eos-daemon",
  "serde_json",
  "sha2",
 ]

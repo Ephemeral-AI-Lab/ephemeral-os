@@ -3,12 +3,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
+use eos_cas::{LayerChange, LayerPath, Manifest};
 use eos_layerstack::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 use eos_occ::{
     ChangesetResult, CommitTransactionPort, FileResult, OccStatus, PreparedChangeset,
     PublishConflict, Route,
 };
-use eos_protocol::{LayerChange, LayerPath, Manifest};
 
 use crate::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
 

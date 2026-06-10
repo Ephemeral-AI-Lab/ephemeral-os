@@ -5,13 +5,14 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 use std::time::Instant;
 
+use eos_cas::manifest_root_hash;
 use eos_layerstack::LayerStack;
-use eos_protocol::{
-    audit::{
-        build_event, BackgroundToolSection, Lane, LayerStackSection, OccSection, OsResourceSection,
-        OverlayWorkspaceSection, ToolCallSection,
-    },
-    manifest_root_hash,
+
+use crate::audit::schema::{
+    build_event, BackgroundToolSection, Lane, LayerStackSection, OccSection, OsResourceSection,
+    OverlayWorkspaceSection, ToolCallSection,
+};
+use crate::wire::{
     ops::{BuiltinDaemonOp, OpFamily},
     Request,
 };
@@ -415,9 +416,7 @@ pub(crate) fn background_event_kind(
 fn is_occ_op(op: &str) -> bool {
     matches!(
         catalog_op(op),
-        Some(
-            BuiltinDaemonOp::WriteFile | BuiltinDaemonOp::EditFile | BuiltinDaemonOp::ExecCommand
-        )
+        Some(BuiltinDaemonOp::WriteFile | BuiltinDaemonOp::EditFile | BuiltinDaemonOp::ExecCommand)
     )
 }
 

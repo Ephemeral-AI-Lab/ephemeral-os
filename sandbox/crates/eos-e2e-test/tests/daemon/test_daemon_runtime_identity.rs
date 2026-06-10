@@ -1,7 +1,7 @@
 //! Daemon identity + per-response dispatch timings.
 
 use anyhow::Result;
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 
 use crate::support::{array, as_i64, as_str, live_pool_or_skip};

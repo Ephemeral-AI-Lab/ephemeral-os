@@ -1,15 +1,11 @@
-//! Envelope wire fixtures: byte-stable round-trip for requests/errors,
-//! canonical-equal (drop timings) for responses. Fixtures are immutable ground
-//! truth from the live Rust (`json.dumps(separators=(",",":")) + "\n"`).
+//! Daemon conformance (SPEC §9.2): envelope wire fixtures decode byte-stably
+//! for requests/errors and canonical-equal (drop timings/daemon_pid/uptime_s)
+//! for responses. Fixtures are immutable ground truth from the live runtime
+//! (`json.dumps(separators=(",",":")) + "\n"`).
 
-use base64 as _;
-use eos_protocol::canonical::canonicalize;
-use eos_protocol::envelope::{decode, encode, Envelope};
-use proptest as _;
-use serde as _;
+use eos_daemon::wire::canonical::canonicalize;
+use eos_daemon::wire::envelope::{decode, encode, Envelope};
 use serde_json::Value;
-use sha2 as _;
-use thiserror as _;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

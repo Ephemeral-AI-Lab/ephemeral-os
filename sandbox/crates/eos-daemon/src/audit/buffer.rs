@@ -2,7 +2,7 @@
 //!
 //! The pure audit *schema* (the `*Section` types, [`Lane`], [`SCHEMA_VERSION`],
 //! the cap/pressure constants, and `build_event`) already lives in
-//! [`eos_protocol::audit`] — this module does NOT redefine it. What lives HERE
+//! [`crate::audit::schema`] — this module does NOT redefine it. What lives HERE
 //! is the daemon-owned, IMPURE machinery the severing left behind:
 //!
 //! * [`AuditBuffer`] — the bounded in-memory ring with lane-priority eviction
@@ -25,7 +25,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-use eos_protocol::audit::{
+use crate::audit::schema::{
     Lane, DEFAULT_MAX_BYTES, DEFAULT_MAX_EVENTS, DEFAULT_PRESSURE_THRESHOLD, SCHEMA_VERSION,
 };
 
@@ -217,7 +217,7 @@ impl Default for AuditBuffer {
 /// Audit emits never break the hot path; subsystems use this single bridge so
 /// the try/swallow discipline lives in one place. IMPURE: it reaches the
 /// process-wide buffer singleton (the future port resolves the singleton; the
-/// pure schema constructors stay in [`eos_protocol::audit`]).
+/// pure schema constructors stay in [`crate::audit::schema`]).
 pub(crate) fn safe_emit(event: Value, lane: Lane) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let _ = global_audit_buffer().append(event, lane);

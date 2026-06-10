@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 
 use crate::support::{array, as_bool, as_str, live_pool_or_skip, reset_isolated_workspaces};

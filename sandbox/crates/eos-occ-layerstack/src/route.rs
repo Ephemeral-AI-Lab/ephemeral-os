@@ -4,9 +4,9 @@ use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use serde_json::{json, Value};
 
+use eos_cas::{LayerChange, LayerPath};
 use eos_layerstack::{LayerStack, LayerStackError};
 use eos_occ::OccRouteProvider;
-use eos_protocol::{LayerChange, LayerPath};
 
 use crate::hash_current;
 use crate::usize_to_f64_saturating;

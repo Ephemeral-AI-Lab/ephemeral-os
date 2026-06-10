@@ -4,13 +4,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Protocol-only sandbox correctness/pressure suite: drives a live eosd over eos-protocol."
+description = "Protocol-only sandbox correctness/pressure suite: drives a live eosd over the wire."
 
 [dependencies]
 # The ONLY operation interface: the eos-sandbox-host wire client against a
-# live eosd; eos-protocol supplies the op-name catalog for tests.
+# live eosd; eos-daemon supplies the op-name catalog and eos-cas the shared
+# file-limit constants for tests.
+eos-cas = { workspace = true }
 eos-config = { workspace = true }
-eos-protocol = { workspace = true }
+eos-daemon = { workspace = true }
 eos-sandbox-host = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

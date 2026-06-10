@@ -1,6 +1,6 @@
 //! Built-in daemon operation registry.
 
-use eos_protocol::ops as protocol_ops;
+use crate::wire::ops as protocol_ops;
 
 use crate::dispatcher::Handler;
 
@@ -13,7 +13,6 @@ pub(crate) struct BuiltinOp {
     pub(crate) spec: protocol_ops::BuiltinOpSpec,
     pub(crate) handler: Handler,
 }
-
 
 pub(crate) const BUILTIN_OPS: &[BuiltinOp] = &[
     BuiltinOp {

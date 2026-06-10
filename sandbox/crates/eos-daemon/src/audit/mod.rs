@@ -2,3 +2,4 @@
 
 pub(crate) mod buffer;
 pub(crate) mod events;
+pub(crate) mod schema;

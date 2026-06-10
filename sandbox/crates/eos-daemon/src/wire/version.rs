@@ -2,7 +2,7 @@
 //!
 //! Invariant: these values mirror the live Rust daemon byte-for-byte. The
 //! protocol-version field is carried INSIDE `args` and the daemon never reads
-//! it (an inert versioning hook) — see [`crate::envelope`].
+//! it (an inert versioning hook) — see [`super::envelope`].
 
 /// Daemon protocol version. Carried inside request `args`, never gated on by the
 /// daemon.
@@ -14,9 +14,6 @@ pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
 /// Top-level (TCP-only, conditional) auth-token envelope key; popped before
 /// dispatch.
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
-
-/// On-disk manifest schema version (the current and only supported schema).
-pub const MANIFEST_SCHEMA_VERSION: i64 = 1;
 
 /// Thin-client exit code: connect to the daemon socket failed.
 pub const CONNECT_FAILED: i32 = 97;
@@ -42,7 +39,6 @@ mod tests {
         assert_eq!(DAEMON_PROTOCOL_VERSION, 1);
         assert_eq!(DAEMON_PROTOCOL_FIELD, "_eos_daemon_protocol_version");
         assert_eq!(DAEMON_AUTH_FIELD, "_eos_daemon_auth_token");
-        assert_eq!(MANIFEST_SCHEMA_VERSION, 1);
         assert_eq!(CONNECT_FAILED, 97);
         assert_eq!(IO_FAILED, 98);
         assert_eq!(MAX_REQUEST_BYTES, 16_777_216);

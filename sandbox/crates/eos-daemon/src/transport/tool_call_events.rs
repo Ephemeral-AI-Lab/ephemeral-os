@@ -4,7 +4,7 @@
 //! `tool_call.completed` is emitted once by the dispatcher's audit pass, so a
 //! single completion lands per op on `Lane::Normal`.
 
-use eos_protocol::audit::{build_event, Lane, ToolCallSection};
+use crate::audit::schema::{build_event, Lane, ToolCallSection};
 
 use crate::audit::buffer::safe_emit;
 

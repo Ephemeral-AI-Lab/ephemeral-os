@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use eos_protocol::ops::{BUILTIN_DAEMON_OPS, BUILTIN_DAEMON_OP_SPECS};
+use crate::wire::ops::{BUILTIN_DAEMON_OPS, BUILTIN_DAEMON_OP_SPECS};
 
 use super::*;
 

@@ -8,8 +8,8 @@
 
 use std::path::{Path, PathBuf};
 
+use eos_cas::{LayerChange, LayerPath};
 use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
-use eos_protocol::{LayerChange, LayerPath};
 use serde::Deserialize;
 use serde_json::json;
 

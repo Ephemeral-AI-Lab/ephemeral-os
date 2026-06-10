@@ -3,9 +3,7 @@
 //! ground truth produced by the live Rust — never edit them to match code.
 
 use base64::Engine as _;
-use eos_protocol::cas::{
-    layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef, Manifest,
-};
+use eos_cas::cas::{layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef, Manifest};
 use proptest as _;
 use serde as _;
 use serde_json::Value;
@@ -93,7 +91,7 @@ fn all_cas_fixtures_match() -> TestResult {
                     .collect::<TestResult<_>>()?;
                 // Cross-check the documented aggregate ordering too.
                 if let Some(order) = case["aggregated_order"].as_array() {
-                    let agg = eos_protocol::cas::aggregate_layer_changes(&changes);
+                    let agg = eos_cas::cas::aggregate_layer_changes(&changes);
                     let agg_paths: Vec<&str> = agg.iter().map(|c| c.path().as_str()).collect();
                     let expected_order: Vec<&str> = order
                         .iter()

@@ -1,9 +1,9 @@
 //! Op routing: the `OP_TABLE`, envelope validation, and audit wrapping.
 //!
-//! The daemon decodes one [`eos_protocol::Request`] and routes `op` through the
+//! The daemon decodes one [`crate::wire::Request`] and routes `op` through the
 //! [`OpTable`]. Handlers return a JSON `Value` response; a failure becomes the
 //! structured error envelope ([`error_envelope`]) keyed by an
-//! [`eos_protocol::ErrorKind`]. There is NO `ping` op — liveness is
+//! [`crate::wire::ErrorKind`]. There is NO `ping` op — liveness is
 //! `api.v1.heartbeat`, readiness is `api.runtime.ready`.
 //!
 //! Built-in handlers are described in [`crate::ops::registry`]. Dynamic plugin
@@ -17,11 +17,11 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
+use crate::wire::{ErrorKind, Request};
+#[cfg(test)]
+use eos_cas::{LayerChange, LayerPath};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
-use eos_protocol::{ErrorKind, Request};
-#[cfg(test)]
-use eos_protocol::{LayerChange, LayerPath};
 
 #[cfg(test)]
 use crate::adapters::occ::{
@@ -111,7 +111,7 @@ impl<'ctx> DispatchContext<'ctx> {
     }
 
     /// Per-file read/write byte caps, when runtime config was threaded. File ops
-    /// fall back to the `eos_protocol::models` defaults when this is `None`.
+    /// fall back to the `eos_cas::models` defaults when this is `None`.
     pub(crate) const fn file_limits(&self) -> Option<FileLimitsConfig> {
         self.file_limits
     }
@@ -127,11 +127,13 @@ pub struct OpTable {
 }
 
 impl OpTable {
-    /// Build the table pre-populated with the daemon-owned builtin ops this
-    /// phase wires (NO `ping`).
+    /// Build the table pre-populated with the daemon-owned builtin ops (NO
+    /// `ping`). Every op is registered under its canonical `sandbox.*` name
+    /// AND each legacy alias; both spellings route to the same handler.
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
         for op in BUILTIN_OPS {
+            table.register_builtin(op.spec.name, op.handler);
             for spelling in op.spec.aliases {
                 table.register_builtin(spelling, op.handler);
             }

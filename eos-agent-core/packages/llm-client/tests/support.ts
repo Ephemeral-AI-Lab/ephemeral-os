@@ -31,13 +31,13 @@ export async function collectUntilError(
   throw new Error("expected the stream to throw");
 }
 
-export interface RecordedCall {
+interface RecordedCall {
   url: string;
   init: RequestInit | undefined;
   body: unknown;
 }
 
-export interface FetchStub {
+interface FetchStub {
   fetch: typeof globalThis.fetch;
   calls: RecordedCall[];
 }

@@ -13,13 +13,13 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+#[cfg(all(target_os = "linux", not(test)))]
+use eos_cas::Intent;
 use eos_plugin::host::route::PluginProcessSpec;
 #[cfg(all(target_os = "linux", not(test)))]
 use eos_plugin::host::route::ENV_PLUGIN_WORKSPACE_MOUNTED;
 use eos_plugin::host::PpcClient;
 use eos_plugin::PluginError;
-#[cfg(all(target_os = "linux", not(test)))]
-use eos_protocol::Intent;
 #[cfg(all(target_os = "linux", not(test)))]
 use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};

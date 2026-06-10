@@ -9,7 +9,7 @@ use crate::{PluginError, PpcEnvelope};
 
 use crate::host::PpcError;
 
-const MAX_PPC_FRAME_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
+const MAX_PPC_FRAME_BYTES: usize = crate::framing::MAX_PPC_FRAME_BYTES;
 
 #[derive(Clone)]
 pub(super) struct FrameWriter {

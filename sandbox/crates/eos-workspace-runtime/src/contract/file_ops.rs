@@ -10,7 +10,9 @@ use crate::contract::mutation::{
     WorkspaceMutationSink,
 };
 use crate::contract::read_view::WorkspaceReadView;
-use crate::contract::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
+use crate::contract::response::{
+    ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings,
+};
 
 /// Read one text file from a workspace mode.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

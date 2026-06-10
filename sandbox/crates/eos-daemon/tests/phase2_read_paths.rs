@@ -5,13 +5,13 @@ use std::sync::Mutex;
 // Integration test crates receive every normal `eos-daemon` dependency even
 // when the test only drives public daemon APIs. These imports keep
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
+use eos_daemon::wire::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
 use eos_layerstack as _;
 use eos_occ as _;
 use eos_overlay as _;
 use eos_plugin as _;
-use eos_protocol::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
 use eos_runner as _;
 use eos_workspace_runtime as _;
 use serde as _;

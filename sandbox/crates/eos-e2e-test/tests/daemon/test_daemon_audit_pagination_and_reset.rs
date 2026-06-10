@@ -1,7 +1,7 @@
 //! `api.audit.pull` cursor pagination plus the config-gated reset hook.
 
 use anyhow::{Context, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 
 use crate::support::{as_i64, live_pool_or_skip};

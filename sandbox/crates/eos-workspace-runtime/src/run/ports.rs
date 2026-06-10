@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use crate::ephemeral::EphemeralWorkspace;
 use crate::contract::{
     FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
+use crate::ephemeral::EphemeralWorkspace;
 use serde_json::Value;
 
 /// Daemon-provided services the run lifecycle depends on but that must stay in

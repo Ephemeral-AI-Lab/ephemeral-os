@@ -4,7 +4,7 @@
 //! conversions use `#[from]`; messages are lowercase with no trailing
 //! punctuation.
 
-use eos_protocol::CasError;
+use eos_cas::CasError;
 
 /// Errors raised by the OCC publish path.
 #[derive(Debug, thiserror::Error)]

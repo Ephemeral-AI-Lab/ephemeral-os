@@ -1,5 +1,5 @@
 use anyhow::Result;
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Value};
 
 use crate::support::{

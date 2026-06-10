@@ -1,6 +1,6 @@
 //! Registered plugin op routing.
 
-use eos_protocol::Intent;
+use eos_cas::Intent;
 use serde_json::{json, Value};
 
 use super::{

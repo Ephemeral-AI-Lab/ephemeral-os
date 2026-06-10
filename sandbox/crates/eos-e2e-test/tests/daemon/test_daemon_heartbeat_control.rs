@@ -3,7 +3,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::json;
 
 use crate::spawn_inflight_exec;

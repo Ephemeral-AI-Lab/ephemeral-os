@@ -37,7 +37,7 @@ pub enum PpcError {
 
     /// A PPC envelope could not be framed / parsed.
     #[error(transparent)]
-    Protocol(#[from] eos_protocol::ProtocolError),
+    Protocol(#[from] crate::framing::ProtocolError),
 
     /// A socket / filesystem I/O operation failed.
     #[error("plugin ppc io error: {0}")]

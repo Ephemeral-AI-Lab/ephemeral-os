@@ -9,8 +9,8 @@ mod service_cache;
 
 use std::path::Path;
 
+use eos_cas::{LayerChange, LayerPath};
 use eos_occ::ChangesetResult;
-use eos_protocol::{LayerChange, LayerPath};
 
 use crate::config::LayerStackConfig;
 use crate::error::DaemonError;

@@ -2,7 +2,7 @@
 
 use std::io;
 
-use eos_protocol::CasError;
+use eos_cas::CasError;
 use thiserror::Error;
 
 /// Failures raised by the overlay kernel-mount and upper-dir capture paths.

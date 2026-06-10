@@ -26,6 +26,10 @@ use crate::command_session::{
     CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
+use crate::contract::{
+    FinalizeCommandRequest, SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome,
+    WorkspaceMode,
+};
 use crate::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
     PreparedEphemeralCommand,
@@ -36,10 +40,6 @@ use crate::isolated::{
 };
 use eos_layerstack::LayerStack;
 use eos_overlay::overlay_writable_root;
-use crate::contract::{
-    FinalizeCommandRequest, SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceMode,
-};
 
 use super::isolated_command_handle::IsolatedCommandHandle;
 use super::ports::WorkspaceRunHostPorts;

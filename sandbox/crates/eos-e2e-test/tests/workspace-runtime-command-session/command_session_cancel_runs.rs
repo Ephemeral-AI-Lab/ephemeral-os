@@ -5,8 +5,8 @@
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
+use eos_daemon::wire::ops;
 use eos_e2e_test::{unique_suffix, NodeLease};
-use eos_protocol::ops;
 use serde_json::json;
 
 use crate::support::{

@@ -1,5 +1,5 @@
 //! Policy-blind path changes captured from a snapshot overlay, plus the
-//! ONE-WAY conversion into `eos_protocol::LayerChange`.
+//! ONE-WAY conversion into `eos_cas::LayerChange`.
 //!
 //! This conversion lives HERE (occ depends on it one-way; overlay has NO occ
 //! dep — the `occ → overlay` edge stays acyclic). The capture half walks ONLY
@@ -10,7 +10,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use eos_protocol::{LayerChange, LayerPath};
+use eos_cas::{LayerChange, LayerPath};
 use sha2::{Digest, Sha256};
 
 use crate::error::{OverlayError, Result};
@@ -98,7 +98,7 @@ impl OverlayPathChange {
     }
 
     /// Convert this overlay-side change into the storage-level
-    /// `eos_protocol::LayerChange`. ONE-WAY: occ consumes this; overlay never
+    /// `eos_cas::LayerChange`. ONE-WAY: occ consumes this; overlay never
     /// imports occ. `write` threads the precomputed `content_path`/`final_hash`;
     /// `symlink` reads the link target (`os.readlink`).
     ///

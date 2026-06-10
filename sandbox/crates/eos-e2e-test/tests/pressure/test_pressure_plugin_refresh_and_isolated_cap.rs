@@ -3,8 +3,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use eos_daemon::wire::ops;
 use eos_e2e_test::unique_suffix;
-use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, request_with_identity};

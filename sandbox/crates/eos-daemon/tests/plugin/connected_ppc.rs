@@ -2,8 +2,8 @@ use super::super::*;
 use super::support::*;
 
 use crate::dispatcher::OpTable;
+use crate::wire::Request;
 use eos_plugin::{PpcDirection, PpcEnvelope};
-use eos_protocol::Request;
 use serde_json::{json, Value};
 use std::io::Write;
 use std::sync::{mpsc, Arc};

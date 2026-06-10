@@ -76,7 +76,7 @@ pub struct LayerStackConfig {
 /// Per-file read/write byte caps for `read_file` / `write_file` / `edit_file`.
 ///
 /// Each bounds a single file payload. Both must stay below the transport frame
-/// limit (`eos_protocol::MAX_REQUEST_BYTES`, 16 MiB): file content travels
+/// limit (the daemon wire `MAX_REQUEST_BYTES`, 16 MiB): file content travels
 /// inside one request/response frame next to the JSON envelope, so values near
 /// 16 MiB risk frame overflow once content is JSON-escaped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

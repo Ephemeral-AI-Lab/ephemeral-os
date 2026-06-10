@@ -2,7 +2,7 @@ use super::super::*;
 use super::support::*;
 
 use crate::dispatcher::OpTable;
-use eos_protocol::Request;
+use crate::wire::Request;
 use serde_json::{json, Value};
 
 #[test]

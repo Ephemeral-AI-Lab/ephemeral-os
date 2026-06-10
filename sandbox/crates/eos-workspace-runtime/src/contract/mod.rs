@@ -8,6 +8,7 @@
 
 pub(crate) mod command;
 pub(crate) mod file_ops;
+pub mod ids;
 pub(crate) mod lease;
 pub(crate) mod mode;
 pub(crate) mod mutation;
@@ -22,6 +23,7 @@ pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
 };
+pub use ids::{CallerId, InvocationId, WorkspaceHandleId};
 pub use lease::SnapshotLease;
 pub use mode::WorkspaceMode;
 pub use mutation::{

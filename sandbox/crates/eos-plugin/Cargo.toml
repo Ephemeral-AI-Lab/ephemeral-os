@@ -6,13 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-eos-protocol.workspace = true
+eos-cas.workspace = true
 # Errors + small JSON arg objects only. NOT eos-occ — the no-publish/no-second-writer
 # guard (06-crate-map §A) keeps that internal edge absent; PPC payload bodies stay
 # opaque `String`, reusing eos_protocol's envelope encode/decode for framing.
 serde.workspace = true
 thiserror.workspace = true
-serde_json.workspace = true
+# preserve_order keeps PPC frame args in insertion order on the wire.
+serde_json = { workspace = true, features = ["preserve_order"] }
 # `host` package publish/setup: content-hash markers + staged-upload ids.
 sha2.workspace = true
 uuid.workspace = true

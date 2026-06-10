@@ -9,10 +9,10 @@ use tokio::time::timeout;
 use crate::error::DaemonError;
 
 /// Maximum bytes read for a single request line.
-pub(super) const MAX_REQUEST_BYTES: usize = eos_protocol::MAX_REQUEST_BYTES;
+pub(super) const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
 
 /// Per-request read timeout in seconds.
-const REQUEST_READ_TIMEOUT_S: f64 = eos_protocol::REQUEST_READ_TIMEOUT_S;
+const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
 
 pub(super) async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>
 where

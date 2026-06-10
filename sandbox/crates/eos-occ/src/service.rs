@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use eos_protocol::{LayerChange, LayerPath};
+use eos_cas::{LayerChange, LayerPath};
 
 use crate::commit_queue::{CommitQueue, CommitTransactionPort, PreparedChangeset};
 use crate::error::OccError;
@@ -260,7 +260,7 @@ impl<T: CommitTransactionPort + 'static> Drop for OccService<T> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use eos_protocol::{LayerChange, LayerPath};
+    use eos_cas::{LayerChange, LayerPath};
 
     use super::*;
     use crate::{CommitQueue, FileResult, OccStatus};

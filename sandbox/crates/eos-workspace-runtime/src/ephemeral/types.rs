@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub use crate::contract::ids::{CallerId, InvocationId};
 use crate::contract::SnapshotLease;
-pub use eos_protocol::{CallerId, InvocationId};
 
 /// Root of the LayerStack workspace whose snapshot is used by the operation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

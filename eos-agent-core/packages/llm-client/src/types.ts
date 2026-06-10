@@ -25,11 +25,6 @@ export interface UsageSnapshot {
   cache_creation_input_tokens?: number;
 }
 
-/** Total accounted tokens (`input + output`). */
-export function totalTokens(usage: UsageSnapshot): number {
-  return usage.input_tokens + usage.output_tokens;
-}
-
 /** A neutral model invocation request. */
 export interface LlmRequest {
   /** Opaque provider model key. */

@@ -4,20 +4,20 @@
 //! # Invariant
 //!
 //! The PPC reuses the daemon's newline-delimited compact-JSON framing — one
-//! [`eos_protocol::Envelope`] per message, a single trailing `\n` — over an
+//! [`crate::framing::Envelope`] per message, a single trailing `\n` — over an
 //! `AF_UNIX` socket to the daemon-managed service process. It is BIDIRECTIONAL and
 //! message-id'd: plugin operation serialization is forbidden, so the daemon
 //! multiplexes many in-flight ops over one service connection, and the
 //! self-managed mode lets the plugin call BACK to the daemon (the OCC commit
 //! callback) on the same channel. The `message_id` correlates a reply to its
 //! request and is carried as the envelope's `invocation_id` so the existing
-//! [`eos_protocol::encode`]/[`eos_protocol::decode`] framing applies unchanged
+//! [`crate::framing::encode`]/[`crate::framing::decode`] framing applies unchanged
 //! (no second wire format). Callback request bodies should include
 //! `parent_message_id` so the daemon can route callback replies while many
 //! callback-capable plugin ops are in flight on the same socket.
 //!
 
-use eos_protocol::{decode, encode, Envelope, ProtocolError, Request};
+use crate::framing::{decode, encode, Envelope, ProtocolError, Request};
 use serde_json::json;
 
 use crate::error::PluginError;
@@ -52,7 +52,7 @@ pub struct PpcEnvelope {
 
 impl PpcEnvelope {
     /// Frame this envelope as newline-delimited compact JSON via the SAME
-    /// [`eos_protocol::encode`] the daemon uses (no second wire format). The
+    /// [`crate::framing::encode`] the daemon uses (no second wire format). The
     /// `{direction, body}` args object is built by the future port; `message_id`
     /// maps to the envelope `invocation_id` and `op` to the envelope `op`.
     ///
@@ -75,7 +75,7 @@ impl PpcEnvelope {
         Self::from_envelope(envelope)
     }
 
-    /// Project this frame onto an [`eos_protocol::Envelope::Request`], encoding
+    /// Project this frame onto an [`crate::framing::Envelope::Request`], encoding
     /// `op`/`message_id`/`{direction, body}` into the request shape so the shared
     /// framing carries it. Body is opaque JSON text wrapped into the args object.
     fn to_envelope(&self) -> Envelope {
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn ppc_decode_rejects_non_request_frames() -> TestResult {
-        let encoded = encode(&Envelope::Response(json!({"success": true})))?;
+        let encoded = encode(&Envelope::Other(json!({"success": true})))?;
 
         assert!(matches!(
             PpcEnvelope::decode(&encoded),

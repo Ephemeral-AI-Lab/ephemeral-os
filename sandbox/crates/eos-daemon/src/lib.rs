@@ -38,6 +38,7 @@ pub(crate) mod dispatch;
 pub(crate) mod ops;
 pub(crate) mod runtime;
 pub(crate) mod transport;
+pub mod wire;
 
 pub use dispatch::dispatcher;
 pub use dispatcher::{DispatchContext, OpTable};

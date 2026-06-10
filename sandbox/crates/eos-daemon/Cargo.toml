@@ -6,8 +6,8 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+eos-cas.workspace = true
 eos-config.workspace = true
-eos-protocol.workspace = true
 eos-layerstack.workspace = true
 eos-overlay.workspace = true
 eos-occ.workspace = true
@@ -16,7 +16,9 @@ eos-workspace-runtime.workspace = true
 eos-plugin.workspace = true
 eos-checkpoint.workspace = true
 eos-runner.workspace = true
-serde_json.workspace = true
+# preserve_order is contract-load-bearing: request `args` keys must cross
+# the wire in insertion order for byte-stable envelope round-trips.
+serde_json = { workspace = true, features = ["preserve_order"] }
 serde.workspace = true
 sha2.workspace = true
 tokio.workspace = true
@@ -32,6 +34,8 @@ nix = { workspace = true, features = ["fs", "process", "signal"] }
 # production `[dependencies]` entry above leaves it off (resolver 2 keeps the
 # dev-dependency feature out of the non-test build).
 eos-plugin = { workspace = true, features = ["test-root-override"] }
+# Property tests for the absorbed wire envelope round-trip.
+proptest.workspace = true
 
 [lints]
 workspace = true

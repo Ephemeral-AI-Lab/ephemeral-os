@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::isolated::network::VethAllocation;
 
-pub use eos_protocol::{CallerId, WorkspaceHandleId};
+pub use crate::contract::ids::{CallerId, WorkspaceHandleId};
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
 ///

@@ -9,8 +9,8 @@
 
 use std::path::PathBuf;
 
+use eos_cas::{Manifest, MANIFEST_SCHEMA_VERSION};
 use eos_layerstack::{LayerCheckpointSquasher, LayerRef, SquashPlanEntry};
-use eos_protocol::{Manifest, MANIFEST_SCHEMA_VERSION};
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

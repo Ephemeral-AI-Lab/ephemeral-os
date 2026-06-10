@@ -186,7 +186,7 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
         Ok(stream) => stream,
         Err(err) => {
             eprintln!("EOS_DAEMON_CONNECT_FAILED:{}", io_error_name(&err));
-            std::process::exit(eos_protocol::CONNECT_FAILED);
+            std::process::exit(eos_daemon::wire::CONNECT_FAILED);
         }
     };
     if let Err(err) = stream
@@ -194,16 +194,16 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
         .and_then(|()| stream.write_all(b"\n"))
     {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(eos_protocol::IO_FAILED);
+        std::process::exit(eos_daemon::wire::IO_FAILED);
     }
     if let Err(err) = stream.shutdown(std::net::Shutdown::Write) {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(eos_protocol::IO_FAILED);
+        std::process::exit(eos_daemon::wire::IO_FAILED);
     }
     let mut response = Vec::new();
     if let Err(err) = stream.read_to_end(&mut response) {
         eprintln!("EOS_DAEMON_IO_FAILED:{}", io_error_name(&err));
-        std::process::exit(eos_protocol::IO_FAILED);
+        std::process::exit(eos_daemon::wire::IO_FAILED);
     }
     std::io::stdout()
         .lock()
@@ -215,7 +215,7 @@ fn run_daemon_client(socket_path: &PathBuf, payload: &str) -> Result<()> {
 #[cfg(not(unix))]
 fn run_daemon_client(_socket_path: &PathBuf, _payload: &str) -> Result<()> {
     eprintln!("EOS_DAEMON_CONNECT_FAILED:UnsupportedPlatform");
-    std::process::exit(eos_protocol::CONNECT_FAILED);
+    std::process::exit(eos_daemon::wire::CONNECT_FAILED);
 }
 
 fn spawn_daemon(config: &DaemonCliConfig) -> Result<()> {

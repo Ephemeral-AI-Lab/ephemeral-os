@@ -353,7 +353,7 @@ mod tests {
         require_ns_fds,
     };
     use crate::request::{Fd, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
-    use eos_protocol::Intent;
+    use eos_cas::Intent;
     use std::path::Path;
 
     #[test]

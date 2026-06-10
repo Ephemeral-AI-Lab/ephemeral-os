@@ -2,9 +2,9 @@ use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use eos_daemon::wire::ops;
 use eos_e2e_test::audit::section;
 use eos_e2e_test::next_invocation_id;
-use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{

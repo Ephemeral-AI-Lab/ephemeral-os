@@ -10,7 +10,7 @@
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
-use eos_protocol::ops;
+use eos_daemon::wire::ops;
 use serde_json::{json, Map, Value};
 
 use crate::audit::AuditTap;

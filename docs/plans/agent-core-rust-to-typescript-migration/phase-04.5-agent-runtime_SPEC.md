@@ -18,9 +18,10 @@ Phase 04.5 introduces `@eos/agent-runtime` (renaming the empty
 `@eos/runtime` stub): the composition root where process-level services and
 per-run objects meet. It owns:
 
-- `AgentRuntime.startRun()` — the per-run assembly: notification queue,
-  background supervisor, service ports, `buildToolExecutor`, engine
-  `startAgentRun`, disposal — in one wiring order, in one file,
+- `AgentRuntime.startRun()` — the per-run assembly: notification inbox,
+  background supervisor (both engine classes, constructed per run),
+  service ports, `buildToolExecutor`, engine `startAgentRun` — in one
+  wiring order, in one file,
 - the run registry (typed map of active runs; mints `AgentRunId`),
 - the real `AgentRunPort`: subagent spawning recurses into `startRun`,
   advisor asks run a child to completion, transcript reads serve the JSONL,
@@ -39,19 +40,23 @@ live; nothing under `agent-core/` changes.
 
 ## 2. Design Decisions
 
-1. **One pair per run.** The notification queue and supervisor are created
-   per agent run, never shared: notifications target exactly one
-   conversation, `liveCount()` backs exactly one run's submission guard,
-   and disposal must not touch a sibling run's sessions. Subagents get
-   their own pair via the same factory — the hierarchy needs no tree; a
-   parent's subagent driver just watches the child's outcome.
-2. **The wiring order is the spec.** queue -> supervisor -> `onDrained`
-   delivery wiring -> service ports -> `buildToolExecutor` -> engine start
-   -> dispose subscription. Each arrow is a real dependency; the order
-   lives in one function so neither `@eos/engine` nor `@eos/tool` ever
-   learns process topology. Services meet only as named arguments at the
-   `buildToolExecutor` call — each tool family factory receives exactly its
-   own port (Phase 04 §2.15); no ambient port record exists.
+1. **One pair per run.** The notification inbox and supervisor (both
+   engine classes, Phase 04 §2.12) are constructed here per agent run,
+   never shared: notifications target exactly one conversation,
+   `liveCount()` backs exactly one run's submission guard, and disposal
+   must not touch a sibling run's sessions. Subagents get their own pair
+   via the same factory — the hierarchy needs no tree; a parent's
+   subagent `SessionHandle` just watches the child's outcome.
+2. **The wiring order is the spec.** inbox -> supervisor -> service ports
+   -> run state -> `buildToolExecutor` -> engine start -> registry-settle
+   subscription.
+   Each arrow is a real dependency; the order lives in one function so
+   neither `@eos/engine` nor `@eos/tool` ever learns process topology.
+   Ports stop at the family-factory calls — each factory receives exactly
+   its own port (Phase 04 §2.15), and `buildToolExecutor` receives only
+   the finished definitions; no ambient port record exists and
+   registration never sees a service. Session teardown is engine-owned
+   (Phase 04 §2.17): this root wires none of it.
 3. **Two lifetimes, one boundary.** Process-level services (LLM client,
    sandbox factory, workflow port, hook config) are bound at
    `createAgentRuntime`; everything per-run is built in `startRun`. The
@@ -127,35 +132,44 @@ interface StartedRun {
 `startRun` wiring order (decision 2):
 
 ```
-1. run_id = mintAgentRunId(); registry.add(run_id, kind, parent)
-2. queue = new SystemNotificationQueue()
-3. supervisor = new BackgroundSupervisor(queue, drivers)
-4. queue.onDrained(refs => supervisor.markDelivered(refs))
-5. workspace = new WorkspaceState()
-6. sandbox = services.sandbox(run_id)          // per-run workspace binding
-7. tools = buildToolExecutor({ kind, sandbox, agents: agentRunPort,
-     workflows: services.workflows, supervisor, hookEngine, workspace,
-     identity, transcript_path })
-8. handle = startAgentRun({ llmClient, tools,
-     notifications: createNotificationSource(queue, supervisor), … })
-9. broadcaster = fanOut(handle.events)         // sole stream consumer
+1. run_id = mintAgentRunId()
+2. inbox = new NotificationInbox()               // engine class
+3. supervisor = new BackgroundSupervisor(inbox)  // engine class; self-
+                                                 // subscribes for delivery
+4. sandbox = services.sandbox(run_id)            // per-run workspace binding
+5. runState = createAgentRunState({ run_id, kind, parent,
+     sandbox_id: sandbox.id, transcript_path })  // Phase 04 §2.19
+   registry.add(runState)                        // facts stored once
+6. definitions = [                               // ports stop here
+     ...sandboxTools(sandbox, supervisor, runState.workspace),
+     ...agentTools(agentRunPort, supervisor),
+     ...(services.workflows
+          ? workflowTools(services.workflows, supervisor) : []),
+     ...backgroundTools(supervisor),
+     submissionTool(kind, supervisor),
+   ]
+   tools = buildToolExecutor({ runState, definitions, inbox, hookEngine })
+7. handle = startAgentRun({ llmClient, tools, notifications: inbox,
+     background: supervisor, … })
+8. broadcaster = fanOut(handle.events)           // sole stream consumer
    broadcaster.subscribe(transcriptWriter)
-10. handle.outcome.finally(() => { supervisor.dispose('run finished');
-      registry.settle(run_id) })
+9. handle.outcome.finally(() => registry.settle(run_id))
 ```
 
-Step 10 is the only place run-end and supervisor lifecycles meet: on the
-success path the submission guard already proved zero live sessions; on
-cancel/failure paths `dispose` cancels stragglers through each driver
-(subagent children receive `interrupt`, commands are killed, workflows
-cancelled).
+Session teardown needs no wiring here: the engine loop triggers
+`supervisor.dispose(reason)` on every finish (Phase 04 §2.17), cancelling
+stragglers through each spawn site's `SessionHandle` (subagent children
+receive `interrupt`, commands are killed, workflows cancelled). Step 9 is
+pure registry bookkeeping.
 
 ## 5. Run Registry and `AgentRunPort` (`registry.ts`, `agent-port.ts`)
 
-The registry is one typed map: `Map<AgentRunId, { kind, parent?,
-handle, transcript_path, status }>`. Terminal runs stay listed until their
-parent (if any) has settled them — transcript reads against finished runs
-must keep working — and are evicted with their parent.
+The registry is one typed map: `Map<AgentRunId, { state: AgentRunState,
+handle, status }>` — the run facts live exactly once, in the state record
+(Phase 04 §2.19); the registry adds only what the record must not hold
+(the live handle, the registry-level status). Terminal runs stay listed
+until their parent (if any) has settled them — transcript reads against
+finished runs must keep working — and are evicted with their parent.
 
 `AgentRunPort` implementation:
 
@@ -169,8 +183,9 @@ must keep working — and are evicted with their parent.
 - `readTranscript(runId, offset?)` -> byte-offset read of the run's JSONL
   (registry lookup; works for live and finished runs).
 
-The parent's subagent **driver** (Phase 04 §9) consumes `settled`; the
-port stays mechanism, the supervisor stays policy.
+The `run_subagent` tool wraps `settled` into the `SessionHandle` it
+registers (Phase 04 §9); the port stays mechanism, the supervisor stays
+policy.
 
 ## 6. Transcript Writer and Event Fan-out (`transcript.ts`, `fan-out.ts`)
 
@@ -211,13 +226,13 @@ per-call payload carries all identity).
 
 | Trigger | Effect |
 | --- | --- |
-| run finishes (any status) | `supervisor.dispose` cancels leftover sessions; registry marks terminal |
-| parent run disposed with live subagent | subagent driver cancel -> child `handle.interrupt('parent disposed')` -> child's own dispose cascades |
-| caller `signal` aborts | engine cancels (Phase 03 semantics); step-10 disposal runs off `outcome` |
+| run finishes (any status) | the ENGINE triggers `supervisor.dispose` (Phase 04 §2.17); the runtime only marks the registry terminal |
+| parent run disposed with live subagent | the child's `SessionHandle.cancel` -> child `handle.interrupt('parent disposed')` -> the child's own engine dispose cascades |
+| caller `signal` aborts | engine cancels (Phase 03 semantics) and disposes on finish |
 | `cancel_background_session` on a subagent | same child-interrupt path, model-initiated |
 
-The cascade is depth-first through drivers; no global kill switch exists —
-each run only ever touches sessions it registered.
+The cascade is depth-first through session handles; no global kill switch
+exists — each run only ever touches sessions it registered.
 
 ## 9. Public API (`index.ts`)
 
@@ -258,6 +273,28 @@ phase.
 - No new third-party dependencies (`node:fs/promises`, `node:crypto`
   suffice).
 
+Resulting layout:
+
+```
+packages/agent-runtime/          RENAMED from packages/runtime/
+├─ src/
+│  ├─ runtime.ts          createAgentRuntime() + startRun() §4 wiring
+│  ├─ registry.ts         run map, AgentRunId minting, parent/child links
+│  ├─ agent-port.ts       real AgentRunPort (startRun recursion, advisor
+│  │                      await, transcript reads)
+│  ├─ transcript.ts       per-run JSONL writer + offset reader
+│  ├─ fan-out.ts          single-consumer stream -> N subscribers
+│  ├─ hook-config.ts      loadHookConfig()
+│  └─ index.ts
+├─ tests/                 §13 integration suite
+└─ package.json           @eos/agent-runtime; deps: @eos/contracts,
+                          @eos/engine, @eos/tool, @eos/llm-client
+```
+
+`@eos/agent-runtime` is the only package that depends on everything; the
+workspace dependency graph stays acyclic with the composition root on top
+(contracts <- engine <- tool <- testkit; agent-runtime consumes all).
+
 ## 12. Migration Steps
 
 1. Rename the stub package -> verify: `pnpm install` + workspace resolution
@@ -279,7 +316,7 @@ network, real files only under a temp `dataDir`.
 
 | # | Case | Asserts |
 | --- | --- | --- |
-| 1 | Wiring order | a `startRun` smoke run produces transcript lines, drains a notification, disposes on finish (spy ordering matches §4) |
+| 1 | Wiring order | a `startRun` smoke run produces transcript lines, drains a notification, and observes the engine-triggered dispose on finish (spy ordering matches §4) |
 | 2 | Submission end-to-end | scripted main run calls `submit_main_outcome`; `outcome.submission` carries the payload; transcript `run_finished` line matches |
 | 3 | Subagent round-trip | main spawns subagent (real child run), idles -> auto-wait, `session_settled` notification arrives, parent reads child transcript via the tool, then submits |
 | 4 | Advisor ask | `ask_advisor` blocks, child advisor run submits, answer returns in the tool result; caller abort mid-ask cancels the child |
@@ -311,7 +348,7 @@ pnpm run check
 Phase 04.5 is accepted when:
 
 - `@eos/agent-runtime` exposes exactly the §9 API and `startRun` performs
-  the §4 wiring in order, with queue/supervisor pairs strictly per-run,
+  the §4 wiring in order, with inbox/supervisor pairs strictly per-run,
 - subagent and advisor execution are both `startRun` recursion (no second
   path), with parent-abort propagation and the §8 disposal cascade covered
   by tests,

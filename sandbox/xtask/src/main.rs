@@ -28,12 +28,135 @@ fn main() -> Result<()> {
     {
         Some("package") => package(&PackageArgs::parse(args)?),
         Some("check-contract") => check_contract(),
+        Some("gen-docs") => gen_docs(),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
         }
         Some(other) => bail!("unknown xtask command {other:?}; run `cargo run -p xtask -- help`"),
     }
+}
+
+/// Regenerate `docs/API.md` from the committed `contract/ops.json`.
+fn gen_docs() -> Result<()> {
+    let root = workspace_root()?;
+    let rendered = render_api_doc(&root)?;
+    let path = root.join("docs").join("API.md");
+    fs::write(&path, rendered).with_context(|| format!("write {}", path.display()))?;
+    println!("gen-docs: wrote docs/API.md");
+    Ok(())
+}
+
+/// Render the API doc deterministically from `contract/ops.json`.
+fn render_api_doc(root: &Path) -> Result<String> {
+    let ops_path = root.join("contract").join("ops.json");
+    let document: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&ops_path).with_context(|| format!("read {}", ops_path.display()))?,
+    )
+    .context("parse contract/ops.json")?;
+    let protocol_version = document
+        .get("protocol_version")
+        .and_then(serde_json::Value::as_i64)
+        .context("ops.json missing protocol_version")?;
+    let ops = document
+        .get("ops")
+        .and_then(serde_json::Value::as_array)
+        .context("ops.json missing ops array")?;
+
+    let field = |op: &serde_json::Value, key: &str| -> Result<String> {
+        Ok(op
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .with_context(|| format!("catalog op missing {key}"))?
+            .to_owned())
+    };
+    let mut sections: std::collections::BTreeMap<&str, Vec<String>> =
+        std::collections::BTreeMap::new();
+    for op in ops {
+        let name = field(op, "name")?;
+        let visibility = field(op, "visibility")?;
+        let served_by = field(op, "served_by")?;
+        let family = field(op, "family")?;
+        let summary = field(op, "summary")?;
+        let mutates = op
+            .get("mutates_state")
+            .and_then(serde_json::Value::as_bool)
+            .context("catalog op missing mutates_state")?;
+        let aliases = op
+            .get("aliases")
+            .and_then(serde_json::Value::as_array)
+            .context("catalog op missing aliases")?
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .map(|alias| format!("`{alias}`"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let aliases = if aliases.is_empty() {
+            "—".to_owned()
+        } else {
+            aliases
+        };
+        let key = match visibility.as_str() {
+            "public" => "public",
+            "operator" => "operator",
+            "internal" => "internal",
+            "test" => "test",
+            other => bail!("unknown visibility {other:?}"),
+        };
+        sections.entry(key).or_default().push(format!(
+            "| `{name}` | {aliases} | {served_by} | {family} | {} | {summary} |",
+            if mutates { "yes" } else { "no" }
+        ));
+    }
+
+    let mut body = String::new();
+    body.push_str("# Sandbox API — op catalog\n\n");
+    body.push_str(
+        "GENERATED from `contract/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
+         Do not edit by hand: `cargo run -p xtask -- check-contract` fails when\n\
+         this file drifts from the committed catalog.\n\n",
+    );
+    let _ = writeln!(&mut body, "Protocol version: **{protocol_version}**\n");
+    for (key, title, blurb) in [
+        (
+            "public",
+            "Public ops (client socket)",
+            "The complete public vocabulary served on the `eos-api` client socket.",
+        ),
+        (
+            "operator",
+            "Operator ops (`eos-api admin`)",
+            "Served only on the operator socket beside the client socket; never the client socket.",
+        ),
+        (
+            "internal",
+            "Internal ops",
+            "Reserved for the host recovery machine; not served from any socket.",
+        ),
+        (
+            "test",
+            "Test ops",
+            "Daemon-side test hooks; refused by `eos-api` and exercised only by direct-daemon test harnesses.",
+        ),
+    ] {
+        let Some(rows) = sections.get(key) else {
+            continue;
+        };
+        let _ = writeln!(&mut body, "## {title}\n\n{blurb}\n");
+        body.push_str("| Op | Aliases | Served by | Family | Mutates | Summary |\n");
+        body.push_str("|---|---|---|---|---|---|\n");
+        for row in rows {
+            body.push_str(row);
+            body.push('\n');
+        }
+        body.push('\n');
+    }
+    body.push_str(
+        "## Dynamic plugin ops\n\n`plugin.<id>.<op>` names are registered at runtime by plugin \
+         services inside a sandbox. They are daemon-served, public, and treated as mutating \
+         (fail-closed) by the recovery ladder; they never appear in the static catalog.\n",
+    );
+    Ok(body)
 }
 
 /// The CI drift gate for `contract/` (SPEC §9):
@@ -60,6 +183,13 @@ fn check_contract() -> Result<()> {
     }
     check_alias_integrity(&committed)?;
 
+    let api_doc_path = root.join("docs").join("API.md");
+    let committed_doc = fs::read_to_string(&api_doc_path)
+        .with_context(|| format!("read {}", api_doc_path.display()))?;
+    if committed_doc != render_api_doc(&root)? {
+        bail!("docs/API.md is stale: regenerate with `cargo run -p xtask -- gen-docs`");
+    }
+
     for suite in CONFORMANCE_SUITES {
         let mut cargo_args = vec!["test", "--quiet", "-p", suite.package];
         for test in suite.tests {
@@ -79,10 +209,26 @@ struct ConformanceSuite {
     tests: &'static [&'static str],
 }
 
-const CONFORMANCE_SUITES: &[ConformanceSuite] = &[ConformanceSuite {
-    package: "eos-protocol",
-    tests: &["envelope_fixtures", "cas_fixtures"],
-}];
+const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
+    // Box side: daemon envelope conformance + the 18 golden CAS cases.
+    ConformanceSuite {
+        package: "eos-daemon",
+        tests: &["contract"],
+    },
+    ConformanceSuite {
+        package: "eos-cas",
+        tests: &["cas_fixtures"],
+    },
+    // Host side: request-fixture encoding + router/visibility coverage.
+    ConformanceSuite {
+        package: "eos-sandbox-host",
+        tests: &["contract"],
+    },
+    ConformanceSuite {
+        package: "eos-api",
+        tests: &["contract"],
+    },
+];
 
 /// Aliases pinned by immutable golden fixtures; they may never leave the
 /// catalog (SPEC §4.2).
@@ -114,9 +260,7 @@ fn check_alias_integrity(ops_json: &str) -> Result<()> {
             .and_then(serde_json::Value::as_array)
             .context("catalog op missing `aliases`")?
         {
-            let alias = alias
-                .as_str()
-                .context("catalog alias must be a string")?;
+            let alias = alias.as_str().context("catalog alias must be a string")?;
             if aliases.insert(alias, name).is_some() {
                 bail!("alias claimed twice in contract/ops.json: {alias}");
             }
@@ -259,7 +403,7 @@ fn package(args: &PackageArgs) -> Result<()> {
         "packaged {artifact_name} target={} sha256={} protocol_version={}",
         args.target,
         sha,
-        eos_protocol::DAEMON_PROTOCOL_VERSION
+        eos_daemon::wire::DAEMON_PROTOCOL_VERSION
     );
     Ok(())
 }
@@ -375,7 +519,7 @@ fn sha256_file(path: &Path) -> Result<String> {
 fn write_protocol_version(out_dir: &Path) -> Result<()> {
     fs::write(
         out_dir.join("protocol_version"),
-        format!("{}\n", eos_protocol::DAEMON_PROTOCOL_VERSION),
+        format!("{}\n", eos_daemon::wire::DAEMON_PROTOCOL_VERSION),
     )
     .with_context(|| format!("write {}", out_dir.join("protocol_version").display()))
 }
@@ -426,7 +570,7 @@ fn write_manifest(
         ),
         artifact_name,
         arch,
-        eos_protocol::DAEMON_PROTOCOL_VERSION,
+        eos_daemon::wire::DAEMON_PROTOCOL_VERSION,
         sha256,
         target,
         env!("CARGO_PKG_VERSION"),
@@ -463,7 +607,9 @@ xtask commands:
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
           [--sign --minisign-key <path>]
   check-contract    verify contract/ops.json matches `eosd dump-ops`, alias
-                    integrity holds, and the conformance suites pass
+                    integrity holds, docs/API.md is fresh, and the
+                    conformance suites pass
+  gen-docs          regenerate docs/API.md from contract/ops.json
 
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64

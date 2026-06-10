@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use eos_protocol::Intent;
+use eos_cas::Intent;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{PluginError, Result};

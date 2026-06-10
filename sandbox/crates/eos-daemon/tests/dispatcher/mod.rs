@@ -6,7 +6,7 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use eos_protocol::audit::Lane;
+use crate::audit::schema::Lane;
 use serde_json::json;
 
 use super::*;
@@ -617,7 +617,7 @@ fn audit_pull_reads_shared_daemon_ring() -> TestResult {
 fn auto_squash_audit_emits_triggered_and_completed() -> TestResult {
     let fixture = Fixture::new("auto_squash_completed")?;
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let expected_hash = eos_protocol::manifest_root_hash(&manifest);
+    let expected_hash = eos_cas::manifest_root_hash(&manifest);
     let invocation_id = format!("autosquash-completed-{}", unique_suffix());
     let request = Request {
         op: "api.v1.write_file".to_owned(),
