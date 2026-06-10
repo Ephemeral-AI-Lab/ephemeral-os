@@ -29,7 +29,8 @@ pub(crate) fn op_read_file(
         return Ok(read_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let outcome = read_file(&DirectBackend::new(root), request).map_err(workspace_error)?;
+    let mut outcome = read_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    enrich_direct_timings(&root, &mut outcome.timings, 0);
     Ok(read_response(outcome))
 }
 
@@ -46,7 +47,8 @@ pub(crate) fn op_write_file(
         return Ok(write_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let outcome = write_file(&DirectBackend::new(root), request).map_err(workspace_error)?;
+    let mut outcome = write_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(write_response(outcome))
 }
 
@@ -63,7 +65,8 @@ pub(crate) fn op_edit_file(
         return Ok(edit_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let outcome = edit_file(&DirectBackend::new(root), request).map_err(workspace_error)?;
+    let mut outcome = edit_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
+    enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(edit_response(outcome))
 }
 
@@ -211,6 +214,22 @@ fn conflict_value(conflict: WorkspaceConflict) -> Value {
 
 fn mode(mode: WorkspaceMode) -> &'static str {
     mode.as_str()
+}
+
+/// Splice the daemon's latest-state resource sample (manifest depth, tree-key
+/// seeds, cgroup/process gauges) into a direct file-op response — the wire
+/// layer's enrichment, so the file-ops crate stays free of process telemetry.
+fn enrich_direct_timings(
+    root: &std::path::Path,
+    timings: &mut eos_file_ops::WorkspaceTimings,
+    changed_path_count: usize,
+) {
+    if let Ok(manifest) = eos_layerstack::service::active_manifest(root) {
+        for (key, value) in crate::response_timings::resource_timings(&manifest, changed_path_count)
+        {
+            timings.entry(key).or_insert(value);
+        }
+    }
 }
 
 fn workspace_error(error: FileOpsError) -> DaemonError {

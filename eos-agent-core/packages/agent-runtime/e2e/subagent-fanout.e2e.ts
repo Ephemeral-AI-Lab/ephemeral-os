@@ -15,6 +15,7 @@ import {
   TERSE_BODY,
   finishedRun,
   lookupCodewordTool,
+  noOpenBackgroundSessionsHookEntries,
   runtimeFixture,
   sessionSettledMessages,
   submissionOf,
@@ -82,6 +83,7 @@ describe.skipIf(!codex.available)("subagent fan-out and nesting over live codex 
             body: HELPER_BODY,
           },
         ],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const lead = runtime.startRun({
         agentName: "lead",
@@ -201,6 +203,7 @@ describe.skipIf(!codex.available)("subagent fan-out and nesting over live codex 
           },
         ],
         baseTools: [wait.definition],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const coordinator = runtime.startRun({
         agentName: "coordinator",
@@ -300,6 +303,7 @@ describe.skipIf(!codex.available)("subagent fan-out and nesting over live codex 
           },
         ],
         baseTools: [lookup.definition],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const overseer = runtime.startRun({
         agentName: "overseer",
@@ -375,6 +379,7 @@ describe.skipIf(!codex.available)("subagent fan-out and nesting over live codex 
             body: HELPER_BODY,
           },
         ],
+        hookEntries: noOpenBackgroundSessionsHookEntries(),
       });
       const chief = runtime.startRun({
         agentName: "chief",

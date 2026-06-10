@@ -21,9 +21,9 @@
 //! cannot publish and does not define a publish port; `eos-daemon` owns the
 //! callback handler and routes it through its existing per-root OCC writer.
 //!
-//! # Build-time guarantee — NOT `eos-occ`
+//! # Build-time guarantee — no storage edge
 //!
-//! This crate does NOT depend on `eos-occ`, `eos-overlay`, `eos-layerstack`,
+//! This crate does NOT depend on `eos-overlay`, `eos-layerstack`,
 //! `nix`, or `tokio`. Snapshot, overlay, publish, process, and
 //! namespace behavior are daemon-side responsibilities.
 //!

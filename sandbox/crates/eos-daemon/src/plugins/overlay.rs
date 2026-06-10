@@ -364,7 +364,10 @@ fn plugin_overlay_run_request(
 }
 
 fn u64_to_f64_saturating(value: u64) -> f64 {
-    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+    const U32_FACTOR: f64 = 4_294_967_296.0;
+    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
+    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
+    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn read_plugin_overlay_result(path: &Path) -> Result<Option<Value>, DaemonError> {

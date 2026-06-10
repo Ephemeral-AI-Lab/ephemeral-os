@@ -56,10 +56,6 @@ impl FileBackend for DirectBackend {
         let manifest = stack.read_active_manifest().map_err(api_error)?;
         let mut timings = WorkspaceTimings::new();
         timings.insert(
-            "resource.layer_stack.manifest_depth".to_owned(),
-            json!(usize_to_f64_saturating(manifest.depth())),
-        );
-        timings.insert(
             "api.read.layer_stack_read_s".to_owned(),
             json!(read_start.elapsed().as_secs_f64()),
         );
@@ -91,14 +87,7 @@ impl FileBackend for DirectBackend {
             &[(path, base_hash)],
         )
         .map_err(api_error)?;
-        let manifest = LayerStack::open(self.root.clone())
-            .and_then(|stack| stack.read_active_manifest())
-            .map_err(api_error)?;
         let mut timings = WorkspaceTimings::new();
-        timings.insert(
-            "resource.layer_stack.manifest_depth".to_owned(),
-            json!(usize_to_f64_saturating(manifest.depth())),
-        );
         timings.insert(
             format!("api.{}.occ_apply_s", mutation.kind.verb()),
             json!(occ_start.elapsed().as_secs_f64()),

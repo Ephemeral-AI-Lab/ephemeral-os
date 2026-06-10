@@ -16,8 +16,8 @@
 //!
 //! ## Threading model (per RUST-GUIDANCE §5)
 //! The queue is a synchronous `mpsc` work queue with one dedicated consumer
-//! thread named `occ-commit-queue` (NOT asyncio/tokio — eos-occ has no tokio
-//! dep). Each work item carries a `std::sync::mpsc` reply sender (the std
+//! thread named `occ-commit-queue` (NOT asyncio/tokio — the commit path has
+//! no tokio dep). Each work item carries a `std::sync::mpsc` reply sender (the std
 //! analogue of a `oneshot`) so the async daemon can await the result without the
 //! OCC crate ever holding a lock across `.await`.
 
