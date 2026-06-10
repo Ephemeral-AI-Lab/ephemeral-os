@@ -10,8 +10,7 @@ eos-cas.workspace = true
 eos-config.workspace = true
 eos-layerstack.workspace = true
 eos-overlay.workspace = true
-eos-occ.workspace = true
-eos-occ-layerstack.workspace = true
+eos-occ = { workspace = true, features = ["layerstack"] }
 eos-workspace-runtime.workspace = true
 eos-plugin.workspace = true
 # preserve_order is contract-load-bearing: request `args` keys must cross

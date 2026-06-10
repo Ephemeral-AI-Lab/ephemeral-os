@@ -16,8 +16,7 @@
 use eos_workspace_runtime::isolated::IsolatedError;
 use serde_json::{json, Value};
 
-use super::isolated;
-use super::run;
+use super::{isolated, require_arg, run};
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
@@ -66,7 +65,7 @@ pub(crate) fn op_cancel_workspace_runs_by_caller_id(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let caller_id = match require_caller_id(args) {
+    let caller_id = match require_arg(args, "caller_id") {
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
     };
@@ -96,24 +95,4 @@ pub(crate) fn op_cancel_workspace_runs(
         "cancelled_command_sessions": cancelled_sessions,
         "isolated_callers_exited": isolated_exited,
     }))
-}
-
-fn require_caller_id(args: &Value) -> Result<String, Value> {
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
-    if caller_id.is_empty() {
-        return Err(json!({
-            "success": false,
-            "error": {
-                "kind": "invalid_argument",
-                "message": "caller_id is required",
-                "details": {"key": "caller_id"},
-            },
-        }));
-    }
-    Ok(caller_id)
 }

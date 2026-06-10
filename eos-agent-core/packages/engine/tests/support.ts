@@ -5,7 +5,9 @@ import {
   toolUseIdFrom,
   type ContentBlock,
   type JsonObject,
+  type JsonValue,
   type Message,
+  type ToolCallResult,
 } from "@eos/contracts";
 import type {
   LlmClient,
@@ -16,13 +18,15 @@ import type {
   UsageSnapshot,
 } from "@eos/llm-client";
 
+import type { SessionOutcome } from "../src/background/session.js";
+import type { BackgroundSupervisor } from "../src/background/supervisor.js";
 import type { AgentEvent } from "../src/events.js";
+import type { NotificationInbox } from "../src/notification-inbox.js";
 import {
   startAgentRun,
   type AgentRunHandle,
   type AgentRunOutcome,
-  type ToolDefinition,
-  type ToolRegistry,
+  type ToolExecutor,
 } from "../src/index.js";
 
 // --- scripted provider client ----------------------------------------------
@@ -171,18 +175,161 @@ export function assistantMessage(...content: ContentBlock[]): Message {
 
 export const userText = fromUserText;
 
-// --- tools -------------------------------------------------------------------
+// --- scripted tool executor ----------------------------------------------------
 
-/** Register executors by name under a trivial spec. */
-export function registryOf(
-  ...tools: [string, ToolDefinition["execute"]][]
-): ToolRegistry {
-  return new Map(
-    tools.map(([name, execute]): [string, ToolDefinition] => [
-      name,
-      { spec: { name, description: name, input_schema: {} }, execute },
-    ]),
-  );
+/** What a scripted tool yields; the executor fills the call facts. */
+export interface ScriptedToolOutput {
+  content: JsonValue;
+  is_error?: boolean;
+  is_terminal?: boolean;
+  metadata?: JsonObject;
+}
+
+export type ScriptedToolHandler = (
+  input: JsonObject,
+  signal: AbortSignal,
+) => Promise<ScriptedToolOutput>;
+
+/**
+ * A minimal in-test `ToolExecutor`: sequential dispatch (concurrency is
+ * `@eos/tool`'s concern), abort-aware so a hanging tool settles the batch
+ * with whatever finished — the engine's normalization fills the rest.
+ */
+export function scriptedExecutor(
+  ...tools: [string, ScriptedToolHandler][]
+): ToolExecutor {
+  const byName = new Map(tools);
+  return {
+    specs: () =>
+      [...byName.keys()].map((name) => ({
+        name,
+        description: name,
+        input_schema: {},
+      })),
+    async executeBatch(calls, signal, emit) {
+      const results: ToolCallResult[] = [];
+      for (const call of calls) {
+        if (signal.aborted) break;
+        emit({
+          type: "tool_execution_started",
+          tool_use_id: call.tool_use_id,
+          name: call.name,
+          input: call.input,
+        });
+        const handler = byName.get(call.name);
+        const startedAt = Date.now();
+        const output = handler
+          ? await settleOrAbort(handler(call.input, signal), signal)
+          : { content: `tool not found: ${call.name}`, is_error: true };
+        if (signal.aborted) break;
+        const result: ToolCallResult = {
+          tool_use_id: call.tool_use_id,
+          content: output.content,
+          is_error: output.is_error ?? false,
+          is_terminal: output.is_terminal ?? false,
+          tool_start_time: startedAt,
+          tool_end_time: Date.now(),
+          ...(output.metadata !== undefined && { metadata: output.metadata }),
+        };
+        results.push(result);
+        emit({
+          type: "tool_execution_completed",
+          tool_use_id: call.tool_use_id,
+          name: call.name,
+          output:
+            typeof result.content === "string"
+              ? result.content
+              : JSON.stringify(result.content),
+          is_error: result.is_error,
+          is_terminal: result.is_terminal,
+          tool_start_time: result.tool_start_time,
+          tool_end_time: result.tool_end_time,
+          ...(result.metadata !== undefined && { metadata: result.metadata }),
+        });
+      }
+      return results;
+    },
+  };
+}
+
+/** An executor over no tools at all. */
+export function emptyExecutor(): ToolExecutor {
+  return scriptedExecutor();
+}
+
+/** A handler that submits a structured outcome as a terminal result. */
+export function submitHandler(submission: JsonValue): ScriptedToolHandler {
+  return () =>
+    Promise.resolve({ content: submission, is_terminal: true });
+}
+
+function settleOrAbort(
+  work: Promise<ScriptedToolOutput>,
+  signal: AbortSignal,
+): Promise<ScriptedToolOutput> {
+  return new Promise((resolve) => {
+    const onAbort = (): void => {
+      resolve({ content: "interrupted", is_error: true });
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve({
+          content: error instanceof Error ? error.message : String(error),
+          is_error: true,
+        });
+      },
+    );
+  });
+}
+
+// --- background session handles ---------------------------------------------------
+
+export interface TestSessionHandle {
+  handle: {
+    settled: Promise<SessionOutcome>;
+    cancel(reason: string): Promise<void>;
+    describe?(): string;
+  };
+  settle(outcome: SessionOutcome): void;
+  fail(error: Error): void;
+  /** Reasons passed to `cancel`, in call order. */
+  cancelled: string[];
+}
+
+/** A push-settled capability handle; `cancel` resolves per `cancelMode`. */
+export function sessionHandle(
+  options: { describe?: string; cancelMode?: "resolve" | "hang" } = {},
+): TestSessionHandle {
+  let settle!: (outcome: SessionOutcome) => void;
+  let fail!: (error: Error) => void;
+  const settled = new Promise<SessionOutcome>((resolve, reject) => {
+    settle = resolve;
+    fail = reject;
+  });
+  const cancelled: string[] = [];
+  return {
+    handle: {
+      settled,
+      cancel: (reason) => {
+        cancelled.push(reason);
+        return options.cancelMode === "hang"
+          ? new Promise<void>(() => undefined)
+          : Promise.resolve();
+      },
+      ...(options.describe !== undefined && {
+        describe: () => options.describe ?? "",
+      }),
+    },
+    settle,
+    fail,
+    cancelled,
+  };
 }
 
 // --- async coordination -------------------------------------------------------
@@ -224,9 +371,11 @@ export function tick(): Promise<void> {
 // --- run orchestration ---------------------------------------------------------
 
 export interface StartMockRunOptions {
-  tools?: ToolRegistry;
+  tools?: ToolExecutor;
   maxTurns?: number;
   signal?: AbortSignal;
+  notifications?: NotificationInbox;
+  background?: BackgroundSupervisor;
 }
 
 /** Start a run over scripted turns with small defaults. */
@@ -237,12 +386,14 @@ export function startMockRun(
   const client = new MockLlmClient(turns);
   const handle = startAgentRun({
     llmClient: client,
-    tools: options.tools ?? new Map<string, ToolDefinition>(),
+    tools: options.tools ?? emptyExecutor(),
     model: "mock-model",
     initialMessages: [userText("hi")],
     maxTokens: 1024,
     maxTurns: options.maxTurns,
     signal: options.signal,
+    notifications: options.notifications,
+    background: options.background,
   });
   return { client, handle };
 }

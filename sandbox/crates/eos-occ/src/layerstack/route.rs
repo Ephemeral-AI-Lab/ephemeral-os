@@ -6,10 +6,10 @@ use serde_json::{json, Value};
 
 use eos_cas::{LayerChange, LayerPath};
 use eos_layerstack::{LayerStack, LayerStackError};
-use eos_occ::OccRouteProvider;
 
-use crate::hash_current;
-use crate::usize_to_f64_saturating;
+use crate::{OccError, OccRouteProvider};
+
+use super::{hash_current, usize_to_f64_saturating};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct OccRouteMetrics {
@@ -17,7 +17,7 @@ pub struct OccRouteMetrics {
     pub direct_path_count: usize,
 }
 
-/// `eos_occ::OccRouteProvider` impl that resolves DIRECT-vs-GATED routing and
+/// [`OccRouteProvider`] impl that resolves DIRECT-vs-GATED routing and
 /// base hashes from the active merged manifest of `root`.
 #[derive(Clone)]
 pub struct LayerStackRouteProvider {
@@ -26,25 +26,22 @@ pub struct LayerStackRouteProvider {
 }
 
 impl OccRouteProvider for LayerStackRouteProvider {
-    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, eos_occ::OccError> {
+    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, OccError> {
         // Per-call re-read of the active merged manifest: opening a fresh
         // `LayerStack` here is load-bearing, so a `.gitignore` edit committed
         // between ops is observed by the next route decision.
         let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
         path_is_ignored(&stack, path.as_str())
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))
+            .map_err(|err| OccError::RoutePreparation(err.to_string()))
     }
 
-    fn base_hash(
-        &self,
-        path: &LayerPath,
-    ) -> std::result::Result<Option<String>, eos_occ::OccError> {
+    fn base_hash(&self, path: &LayerPath) -> std::result::Result<Option<String>, OccError> {
         let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
         let (bytes, exists) = stack
             .read_bytes(path.as_str())
-            .map_err(|err| eos_occ::OccError::RoutePreparation(err.to_string()))?;
+            .map_err(|err| OccError::RoutePreparation(err.to_string()))?;
         Ok(hash_current(bytes.as_deref(), exists))
     }
 }

@@ -190,7 +190,6 @@ dependencies = [
  "eos-config",
  "eos-layerstack",
  "eos-occ",
- "eos-occ-layerstack",
  "eos-overlay",
  "eos-plugin",
  "eos-workspace-runtime",
@@ -249,20 +248,12 @@ name = "eos-occ"
 version = "0.1.0"
 dependencies = [
  "eos-cas",
- "serde",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-occ-layerstack"
-version = "0.1.0"
-dependencies = [
- "eos-cas",
  "eos-layerstack",
- "eos-occ",
  "ignore",
+ "serde",
  "serde_json",
  "sha2",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -303,7 +294,6 @@ version = "0.1.0"
 dependencies = [
  "eos-cas",
  "eos-config",
- "eos-layerstack",
  "eos-overlay",
  "futures-util",
  "libc",

@@ -1,20 +1,18 @@
 //! Layer-stack-bound OCC adapters.
 //!
-//! This is the intermediate host crate that binds the route-agnostic OCC engine
-//! (`eos-occ`) to concrete `eos-layerstack` storage: `eos-daemon` → this crate →
-//! {`eos-occ`, `eos-layerstack`}. It owns the two pieces of OCC machinery that
-//! `eos-occ` deliberately cannot link (it depends on `eos-protocol` only):
+//! This optional module binds the route-agnostic OCC engine to concrete
+//! `eos-layerstack` storage for daemon publish paths. It owns the two pieces of
+//! OCC machinery that need both OCC decisions and the active layer stack:
 //!
-//! * [`LayerStackCommitTransaction`] — the [`eos_occ::CommitTransactionPort`]
+//! * [`LayerStackCommitTransaction`] — the [`crate::CommitTransactionPort`]
 //!   impl that revalidates a prepared changeset against the active manifest and
 //!   publishes a new layer (with auto-squash) via `LayerStack`.
-//! * [`LayerStackRouteProvider`] — the [`eos_occ::OccRouteProvider`] impl plus
+//! * [`LayerStackRouteProvider`] — the [`crate::OccRouteProvider`] impl plus
 //!   the gitignore engine and [`occ_route_metrics`] telemetry.
 //!
 //! The OCC single-writer cache (`OccService` per root) stays daemon-owned; this
-//! crate is *reuse only* and gains no dependency toward the daemon. Errors are
+//! module is *reuse only* and gains no dependency toward the daemon. Errors are
 //! `eos-layerstack`/`eos-occ` native — there is no `DaemonError` edge here.
-#![forbid(unsafe_code)]
 
 mod publish;
 mod route;

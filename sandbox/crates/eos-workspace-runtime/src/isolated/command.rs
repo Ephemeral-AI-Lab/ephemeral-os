@@ -15,7 +15,9 @@ use crate::contract::{
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
     WorkspaceTimings,
 };
-use eos_cas::LayerChange;
+use eos_cas::{
+    Fd, Intent, LayerChange, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
+};
 use serde_json::{json, Value};
 
 /// Daemon-supplied facts needed to prepare an isolated command workspace.
@@ -54,11 +56,11 @@ pub fn prepare_isolated_command(
     request: PrepareCommandRequest,
 ) -> Result<PreparedCommandWorkspace, WorkspaceApiError> {
     let mode = if context.ns_fds.is_empty() {
-        "fresh_ns"
+        RunMode::FreshNs
     } else {
-        "set_ns"
+        RunMode::SetNs
     };
-    let ns_fds = ns_fds_value(&context.ns_fds);
+    let ns_fds = ns_fds_from_map(&context.ns_fds);
     let PrepareCommandRequest {
         caller_id,
         command_session_id,
@@ -90,30 +92,27 @@ pub fn prepare_isolated_command(
         .map_err(prepare_error)?,
     )
     .map_err(prepare_error)?;
-    let run_request = json!({
-        "mode": mode,
-        "tool_call": {
-            "invocation_id": &invocation_id,
-            "caller_id": &caller_id,
-            "verb": "exec_command",
-            "intent": "write_allowed",
-            "args": {
-                "command": &cmd,
-                "cwd": ".",
-            },
-            "background": false,
+    let run_request = RunRequest {
+        mode,
+        tool_call: ToolCall {
+            invocation_id: invocation_id.clone(),
+            caller_id: caller_id.clone(),
+            verb: RunnerVerb::ExecCommand,
+            intent: Intent::WriteAllowed,
+            args: json!({ "command": &cmd, "cwd": "." }),
+            background: false,
         },
-        "workspace_root": context.workspace_root,
-        "layer_paths": context.layer_paths,
-        "upperdir": context.upperdir,
-        "workdir": context.workdir,
-        "ns_fds": ns_fds,
-        "cgroup_path": context.cgroup_path,
-        "timeout_seconds": timeout_seconds,
-    });
+        workspace_root: WorkspaceRoot(context.workspace_root),
+        layer_paths: context.layer_paths,
+        upperdir: Some(context.upperdir),
+        workdir: Some(context.workdir),
+        ns_fds,
+        cgroup_path: context.cgroup_path,
+        timeout_seconds,
+    };
 
     Ok(PreparedCommandWorkspace {
-        run_request,
+        run_request: serde_json::to_value(&run_request).map_err(prepare_error)?,
         request_path: session_dir.join("runner-request.json"),
         output_path: session_dir.join("runner-result.json"),
         final_path: session_dir.join("final.json"),
@@ -276,21 +275,17 @@ fn merge_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&V
     }
 }
 
-fn ns_fds_value(map: &HashMap<String, i32>) -> Value {
+fn ns_fds_from_map(map: &HashMap<String, i32>) -> Option<NsFds> {
     if map.is_empty() {
-        Value::Null
-    } else {
-        json!({
-            "user": namespace_fd(map, "user"),
-            "mnt": namespace_fd(map, "mnt"),
-            "pid": namespace_fd(map, "pid"),
-            "net": namespace_fd(map, "net"),
-        })
+        return None;
     }
-}
-
-fn namespace_fd(map: &HashMap<String, i32>, name: &str) -> Value {
-    map.get(name).map_or(Value::Null, |fd| json!(*fd))
+    let fd = |name: &str| map.get(name).copied().map(Fd);
+    Some(NsFds {
+        user: fd("user"),
+        mnt: fd("mnt"),
+        pid: fd("pid"),
+        net: fd("net"),
+    })
 }
 
 #[cfg(test)]

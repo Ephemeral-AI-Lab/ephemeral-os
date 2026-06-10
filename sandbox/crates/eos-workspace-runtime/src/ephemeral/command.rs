@@ -15,6 +15,7 @@ use crate::contract::{
     SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode,
     WorkspaceTimings,
 };
+use eos_cas::{Intent, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::ephemeral::{
@@ -84,30 +85,27 @@ pub fn prepare_ephemeral_command(
     let output_path = dirs.run_dir.join("command-runner-result.json");
     let request_path = dirs.run_dir.join("command-runner-request.json");
 
-    let run_request = json!({
-        "mode": "fresh_ns",
-        "tool_call": {
-            "invocation_id": &invocation_id,
-            "caller_id": &caller_id,
-            "verb": "exec_command",
-            "intent": "write_allowed",
-            "args": {
-                "command": &cmd,
-                "cwd": ".",
-            },
-            "background": false,
+    let run_request = RunRequest {
+        mode: RunMode::FreshNs,
+        tool_call: ToolCall {
+            invocation_id: invocation_id.clone(),
+            caller_id: caller_id.clone(),
+            verb: RunnerVerb::ExecCommand,
+            intent: Intent::WriteAllowed,
+            args: json!({ "command": &cmd, "cwd": "." }),
+            background: false,
         },
-        "workspace_root": context.workspace_root.clone(),
-        "layer_paths": snapshot.layer_paths.clone(),
-        "upperdir": dirs.upperdir.clone(),
-        "workdir": dirs.workdir.clone(),
-        "ns_fds": null,
-        "cgroup_path": null,
-        "timeout_seconds": timeout_seconds,
-    });
+        workspace_root: WorkspaceRoot(context.workspace_root.clone()),
+        layer_paths: snapshot.layer_paths.clone(),
+        upperdir: Some(dirs.upperdir.clone()),
+        workdir: Some(dirs.workdir.clone()),
+        ns_fds: None,
+        cgroup_path: None,
+        timeout_seconds,
+    };
 
     let prepared = PreparedCommandWorkspace {
-        run_request,
+        run_request: serde_json::to_value(&run_request).map_err(prepare_error)?,
         request_path,
         output_path,
         final_path: context.final_path,

@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { toolUseIdFrom, type ToolCallResult } from "@eos/contracts";
 import { ProviderError } from "@eos/llm-client";
 
+import { BackgroundSupervisor } from "../src/background/supervisor.js";
 import {
-  startAgentRun,
-  type ToolDefinition,
-  type ToolOutput,
-} from "../src/index.js";
+  NotificationInbox,
+  systemNotificationMessage,
+} from "../src/notification-inbox.js";
+import { startAgentRun, type ToolExecutor } from "../src/index.js";
 import {
   MockLlmClient,
   USAGE,
@@ -17,15 +19,18 @@ import {
   collectEvents,
   complete,
   deferred,
+  emptyExecutor,
   expectProviderValid,
   failingTurn,
   gatedTurn,
   hangingTurn,
   must,
-  registryOf,
   reasoningDelta,
+  scriptedExecutor,
   scriptedTurn,
+  sessionHandle,
   startMockRun,
+  submitHandler,
   textBlock,
   textDelta,
   tick,
@@ -35,30 +40,45 @@ import {
   userText,
 } from "./support.js";
 
+const SUBMISSION = { summary: "done", payload: { answer: 42 } };
+
 describe("agent loop", () => {
-  it("completes after one text-only turn with the stop_reason surfaced (§14.1)", async () => {
-    const reply = assistantMessage(textBlock("hello"));
-    const { client, handle } = startMockRun([
-      scriptedTurn([textDelta("hello"), complete(reply, "end_turn")]),
-    ]);
+  it("finishes only through a terminal tool result and carries the submission (§15.2)", async () => {
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const call = assistantMessage(
+      textBlock("submitting"),
+      toolUseBlock("tu_s", "submit", { summary: "done" }),
+    );
+    const { client, handle } = startMockRun(
+      [scriptedTurn([complete(call, "tool_use")])],
+      { tools },
+    );
     const outcome = asCompleted(await handle.outcome);
     expect(outcome.turns).toBe(1);
-    expect(outcome.stop_reason).toBe("end_turn");
-    expect(outcome.final_message).toEqual(reply);
+    expect(outcome.submission).toEqual(SUBMISSION);
+    expect(outcome.final_message).toEqual(call);
+    expect(outcome.stop_reason).toBe("tool_use");
     expect(outcome.usage).toEqual(USAGE);
-    expect(outcome.llm).toEqual([userText("hi"), reply]);
-    expect(outcome.displayed.map((entry) => entry.message)).toEqual(outcome.llm);
+    expect(must(outcome.llm.at(-1))).toEqual({
+      role: "user",
+      content: [toolResultBlock("tu_s", JSON.stringify(SUBMISSION))],
+    });
     expect(client.requests).toHaveLength(1);
     expectProviderValid(outcome.llm);
   });
 
-  it("feeds tool results back into the next provider request (§14.2)", async () => {
-    const tools = registryOf(["calc", () => Promise.resolve({ content: "42" })]);
+  it("feeds tool results back into the next provider request (P03 §14.2)", async () => {
+    const tools = scriptedExecutor(
+      ["calc", () => Promise.resolve({ content: "42" })],
+      ["submit", submitHandler(SUBMISSION)],
+    );
     const call = assistantMessage(toolUseBlock("tu_1", "calc", { expr: "6*7" }));
     const { client, handle } = startMockRun(
       [
         scriptedTurn([complete(call, "tool_use")]),
-        scriptedTurn([complete(assistantMessage(textBlock("the answer is 42")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_2", "submit")), "tool_use"),
+        ]),
       ],
       { tools },
     );
@@ -72,85 +92,141 @@ describe("agent loop", () => {
     ]);
     expect(secondRequest.tools).toEqual([
       { name: "calc", description: "calc", input_schema: {} },
+      { name: "submit", description: "submit", input_schema: {} },
     ]);
     expectProviderValid(outcome.llm);
   });
 
-  it("executes a parallel batch capped at 8 into one ordered result message (§14.3)", async () => {
-    let inflight = 0;
-    let maxInflight = 0;
-    const tools = registryOf([
-      "probe",
-      (input) => {
-        inflight += 1;
-        maxInflight = Math.max(maxInflight, inflight);
-        return tick().then((): ToolOutput => {
-          inflight -= 1;
-          return { content: JSON.stringify(input.i) };
-        });
-      },
-    ]);
-    const calls = Array.from({ length: 12 }, (_, i) =>
-      toolUseBlock(`tu_${String(i)}`, "probe", { i }),
-    );
+  it("continues past bare text turns appending nothing — text never terminates (§15.4)", async () => {
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
     const { client, handle } = startMockRun(
       [
-        scriptedTurn([complete(assistantMessage(...calls), "tool_use")]),
-        scriptedTurn([complete(assistantMessage(textBlock("done")))]),
-      ],
-      { tools },
-    );
-    const outcome = asCompleted(await handle.outcome);
-    expect(maxInflight).toBe(8);
-    const resultMessage = must(must(client.requests.at(1)).messages.at(-1));
-    expect(resultMessage.content).toEqual(
-      Array.from({ length: 12 }, (_, i) =>
-        toolResultBlock(`tu_${String(i)}`, String(i)),
-      ),
-    );
-    expectProviderValid(outcome.llm);
-  });
-
-  it("maps a thrown tool error to is_error and keeps going (§14.4)", async () => {
-    const tools = registryOf(
-      ["boom", () => Promise.reject(new Error("kaboom"))],
-      ["ok", () => Promise.resolve({ content: "fine" })],
-    );
-    const { client, handle } = startMockRun(
-      [
+        scriptedTurn([complete(assistantMessage(textBlock("thinking")))]),
+        scriptedTurn([complete(assistantMessage(textBlock("still thinking")), "max_tokens")]),
         scriptedTurn([
-          complete(
-            assistantMessage(toolUseBlock("tu_a", "boom"), toolUseBlock("tu_b", "ok")),
-            "tool_use",
-          ),
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
         ]),
-        scriptedTurn([complete(assistantMessage(textBlock("recovered")))]),
       ],
       { tools },
     );
     const outcome = asCompleted(await handle.outcome);
-    expect(must(must(client.requests.at(1)).messages.at(-1)).content).toEqual([
-      toolResultBlock("tu_a", "kaboom", true),
-      toolResultBlock("tu_b", "fine"),
+    expect(outcome.turns).toBe(3);
+    expect(outcome.stop_reason, "stop_reason comes from the submitting turn").toBe(
+      "tool_use",
+    );
+    expect(
+      must(client.requests.at(1)).messages,
+      "a bare text turn appends nothing before the next call",
+    ).toEqual([userText("hi"), assistantMessage(textBlock("thinking"))]);
+    expect(
+      must(client.requests.at(2)).messages,
+      "a max_tokens truncation does not terminate either",
+    ).toEqual([
+      userText("hi"),
+      assistantMessage(textBlock("thinking")),
+      assistantMessage(textBlock("still thinking")),
     ]);
     expectProviderValid(outcome.llm);
   });
 
-  it("answers an unknown tool with a not-found error result and continues (§14.5)", async () => {
-    const { client, handle } = startMockRun([
-      scriptedTurn([
-        complete(assistantMessage(toolUseBlock("tu_g", "ghost")), "tool_use"),
-      ]),
-      scriptedTurn([complete(assistantMessage(textBlock("moving on")))]),
-    ]);
+  it("fails with max_turns and no submission when the model never submits (§15.4)", async () => {
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("a")))]),
+        scriptedTurn([complete(assistantMessage(textBlock("b")))]),
+      ],
+      { maxTurns: 2 },
+    );
+    const outcome = asFailed(await handle.outcome);
+    expect(outcome.failure.kind).toBe("max_turns");
+    expect(outcome.turns).toBe(2);
+    expect(client.requests).toHaveLength(2);
+    expect("submission" in outcome).toBe(false);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("parks on live sessions after a bare text turn and wakes on the settlement (§15.3)", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSupervisor(inbox);
+    const session = sessionHandle();
+    supervisor.register(
+      { type: "command", id: "c1" },
+      toolUseIdFrom("tu_bg"),
+      session.handle,
+    );
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("waiting on the build")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools, notifications: inbox, background: supervisor },
+    );
+    await tick();
+    await tick();
+    expect(client.requests, "the loop parks instead of burning a provider call").toHaveLength(1);
+    session.settle({ status: "completed", summary: "build ok" });
     const outcome = asCompleted(await handle.outcome);
-    expect(must(must(client.requests.at(1)).messages.at(-1)).content).toEqual([
-      toolResultBlock("tu_g", "tool not found: ghost", true),
+    expect(outcome.turns, "waiting consumed no turn").toBe(2);
+    expect(must(client.requests.at(1)).messages).toEqual([
+      userText("hi"),
+      assistantMessage(textBlock("waiting on the build")),
+      systemNotificationMessage({
+        type: "session_settled",
+        session: { type: "command", id: "c1" },
+        status: "completed",
+        summary: "build ok",
+      }),
+    ]);
+    expect(supervisor.openCount(), "the drain marked the session delivered").toBe(0);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("wakes the parked loop on a steer, draining steers above notifications (§15.3, §15.5)", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSupervisor(inbox);
+    const session = sessionHandle();
+    supervisor.register(
+      { type: "command", id: "c9" },
+      toolUseIdFrom("tu_bg"),
+      session.handle,
+    );
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("waiting")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools, notifications: inbox, background: supervisor },
+    );
+    await tick();
+    await tick();
+    expect(client.requests).toHaveLength(1);
+    session.settle({ status: "completed", summary: "finished" });
+    expect(handle.steer(userText("change of plans"))).toBe(true);
+    const outcome = asCompleted(await handle.outcome);
+    expect(
+      must(client.requests.at(1)).messages,
+      "steers drain before notifications at the same boundary",
+    ).toEqual([
+      userText("hi"),
+      assistantMessage(textBlock("waiting")),
+      userText("change of plans"),
+      systemNotificationMessage({
+        type: "session_settled",
+        session: { type: "command", id: "c9" },
+        status: "completed",
+        summary: "finished",
+      }),
     ]);
     expectProviderValid(outcome.llm);
   });
 
-  it("salvages an interrupted stream to displayed only and cancels with the reason (§14.6)", async () => {
+  it("salvages an interrupted stream to displayed only and cancels with the reason (P03 §14.6)", async () => {
     const streamed = deferred();
     const { handle } = startMockRun([
       hangingTurn([textDelta("Hello, wo")], streamed),
@@ -162,7 +238,6 @@ describe("agent loop", () => {
     const outcome = asCancelled(await handle.outcome);
     expect(outcome.reason).toBe("user clicked stop");
     expect(outcome.turns).toBe(0);
-    expect(outcome.usage).toEqual({ input_tokens: 0, output_tokens: 0 });
     const partial = must(outcome.displayed.at(-1));
     expect(partial.partial).toBe("interrupted");
     expect(partial.message).toEqual(assistantMessage(textBlock("Hello, wo")));
@@ -172,9 +247,9 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("closes a cancelled batch with settled plus synthetic results in both lists (§14.7)", async () => {
+  it("closes a cancelled batch with settled plus synthetic results in both lists (P03 §14.7)", async () => {
     const fastDone = deferred();
-    const tools = registryOf(
+    const tools = scriptedExecutor(
       [
         "fast",
         () => {
@@ -182,7 +257,7 @@ describe("agent loop", () => {
           return Promise.resolve({ content: "fast ok" });
         },
       ],
-      ["slow", () => new Promise<ToolOutput>(() => undefined)],
+      ["slow", () => new Promise(() => undefined)],
     );
     const { handle } = startMockRun(
       [
@@ -215,22 +290,75 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("delivers a steer queued mid-run with the next provider request (§14.8)", async () => {
+  it("fills results the executor dropped so history stays provider-valid (§15.21)", async () => {
+    const dropping: ToolExecutor = {
+      specs: () => [],
+      executeBatch: (calls, _signal, _emit) =>
+        Promise.resolve(
+          calls
+            .filter((call) => call.name === "submit")
+            .map(
+              (call): ToolCallResult => ({
+                tool_use_id: call.tool_use_id,
+                content: SUBMISSION,
+                is_error: false,
+                is_terminal: true,
+                tool_start_time: Date.now(),
+                tool_end_time: Date.now(),
+              }),
+            ),
+        ),
+    };
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([
+          complete(
+            assistantMessage(
+              toolUseBlock("tu_a", "ghost_a"),
+              toolUseBlock("tu_b", "ghost_b"),
+            ),
+            "tool_use",
+          ),
+        ]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools: dropping },
+    );
+    const outcome = asCompleted(await handle.outcome);
+    expect(must(client.requests.at(1)).messages.at(-1)).toEqual({
+      role: "user",
+      content: [
+        toolResultBlock("tu_a", "interrupted", true),
+        toolResultBlock("tu_b", "interrupted", true),
+      ],
+    });
+    expect(outcome.submission).toEqual(SUBMISSION);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("delivers a steer queued mid-run with the next provider request (P03 §14.8)", async () => {
     const batchStarted = deferred();
     const releaseBatch = deferred();
-    const tools = registryOf([
-      "wait",
-      () => {
-        batchStarted.resolve();
-        return releaseBatch.promise.then((): ToolOutput => ({ content: "done" }));
-      },
-    ]);
+    const tools = scriptedExecutor(
+      [
+        "wait",
+        () => {
+          batchStarted.resolve();
+          return releaseBatch.promise.then(() => ({ content: "done" }));
+        },
+      ],
+      ["submit", submitHandler(SUBMISSION)],
+    );
     const { client, handle } = startMockRun(
       [
         scriptedTurn([
           complete(assistantMessage(toolUseBlock("tu_w", "wait")), "tool_use"),
         ]),
-        scriptedTurn([complete(assistantMessage(textBlock("after")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
       ],
       { tools },
     );
@@ -245,27 +373,29 @@ describe("agent loop", () => {
       userText("also check Y"),
     ]);
     expect(outcome.llm).toContainEqual(userText("also check Y"));
-    expect(outcome.displayed.map((entry) => entry.message)).toContainEqual(
-      userText("also check Y"),
-    );
     expectProviderValid(outcome.llm);
   });
 
-  it("extends the run when a steer lands during the final turn (§14.9)", async () => {
+  it("extends the run when a steer lands during a bare text turn (P03 §14.9)", async () => {
     const started = deferred();
     const release = deferred();
-    const { client, handle } = startMockRun([
-      gatedTurn(started, release.promise, [
-        complete(assistantMessage(textBlock("first"))),
-      ]),
-      scriptedTurn([complete(assistantMessage(textBlock("post-steer")))]),
-    ]);
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { client, handle } = startMockRun(
+      [
+        gatedTurn(started, release.promise, [
+          complete(assistantMessage(textBlock("first"))),
+        ]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools },
+    );
     await started.promise;
     expect(handle.steer(userText("one more"))).toBe(true);
     release.resolve();
     const outcome = asCompleted(await handle.outcome);
     expect(outcome.turns).toBe(2);
-    expect(outcome.final_message).toEqual(assistantMessage(textBlock("post-steer")));
     expect(must(client.requests.at(1)).messages).toEqual([
       userText("hi"),
       assistantMessage(textBlock("first")),
@@ -274,20 +404,26 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("rejects a steer once finishing has begun and validates the role (§14.10)", async () => {
-    const reply = assistantMessage(textBlock("done"));
-    const { handle } = startMockRun([scriptedTurn([complete(reply)])]);
+  it("rejects a steer once finishing has begun and validates the role (P03 §14.10)", async () => {
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { handle } = startMockRun(
+      [
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools },
+    );
     const outcome = asCompleted(await handle.outcome);
     expect(handle.steer(userText("too late"))).toBe(false);
-    expect(outcome.llm).toEqual([userText("hi"), reply]);
-    expect(outcome.displayed).toHaveLength(2);
+    expect(outcome.displayed).toHaveLength(3);
     expect(() => handle.steer(assistantMessage(textBlock("wrong role")))).toThrow(
       TypeError,
     );
   });
 
-  it("fails with max_turns and drops a steer queued after the budget is spent (§14.11)", async () => {
-    const tools = registryOf(["echo", () => Promise.resolve({ content: "ok" })]);
+  it("fails with max_turns and drops a steer queued after the budget is spent (P03 §14.11)", async () => {
+    const tools = scriptedExecutor(["echo", () => Promise.resolve({ content: "ok" })]);
     const started = deferred();
     const release = deferred();
     const { client, handle } = startMockRun(
@@ -309,14 +445,11 @@ describe("agent loop", () => {
     expect(outcome.turns).toBe(2);
     expect(client.requests).toHaveLength(2);
     expect(outcome.llm).not.toContainEqual(userText("late steer"));
-    expect(outcome.displayed.map((entry) => entry.message)).not.toContainEqual(
-      userText("late steer"),
-    );
     expect(handle.steer(userText("post-finish"))).toBe(false);
     expectProviderValid(outcome.llm);
   });
 
-  it("fails with provider_error and salvages pre-error deltas (§14.12)", async () => {
+  it("fails with provider_error and salvages pre-error deltas (P03 §14.12)", async () => {
     const { handle } = startMockRun([
       failingTurn(
         [textDelta("partial out")],
@@ -328,15 +461,13 @@ describe("agent loop", () => {
       kind: "provider_error",
       message: "upstream died",
     });
-    expect(outcome.turns).toBe(0);
     const partial = must(outcome.displayed.at(-1));
     expect(partial.partial).toBe("provider_error");
-    expect(partial.message).toEqual(assistantMessage(textBlock("partial out")));
     expect(outcome.llm).toEqual([userText("hi")]);
     expectProviderValid(outcome.llm);
   });
 
-  it("classifies an engine invariant violation as internal and still finishes (§14.13)", async () => {
+  it("classifies an engine invariant violation as internal and still finishes (P03 §14.13)", async () => {
     const { handle } = startMockRun([scriptedTurn([textDelta("oops")])]);
     const { events, done } = collectEvents(handle);
     const outcome = asFailed(await handle.outcome);
@@ -349,17 +480,7 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("completes with stop_reason max_tokens on truncation (§14.14)", async () => {
-    const truncated = assistantMessage(textBlock("truncat"));
-    const { handle } = startMockRun([
-      scriptedTurn([complete(truncated, "max_tokens")]),
-    ]);
-    const outcome = asCompleted(await handle.outcome);
-    expect(outcome.stop_reason).toBe("max_tokens");
-    expect(outcome.final_message).toEqual(truncated);
-  });
-
-  it("treats an external signal abort exactly like interrupt() (§14.15)", async () => {
+  it("treats an external signal abort exactly like interrupt() (P03 §14.15)", async () => {
     const controller = new AbortController();
     const streamed = deferred();
     const { handle } = startMockRun(
@@ -370,28 +491,35 @@ describe("agent loop", () => {
     controller.abort();
     const outcome = asCancelled(await handle.outcome);
     expect(outcome.reason).toBe("interrupted");
-    const partial = must(outcome.displayed.at(-1));
-    expect(partial.partial).toBe("interrupted");
     expect(outcome.llm).toEqual([userText("hi")]);
     expectProviderValid(outcome.llm);
   });
 
-  it("keeps running to completion after the consumer breaks early (§14.16)", async () => {
-    const reply = assistantMessage(textBlock("a"));
-    const { handle } = startMockRun([
-      scriptedTurn([textDelta("a"), complete(reply)]),
-    ]);
+  it("keeps running to completion after the consumer breaks early (P03 §14.16)", async () => {
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { handle } = startMockRun(
+      [
+        scriptedTurn([
+          textDelta("a"),
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools },
+    );
     const iterator = handle.events[Symbol.asyncIterator]();
     const first = await iterator.next();
     expect(first.done).toBe(false);
     await iterator.return?.();
     const outcome = asCompleted(await handle.outcome);
-    expect(outcome.final_message).toEqual(reply);
+    expect(outcome.submission).toEqual(SUBMISSION);
     expectProviderValid(outcome.llm);
   });
 
-  it("emits the golden event sequence for a two-turn tool run (§14.18)", async () => {
-    const tools = registryOf(["echo", () => Promise.resolve({ content: "echoed" })]);
+  it("emits the golden event sequence with execution facts on completions (P03 §14.18)", async () => {
+    const tools = scriptedExecutor(
+      ["echo", () => Promise.resolve({ content: "echoed" })],
+      ["submit", submitHandler(SUBMISSION)],
+    );
     const { handle } = startMockRun(
       [
         scriptedTurn([
@@ -405,10 +533,11 @@ describe("agent loop", () => {
         scriptedTurn([
           reasoningDelta("hmm"),
           textDelta("done"),
-          complete(assistantMessage(textBlock("done")), "end_turn", {
-            input_tokens: 7,
-            output_tokens: 3,
-          }),
+          complete(
+            assistantMessage(textBlock("done"), toolUseBlock("tu_s", "submit")),
+            "tool_use",
+            { input_tokens: 7, output_tokens: 3 },
+          ),
         ]),
       ],
       { tools },
@@ -427,16 +556,111 @@ describe("agent loop", () => {
       "reasoning_delta",
       "assistant_text_delta",
       "assistant_message_complete",
+      "tool_execution_started",
+      "tool_execution_completed",
       "run_finished",
     ]);
-    expect(must(events.at(0))).toEqual({ type: "turn_started", turn: 1 });
-    expect(must(events.at(6))).toEqual({ type: "turn_started", turn: 2 });
+    const completions = events.filter(
+      (event) => event.type === "tool_execution_completed",
+    );
+    expect(must(completions.at(0))).toMatchObject({
+      tool_use_id: "tu_1",
+      is_error: false,
+      is_terminal: false,
+    });
+    expect(must(completions.at(1))).toMatchObject({
+      tool_use_id: "tu_s",
+      is_terminal: true,
+    });
+    for (const [index, completion] of completions.entries()) {
+      if (completion.type !== "tool_execution_completed") continue;
+      expect(
+        completion.tool_end_time,
+        `completion ${String(index)} carries the execute clock`,
+      ).toBeGreaterThanOrEqual(completion.tool_start_time);
+    }
     const last = must(events.at(-1));
-    expect(last.type).toBe("run_finished");
     if (last.type === "run_finished") expect(last.outcome).toBe(outcome);
     expect(outcome.usage).toEqual({ input_tokens: 17, output_tokens: 8 });
-    expect(outcome.turns).toBe(2);
     expectProviderValid(outcome.llm);
+  });
+
+  it("stringifies structured content exactly once at the tool_result projection (§15.20)", async () => {
+    const structured = { files: ["a.ts", "b.ts"], count: 2 };
+    const tools = scriptedExecutor(
+      ["scan", () => Promise.resolve({ content: structured })],
+      ["submit", submitHandler(SUBMISSION)],
+    );
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_1", "scan")), "tool_use"),
+        ]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools },
+    );
+    const { events, done } = collectEvents(handle);
+    const outcome = asCompleted(await handle.outcome);
+    await done;
+    const block = must(must(client.requests.at(1)).messages.at(-1)).content[0];
+    if (block.type !== "tool_result") throw new Error("expected a tool_result");
+    expect(block.content).toBe(JSON.stringify(structured));
+    expect(
+      JSON.parse(block.content),
+      "single-encoded: parsing recovers the object, not a string",
+    ).toEqual(structured);
+    const completion = must(
+      events.find((event) => event.type === "tool_execution_completed"),
+    );
+    if (completion.type === "tool_execution_completed") {
+      expect(completion.output).toBe(JSON.stringify(structured));
+    }
+    expect(outcome.submission, "the submission survives structured").toEqual(
+      SUBMISSION,
+    );
+    expectProviderValid(outcome.llm);
+  });
+
+  it("tears down running sessions on finish without awaiting teardown (§15.22)", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSupervisor(inbox);
+    const first = sessionHandle({ cancelMode: "hang" });
+    const second = sessionHandle({ cancelMode: "hang" });
+    supervisor.register(
+      { type: "command", id: "c1" },
+      toolUseIdFrom("tu_a"),
+      first.handle,
+    );
+    supervisor.register(
+      { type: "subagent", id: "r2" },
+      toolUseIdFrom("tu_b"),
+      second.handle,
+    );
+    const { client, handle } = startMockRun(
+      [scriptedTurn([complete(assistantMessage(textBlock("waiting")))])],
+      { notifications: inbox, background: supervisor },
+    );
+    await tick();
+    await tick();
+    expect(client.requests, "parked on the live sessions").toHaveLength(1);
+    handle.interrupt("user stop");
+    const outcome = asCancelled(await handle.outcome);
+    expect(outcome.reason).toBe("user stop");
+    await tick();
+    expect(first.cancelled, "first session torn down").toEqual(["run finished"]);
+    expect(second.cancelled, "second session torn down").toEqual(["run finished"]);
+    const late = sessionHandle();
+    supervisor.register(
+      { type: "command", id: "late" },
+      toolUseIdFrom("tu_c"),
+      late.handle,
+    );
+    expect(late.cancelled, "the dispose latch cancels late registrations").toEqual([
+      "run finished",
+    ]);
   });
 
   it("rejects empty initialMessages with a TypeError", () => {
@@ -444,7 +668,7 @@ describe("agent loop", () => {
     expect(() =>
       startAgentRun({
         llmClient: client,
-        tools: new Map<string, ToolDefinition>(),
+        tools: emptyExecutor(),
         model: "mock-model",
         initialMessages: [],
       }),

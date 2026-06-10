@@ -12,7 +12,7 @@ use eos_workspace_runtime::isolated::{
     Rfc1918Egress as RuntimeRfc1918Egress,
 };
 
-use super::errors::setup_error;
+use super::setup_error;
 use super::runtime::{DaemonLayerStackPort, DaemonNamespaceRuntime};
 
 type DaemonSession = IsolatedSession<DaemonLayerStackPort, DaemonNamespaceRuntime, JsonlAuditSink>;

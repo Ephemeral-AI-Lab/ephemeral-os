@@ -2,11 +2,10 @@
 //!
 //! This module is the first Rust lifecycle slice behind
 //! `api.isolated_workspace.*`: it owns the dispatch entry points for one
-//! daemon-local isolated runtime session. State construction, structured
-//! error payloads, and namespace runtime details live in child modules so this
-//! file stays a routing surface.
+//! daemon-local isolated runtime session. State construction and namespace
+//! runtime details live in child modules so this file stays a routing
+//! surface.
 
-mod errors;
 #[cfg(target_os = "linux")]
 mod ns_runner;
 mod runtime;
@@ -29,9 +28,7 @@ use crate::workspace::run;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 
-use errors::{
-    env_true, error_json, error_payload, require_arg, setup_error, test_runtime_stub_enabled,
-};
+use super::{error_json, require_arg};
 #[cfg(target_os = "linux")]
 use runtime::command_handle_from;
 pub(crate) use state::configure_isolated_workspace;
@@ -263,6 +260,52 @@ pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
     LOCK.get_or_init(|| Mutex::new(()))
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
+}
+
+fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
+    IsolatedError::SetupFailed {
+        step: error.to_string(),
+    }
+}
+
+/// Map an [`IsolatedError`] onto the structured error payload, carrying the
+/// variant-specific detail fields.
+fn error_payload(error: &IsolatedError) -> Value {
+    let details = match error {
+        IsolatedError::AlreadyOpen {
+            created_at,
+            last_activity,
+        } => json!({
+            "created_at": created_at,
+            "last_activity": last_activity,
+        }),
+        IsolatedError::QuotaExceeded { total_cap } => json!({
+            "total_cap": total_cap,
+        }),
+        IsolatedError::HostRamPressure {
+            required_bytes,
+            budget_bytes,
+        } => json!({
+            "required_bytes": required_bytes,
+            "budget_bytes": budget_bytes,
+        }),
+        IsolatedError::SetupFailed { step } | IsolatedError::SetupTimeout { step } => json!({
+            "failed_step": step,
+        }),
+        _ => json!({}),
+    };
+    error_json(error.kind(), error.to_string(), details)
+}
+
+fn env_true(key: &str) -> bool {
+    std::env::var(key)
+        .unwrap_or_default()
+        .trim()
+        .eq_ignore_ascii_case("true")
+}
+
+fn test_runtime_stub_enabled() -> bool {
+    env_true(TEST_HARNESS_ENV)
 }
 
 #[cfg(test)]

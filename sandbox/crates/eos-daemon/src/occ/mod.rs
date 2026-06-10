@@ -1,7 +1,7 @@
 //! Shared OCC writer facade.
 //!
 //! The layer-stack-bound `CommitTransactionPort` / `OccRouteProvider` impls plus
-//! the gitignore engine and content hashing live in [`eos_occ_layerstack`]; this
+//! the gitignore engine and content hashing live in [`eos_occ::layerstack`]; this
 //! module keeps the daemon-owned per-root [`service_cache`] single writer and the
 //! changeset/base-hash glue that needs the dispatcher's `DaemonError`.
 
@@ -16,16 +16,16 @@ use crate::config::LayerStackConfig;
 use crate::error::DaemonError;
 
 #[cfg(test)]
-pub(crate) use eos_occ_layerstack::{
+pub(crate) use eos_occ::layerstack::{
     hash_bytes, LayerStackCommitTransaction, LayerStackRouteProvider,
 };
-pub(crate) use eos_occ_layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
+pub(crate) use eos_occ::layerstack::{hash_current, insert_occ_route_timings, occ_route_metrics};
 pub(crate) use service_cache::occ_service_cache_snapshot;
 #[cfg(test)]
 pub(crate) use service_cache::{normalize_root_key, OccServiceCache, OCC_SERVICE_CACHE_MAX};
 
 pub(crate) fn configure_layer_stack(config: &LayerStackConfig) {
-    eos_occ_layerstack::configure_auto_squash_max_depth(config.auto_squash_max_depth);
+    eos_occ::layerstack::configure_auto_squash_max_depth(config.auto_squash_max_depth);
 }
 
 pub(crate) fn apply_occ_changeset(
@@ -50,7 +50,7 @@ pub(crate) fn base_hashes_for_snapshot(
     manifest: &eos_layerstack::Manifest,
     changes: &[LayerChange],
 ) -> Result<Vec<(LayerPath, Option<String>)>, DaemonError> {
-    Ok(eos_occ_layerstack::base_hashes_for_snapshot(
+    Ok(eos_occ::layerstack::base_hashes_for_snapshot(
         root, manifest, changes,
     )?)
 }

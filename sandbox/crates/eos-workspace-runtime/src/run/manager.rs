@@ -8,9 +8,10 @@
 //! — never reaching the OCC merge). Each run owns its overlay/namespace state
 //! directly, so the publish-vs-discard branch is structural, not a flag check.
 //!
-//! The OCC publish, per-finalize resource telemetry, and isolated-audit sink are
-//! daemon-resident; they are injected via [`WorkspaceRunHostPorts`] so this crate
-//! keeps no `eos-occ` edge and no daemon-global state.
+//! The OCC publish, snapshot lease acquire/release, per-finalize resource
+//! telemetry, and isolated-audit sink are daemon-resident; they are injected via
+//! [`WorkspaceRunHostPorts`] so this crate keeps no `eos-occ` or
+//! `eos-layerstack` edge and no daemon-global state.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -27,8 +28,7 @@ use crate::command_session::{
     StartCommandSession, WriteStdin,
 };
 use crate::contract::{
-    FinalizeCommandRequest, SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceMode,
+    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 use crate::ephemeral::{
     discard_ephemeral_command, prepare_ephemeral_command, EphemeralCommandPrepareContext,
@@ -38,7 +38,6 @@ use crate::isolated::{
     finalize_isolated_command, prepare_isolated_command, take_isolated_audit,
     IsolatedCommandFinalizeContext, IsolatedCommandPrepareContext,
 };
-use eos_layerstack::LayerStack;
 use eos_overlay::overlay_writable_root;
 
 use super::isolated_command_handle::IsolatedCommandHandle;
@@ -129,16 +128,8 @@ impl WorkspaceRunManager {
             "command_session:{}:{}",
             prepare_request.caller_id, prepare_request.invocation_id
         );
-        let lease = LayerStack::open(root.clone())
-            .and_then(|stack| stack.acquire_snapshot(&request_id))
-            .map_err(layerstack_error)?;
-        let lease_id = lease.lease_id.clone();
-        let snapshot = SnapshotLease {
-            lease_id: lease.lease_id,
-            manifest_version: lease.manifest_version,
-            manifest_root_hash: lease.root_hash,
-            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
-        };
+        let snapshot = self.ports.acquire_snapshot(&root, &request_id)?;
+        let lease_id = snapshot.lease_id.clone();
         let session_dir = scratch_root.join(&spec.id);
         let context = EphemeralCommandPrepareContext {
             layer_stack_root: root.clone(),
@@ -150,7 +141,7 @@ impl WorkspaceRunManager {
         let prepared = match prepare_ephemeral_command(context, snapshot, prepare_request) {
             Ok(prepared) => prepared,
             Err(error) => {
-                release_lease(&root, &lease_id);
+                self.ports.release_lease(&root, &lease_id);
                 return Err(error.into());
             }
         };
@@ -162,7 +153,7 @@ impl WorkspaceRunManager {
             Ok(session) => session,
             Err(error) => {
                 discard_ephemeral_command(&workspace.dirs);
-                release_lease(&root, &lease_id);
+                self.ports.release_lease(&root, &lease_id);
                 return Err(error);
             }
         };
@@ -412,7 +403,7 @@ impl WorkspaceRunManager {
         }
         if let WorkspaceRun::Ephemeral(ephemeral) = &**run {
             discard_ephemeral_command(&ephemeral.workspace.dirs);
-            release_lease(
+            self.ports.release_lease(
                 &ephemeral.workspace.layer_stack_root.0,
                 &ephemeral.workspace.snapshot.lease_id,
             );
@@ -528,7 +519,7 @@ fn settle_ephemeral(
         })
     };
     discard_ephemeral_command(&run.workspace.dirs);
-    release_lease(&root, &lease_id);
+    ports.release_lease(&root, &lease_id);
     outcome
 }
 
@@ -560,18 +551,6 @@ fn settle_isolated(
     let audit = take_isolated_audit(&mut outcome);
     ports.record_tool_call(&run.handle.caller_id, audit);
     Ok(outcome)
-}
-
-fn release_lease(root: &Path, lease_id: &str) {
-    let _ =
-        LayerStack::open(root.to_path_buf()).and_then(|mut stack| stack.release_lease(lease_id));
-}
-
-fn layerstack_error(error: impl std::fmt::Display) -> CommandSessionError {
-    CommandSessionError::Workspace(WorkspaceApiError::new(
-        "snapshot_acquire_failed",
-        error.to_string(),
-    ))
 }
 
 fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {

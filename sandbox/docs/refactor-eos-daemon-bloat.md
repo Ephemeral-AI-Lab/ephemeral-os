@@ -36,7 +36,7 @@ happened**:
 | Audit DTOs, lanes, schema, `build_event` | `eos-protocol::audit` |
 | Isolated-run lifecycle (enter/exit/gc/ttl/persistence/network) | `eos-isolated-workspace` (3.5k LOC) |
 | Overlay kernel-mount / path-change / writable-dirs | `eos-overlay` |
-| OCC commit queue / route / single-writer service | `eos-occ` / `eos-occ-layerstack` |
+| OCC commit queue / route / single-writer service | `eos-occ` (`layerstack` feature) |
 
 Of **63 chunks across 11 areas, 54 were genuine glue that stays even pre-verify**;
 only 9 chunks were proposed for a move. The adversarial pass then **downgraded 5 of
@@ -70,7 +70,7 @@ back-edge into `eos-daemon`.
    └───────────────┬───────────────┬───────────────┬───────────────┬─────────────────────┘
         composes…  │               │               │               │   (deps only point DOWN — DAG rooted at eos-protocol)
                    ▼               ▼               ▼               ▼
-        eos-occ-layerstack   eos-plugin-host   eos-checkpoint-host   eos-{ephemeral,isolated}-workspace
+        eos-occ::layerstack  eos-plugin-host   eos-checkpoint-host   eos-{ephemeral,isolated}-workspace
         eos-occ              eos-plugin        eos-overlay           eos-command-session  eos-workspace-api
                                    └──────────────── eos-protocol (leaf) ────────────────┘
 ```
@@ -87,7 +87,7 @@ the daemon by design (the MF-1 single-writer invariant).
 
 | Chunk | Map verdict → Dest | Adversarial verdict | Why |
 |---|---|---|---|
-| `services/occ/mod.rs::base_hashes_for_snapshot` (~20 LOC) | move → `eos-occ-layerstack` | ✅ **move-confirmed** | Pure `MergedView`+`hash_current`; target already owns `hash_current`/`base_hash`; **zero new edges**; only `DaemonError` is cosmetic (returns native `LayerStackError`). |
+| `services/occ/mod.rs::base_hashes_for_snapshot` (~20 LOC) | move → `eos-occ::layerstack` | ✅ **move-confirmed** | Pure `MergedView`+`hash_current`; target already owns `hash_current`/`base_hash`; **zero new daemon edge**; only `DaemonError` is cosmetic (returns native `LayerStackError`). |
 | `services/checkpoint/base.rs` disk-walk (`count_dirs`/`storage_bytes`, ~50 LOC) | split-facade → `eos-layerstack` | ✅ **move-confirmed** | Walks `layers/` + `staging/` — the crate's *own* layout constants. Behind `LayerStack::storage_metrics()` DTO; **no new edge** (daemon already deps `eos-layerstack`). Facade stays to splice the OCC snapshot. |
 | `workspace_run/registry.rs` `WorkspaceRunRegistry` (~355 LOC) | move → **NEW** `eos-workspace-run-host` | ⚠️ **move-needs-new-host-crate** | Survives DAG/contract/global-state (instance state, no static). Gated on first extracting `CommandHandle` out of daemon-only `isolated/runtime.rs`. Cannot land in thin `eos-command-session` (its doc assigns the registry to the composition tier). |
 | `workspace_run/manager.rs` body (~250 LOC) | split-facade → **NEW** `eos-workspace-run-host` | ⚠️ **move-needs-new-host-crate** | Movable only if 3 seams stay **injected from the daemon**: `DaemonPublisherPort` (carries the forbidden `eos-occ` edge), the **audit emit** `record_tool_call(...)` at `manager.rs:542`, and `response_timings`. Most-constrained move; stage last. |
@@ -95,17 +95,18 @@ the daemon by design (the MF-1 single-writer invariant).
 | `services/plugins/occ_callbacks.rs` (~180 LOC) | split-facade → `eos-plugin-host` | ❌ **stay** (back-edge) | Publish body reaches the daemon-global OCC writer (MF-1). The facade is *already* split correctly: host owns PPC transport, daemon injects the callback closure. Nothing left to move. |
 | `services/plugins/ensure_args.rs` manifest derivation | split-facade → `eos-plugin-host` | ❌ **stay** (contract break) | Builds daemon-local `PluginOperationRoute`/`PluginProcessSpec` (which carry `eos-runner`); moving needs a neutral-DTO shim the repo forbids. *(Narrow exception: ~40 LOC of `resolved_service_command`/path math could move in a separately-scoped pass.)* |
 | `workspace_run/isolated/runtime.rs` ns-runner spawn helpers (~150 LOC) | split-facade → NEW / `eos-command-session` | ❌ **stay** | **Zero external consumers** → a new crate would be a single-consumer abstraction CLAUDE.md forbids. Crate-map (`docs/contract/06`) explicitly mandates the daemon spawns holder/runner children. `eos-command-session` deliberately stays untyped (`&Value`) about the runner wire. |
-| `services/workspace/file_ports.rs` ephemeral read (~25 LOC) | split-facade → NEW / `eos-occ-layerstack` | ❌ **stay** (orphan rule + contract) | `EphemeralFilePorts` carries a second `impl WorkspaceMutationSink` that stays in the daemon → moving the type out is an **orphan-rule compile error**. Read body also embeds daemon `/proc`+`/sys/fs/cgroup` telemetry via `resource_timings`. |
+| `services/workspace/file_ports.rs` ephemeral read (~25 LOC) | split-facade → `eos-occ::layerstack` | ❌ **stay** (orphan rule + contract) | `EphemeralFilePorts` carries a second `impl WorkspaceMutationSink` that stays in the daemon → moving the type out is an **orphan-rule compile error**. Read body also embeds daemon `/proc`+`/sys/fs/cgroup` telemetry via `resource_timings`. |
 | `core` / `audit` / `ops` / `overlay` (remaining 53 chunks) | stay | ✅ stay | RPC framing, op routing, error-envelope, control plane, ring buffer + emit bridge, and the deliberate occ/overlay/plugin/workspace junction seams. |
 
 ## Recommended plan — three tiers, smallest-safe first
 
 ### Tier 1 — two edge-free wins ✅ DONE (verified: `cargo check`/`clippy -D warnings`/`test` green on all 3 crates)
-1. **`base_hashes_for_snapshot` → `eos-occ-layerstack`.** Move the body next to the
+1. **`base_hashes_for_snapshot` → `eos-occ::layerstack`.** Move the body next to the
    existing `hash_current`/`base_hash` it mirrors; have it return native
    `LayerStackError`. The daemon keeps a one-line re-export (matches `occ/mod.rs:19`'s
    existing re-export pattern) so the `DaemonError`-returning surface is preserved via
-   `?`/`#[from]`. *Verify:* `cargo test -p eos-occ-layerstack -p eos-daemon`.
+   `?`/`#[from]`. *Verify:* `cargo test -p eos-occ --features layerstack` and
+   `cargo test -p eos-daemon`.
 2. **`layer_metrics` disk-walk → `eos-layerstack::storage_metrics()`.** Move
    `count_dirs`/`storage_bytes` behind a typed `LayerStackMetrics` DTO; the
    `api.layer_metrics` facade stays in the daemon to splice in the OCC service-cache

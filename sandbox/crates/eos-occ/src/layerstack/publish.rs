@@ -3,14 +3,14 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use eos_cas::{LayerChange, LayerPath, Manifest};
-use eos_layerstack::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
-use eos_occ::{
+use crate::{
     ChangesetResult, CommitTransactionPort, FileResult, OccStatus, PreparedChangeset,
     PublishConflict, Route,
 };
+use eos_cas::{LayerChange, LayerPath, Manifest};
+use eos_layerstack::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 
-use crate::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
+use super::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
 
 static AUTO_SQUASH_MAX_DEPTH_CONFIG: AtomicUsize = AtomicUsize::new(AUTO_SQUASH_MAX_DEPTH);
 
@@ -23,7 +23,7 @@ fn auto_squash_max_depth() -> usize {
     AUTO_SQUASH_MAX_DEPTH_CONFIG.load(Ordering::Relaxed)
 }
 
-/// `eos_occ::CommitTransactionPort` impl that revalidates a prepared changeset
+/// [`CommitTransactionPort`] impl that revalidates a prepared changeset
 /// against the active manifest and publishes a new layer (with auto-squash) via
 /// `LayerStack` for `root`.
 #[derive(Clone)]
@@ -309,11 +309,6 @@ fn validate_prepared(
                 group.base_hash.as_deref(),
                 &mut parent_absent_cache,
             ),
-            _ => FileResult {
-                path: group.path.clone(),
-                status: OccStatus::Rejected,
-                message: "unsupported route".to_owned(),
-            },
         })
         .collect()
 }

@@ -1,0 +1,150 @@
+import { describe, expect, it } from "vitest";
+
+import { toolUseIdFrom, type JsonValue } from "@eos/contracts";
+import { BackgroundSupervisor, NotificationInbox } from "@eos/engine";
+import { scriptedRunState, scriptedSessionHandle } from "@eos/testkit";
+
+import {
+  ToolNameSchema,
+  type ToolCallContext,
+  type ToolDefinition,
+} from "../src/contract.js";
+import { snapshotRunState } from "../src/run-state.js";
+import { backgroundTools, submissionTool } from "../src/index.js";
+import { live, must, tick } from "./support.js";
+
+function setup(): {
+  inbox: NotificationInbox;
+  supervisor: BackgroundSupervisor;
+  list: ToolDefinition;
+  cancel: ToolDefinition;
+} {
+  const inbox = new NotificationInbox();
+  const supervisor = new BackgroundSupervisor(inbox);
+  const [list, cancel] = backgroundTools(supervisor);
+  return { inbox, supervisor, list, cancel };
+}
+
+const ctx = (): ToolCallContext => ({
+  meta: Object.freeze({
+    tool_use_id: toolUseIdFrom("tu_t"),
+    tool_name: ToolNameSchema.parse("test_caller"),
+    run: snapshotRunState(scriptedRunState()),
+  }),
+  signal: live(),
+});
+
+const register = (
+  supervisor: BackgroundSupervisor,
+  type: string,
+  id: string,
+  describe?: string,
+): ReturnType<typeof scriptedSessionHandle> => {
+  const session = scriptedSessionHandle(describe);
+  supervisor.register({ type, id }, toolUseIdFrom(`tu_${id}`), session.handle);
+  return session;
+};
+
+describe("background tool family", () => {
+  it("lists running and undelivered sessions as rows", async () => {
+    const { supervisor, list } = setup();
+    register(supervisor, "command", "c1", "npm test");
+    const second = register(supervisor, "subagent", "r2");
+    second.settle({ status: "completed", summary: "explored" });
+    await tick();
+    const outcome = await list.execute({}, ctx());
+    const rows = outcome.content as { id: string; status: string }[];
+    expect(rows).toHaveLength(2);
+    expect(must(rows.at(0))).toMatchObject({
+      type: "command",
+      id: "c1",
+      status: "running",
+      description: "npm test",
+    });
+    expect(must(rows.at(1))).toMatchObject({
+      type: "subagent",
+      id: "r2",
+      status: "completed",
+      summary: "explored",
+    });
+  });
+
+  it("cancels exactly the named session by (type, id) (§15.9)", async () => {
+    const { supervisor, cancel } = setup();
+    const first = register(supervisor, "command", "c1");
+    const second = register(supervisor, "command", "c2");
+    const outcome = await cancel.execute(
+      { type: "command", id: "c2", reason: "wrong branch" },
+      ctx(),
+    );
+    expect(outcome.isError ?? false).toBe(false);
+    expect(outcome.content).toContain("command:c2 cancelled");
+    expect(second.cancelled).toEqual(["wrong branch"]);
+    expect(first.cancelled, "the sibling session is untouched").toEqual([]);
+  });
+
+  it("errors on an unknown ref (§15.9)", async () => {
+    const { cancel } = setup();
+    const outcome = await cancel.execute({ type: "command", id: "ghost" }, ctx());
+    expect(outcome.isError).toBe(true);
+    expect(outcome.content).toBe("no background session command:ghost");
+  });
+
+  it("notes an already-terminal session as a no-op (§15.9)", async () => {
+    const { supervisor, cancel } = setup();
+    const session = register(supervisor, "command", "c1");
+    session.settle({ status: "completed", summary: "done" });
+    await tick();
+    const outcome = await cancel.execute({ type: "command", id: "c1" }, ctx());
+    expect(outcome.isError ?? false, "a no-op is not an error").toBe(false);
+    expect(outcome.content).toContain("already settled (completed)");
+    expect(session.cancelled, "no teardown for a settled session").toEqual([]);
+  });
+});
+
+describe("submission tool family", () => {
+  it("is terminal by construction, one definition per kind", () => {
+    const { supervisor } = setup();
+    const tool = submissionTool("worker", supervisor);
+    expect(tool.name).toBe("submit_worker_outcome");
+    expect(tool.terminal).toBe(true);
+    expect(tool.availableInIsolatedWorkspace).toBe(false);
+  });
+
+  it("blocks submission while sessions are running OR settled-but-undelivered, naming them (§15.16)", async () => {
+    const { inbox, supervisor } = setup();
+    const submit = submissionTool("main", supervisor);
+    const session = register(supervisor, "command", "c1");
+
+    const whileRunning = await submit.execute({ summary: "all done" }, ctx());
+    expect(whileRunning.isError).toBe(true);
+    expect(whileRunning.content).toContain("command:c1 (running)");
+
+    session.settle({ status: "completed", summary: "ok" });
+    await tick();
+    const whileUndelivered = await submit.execute({ summary: "all done" }, ctx());
+    expect(
+      whileUndelivered.isError,
+      "a settlement the model has not seen still blocks",
+    ).toBe(true);
+    expect(whileUndelivered.content).toContain("command:c1 (completed)");
+
+    inbox.drain();
+    const afterDelivery = await submit.execute(
+      { summary: "all done", payload: { commits: 2 } },
+      ctx(),
+    );
+    expect(afterDelivery.isError ?? false).toBe(false);
+    expect(afterDelivery.content as JsonValue).toEqual({
+      summary: "all done",
+      payload: { commits: 2 },
+    });
+  });
+
+  it("returns the parsed outcome object as the terminal content", async () => {
+    const { supervisor } = setup();
+    const submit = submissionTool("planner", supervisor);
+    const outcome = await submit.execute({ summary: "plan ready" }, ctx());
+    expect(outcome.content).toEqual({ summary: "plan ready" });
+  });
+});

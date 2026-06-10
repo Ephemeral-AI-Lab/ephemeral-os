@@ -162,6 +162,21 @@ struct NoopRunHostPorts;
 
 #[cfg(target_os = "linux")]
 impl eos_workspace_runtime::run::WorkspaceRunHostPorts for NoopRunHostPorts {
+    fn acquire_snapshot(
+        &self,
+        _root: &std::path::Path,
+        _request_id: &str,
+    ) -> Result<
+        eos_workspace_runtime::contract::SnapshotLease,
+        eos_workspace_runtime::contract::WorkspaceApiError,
+    > {
+        unimplemented!("settle path is not exercised by completion-queue unit tests")
+    }
+
+    fn release_lease(&self, _root: &std::path::Path, _lease_id: &str) {
+        unimplemented!("settle path is not exercised by completion-queue unit tests")
+    }
+
     fn base_timings(
         &self,
         _root: &std::path::Path,

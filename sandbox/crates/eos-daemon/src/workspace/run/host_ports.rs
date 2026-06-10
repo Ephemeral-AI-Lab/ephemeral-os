@@ -1,16 +1,18 @@
 //! Daemon implementation of the run-host injected seams.
 //!
-//! These are the three responsibilities the `eos-workspace-runtime` crate
-//! deliberately does NOT take on (they would pull the `eos-occ` edge or reach
-//! daemon-global state): publishing through the per-root OCC single writer,
+//! These are the responsibilities the `eos-workspace-runtime` crate
+//! deliberately does NOT take on (they would pull the `eos-occ` or
+//! `eos-layerstack` edge, or reach daemon-global state): the snapshot lease
+//! acquire/release hinge, publishing through the per-root OCC single writer,
 //! sampling daemon-process resource telemetry, and recording an isolated
 //! command's audit into the caller's daemon-global isolated session.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use eos_layerstack::LayerStack;
 use eos_workspace_runtime::contract::{
-    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
+    FinalizeCommandRequest, SnapshotLease, WorkspaceApiError, WorkspaceCommandOutcome,
+    WorkspaceTimings,
 };
 use eos_workspace_runtime::ephemeral::{finalize_ephemeral_command, EphemeralWorkspace};
 use eos_workspace_runtime::run::WorkspaceRunHostPorts;
@@ -25,6 +27,29 @@ use crate::response_timings::{resource_timings, timing_map};
 pub(crate) struct DaemonRunHostPorts;
 
 impl WorkspaceRunHostPorts for DaemonRunHostPorts {
+    fn acquire_snapshot(
+        &self,
+        root: &Path,
+        request_id: &str,
+    ) -> Result<SnapshotLease, WorkspaceApiError> {
+        let lease = LayerStack::open(root.to_path_buf())
+            .and_then(|stack| stack.acquire_snapshot(request_id))
+            .map_err(|error| {
+                WorkspaceApiError::new("snapshot_acquire_failed", error.to_string())
+            })?;
+        Ok(SnapshotLease {
+            lease_id: lease.lease_id,
+            manifest_version: lease.manifest_version,
+            manifest_root_hash: lease.root_hash,
+            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
+        })
+    }
+
+    fn release_lease(&self, root: &Path, lease_id: &str) {
+        let _ = LayerStack::open(root.to_path_buf())
+            .and_then(|mut stack| stack.release_lease(lease_id));
+    }
+
     fn base_timings(&self, root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
         let manifest = LayerStack::open(root.to_path_buf())
             .and_then(|stack| stack.read_active_manifest())

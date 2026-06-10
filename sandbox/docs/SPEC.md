@@ -261,7 +261,7 @@ sandbox/
 │   │                               runner.rs (daemon↔ns-runner wire DTOs)
 │   ├── eos-plugin/                 + framing.rs (own PPC framing)
 │   ├── eos-workspace-runtime/      src/contract/ + ids.rs (absorbed typed IDs)
-│   ├── eos-layerstack/ eos-occ/ eos-overlay/ eos-occ-layerstack/
+│   ├── eos-layerstack/ eos-occ/ eos-overlay/
 │   │   eos-namespace/              absorbed eos-runner + eos-ns-holder
 │   │                               (holder + runner modules; DTOs → eos-cas)
 │   ├── eos-e2e-test/               shrinks; imports eos-sandbox-host
