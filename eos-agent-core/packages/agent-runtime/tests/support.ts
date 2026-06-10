@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -105,7 +105,7 @@ export function hangingTurn(onStart?: () => void): ScriptedTurn {
 
 // --- event and message builders ------------------------------------------------
 
-export const USAGE: UsageSnapshot = { input_tokens: 1, output_tokens: 1 };
+const USAGE: UsageSnapshot = { input_tokens: 1, output_tokens: 1 };
 
 export function complete(
   message: Message,
@@ -218,14 +218,6 @@ export function writeProfile(dir: string, spec: ProfileSpec): string {
   const path = join(dir, `${spec.name}.md`);
   writeFileSync(path, content);
   return path;
-}
-
-/** A fresh profiles dir under a temp root. */
-export function profilesDir(specs: readonly ProfileSpec[]): string {
-  const dir = join(tempDir("eos-profiles-"), "profiles");
-  mkdirSync(dir, { recursive: true });
-  for (const spec of specs) writeProfile(dir, spec);
-  return dir;
 }
 
 /** An unsigned JWT whose payload the codex loader decodes. */

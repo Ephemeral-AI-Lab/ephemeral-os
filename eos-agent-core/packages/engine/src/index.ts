@@ -8,6 +8,7 @@ import type { NotificationInbox } from "./notification-inbox.js";
 import { RunHandle, type AgentRunHandle } from "./run-handle.js";
 import type { ToolExecutor } from "./tool-executor.js";
 
+export { RUN_FINISHED_DISPOSE_REASON } from "./agent-loop.js";
 export type {
   SessionHandle,
   SessionOutcome,
@@ -54,8 +55,9 @@ export interface StartAgentRunInput {
   /** Optional parent scope; an external abort ≡ `interrupt()`. */
   signal?: AbortSignal;
   /**
-   * Drained at loop boundaries below steers. Pass the same instance the
-   * publishers (supervisor, hook pipeline) hold.
+   * Drained at loop boundaries below steers. Pass the instance the
+   * supervisor publishes settlements to; the loop itself publishes each
+   * result's `metadata.hook_contexts` entry here (Phase 04.5 decision 11).
    */
   notifications?: NotificationInbox;
   /**

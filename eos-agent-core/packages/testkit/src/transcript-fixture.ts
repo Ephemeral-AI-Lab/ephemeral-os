@@ -7,8 +7,8 @@ import type { JsonObject } from "@eos/contracts";
 /**
  * Write an append-only JSONL transcript fixture and return its path. Hooks
  * infer state through `run.transcript_path` and never receive live
- * objects; until Phase 04.5 ships the real writer, suites point hooks at
- * one of these.
+ * objects; the real writer lives above this package in `@eos/agent-runtime`,
+ * so tool-level suites point hooks at one of these.
  */
 export function writeTranscriptFixture(
   lines: JsonObject[],

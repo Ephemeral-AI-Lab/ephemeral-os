@@ -11,7 +11,7 @@ export function runTranscriptPath(dataDir: string, runId: string): string {
 }
 
 /** One conversation-shaping entry, before the writer stamps `seq`/`ts`. */
-export type TranscriptEntry =
+type TranscriptEntry =
   | { kind: "user"; origin: "initial" | "steer"; message: Message }
   | { kind: "assistant"; message: Message }
   | { kind: "tool_result"; result: ToolCallResult }

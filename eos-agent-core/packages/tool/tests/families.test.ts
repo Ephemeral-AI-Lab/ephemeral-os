@@ -10,7 +10,8 @@ import {
   type ToolDefinition,
 } from "../src/contract.js";
 import { snapshotRunState } from "../src/run-state.js";
-import { backgroundTools, submissionTool } from "../src/index.js";
+import { backgroundTools } from "../src/index.js";
+import { submissionTool } from "../src/tools/submission/index.js";
 import { live, must, tick } from "./support.js";
 
 function setup(): {

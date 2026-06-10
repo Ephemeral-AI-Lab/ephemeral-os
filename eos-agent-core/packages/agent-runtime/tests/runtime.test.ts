@@ -102,7 +102,7 @@ async function waitForFinished(runtime: AgentRuntime, agentName: string): Promis
 }
 
 describe("agent runtime", () => {
-  it("wires §4 in order: profile-selected tools (the worker's ask_advisor included) reach one engine run with resolved model facts (§13.3)", async () => {
+  it("wires §4 in order: profile-selected tools (the worker's ask_advisor included) reach one engine run that drains a notification (§13.3)", async () => {
     const sandboxNames = [
       "read",
       "multi_read",
@@ -115,7 +115,31 @@ describe("agent runtime", () => {
     const baseTools = sandboxNames.map((name) =>
       scriptedTool({ name, execute: () => Promise.resolve({ content: name }) }),
     );
+    const helperClient = new MockLlmClient([
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_hs", "submit_subagent_outcome", {
+              summary: "smoke helper done",
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+    ]);
     const client = new MockLlmClient([
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_spawn", "run_subagent", {
+              agent_name: "helper",
+              prompt: "smoke",
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+      scriptedTurn([complete(assistantMessage(textBlock("waiting")))]),
       scriptedTurn([
         complete(
           assistantMessage(
@@ -136,10 +160,12 @@ describe("agent runtime", () => {
             "list_background_sessions",
             "cancel_background_session",
             "ask_advisor",
+            "run_subagent",
           ],
         },
+        HELPER,
       ],
-      clients: { worker_llm: client },
+      clients: { worker_llm: client, helper_llm: helperClient },
       baseTools,
     });
 
@@ -176,6 +202,7 @@ describe("agent runtime", () => {
       "multi_read",
       "read",
       "read_command_transcript",
+      "run_subagent",
       "submit_worker_outcome",
       "write",
     ]);
@@ -184,11 +211,47 @@ describe("agent runtime", () => {
     expect(request.system_prompt).toContain("You are worker");
     expect(request.messages).toEqual([userMessage("work the item")]);
 
+    const helper = must(runtime.listRuns().find((r) => r.agent_name === "helper"));
+    expect(
+      client.requests.flatMap((r) => r.messages),
+      "the per-run inbox drains the settlement into the conversation",
+    ).toContainEqual(
+      systemNotificationMessage({
+        type: "session_settled",
+        session: { type: "subagent", id: helper.run_id },
+        status: "completed",
+        summary: "smoke helper done",
+      }),
+    );
+
     await waitForFinished(runtime, "worker");
     expect(
       readTranscriptLines(run.transcriptPath).map((line) => line.kind),
       "the smoke run leaves an ordered transcript",
-    ).toEqual(["user", "assistant", "tool_result", "run_finished"]);
+    ).toEqual([
+      "user",
+      "assistant",
+      "tool_result",
+      "assistant",
+      "assistant",
+      "tool_result",
+      "run_finished",
+    ]);
+  });
+
+  it("rejects baseTools whose names collide with a runtime tool family (§4)", () => {
+    expect(() =>
+      runtimeFixture({
+        profiles: [ROOT],
+        clients: { root_llm: new MockLlmClient([]) },
+        baseTools: [
+          scriptedTool({
+            name: "run_subagent",
+            execute: () => Promise.resolve({ content: "shadow" }),
+          }),
+        ],
+      }),
+    ).toThrow('baseTools name "run_subagent" collides');
   });
 
   it("fails createAgentRuntime when a profile references a missing llm client id (§13.2)", () => {
@@ -492,6 +555,67 @@ describe("agent runtime", () => {
       kind: "run_finished",
       outcome_status: "cancelled",
       interrupt_reason: "caller_disposed",
+    });
+  });
+
+  it("records model_cancelled when cancel_background_session stops a subagent (§8)", async () => {
+    const helperClient = new MockLlmClient([hangingTurn()]);
+    const rootClient = new MockLlmClient([
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_spawn", "run_subagent", {
+              agent_name: "helper",
+              prompt: "obsolete work",
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+      dynamicTurn((request) => [
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_cancel", "cancel_background_session", {
+              type: "subagent",
+              id: asString(lastToolResultJson(request).run_id),
+              reason: "no longer needed",
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_s", "submit_main_outcome", { summary: "done" }),
+          ),
+          "tool_use",
+        ),
+      ]),
+    ]);
+    const { runtime, dataDir } = runtimeFixture({
+      profiles: [ROOT, HELPER],
+      clients: { root_llm: rootClient, helper_llm: helperClient },
+    });
+
+    const root = runtime.startRun({
+      agentName: "root",
+      initialMessages: [userMessage("delegate, then change course")],
+    });
+    const outcome = await root.handle.outcome;
+    expect(outcome.status, "the cancelled session unblocks the submission").toBe(
+      "completed",
+    );
+
+    await waitForFinished(runtime, "helper");
+    const helper = must(runtime.listRuns().find((run) => run.agent_name === "helper"));
+    expect(
+      must(readTranscriptLines(runTranscriptPath(dataDir, helper.run_id)).at(-1)),
+      "a model-initiated cancel is distinguishable from the disposal cascade",
+    ).toMatchObject({
+      kind: "run_finished",
+      outcome_status: "cancelled",
+      interrupt_reason: "model_cancelled",
     });
   });
 

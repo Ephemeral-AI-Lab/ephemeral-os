@@ -113,13 +113,21 @@ export function createAgentRuntime(dependencies: AgentRuntimeDependencies): Agen
 /**
  * The static name universe for profile validation: each runtime-owned tool
  * family's exported constant plus every base definition's name, split by
- * terminality.
+ * terminality. A base name that collides with a family tool (or another
+ * base tool) would silently shadow it at selection time, so collisions are
+ * a startup error like every other config fault.
  */
 function knownToolNames(baseTools: readonly ToolDefinition[]): KnownToolNames {
   const ordinary = new Set<string>([...AGENT_TOOL_NAMES, ...BACKGROUND_TOOL_NAMES]);
   const terminal = new Set<string>(TERMINAL_TOOL_NAMES);
   for (const definition of baseTools) {
-    (definition.isTerminal ? terminal : ordinary).add(definition.name);
+    const name: string = definition.name;
+    if (ordinary.has(name) || terminal.has(name)) {
+      throw new Error(
+        `baseTools name "${name}" collides with a runtime tool family or another base tool`,
+      );
+    }
+    (definition.isTerminal ? terminal : ordinary).add(name);
   }
   return { ordinary, terminal };
 }

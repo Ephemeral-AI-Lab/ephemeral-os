@@ -31,6 +31,5 @@ export {
 } from "./tools/background/index.js";
 export {
   TERMINAL_TOOL_NAMES,
-  submissionTool,
   terminalToolDefinitions,
 } from "./tools/submission/index.js";

@@ -4,10 +4,11 @@ import {
   type AgentRunId,
   type JsonValue,
 } from "@eos/contracts";
-import type {
-  AgentRunOutcome,
-  BackgroundSupervisor,
-  SessionOutcome,
+import {
+  RUN_FINISHED_DISPOSE_REASON,
+  type AgentRunOutcome,
+  type BackgroundSupervisor,
+  type SessionOutcome,
 } from "@eos/engine";
 import { defineTool, type ToolDefinition, type ToolOutcome } from "@eos/tool";
 import { z } from "zod";
@@ -27,14 +28,6 @@ export const AGENT_TOOL_NAMES = [
 
 const DEFAULT_READ_BYTES = 65_536;
 const MAX_READ_BYTES = 262_144;
-
-/**
- * The engine literal `runAgentLoop` disposes sessions with on every finish.
- * Any other cancel reason reaches a subagent only through
- * `cancel_background_session`, so this one string distinguishes the §8
- * disposal cascade from a model-initiated cancel.
- */
-const ENGINE_DISPOSE_REASON = "run finished";
 
 /** Narrow bound runtime calls - never a service object (§5). */
 export interface AgentRunCalls {
@@ -96,8 +89,13 @@ function runSubagentTool(
         {
           settled: subagent.handle.outcome.then(mapSubagentOutcome),
           cancel: async (reason) => {
+            // §8 fixed reasons: the engine's dispose-on-finish marks the
+            // disposal cascade; any other cancel reaches a subagent only
+            // through cancel_background_session (model-initiated).
             subagent.handle.interrupt(
-              reason === ENGINE_DISPOSE_REASON ? "caller_disposed" : "model_cancelled",
+              reason === RUN_FINISHED_DISPOSE_REASON
+                ? "caller_disposed"
+                : "model_cancelled",
             );
             await subagent.handle.outcome;
           },

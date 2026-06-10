@@ -11,6 +11,13 @@ import type { AgentRunFailure, AgentRunStatus, RunHandle } from "./run-handle.js
 import type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 import { addUsage, runAssistantTurn, type TurnConfig } from "./turn.js";
 
+/**
+ * The session-cancel reason the loop's exit path passes to
+ * `supervisor.dispose` on every finish. Spawn-site session handles key the
+ * disposal cascade off this exact value (Phase 04.5 §8).
+ */
+export const RUN_FINISHED_DISPOSE_REASON = "run finished";
+
 /** Everything one run's loop needs; assembled by `startAgentRun`. */
 export interface AgentLoopContext {
   handle: RunHandle;
@@ -111,7 +118,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
     }
     // Sessions are loop lifecycle: every finish tears them down.
     // Fire-and-forget — run_finished never waits on teardown.
-    void ctx.background?.dispose("run finished");
+    void ctx.background?.dispose(RUN_FINISHED_DISPOSE_REASON);
   }
 }
 
