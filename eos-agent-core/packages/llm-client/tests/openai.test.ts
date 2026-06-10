@@ -16,6 +16,7 @@ import {
   collectUntilError,
   fetchStub,
   fixture,
+  hangingSseResponse,
   sseResponse,
 } from "./support.js";
 
@@ -200,6 +201,50 @@ describe("openai golden decode (real sdk parser via injected fetch)", () => {
     expect(provider.kind).toBe("decode");
     expect(provider.truncated).toBe(true);
     expect(provider.request_id).toBe("req-trunc");
+  });
+
+  it("aborts an idle stream as a transport failure", async () => {
+    const stub = fetchStub([
+      (init) =>
+        hangingSseResponse(
+          'data: {"type":"response.created","response":{"id":"r","status":"in_progress"}}\n\n',
+          init,
+        ),
+    ]);
+    const idleClient = new OpenAiResponsesClient(
+      { api_key: "test-key" },
+      {
+        retry: NO_RETRY,
+        streamGuard: { idle_timeout_s: 0.05 },
+        fetch: stub.fetch,
+      },
+    );
+    const { error } = await collectUntilError(
+      idleClient.streamMessage(buildLlmRequest({ model: "gpt" })),
+    );
+    expect(error).toBeInstanceOf(ProviderError);
+    expect((error as ProviderError).kind).toBe("transport");
+  });
+
+  it("rethrows the abort error as-is when the caller cancels mid-stream", async () => {
+    const stub = fetchStub([
+      (init) =>
+        hangingSseResponse(
+          'data: {"type":"response.output_text.delta","delta":"partial"}\n\n',
+          init,
+        ),
+    ]);
+    const controller = new AbortController();
+    const pending = collectUntilError(
+      client(stub).streamMessage(buildLlmRequest({ model: "gpt" }), {
+        signal: controller.signal,
+      }),
+    );
+    setTimeout(() => { controller.abort(); }, 20);
+    const { error } = await pending;
+    expect(controller.signal.aborted).toBe(true);
+    // Classified by signal.aborted, never by error type.
+    expect(error).toBe(controller.signal.reason);
   });
 
   it("surfaces response.failed as a decode error with the provider message", async () => {

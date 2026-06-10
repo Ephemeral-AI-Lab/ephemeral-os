@@ -83,6 +83,9 @@ importers:
       openai:
         specifier: 6.42.0
         version: 6.42.0(zod@4.4.3)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   packages/observability: {}
 
