@@ -2,5 +2,22 @@
   "name": "@eos/agent-runtime",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@eos/contracts": "workspace:*",
+    "@eos/engine": "workspace:*",
+    "@eos/llm-client": "workspace:*",
+    "@eos/tool": "workspace:*",
+    "yaml": "^2.8.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eos/testkit": "workspace:*"
+  }
 }

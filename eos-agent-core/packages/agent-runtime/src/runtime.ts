@@ -1,0 +1,248 @@
+import {
+  mintAgentRunId,
+  sandboxIdFrom,
+  type AgentRunId,
+  type Message,
+} from "@eos/contracts";
+import {
+  BackgroundSupervisor,
+  NotificationInbox,
+  startAgentRun,
+  type AgentRunHandle,
+} from "@eos/engine";
+import {
+  BACKGROUND_TOOL_NAMES,
+  HookEngine,
+  TERMINAL_TOOL_NAMES,
+  backgroundTools,
+  buildToolExecutor,
+  terminalToolDefinitions,
+  type AgentRunState,
+  type ToolDefinition,
+} from "@eos/tool";
+
+import {
+  loadAgentProfileRegistry,
+  selectProfileDefinitions,
+  type AgentProfileRegistry,
+  type KnownToolNames,
+} from "./agent-profile-registry.js";
+import { AGENT_TOOL_NAMES, agentTools } from "./agent-tools.js";
+import { loadHookConfig } from "./hook-config.js";
+import {
+  loadLlmClientRegistry,
+  type LlmClientRegistry,
+} from "./llm-client-registry.js";
+import { RunRegistry, type RunSummary } from "./run-registry.js";
+import {
+  TranscriptWriter,
+  readTranscriptFile as readTranscriptBytes,
+  runTranscriptPath,
+  type TranscriptRead,
+} from "./transcript.js";
+
+/** Process-level dependencies, bound once at `createAgentRuntime` (§2.3). */
+export interface AgentRuntimeDependencies {
+  /** Default: `.eos-agents/profiles`. */
+  agentProfilesDir?: string;
+  /** Default: `.eos-agents/llm_clients.json`. */
+  llmClientsPath?: string;
+  /** Optional in-memory test override; wins over `llmClientsPath`. */
+  llmClients?: LlmClientRegistry;
+  /** Already-built process-level tools (the backend-family seam, §10). */
+  baseTools?: readonly ToolDefinition[];
+  /** Default: `.eos-agents/hooks.json`. */
+  hookConfigPath?: string;
+  /** Transcript root. */
+  dataDir: string;
+}
+
+export type UserMessage = Message & { role: "user" };
+
+/** In-process input (camelCase; never serialized). */
+export interface StartRunParams {
+  agentName: string;
+  /** Ordered user messages; the system prompt stays profile data (§2.9). */
+  initialMessages: readonly [UserMessage, ...UserMessage[]];
+  /** Caller cancellation scope (§2.10). */
+  signal?: AbortSignal;
+}
+
+export interface StartedRun {
+  runId: AgentRunId;
+  /**
+   * Steer / interrupt / outcome. Its event stream is already consumed by
+   * the runtime's transcript subscriber (decision 5); iterating it throws.
+   */
+  handle: AgentRunHandle;
+  transcriptPath: string;
+}
+
+/** The §9 public API. */
+export interface AgentRuntime {
+  startRun(params: StartRunParams): StartedRun;
+  listRuns(): readonly RunSummary[];
+}
+
+/**
+ * Bind the process-level dependencies: load and statically validate agent
+ * profiles, llm clients, and hook config. Config errors fail loudly here,
+ * before any run can start.
+ */
+export function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime {
+  const agentProfiles = loadAgentProfileRegistry(
+    dependencies.agentProfilesDir ?? ".eos-agents/profiles",
+    knownToolNames(dependencies.baseTools ?? []),
+  );
+  const llmClients =
+    dependencies.llmClients ??
+    loadLlmClientRegistry(dependencies.llmClientsPath ?? ".eos-agents/llm_clients.json");
+  // Profiles resolve before engine start (§2.8); a dangling llm_client_id
+  // reference is a startup error, never a mid-run one.
+  for (const profile of agentProfiles.list()) llmClients.require(profile.llm_client_id);
+  const hookEngine = new HookEngine(loadHookConfig(dependencies.hookConfigPath));
+  return createRuntime({
+    dataDir: dependencies.dataDir,
+    baseTools: dependencies.baseTools ?? [],
+    agentProfiles,
+    llmClients,
+    hookEngine,
+  });
+}
+
+/**
+ * The static name universe for profile validation: each runtime-owned tool
+ * family's exported constant plus every base definition's name, split by
+ * terminality.
+ */
+function knownToolNames(baseTools: readonly ToolDefinition[]): KnownToolNames {
+  const ordinary = new Set<string>([...AGENT_TOOL_NAMES, ...BACKGROUND_TOOL_NAMES]);
+  const terminal = new Set<string>(TERMINAL_TOOL_NAMES);
+  for (const definition of baseTools) {
+    (definition.isTerminal ? terminal : ordinary).add(definition.name);
+  }
+  return { ordinary, terminal };
+}
+
+interface RuntimeContext {
+  dataDir: string;
+  baseTools: readonly ToolDefinition[];
+  agentProfiles: AgentProfileRegistry;
+  llmClients: LlmClientRegistry;
+  /** One engine per runtime: hook commands are stateless processes (§7). */
+  hookEngine: HookEngine;
+}
+
+interface StartRunContext {
+  /** Internal only, never public input. */
+  parent?: AgentRunId;
+}
+
+function createRuntime(ctx: RuntimeContext): AgentRuntime {
+  const registry = new RunRegistry();
+  /** Per-run write barriers, keyed by transcript path: reads await the queue. */
+  const transcriptBarriers = new Map<string, () => Promise<void>>();
+
+  const readTranscriptFile = async (
+    path: string,
+    offset: number,
+    maxBytes: number,
+  ): Promise<TranscriptRead> => {
+    await transcriptBarriers.get(path)?.();
+    return readTranscriptBytes(path, offset, maxBytes);
+  };
+
+  // The §4 wiring order IS the spec (decision 2): per-run inbox/supervisor
+  // pair, profile-resolved engine input, runtime-owned transcript consumer,
+  // and one atomic registration after everything that can fail.
+  function startRun(params: StartRunParams, context: StartRunContext = {}): StartedRun {
+    const profile = ctx.agentProfiles.require(params.agentName);
+    const llm = ctx.llmClients.require(profile.llm_client_id);
+    if (profile.agent_kind === "main" && context.parent !== undefined) {
+      throw new Error("main profiles can only be started externally");
+    }
+
+    const runId = mintAgentRunId();
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSupervisor(inbox);
+    const transcriptPath = runTranscriptPath(ctx.dataDir, runId);
+
+    const runState: AgentRunState = {
+      run_id: runId,
+      kind: profile.agent_kind,
+      parent: context.parent,
+      agent_name: profile.name,
+      // Placeholder until the sandbox family phase binds real sandboxes.
+      sandbox_id: sandboxIdFrom(runId),
+      transcript_path: transcriptPath,
+      workspace: { isIsolated: false },
+    };
+
+    const availableDefinitions = [
+      ...ctx.baseTools,
+      ...agentTools(
+        {
+          startRun: (next) => startRun(next, { parent: runId }),
+          transcriptPathOf: (target) => registry.transcriptPathOf(target),
+          readTranscriptFile,
+        },
+        supervisor,
+      ),
+      ...backgroundTools(supervisor),
+      ...terminalToolDefinitions(supervisor),
+    ];
+    const definitions = selectProfileDefinitions(profile, availableDefinitions);
+
+    // No inbox parameter (decision 11): hook context rides result metadata
+    // and the engine publishes it; tools and the executor never see the inbox.
+    const tools = buildToolExecutor({ runState, definitions, hookEngine: ctx.hookEngine });
+
+    const handle = startAgentRun({
+      llmClient: llm.client,
+      tools,
+      notifications: inbox,
+      background: supervisor,
+      model: llm.model_id,
+      reasoningEffort: llm.reasoning_effort,
+      systemPrompt: profile.system_prompt,
+      maxTurns: profile.max_turns,
+      signal: params.signal,
+      initialMessages: [...params.initialMessages],
+    });
+
+    const transcriptWriter = new TranscriptWriter(transcriptPath);
+    for (const message of params.initialMessages) {
+      transcriptWriter.appendUser("initial", message);
+    }
+    let finished = false;
+    // Decision 5: the runtime is the stream's single consumer.
+    const consumed = (async () => {
+      for await (const event of handle.events) transcriptWriter.append(event);
+    })();
+    transcriptBarriers.set(transcriptPath, async () => {
+      // After finish the buffered tail may still be draining off the stream.
+      if (finished) await consumed;
+      await transcriptWriter.flush();
+    });
+    registry.add(runState, handle);
+    void handle.outcome.finally(() => {
+      finished = true;
+      // The one authoritative flush trigger (§6): the stream's whole tail
+      // is on disk before the registry reports the run finished.
+      void consumed
+        .then(() => transcriptWriter.flush())
+        // A write failure resurfaces on the next read; finishing is bookkeeping.
+        .catch(() => undefined)
+        .finally(() => {
+          registry.finish(runId);
+        });
+    });
+
+    return { runId, handle, transcriptPath };
+  }
+
+  return {
+    startRun: (params) => startRun(params),
+    listRuns: () => registry.list(),
+  };
+}

@@ -1,4 +1,9 @@
-import { JsonObjectSchema, type AgentKind, type JsonObject } from "@eos/contracts";
+import {
+  AgentKindSchema,
+  JsonObjectSchema,
+  type AgentKind,
+  type JsonObject,
+} from "@eos/contracts";
 import type { BackgroundSupervisor } from "@eos/engine";
 import { z } from "zod";
 
@@ -34,6 +39,21 @@ const SUBMISSIONS: Record<AgentKind, SubmissionRow> = {
   advisor: submissionRow("advisor"),
   subagent: submissionRow("subagent"),
 };
+
+/** The terminal name universe: static, so profile validation needs no supervisor. */
+export const TERMINAL_TOOL_NAMES: readonly string[] = AgentKindSchema.options.map(
+  (kind) => SUBMISSIONS[kind].name,
+);
+
+/**
+ * The full terminal inventory, one definition per name. Not keyed by
+ * `AgentKind`: the profile selects exactly one entry by `terminal_tool`.
+ */
+export function terminalToolDefinitions(
+  supervisor: BackgroundSupervisor,
+): ToolDefinition[] {
+  return AgentKindSchema.options.map((kind) => submissionTool(kind, supervisor));
+}
 
 /**
  * The terminal tool for one agent kind. Guards "no open sessions before

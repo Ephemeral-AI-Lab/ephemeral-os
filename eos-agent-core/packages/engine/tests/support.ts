@@ -182,6 +182,7 @@ export interface ScriptedToolResult {
   content: JsonValue;
   is_error?: boolean;
   is_terminal?: boolean;
+  metadata?: JsonObject;
 }
 
 export type ScriptedToolHandler = (
@@ -228,6 +229,7 @@ export function scriptedExecutor(
           is_terminal: output.is_terminal ?? false,
           tool_start_time: startedAt,
           tool_end_time: Date.now(),
+          ...(output.metadata !== undefined && { metadata: output.metadata }),
         };
         results.push(result);
         emit({

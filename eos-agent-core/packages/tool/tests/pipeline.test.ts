@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { NotificationInbox, systemNotificationMessage } from "@eos/engine";
 import { scriptedRunState, scriptedTool } from "@eos/testkit";
 import { z } from "zod";
 
@@ -289,14 +288,12 @@ describe("tool pipeline", () => {
     expect(responses).toEqual(["file missing"]);
   });
 
-  it("publishes additionalContext as hook_context notifications (§15.13)", async () => {
-    const inbox = new NotificationInbox();
+  it("accumulates additionalContext under metadata.hook_contexts in stage order (04.5 §11)", async () => {
     const tool = scriptedTool({
       name: "probe",
-      execute: () => Promise.resolve({ content: "ran" }),
+      execute: () => Promise.resolve({ content: "ran", metadata: { cost: 1 } }),
     });
-    await runPipeline(tool, {
-      inbox,
+    const result = await runPipeline(tool, {
       entries: [
         preHook(() => ({ additionalContext: "lint config changed recently" })),
         {
@@ -310,18 +307,32 @@ describe("tool pipeline", () => {
         },
       ],
     });
-    expect(inbox.drain()).toEqual([
-      systemNotificationMessage({
-        type: "hook_context",
-        tool_use_id: "tu_1",
-        text: "lint config changed recently",
-      }),
-      systemNotificationMessage({
-        type: "hook_context",
-        tool_use_id: "tu_1",
-        text: "remember to rerun CI",
-      }),
+    expect(result.is_error).toBe(false);
+    expect(result.metadata, "tool metadata survives beside the hook transport").toMatchObject({
+      cost: 1,
+    });
+    expect(result.metadata?.hook_contexts).toEqual([
+      "lint config changed recently",
+      "remember to rerun CI",
     ]);
+  });
+
+  it("carries hook_contexts on a deny so the engine can still publish them (04.5 §11)", async () => {
+    const tool = scriptedTool({
+      name: "guarded",
+      execute: () => Promise.resolve({ content: "ran" }),
+    });
+    const result = await runPipeline(tool, {
+      entries: [
+        preHook(() => ({
+          decision: "deny",
+          reason: "not today",
+          additionalContext: "the repo is frozen for release",
+        })),
+      ],
+    });
+    expect(result.is_error).toBe(true);
+    expect(result.metadata?.hook_contexts).toEqual(["the repo is frozen for release"]);
   });
 
   it("accumulates hook warnings under metadata.hook_warnings (§15.13)", async () => {

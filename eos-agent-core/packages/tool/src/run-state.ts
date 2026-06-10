@@ -14,6 +14,8 @@ export interface AgentRunState {
   readonly run_id: AgentRunId;
   readonly kind: AgentKind;
   readonly parent?: AgentRunId;
+  /** The profile name the run was started under (`parent` stays the caller link). */
+  readonly agent_name: string;
   readonly sandbox_id: SandboxId;
   readonly transcript_path: string;
   /** The ONE mutable cell; any future mutable field needs a named writer. */

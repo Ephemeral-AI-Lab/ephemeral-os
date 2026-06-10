@@ -3,7 +3,7 @@ import {
   type JsonObject,
   type ToolCallResult,
 } from "@eos/contracts";
-import type { AgentEvent, NotificationInbox, ToolUseBlock } from "@eos/engine";
+import type { AgentEvent, ToolUseBlock } from "@eos/engine";
 import { scriptedRunState } from "@eos/testkit";
 
 import { HookEngine } from "../src/hooks/runner.js";
@@ -25,7 +25,6 @@ export const live = (): AbortSignal => new AbortController().signal;
 export interface RunPipelineOptions {
   input?: JsonObject;
   entries?: HookConfigEntry[];
-  inbox?: NotificationInbox;
   runState?: AgentRunState;
   signal?: AbortSignal;
 }
@@ -37,7 +36,6 @@ export function runPipeline(
 ): Promise<PipelineResult> {
   const bound = bindTool(definition, {
     hooks: new HookEngine(options.entries ?? []),
-    inbox: options.inbox,
   });
   const runState = options.runState ?? scriptedRunState();
   return bound.run(

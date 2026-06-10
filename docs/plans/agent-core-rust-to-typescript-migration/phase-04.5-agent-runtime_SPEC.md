@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 04.5 Agent Runtime
 
-Status: Proposed
+Status: Completed
 Date: 2026-06-10
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -623,15 +623,15 @@ workspace dependency graph stays acyclic with the composition root on top
 | # | Step | Verify | Status |
 | --- | --- | --- | --- |
 | 1 | Stub package | `pnpm install` + workspace resolution green | Done |
-| 2 | §11 owned `@eos/tool` + `@eos/engine` changes | toolset suite green over pre-selected definitions; `AGENT_TOOLSET` deleted; `AgentRunState.agent_name` typed; pipeline emits `metadata.hook_contexts` (no `inbox` param) and the loop suite asserts publish + drain | Pending |
-| 3 | Agent profile loader + registry | §13 case 1: valid frontmatter/body profile loads by agent name; duplicate names, malformed profiles, and tool-selection violations fail at startup | Pending |
-| 4 | LLM client registry | §13 case 2: `.eos-agents/llm_clients.json` loads, Codex CLI auth-file entries build `codex_coding_plan` clients, missing `llm_client_id` references fail at startup | Pending |
-| 5 | Transcript writer | §13 case 9: ordered lines, offset reads, flush gated on `outcome` | Pending |
-| 6 | Registry + agent tool runtime calls (subagent start, advisor await, transcript read) | §13 cases 5-6 | Pending |
-| 7 | Hook config loading | missing/valid/malformed cases and §13 case 8 | Pending |
-| 8 | `createAgentRuntime` + `startRun` wiring + disposal | §13 cases 3-4, 7 | Pending |
-| 9 | Workspace wiring | `pnpm run check` green; `git diff --stat -- agent-core` empty | Pending |
-| 10 | Update the migration `index.md` row | Phase 04.5 row with status and verification | Pending |
+| 2 | §11 owned `@eos/tool` + `@eos/engine` changes | toolset suite green over pre-selected definitions; `AGENT_TOOLSET` deleted; `AgentRunState.agent_name` typed; pipeline emits `metadata.hook_contexts` (no `inbox` param) and the loop suite asserts publish + drain | Done |
+| 3 | Agent profile loader + registry | §13 case 1: valid frontmatter/body profile loads by agent name; duplicate names, malformed profiles, and tool-selection violations fail at startup | Done |
+| 4 | LLM client registry | §13 case 2: `.eos-agents/llm_clients.json` loads, Codex CLI auth-file entries build `codex_coding_plan` clients, missing `llm_client_id` references fail at startup | Done |
+| 5 | Transcript writer | §13 case 9: ordered lines, offset reads, flush gated on `outcome` | Done |
+| 6 | Registry + agent tool runtime calls (subagent start, advisor await, transcript read) | §13 cases 5-6 | Done |
+| 7 | Hook config loading | missing/valid/malformed cases and §13 case 8 | Done |
+| 8 | `createAgentRuntime` + `startRun` wiring + disposal | §13 cases 3-4, 7 | Done |
+| 9 | Workspace wiring | `pnpm run check` green; `git diff --stat -- agent-core` empty | Done |
+| 10 | Update the migration `index.md` row | Phase 04.5 row with status and verification | Done |
 
 ## 13. Verification
 

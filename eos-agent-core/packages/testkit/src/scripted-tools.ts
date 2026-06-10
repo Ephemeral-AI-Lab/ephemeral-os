@@ -41,6 +41,7 @@ export function scriptedRunState(
   return {
     run_id: agentRunIdFrom("run-fixture"),
     kind,
+    agent_name: kind,
     sandbox_id: sandboxIdFrom("sb-fixture"),
     transcript_path: overrides.transcriptPath ?? "/dev/null",
     workspace: { isIsolated: overrides.isIsolated ?? false },

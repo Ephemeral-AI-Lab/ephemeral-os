@@ -1,76 +1,66 @@
 import { describe, expect, it } from "vitest";
 
-import { AgentKindSchema, type AgentKind } from "@eos/contracts";
-import {
-  BackgroundSupervisor,
-  NotificationInbox,
-  type ToolExecutor,
-} from "@eos/engine";
+import { BackgroundSupervisor, NotificationInbox } from "@eos/engine";
 import { scriptedRunState, scriptedTool } from "@eos/testkit";
 
 import type { ToolDefinition } from "../src/contract.js";
-import { AGENT_TOOLSET, buildToolExecutor } from "../src/toolset.js";
-import { backgroundTools, submissionTool } from "../src/index.js";
+import { buildToolExecutor } from "../src/toolset.js";
+import {
+  TERMINAL_TOOL_NAMES,
+  backgroundTools,
+  terminalToolDefinitions,
+} from "../src/index.js";
 import { live, must, toolUse } from "./support.js";
 
-function assemble(kind: AgentKind): {
-  executor: ToolExecutor;
-  definitions: ToolDefinition[];
-} {
-  const inbox = new NotificationInbox();
-  const supervisor = new BackgroundSupervisor(inbox);
-  const definitions = [
-    ...backgroundTools(supervisor),
-    ...AgentKindSchema.options.map((k) => submissionTool(k, supervisor)),
-    scriptedTool({
-      name: "rogue",
-      execute: () => Promise.resolve({ content: "off the books" }),
-    }),
-  ];
-  const executor = buildToolExecutor({
-    runState: scriptedRunState(kind),
-    definitions,
-    inbox,
-  });
-  return { executor, definitions };
+function supervisor(): BackgroundSupervisor {
+  return new BackgroundSupervisor(new NotificationInbox());
 }
 
 describe("toolset assembly", () => {
-  it.each`
-    kind          | expected
-    ${"main"}     | ${["cancel_background_session", "list_background_sessions", "submit_main_outcome"]}
-    ${"worker"}   | ${["cancel_background_session", "list_background_sessions", "submit_worker_outcome"]}
-    ${"subagent"} | ${["cancel_background_session", "list_background_sessions", "submit_subagent_outcome"]}
-    ${"planner"}  | ${["submit_planner_outcome"]}
-    ${"advisor"}  | ${["submit_advisor_outcome"]}
-  `(
-    "gives $kind exactly its constructed row in sorted order (§15.19)",
-    ({ kind, expected }: { kind: AgentKind; expected: string[] }) => {
-      const { executor } = assemble(kind);
-      expect(executor.specs().map((spec) => spec.name)).toEqual(expected);
-    },
-  );
+  it("binds exactly the supplied definitions in sorted order (04.5 §11)", () => {
+    const definitions: ToolDefinition[] = [
+      scriptedTool({
+        name: "zeta",
+        execute: () => Promise.resolve({ content: "z" }),
+      }),
+      scriptedTool({
+        name: "alpha",
+        execute: () => Promise.resolve({ content: "a" }),
+      }),
+    ];
+    const executor = buildToolExecutor({
+      runState: scriptedRunState("worker"),
+      definitions,
+    });
+    expect(executor.specs().map((spec) => spec.name)).toEqual(["alpha", "zeta"]);
+  });
 
-  it("skips row names with no constructed definition (§15.19)", () => {
-    // Every kind's row names sandbox tools; none are constructed this
-    // phase, and the planner row is nothing but skips + its submission.
-    expect(AGENT_TOOLSET.planner).toContain("read");
-    const { executor } = assemble("planner");
+  it("never filters by agent kind: selection happened upstream in the profile", () => {
+    const definitions = [
+      ...backgroundTools(supervisor()),
+      scriptedTool({
+        name: "ask_advisor",
+        execute: () => Promise.resolve({ content: "ok" }),
+      }),
+    ];
+    const executor = buildToolExecutor({
+      runState: scriptedRunState("worker"),
+      definitions,
+    });
     expect(executor.specs().map((spec) => spec.name)).toEqual([
-      "submit_planner_outcome",
+      "ask_advisor",
+      "cancel_background_session",
+      "list_background_sessions",
     ]);
   });
 
-  it("excludes definitions outside the kind's row (§15.19)", () => {
-    const { executor } = assemble("planner");
-    const names = executor.specs().map((spec) => spec.name);
-    expect(names).not.toContain("rogue");
-    expect(names).not.toContain("submit_main_outcome");
-    expect(names).not.toContain("list_background_sessions");
-  });
-
   it("dispatches through the assembled pipeline: a solo submission terminates (§15.19)", async () => {
-    const { executor } = assemble("main");
+    const executor = buildToolExecutor({
+      runState: scriptedRunState("main"),
+      definitions: terminalToolDefinitions(supervisor()).filter(
+        (definition) => definition.name === "submit_main_outcome",
+      ),
+    });
     const events: unknown[] = [];
     const results = await executor.executeBatch(
       [toolUse("tu_s", "submit_main_outcome", { summary: "shipped" })],
@@ -84,11 +74,21 @@ describe("toolset assembly", () => {
     });
   });
 
-  it("names every deferred family in the rows so later phases only add factories", () => {
-    expect(AGENT_TOOLSET.main).toEqual(
-      expect.arrayContaining(["read", "exec_command", "run_subagent", "delegate_workflow"]),
-    );
-    expect(AGENT_TOOLSET.worker).toEqual(expect.arrayContaining(["edit"]));
-    expect(AGENT_TOOLSET.advisor).toEqual(["read", "multi_read", "submit_advisor_outcome"]);
+  it("inventories one terminal definition per submission name, statically named", () => {
+    const definitions = terminalToolDefinitions(supervisor());
+    expect(definitions.map((definition) => definition.name as string)).toEqual([
+      ...TERMINAL_TOOL_NAMES,
+    ]);
+    expect(TERMINAL_TOOL_NAMES).toEqual([
+      "submit_main_outcome",
+      "submit_planner_outcome",
+      "submit_worker_outcome",
+      "submit_advisor_outcome",
+      "submit_subagent_outcome",
+    ]);
+    expect(
+      definitions.every((definition) => definition.isTerminal),
+      "every inventory entry is terminal",
+    ).toBe(true);
   });
 });

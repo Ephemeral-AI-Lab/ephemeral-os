@@ -1,9 +1,5 @@
 import type { JsonObject, ToolCallResult } from "@eos/contracts";
-import {
-  systemNotificationMessage,
-  type NotificationInbox,
-  type ToolUseBlock,
-} from "@eos/engine";
+import type { ToolUseBlock } from "@eos/engine";
 import type { z } from "zod";
 
 import type {
@@ -24,8 +20,6 @@ export type PipelineResult = Omit<ToolCallResult, "tool_use_id">;
 /** Run-level dependencies closed over at executor build. */
 export interface BindToolDeps {
   hooks: HookEngine;
-  /** `additionalContext` target; absent drops hook context silently. */
-  inbox?: NotificationInbox;
 }
 
 /** One definition bound through the pipeline; dispatched by the executor. */
@@ -58,21 +52,16 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       run: runSnapshot,
     });
     const warnings: string[] = [];
+    // Decision 04.5/11: hook context rides the result under
+    // `metadata.hook_contexts`; the engine loop is its only publisher.
+    const contexts: string[] = [];
     const absorb = (summary: HookRunSummary): void => {
       warnings.push(...summary.warnings);
-      for (const text of summary.additionalContexts) {
-        deps.inbox?.publish(
-          systemNotificationMessage({
-            type: "hook_context",
-            tool_use_id: meta.tool_use_id,
-            text,
-          }),
-        );
-      }
+      contexts.push(...summary.additionalContexts);
     };
     const rejected = (content: string): PipelineResult => {
       const at = Date.now();
-      return stamp(definition, { content, isError: true }, at, at, warnings);
+      return stamp(definition, { content, isError: true }, at, at, warnings, contexts);
     };
 
     // Defense in depth: the executor already stops dispatching on abort.
@@ -133,7 +122,14 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       absorb(
         await deps.hooks.run(hookPayload("PostToolUseFailure", { error: message }), signal),
       );
-      return stamp(definition, { content: message, isError: true }, startedAt, endedAt, warnings);
+      return stamp(
+        definition,
+        { content: message, isError: true },
+        startedAt,
+        endedAt,
+        warnings,
+        contexts,
+      );
     }
     const endedAt = Date.now();
 
@@ -144,7 +140,7 @@ export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundT
       ),
     );
 
-    return stamp(definition, outcome, startedAt, endedAt, warnings);
+    return stamp(definition, outcome, startedAt, endedAt, warnings, contexts);
   };
   return { definition, run };
 }
@@ -157,7 +153,8 @@ export function projectContent(content: ToolOutcome["content"]): string {
 /**
  * The pipeline's stamping: `is_terminal = definition.isTerminal && !isError`
  * (a failed submission can never terminate a run) plus the execute-only
- * clock and accumulated hook warnings.
+ * clock and the accumulated hook warnings and contexts (the engine loop
+ * publishes each `hook_contexts` entry as a `hook_context` notification).
  */
 function stamp(
   definition: ToolDefinition,
@@ -165,11 +162,16 @@ function stamp(
   startedAt: number,
   endedAt: number,
   warnings: string[],
+  contexts: string[],
 ): PipelineResult {
   const isError = outcome.isError ?? false;
+  const hookFacts: JsonObject = {
+    ...(warnings.length > 0 && { hook_warnings: warnings }),
+    ...(contexts.length > 0 && { hook_contexts: contexts }),
+  };
   const metadata =
-    warnings.length > 0
-      ? { ...outcome.metadata, hook_warnings: warnings }
+    Object.keys(hookFacts).length > 0
+      ? { ...outcome.metadata, ...hookFacts }
       : outcome.metadata;
   const result: PipelineResult = {
     content: outcome.content,

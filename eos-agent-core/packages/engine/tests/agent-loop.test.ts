@@ -229,6 +229,47 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
+  it("publishes metadata.hook_contexts as hook_context notifications drained at the next boundary (04.5 §11)", async () => {
+    const inbox = new NotificationInbox();
+    const tools = scriptedExecutor(
+      [
+        "probe",
+        () =>
+          Promise.resolve({
+            content: "ran",
+            metadata: { hook_contexts: ["lint config changed recently"] },
+          }),
+      ],
+      ["submit", submitHandler(SUBMISSION)],
+    );
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_p", "probe")), "tool_use"),
+        ]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools, notifications: inbox },
+    );
+    const outcome = asCompleted(await handle.outcome);
+    expect(must(client.requests.at(0)).messages, "no early delivery").toEqual([
+      userText("hi"),
+    ]);
+    expect(
+      must(client.requests.at(1)).messages.at(-1),
+      "the context lands after the tool result, at the next boundary",
+    ).toEqual(
+      systemNotificationMessage({
+        type: "hook_context",
+        tool_use_id: toolUseIdFrom("tu_p"),
+        text: "lint config changed recently",
+      }),
+    );
+    expectProviderValid(outcome.llm);
+  });
+
   it("salvages an interrupted stream to displayed only and cancels with the reason (P03 §14.6)", async () => {
     const streamed = deferred();
     const { handle } = startMockRun([

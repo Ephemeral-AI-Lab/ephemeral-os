@@ -3,7 +3,10 @@ import { ProviderError, type UsageSnapshot } from "@eos/llm-client";
 
 import type { BackgroundSupervisor } from "./background/supervisor.js";
 import type { Conversation, ToolResultBlock } from "./conversation.js";
-import type { NotificationInbox } from "./notification-inbox.js";
+import {
+  systemNotificationMessage,
+  type NotificationInbox,
+} from "./notification-inbox.js";
 import type { AgentRunFailure, AgentRunStatus, RunHandle } from "./run-handle.js";
 import type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 import { addUsage, runAssistantTurn, type TurnConfig } from "./turn.js";
@@ -81,6 +84,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
         await ctx.tools.executeBatch(calls, handle.signal, handle.emit),
       );
       conversation.appendToolResults(results.map(projectToolResult));
+      publishHookContexts(results, ctx.notifications);
       const terminal = results.find((result) => result.is_terminal);
       if (terminal) {
         // The submission outranks late redirection: steers accepted
@@ -152,6 +156,32 @@ function normalizeBatch(
       tool_end_time: at,
     };
   });
+}
+
+/**
+ * The one publisher of hook `additionalContext` (Phase 04.5 decision 11):
+ * each `metadata.hook_contexts` entry becomes a `hook_context` notification
+ * as the result is appended, drained at the next loop boundary.
+ */
+function publishHookContexts(
+  results: ToolCallResult[],
+  notifications: NotificationInbox | undefined,
+): void {
+  if (!notifications) return;
+  for (const result of results) {
+    const contexts = result.metadata?.hook_contexts;
+    if (!Array.isArray(contexts)) continue;
+    for (const text of contexts) {
+      if (typeof text !== "string") continue;
+      notifications.publish(
+        systemNotificationMessage({
+          type: "hook_context",
+          tool_use_id: result.tool_use_id,
+          text,
+        }),
+      );
+    }
+  }
 }
 
 /** The ONE serialization point: non-string content is stringified here. */
