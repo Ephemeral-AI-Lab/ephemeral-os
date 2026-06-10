@@ -44,7 +44,7 @@ live; nothing under `agent-core/` changes.
    never shared: notifications target exactly one conversation,
    `liveCount()` backs exactly one run's submission guard, and disposal
    must not touch a sibling run's sessions. Subagent and advisor runs get
-   their own pair via the same factory; a parent's subagent
+   their own pair via the same factory; the caller's subagent
    `SessionHandle` just watches that run's outcome.
 2. **The wiring order is the spec.** inbox -> supervisor -> run state ->
    runtime-owned tool definitions -> `buildToolExecutor` -> engine start
@@ -67,23 +67,28 @@ live; nothing under `agent-core/` changes.
    writer always; caller subscribers optionally). Backpressure remains a
    server-phase concern.
 6. **Subagent and advisor execution are just `startRun`.** `startRun` is
-   parameterized by `AgentType`, not a separate spawn helper. `run_subagent`
-   calls `startRun({ agentType: 'subagent', parent })`, registers
-   `handle.outcome.then(...)` with the background supervisor, and returns
-   immediately. `ask_advisor` calls `startRun({ agentType: 'advisor',
-   parent })`, awaits `handle.outcome`, and returns the advisor submission
-   as the tool result. No second execution path exists.
-7. **The runtime vocabulary is agent type.** Phase 04.5 uses
-   `AgentType`/`agentType` for run selection (`main`, `planner`, `worker`,
-   `subagent`, `advisor`). If earlier TypeScript phases still expose
-   `AgentKind`, align that contract name before implementing this phase.
+   `agent_name` driven, not a separate spawn helper and not
+   `AgentType`-parameterized. `run_subagent` passes its requested
+   `agent_name` to `startRun(...)`, registers `handle.outcome.then(...)`
+   with the background supervisor, and returns immediately. `ask_advisor`
+   calls `startRun(...)` with `agent_name: "advisor"`, awaits
+   `handle.outcome`, and returns the advisor submission as the tool
+   result. No second execution path exists.
+7. **The public runtime vocabulary is agent name.** `AgentType` stays as
+   profile data (`agent_type: main | planner | worker | subagent |
+   advisor`) and as a derived run fact, but callers do not pass it to
+   `startRun`. If earlier TypeScript phases still expose `AgentKind`, align
+   that contract name before implementing this phase.
 8. **Profiles resolve before engine start.** `startRun` loads the
-   `AgentType` profile before constructing the engine input. Profile data
-   contributes the default model and base system prompt; caller
-   `systemPrompt` appends run-specific instructions. Tool selection is
-   still assembled by the runtime from `agentType` and available tool
-   definitions before `startAgentRun`; the engine receives only a resolved
-   `systemPrompt` and `ToolExecutor`.
+   named agent profile from the runtime's `AgentProfileRegistry` before
+   constructing the engine input. Profile data contributes the agent type,
+   LLM client id, system prompt, max turns, allowed tools, and derived
+   terminal tool. The runtime resolves `llm_client_id` through
+   `.eos-agents/llm_clients.json` to get the configured client, auth
+   source, and model id. Tool selection is assembled by the runtime from
+   that resolved profile and available tool definitions before
+   `startAgentRun`; the engine receives only a resolved `systemPrompt`,
+   LLM client, model id, turn limit, and `ToolExecutor`.
 9. **Initial messages are ordered user messages.** `initialMessages` is a
    non-empty list because some call sites need separable user messages
    (for example transcript-as-evidence, then an instruction about that
@@ -93,7 +98,7 @@ live; nothing under `agent-core/` changes.
 10. **`signal` is lifecycle input, not prompt data.** The optional
     `AbortSignal` belongs on `startRun` because cancellation is owned by
     the caller's lifecycle: a UI stop button, server request abort,
-    parent-run disposal, or an `ask_advisor` tool cancellation can all
+    caller-run disposal, or an `ask_advisor` tool cancellation can all
     terminate the run without changing its prompts, profile, or tools. The
     runtime passes this signal to `startAgentRun`; while the process is
     alive, the handle resolves a `cancelled` `AgentRunOutcome`.
@@ -105,9 +110,11 @@ In scope:
 - keep the package at `packages/agent-runtime`
   (`@eos/agent-runtime`; the stub is package.json-only at phase start),
 - `AgentRuntime` (`createAgentRuntime`, `startRun`), run registry,
+- `AgentProfileRegistry` + profile loader for `.eos-agents/profile/*.md`,
+- `LlmClientRegistry` + config loader for `.eos-agents/llm_clients.json`,
 - agent tool runtime calls, transcript writer + reader, event broadcaster,
 - hook config loading with Zod validation,
-- disposal and parent-run cancellation,
+- disposal and caller-run cancellation,
 - the §13 integration suite over `MockLlmClient` + in-process fakes.
 
 Out of scope (named seams in §10):
@@ -121,22 +128,20 @@ Out of scope (named seams in §10):
 
 ```ts
 interface AgentRuntimeDependencies {
-  llm: LlmClient;                          // already configured (Phase 02.5)
-  profiles: AgentProfileStore;             // loads AgentType profile data
+  agentProfilesDir?: string;               // default: .eos-agents/profile
+  llmClientsPath?: string;                 // default: .eos-agents/llm_clients.json
+  llmClients?: LlmClientRegistry;          // optional in-memory test override
   baseTools?: readonly ToolDefinition[];   // optional process-level tools
   hookConfigPath?: string;                 // default: .eos-agents/hooks.json
   dataDir: string;                         // transcript root
 }
 
+type AgentName = string;
 type UserMessage = Message & { role: "user" };
 
 interface StartRunParams {
-  agentType: AgentType;
+  agent_name: AgentName;
   initialMessages: readonly [UserMessage, ...UserMessage[]];
-  model?: string;                          // overrides profile default
-  systemPrompt?: string;                   // appended after profile prompt
-  maxTurns?: number;
-  parent?: AgentRunId;                     // set for subagent/advisor runs
   signal?: AbortSignal;                    // caller cancellation scope
 }
 
@@ -148,26 +153,158 @@ interface StartedRun {
 }
 ```
 
+`createAgentRuntime` loads agent profiles at startup:
+
+```ts
+function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime {
+  const agent_profile_registry = loadAgentProfileRegistry(
+    dependencies.agentProfilesDir ?? ".eos-agents/profile",
+  );
+  const llm_client_registry =
+    dependencies.llmClients ??
+    loadLlmClientRegistry(
+      dependencies.llmClientsPath ?? ".eos-agents/llm_clients.json",
+    );
+  const hookEngine = buildHookEngine(loadHookConfig(dependencies.hookConfigPath));
+  return createRuntime({
+    ...dependencies,
+    agent_profile_registry,
+    llm_client_registry,
+    hookEngine,
+  });
+}
+```
+
+`agent-profile-loader.ts` parses one Markdown file into frontmatter plus
+body. `agent-profile-registry.ts` loads the directory once, validates every
+profile with Zod, rejects duplicate `name` values, and exposes lookup by
+`agent_name` only:
+
+```ts
+type AgentType = "main" | "planner" | "worker" | "subagent" | "advisor";
+
+interface AgentProfile {
+  name: AgentName;
+  description: string;
+  llm_client_id: string;
+  max_turns: number;
+  agent_type: AgentType;
+  allowed_tools: readonly ToolName[];
+  systemPrompt: string;                    // Markdown body after frontmatter
+  source_path: string;                     // diagnostics only, never API input
+}
+
+interface AgentProfileRegistry {
+  require(agent_name: AgentName): AgentProfile;
+  list(): readonly AgentProfile[];
+}
+```
+
+Profile file format:
+
+```md
+---
+name: worker
+description: Worker
+llm_client_id: codex_coding_plan
+max_turns: 100
+agent_type: worker
+allowed_tools:
+  - read_file
+  - write_file
+  - edit_file
+  - exec_command
+  - write_stdin
+---
+
+You are the worker for one assigned work item.
+
+Complete only the `<work_item>` in your context. Treat `<needs>` as fixed
+direct dependency outcomes. If delegated workflow tools are available and a
+subtask needs decomposition, you may delegate it, then inspect or cancel all
+outstanding workflow handles before your terminal submission.
+
+Before terminal submission, call `ask_advisor` with
+`tool_name="submit_worker_outcome"` and the exact payload you intend to
+send.
+```
+
+`allowed_tools` names ordinary non-terminal tools to expose. The runtime
+derives exactly one terminal submission tool from `agent_type`
+(`submit_<agent_type>_outcome`) and adds it after allowlist validation; the
+model never chooses the terminal through a separate profile field. The
+loader does not infer ordinary tools from prose: if the profile body tells
+the agent to call `ask_advisor`, `allowed_tools` must include
+`ask_advisor`.
+
+`llm-client-registry.ts` loads `.eos-agents/llm_clients.json`, validates it
+with Zod, and exposes lookup by `llm_client_id`:
+
+```ts
+interface LlmClientBinding {
+  id: string;
+  provider: ProviderConnection["provider"];
+  model_id: string;
+  client: LlmClient;
+}
+
+interface LlmClientRegistry {
+  require(llm_client_id: string): LlmClientBinding;
+  list(): readonly LlmClientBinding[];
+}
+```
+
+Config file format:
+
+```json
+{
+  "clients": [
+    {
+      "id": "codex_coding_plan",
+      "provider": "codex_coding_plan",
+      "model_id": "gpt-5.5",
+      "base_url": "https://chatgpt.com/backend-api/codex",
+      "auth": {
+        "kind": "codex_cli_auth_file",
+        "path": "/Users/yifanxu/.codex/auth.json"
+      }
+    }
+  ]
+}
+```
+
+The Codex loader mirrors
+`packages/llm-client/e2e/support/codex-auth.ts`: read
+`tokens.access_token` from the configured auth file, validate the JWT has
+the ChatGPT account claim and is not expired, wrap it in `SecretString`,
+then call `createLlmClient({ provider: "codex_coding_plan", base_url,
+access_token })`. The token is never written back to
+`.eos-agents/llm_clients.json`.
+
 `startRun` implementation sketch:
 
 ```ts
-function startRun(params: StartRunParams): StartedRun {
-  if (params.agentType === "main" && params.parent !== undefined) {
-    throw new TypeError("main runs cannot have a parent");
+interface StartRunContext {
+  caller_run_id?: AgentRunId;              // internal only, never public input
+}
+
+function startRun(params: StartRunParams, context: StartRunContext = {}): StartedRun {
+  const profile = agent_profile_registry.require(params.agent_name);
+  const llm = llm_client_registry.require(profile.llm_client_id);
+  if (profile.agent_type === "main" && context.caller_run_id !== undefined) {
+    throw new TypeError("main profiles can only be started externally");
   }
 
   const run_id = mintAgentRunId();
-  const profile = dependencies.profiles.load(params.agentType);
-  const systemPrompt = composeSystemPrompt(profile.systemPrompt, params.systemPrompt);
-  const model = params.model ?? profile.model;
   const inbox = new NotificationInbox();
   const supervisor = new BackgroundSupervisor(inbox);
   const transcript_path = transcriptPathFor(dependencies.dataDir, run_id);
 
   const runState = createAgentRunState({
     run_id,
-    agentType: params.agentType,
-    parent: params.parent,
+    agentType: profile.agent_type,
+    caller_run_id: context.caller_run_id,
+    agent_name: profile.name,
     transcript_path,
   });
   registry.add(runState);
@@ -176,14 +313,14 @@ function startRun(params: StartRunParams): StartedRun {
     ...(dependencies.baseTools ?? []),
     ...agentTools(
       {
-        startRun: (next) => startRun({ ...next, parent: run_id }),
+        startRun: (next) => startRun(next, { caller_run_id: run_id }),
         resolveTranscriptPath: (target) => registry.transcriptPath(target),
         readTranscriptFile,
       },
       supervisor,
     ),
     ...backgroundTools(supervisor),
-    submissionTool(params.agentType, supervisor),
+    submissionTool(profile.agent_type, supervisor),
   ];
 
   const tools = buildToolExecutor({
@@ -194,13 +331,13 @@ function startRun(params: StartRunParams): StartedRun {
   });
 
   const handle = startAgentRun({
-    llmClient: dependencies.llm,
+    llmClient: llm.client,
     tools,
     notifications: inbox,
     background: supervisor,
-    model,
-    systemPrompt,
-    maxTurns: params.maxTurns,
+    model: llm.model_id,
+    systemPrompt: profile.systemPrompt,
+    maxTurns: profile.max_turns,
     signal: params.signal,
     initialMessages: [...params.initialMessages],
   });
@@ -225,25 +362,28 @@ function startRun(params: StartRunParams): StartedRun {
 `startRun` wiring order (decision 2):
 
 ```
-1. run_id = mintAgentRunId()
-2. inbox = new NotificationInbox()               // engine class
-3. supervisor = new BackgroundSupervisor(inbox)  // engine class; self-
+1. profile = agent_profile_registry.require(agent_name)
+2. llm = llm_client_registry.require(profile.llm_client_id)
+3. run_id = mintAgentRunId()
+4. inbox = new NotificationInbox()               // engine class
+5. supervisor = new BackgroundSupervisor(inbox)  // engine class; self-
                                                  // subscribes for delivery
-4. profile = dependencies.profiles.load(agentType)
-5. systemPrompt/model = profile defaults + startRun overrides
 6. transcript_path = runs/<run_id>/transcript.jsonl
-7. runState = createAgentRunState({ run_id, agentType, parent,
-     transcript_path })                          // Phase 04 §2.19
+7. runState = createAgentRunState({ run_id,
+     agentType: profile.agent_type,
+     caller_run_id: internal caller_run_id,
+     agent_name: profile.name, transcript_path }) // Phase 04 §2.19
    registry.add(runState)                        // facts stored once
 8. definitions = [
      ...(dependencies.baseTools ?? []),
      ...agentTools({ startRun, resolveTranscriptPath, readTranscriptFile }, supervisor),
      ...backgroundTools(supervisor),
-     submissionTool(agentType, supervisor),
+     submissionTool(profile.agent_type, supervisor),
    ]
    tools = buildToolExecutor({ runState, definitions, inbox, hookEngine })
-9. handle = startAgentRun({ llmClient, tools, notifications: inbox,
-     background: supervisor, systemPrompt, model,
+9. handle = startAgentRun({ llmClient: llm.client, tools, notifications: inbox,
+     background: supervisor, systemPrompt: profile.systemPrompt,
+     model: llm.model_id, maxTurns: profile.max_turns,
      initialMessages, ... })
 10. broadcaster = createEventBroadcaster(handle.events) // sole consumer
    broadcaster.subscribe(transcriptWriter)
@@ -252,7 +392,7 @@ function startRun(params: StartRunParams): StartedRun {
 
 Session teardown needs no wiring here: the engine loop triggers
 `supervisor.dispose(reason)` on every finish (Phase 04 §2.17), cancelling
-stragglers through each spawn site's `SessionHandle`. Step 9 is pure
+stragglers through each start site's `SessionHandle`. Step 11 is pure
 registry bookkeeping.
 
 ## 5. Run Registry and Agent Tool Runtime Calls (`registry.ts`)
@@ -261,17 +401,19 @@ The registry is one typed map: `Map<AgentRunId, { state: AgentRunState,
 handle, status }>` - the run facts live exactly once, in the state record
 (Phase 04 §2.19); the registry adds only what the record must not hold
 (the live handle, the registry-level status). Terminal runs stay listed
-until their parent (if any) has settled them; transcript reads against
-finished runs must keep working.
+until the caller-run session (if any) has observed their settlement;
+transcript reads against finished runs must keep working.
 
 Agent-family tools receive narrow bound functions, not a service object:
 
 - `run_subagent` receives a start function that can call
-  `startRun({ agentType: 'subagent', parent })`; it registers
+  `startRun({ agent_name, initialMessages })`; the runtime registry
+  resolves the name to a profile before engine start. It registers
   `handle.outcome.then(mapSubagentOutcome)` as the `SessionHandle.settled`
   promise and returns the session/run reference immediately.
 - `ask_advisor` receives a start function that can call
-  `startRun({ agentType: 'advisor', parent, signal })`; it awaits the
+  `startRun({ agent_name: "advisor", initialMessages, signal })`; it
+  awaits the
   returned handle's outcome and maps the advisor submission to its tool
   result.
 - `read_agent_run_transcript` resolves `run_id -> transcript_path` through
@@ -283,24 +425,21 @@ Tool flow:
 ```ts
 // main: external caller starts the primary run.
 const main = runtime.startRun({
-  agentType: "main",
+  agent_name: "root",
   initialMessages: [fromUserText(prompt)],
-  model,
   signal,
 });
 return main;
 
 // ask_advisor: synchronous tool result.
 const advisor = startRun({
-  agentType: "advisor",
-  parent,
+  agent_name: "advisor",
   initialMessages: [
     fromUserText(callerTranscript),
     fromUserText(
       "Read the transcript and verify if the caller submitted the payload correctly.",
     ),
   ],
-  model,
   signal,
 });
 const advisorOutcome = await advisor.handle.outcome;
@@ -308,10 +447,8 @@ return mapAdvisorOutcome(advisorOutcome);
 
 // run_subagent: background session.
 const subagent = startRun({
-  agentType: "subagent",
-  parent,
+  agent_name,
   initialMessages: [fromUserText(prompt)],
-  model,
 });
 supervisor.register(
   { type: "subagent", id: subagent.run_id },
@@ -368,7 +505,7 @@ per-call payload carries all identity).
 | Trigger | Effect |
 | --- | --- |
 | run finishes (any status) | the ENGINE triggers `supervisor.dispose` (Phase 04 §2.17); the runtime only marks the registry terminal |
-| owning run disposed with live subagent | the subagent `SessionHandle.cancel` -> `handle.interrupt('parent disposed')` -> that run's own engine dispose cascades |
+| caller run disposed with live subagent | the subagent `SessionHandle.cancel` -> `handle.interrupt('caller disposed')` -> that run's own engine dispose cascades |
 | caller `signal` aborts | engine cancels (Phase 03 semantics) and disposes on finish |
 | `cancel_background_session` on a subagent | same subagent interrupt path, model-initiated |
 
@@ -383,7 +520,7 @@ function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntim
 interface AgentRuntime {
   startRun(params: StartRunParams): StartedRun;
   getRun(runId: AgentRunId): StartedRun | undefined;
-  listRuns(): ReadonlyArray<{ run_id, agentType, status, parent? }>;
+  listRuns(): ReadonlyArray<{ run_id, agentType, agent_name, status, caller_run_id? }>;
 }
 ```
 
@@ -404,13 +541,15 @@ phase.
 ## 11. Workspace Changes
 
 - `packages/agent-runtime/`; package name `@eos/agent-runtime`
-  (`dependencies`: `@eos/contracts`, `@eos/engine`, `@eos/tool` via
-  `workspace:*`). Phase 03 §11's runtime references resolve to this package.
+  (`dependencies`: `@eos/contracts`, `@eos/engine`, `@eos/tool`,
+  `@eos/llm-client` via `workspace:*`, plus `yaml` for profile
+  frontmatter parsing). Phase 03 §11's runtime references resolve to this
+  package.
 - `packages/testkit/`: gains a scripted `MockLlmClient` scenario helper if
   the engine's double is promoted (second consumer now exists); otherwise
   the runtime suite keeps a local copy.
-- No new third-party dependencies (`node:fs/promises`, `node:crypto`
-  suffice).
+- `yaml` is the only new third-party dependency in this phase; all parsed
+  profile data is still validated through Zod before registration.
 
 Resulting layout:
 
@@ -418,7 +557,10 @@ Resulting layout:
 packages/agent-runtime/
 ├─ src/
 │  ├─ runtime.ts          createAgentRuntime() + startRun() §4 wiring
-│  ├─ registry.ts         run map, AgentRunId minting, parent links
+│  ├─ registry.ts         run map, AgentRunId minting, caller links
+│  ├─ agent-profile-loader.ts frontmatter/body parser + Zod validation
+│  ├─ agent-profile-registry.ts name-indexed registry
+│  ├─ llm-client-registry.ts llm_clients.json loader + client factory binding
 │  ├─ agent-tools.ts      bound runtime calls for subagent/advisor/transcript
 │  ├─ transcript.ts       per-run JSONL writer + offset reader
 │  ├─ event-broadcaster.ts single-consumer stream -> N subscribers
@@ -437,15 +579,22 @@ workspace dependency graph stays acyclic with the composition root on top
 
 1. Verify the stub package -> verify: `pnpm install` + workspace resolution
    green.
-2. Transcript writer + event broadcaster -> verify: ordered lines, offset
+2. Agent profile loader + registry -> verify: valid frontmatter/body
+   profile loads by `agent_name`, duplicate names and malformed profiles
+   fail at startup.
+3. LLM client registry -> verify: `.eos-agents/llm_clients.json` loads,
+   Codex CLI auth-file entries build `codex_coding_plan` clients, and
+   missing `llm_client_id` references fail at startup.
+4. Transcript writer + event broadcaster -> verify: ordered lines, offset
    reads, slow-tap isolation tests.
-3. Registry + agent tool runtime calls (subagent start, advisor await,
-   transcript read) -> verify: §13 cases 3-4.
-4. Hook config loading -> verify: missing/valid/malformed cases.
-5. `createAgentRuntime` + `startRun` wiring + disposal -> verify: §13
-   cases 1-2, 5-7.
-6. Workspace wiring -> verify: `pnpm run check` green.
-7. Update the migration `index.md` row for this phase.
+5. Registry + agent tool runtime calls (subagent start, advisor await,
+   transcript read) -> verify: §13 cases 5-6.
+6. Hook config loading -> verify: missing/valid/malformed cases and §13
+   case 7.
+7. `createAgentRuntime` + `startRun` wiring + disposal -> verify: §13
+   cases 3-4, 7-8.
+8. Workspace wiring -> verify: `pnpm run check` green.
+9. Update the migration `index.md` row for this phase.
 
 ## 13. Verification
 
@@ -454,13 +603,15 @@ network, real files only under a temp `dataDir`.
 
 | # | Case | Asserts |
 | --- | --- | --- |
-| 1 | Wiring order | a `startRun` smoke run produces transcript lines, drains a notification, and observes the engine-triggered dispose on finish (spy ordering matches §4) |
-| 2 | Submission end-to-end | scripted main run calls `submit_main_outcome`; `outcome.submission` carries the payload; transcript `run_finished` line matches |
-| 3 | Subagent round-trip | main starts a subagent run, idles -> auto-wait, `session_settled` notification arrives, parent reads the subagent transcript via the tool, then submits |
-| 4 | Advisor ask | `ask_advisor` blocks, advisor run submits, answer returns in the tool result; caller abort mid-ask cancels the advisor run |
-| 5 | Disposal cascade | interrupting the parent cancels the live subagent run; both registries settle |
-| 6 | Hook script over transcript | a real spawned node hook denies a call based on `transcript_path` contents (read-before-write style assertion) |
-| 7 | Event broadcast isolation | transcript subscriber receives every event while a slow caller subscriber lags or returns early |
+| 1 | Profile loader / registry | the worker-format Markdown profile loads by `agent_name`; duplicate `name`, missing `llm_client_id`, invalid `max_turns`, and unknown tool names fail before any run starts |
+| 2 | LLM client registry | `llm_clients.json` loads the Codex coding-plan entry, reads the configured Codex auth file without persisting the token, and rejects missing client ids referenced by profiles |
+| 3 | Wiring order | a `startRun` smoke run produces transcript lines, drains a notification, and observes the engine-triggered dispose on finish (spy ordering matches §4) |
+| 4 | Submission end-to-end | scripted main run calls `submit_main_outcome`; `outcome.submission` carries the payload; transcript `run_finished` line matches |
+| 5 | Subagent round-trip | main starts a subagent run by `agent_name`, idles -> auto-wait, `session_settled` notification arrives, caller reads the subagent transcript via the tool, then submits |
+| 6 | Advisor ask | `ask_advisor` blocks, advisor run submits, answer returns in the tool result; caller abort mid-ask cancels the advisor run |
+| 7 | Disposal cascade | interrupting the caller cancels the live subagent run; both registries settle |
+| 8 | Hook script over transcript | a real spawned node hook denies a call based on `transcript_path` contents (read-before-write style assertion) |
+| 9 | Event broadcast isolation | transcript subscriber receives every event while a slow caller subscriber lags or returns early |
 
 Commands:
 
@@ -487,7 +638,7 @@ Phase 04.5 is accepted when:
 - `@eos/agent-runtime` exposes exactly the §9 API and `startRun` performs
   the §4 wiring in order, with inbox/supervisor pairs strictly per-run,
 - subagent and advisor execution is `startRun` recursion (no second path),
-  with parent-abort propagation and the §8 disposal cascade covered by
+  with caller cancellation and the §8 disposal cascade covered by
   tests,
 - every run (including subagent/advisor runs) has a readable JSONL
   transcript that hook scripts and `read_agent_run_transcript` consume by
@@ -504,9 +655,11 @@ Phase 04.5 is accepted when:
 | Step | Status | Required proof |
 | --- | --- | --- |
 | Package rename | Done | workspace resolves `@eos/agent-runtime` |
+| Agent profile loader + registry | Pending | §13 case 1 |
+| LLM client registry | Pending | §13 case 2 |
 | Transcript + event broadcaster | Pending | §13 writer/tap tests green |
-| Registry + agent tool runtime calls | Pending | §13 cases 3-4 |
-| Hook config loading | Pending | missing/valid/malformed cases green |
-| Composition root + disposal | Pending | §13 cases 1-2, 5-7 |
+| Registry + agent tool runtime calls | Pending | §13 cases 5-6 |
+| Hook config loading | Pending | missing/valid/malformed cases and §13 case 8 |
+| Composition root + disposal | Pending | §13 cases 3-4, 7, 9 |
 | Workspace wiring | Pending | `pnpm run check` green; `git diff --stat -- agent-core` empty |
 | Index updated | Pending | Phase 04.5 row in `index.md` |

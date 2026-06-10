@@ -1,7 +1,0 @@
-interface:
-  display_name: "Live E2E Plan Executor"
-  short_description: "Run and harden EphemeralOS live E2E plans"
-  default_prompt: "Use $live-e2e-plan-executor on this 3.* live E2E plan and iterate until correctness and sandbox performance are proven."
-
-policy:
-  allow_implicit_invocation: true
