@@ -11,10 +11,9 @@ use eos_command_session::session::CommandSession;
 use eos_command_session::{
     CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSessionCompletion,
 };
-use eos_ephemeral_workspace::EphemeralWorkspace;
 use eos_layerstack::service::Snapshot;
-
-use crate::CommandBinding;
+use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::EphemeralWorkspace;
 
 pub(crate) struct EphemeralRun {
     pub(crate) session: CommandSession,
@@ -25,7 +24,7 @@ pub(crate) struct EphemeralRun {
 
 pub(crate) struct IsolatedRun {
     pub(crate) session: CommandSession,
-    pub(crate) binding: CommandBinding,
+    pub(crate) binding: WorkspaceExecutionBinding,
 }
 
 pub(crate) enum ActiveCommand {

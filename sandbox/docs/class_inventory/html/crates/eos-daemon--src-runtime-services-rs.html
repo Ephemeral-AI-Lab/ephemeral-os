@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/runtime/services.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>21</b><span>modules</span></div>
+  <div><b>166</b><span>items</span></div>
+  <div><b>107</b><span>fields</span></div>
+  <div><b>65</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>dispatcher.rs</span><small>1/7</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-cancel-rs.html"><span>cancel.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-rs.html"><span>command.rs</span><small>2/15</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>4/17</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolation-rs.html"><span>isolation.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugin-rs.html"><span>plugin.rs</span><small>0/14</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/10</small></a></li><li><a class="file-link active" href="eos-daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>5/4</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-wire-envelope-rs.html"><span>envelope.rs</span><small>6/3</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-ops-rs.html"><span>ops.rs</span><small>5/1</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime::services crates/eos-daemon/src/runtime/services.rs sweep_workspace_ttl sweep_command_sessions recover_orphaned_command_sessions RuntimeServices impl RuntimeServices">
+  <div class="module-head">
+    <div>
+      <h2>src/runtime/services.rs</h2>
+      <p class="path">module <code>runtime::services</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RuntimeServices-30" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RuntimeServices pub pub struct RuntimeServices crates/eos-daemon/src/runtime/services.rs plugin PluginRuntime workspace WorkspaceRuntime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RuntimeServices</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-30">RuntimeServices</a></code>
+  <p class="docstring">Runtime service instances shared by daemon dispatch handlers.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plugin</td><td><code>PluginRuntime</code></td></tr><tr><td>pub</td><td>workspace</td><td><code><a class="symbol-link" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-37"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a> (plugin : PluginRuntimeConfig , isolated_workspace : IsolatedWorkspaceConfig , launcher : Arc &lt; dyn eos_workspace :: NsRunnerLauncher &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            plugin: <span class="rs-type">PluginRuntime</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(plugin, launcher),
+            workspace: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(isolated_workspace),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-ensure-plugin-family-allowed-49"><td>method</td><td>ensure_plugin_family_allowed</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-49">ensure_plugin_family_allowed</a> (&amp; self , args : &amp; Value) -&gt; Result &lt; () , PluginRuntimeError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-49">ensure_plugin_family_allowed</a>(&amp;<span class="rs-self">self</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        eos_plugin_ops::ensure::validate_plugin_caller_fields(args)?;
+        <span class="rs-kw">let</span> caller_id = args
+            .get(&quot;caller_id&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .unwrap_or_default()
+            .trim();
+        <span class="rs-kw">if</span> !caller_id.is_empty() &amp;&amp; <span class="rs-self">self</span>.workspace.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-workspace-rs.html#method-caller-has-active-handle-214">caller_has_active_handle</a>(caller_id) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginRuntimeError</span>::<span class="rs-type">Plugin</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/runtime/services.rs:30</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-sweep-workspace-ttl-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sweep_workspace_ttl pub(crate) pub(crate) fn sweep_workspace_ttl (workspace : &amp; WorkspaceRuntime) -&gt; usize crates/eos-daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sweep_workspace_ttl</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-workspace-ttl-16">sweep_workspace_ttl</a> (workspace : &amp; <a class="symbol-link" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>) -&gt; usize</code>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-workspace-ttl-16">sweep_workspace_ttl</a>(workspace: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>) -&gt; usize {
+        workspace.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-150">ttl_sweep</a>()
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/runtime/services.rs:16</p>
+</article><article id="item-fn-sweep-command-sessions-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sweep_command_sessions pub(crate) pub(crate) fn sweep_command_sessions () crates/eos-daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sweep_command_sessions</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-command-sessions-21">sweep_command_sessions</a> ()</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-command-sessions-21">sweep_command_sessions</a>() {
+        eos_command_ops::runtime::command_session_reaper_sweep();
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/runtime/services.rs:21</p>
+</article><article id="item-fn-recover-orphaned-command-sessions-25" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recover_orphaned_command_sessions pub(crate) pub(crate) fn recover_orphaned_command_sessions () crates/eos-daemon/src/runtime/services.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>recover_orphaned_command_sessions</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-command-sessions-25">recover_orphaned_command_sessions</a> ()</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-command-sessions-25">recover_orphaned_command_sessions</a>() {
+        eos_command_ops::runtime::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-command-sessions-25">recover_orphaned_command_sessions</a>();
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/runtime/services.rs:25</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/runtime/services.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-owned runtime services shared by dispatch handlers.</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> eos_config::configs::daemon::<span class="rs-type">PluginRuntimeConfig</span>;
+<span class="rs-kw">use</span> eos_config::configs::isolated_workspace::<span class="rs-type">IsolatedWorkspaceConfig</span>;
+<span class="rs-kw">use</span> eos_plugin::<span class="rs-type">PluginError</span>;
+<span class="rs-kw">use</span> eos_plugin_ops::{<span class="rs-type">PluginRuntime</span>, <span class="rs-type">PluginRuntimeError</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> sweepers {
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>;
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-workspace-ttl-16">sweep_workspace_ttl</a>(workspace: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>) -&gt; usize {
+        workspace.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-150">ttl_sweep</a>()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-sweep-command-sessions-21">sweep_command_sessions</a>() {
+        eos_command_ops::runtime::command_session_reaper_sweep();
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-command-sessions-25">recover_orphaned_command_sessions</a>() {
+        eos_command_ops::runtime::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#item-fn-recover-orphaned-command-sessions-25">recover_orphaned_command_sessions</a>();
+    }
+}
+
+<span class="rs-comment">/// Runtime service instances shared by daemon dispatch handlers.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-30">RuntimeServices</a> {
+    <span class="rs-kw">pub</span> plugin: <span class="rs-type">PluginRuntime</span>,
+    <span class="rs-kw">pub</span> workspace: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-services-rs.html#item-struct-RuntimeServices-30">RuntimeServices</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(
+        plugin: <span class="rs-type">PluginRuntimeConfig</span>,
+        isolated_workspace: <span class="rs-type">IsolatedWorkspaceConfig</span>,
+        launcher: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_workspace::<span class="rs-type">NsRunnerLauncher</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            plugin: <span class="rs-type">PluginRuntime</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(plugin, launcher),
+            workspace: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-workspace-rs.html#item-struct-WorkspaceRuntime-119">WorkspaceRuntime</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-41">new</a>(isolated_workspace),
+        }
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-services-rs.html#method-ensure-plugin-family-allowed-49">ensure_plugin_family_allowed</a>(&amp;<span class="rs-self">self</span>, args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">PluginRuntimeError</span>&gt; {
+        eos_plugin_ops::ensure::validate_plugin_caller_fields(args)?;
+        <span class="rs-kw">let</span> caller_id = args
+            .get(&quot;caller_id&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .unwrap_or_default()
+            .trim();
+        <span class="rs-kw">if</span> !caller_id.is_empty() &amp;&amp; <span class="rs-self">self</span>.workspace.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-workspace-rs.html#method-caller-has-active-handle-214">caller_has_active_handle</a>(caller_id) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginRuntimeError</span>::<span class="rs-type">Plugin</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

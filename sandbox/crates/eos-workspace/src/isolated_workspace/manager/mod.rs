@@ -7,6 +7,7 @@ use crate::isolated_workspace::caps::ResourceCaps;
 use crate::isolated_workspace::error::IsolatedError;
 use crate::isolated_workspace::namespace::NamespaceRuntime;
 use crate::isolated_workspace::network::{IsolatedNetwork, VethAllocation};
+use crate::shared::OverlayDirs;
 
 use self::lifecycle::monotonic_seconds;
 
@@ -40,9 +41,7 @@ pub struct WorkspaceHandle {
     pub manifest_version: i64,
     pub manifest_root_hash: String,
     pub workspace_root: String,
-    pub scratch_dir: PathBuf,
-    pub upperdir: PathBuf,
-    pub workdir: PathBuf,
+    pub dirs: OverlayDirs,
     pub layer_paths: Vec<PathBuf>,
     pub ns_fds: HashMap<String, i32>,
     pub holder_pid: i32,

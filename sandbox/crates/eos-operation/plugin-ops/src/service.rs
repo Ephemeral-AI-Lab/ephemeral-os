@@ -6,7 +6,7 @@ use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
 use eos_plugin::{PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus};
 
 use crate::PluginRuntimeError;
-use eos_ephemeral_workspace::overlay_run_dirs;
+use eos_workspace::overlay_run_dirs;
 
 use super::process::PluginServiceOverlay;
 use super::state::{DaemonPluginState, PluginRuntime, SharedPpcClient};

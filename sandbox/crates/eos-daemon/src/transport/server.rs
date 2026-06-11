@@ -16,7 +16,7 @@ use eos_config::configs::{
     daemon::{DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
-use eos_isolated_workspace::CurrentExeNsRunnerLauncher;
+use eos_workspace::CurrentExeNsRunnerLauncher;
 
 use crate::dispatcher::OpTable;
 use crate::error::DaemonError;

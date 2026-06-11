@@ -12,14 +12,14 @@ use eos_command_session::{
     CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
-use eos_ephemeral_workspace::EphemeralWorkspace;
 use eos_layerstack::service;
+use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::EphemeralWorkspace;
 
 use crate::outcome::FinalizeCommandRequest;
 use crate::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
 use crate::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
 use crate::settle::{discarded_response, settle_ephemeral, settle_isolated};
-use crate::CommandBinding;
 
 pub enum ExecTarget {
     Ephemeral {
@@ -28,7 +28,7 @@ pub enum ExecTarget {
         scratch_root: PathBuf,
     },
     Isolated {
-        binding: Box<CommandBinding>,
+        binding: Box<WorkspaceExecutionBinding>,
     },
 }
 
@@ -155,7 +155,7 @@ impl CommandOps {
         spec: CommandSessionSpec,
         request: &StartCommandSession,
         command_id: &str,
-        binding: Box<CommandBinding>,
+        binding: Box<WorkspaceExecutionBinding>,
         yield_time_ms: u64,
     ) -> Result<CommandResponse, CommandSessionError> {
         let prepared = prepare_isolated(

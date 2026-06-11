@@ -121,18 +121,18 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   `[workspace.dependencies]`; crates use `dep.workspace = true`. Internal crates are path deps.
 - `proj-lib-main-split`: `eosd/src/main.rs` is subcommand dispatch only; all logic in libraries.
 - **The dependency edges ARE the architecture.** The single sharpest invariant —
-  *isolated keeps writes private and NEVER publishes* — is encoded by
-  **`eos-isolated-workspace` not depending on `eos-layerstack` and not owning
-  publish paths**. `eos-plugin` is even narrower now:
+  *isolated keeps writes private and NEVER publishes* — is encoded inside
+  **`eos-workspace::isolated_workspace`**, which must not own publish paths.
+  `eos-plugin` is even narrower now:
   it is a pure contract/PPC crate, while snapshot/overlay/publish/process
   behavior stays in `eos-plugin-ops`. Verified edges (get these EXACTLY right):
   - `contract/` → data/prose only; no compiled crate.
   - `eos-layerstack` → storage, leases, CAS hashes, route/commit policy.
   - `eos-overlay` → overlayfs mechanics and captured path changes.
   - `eos-namespace` → single-threaded namespace holder/runner support.
-  - `eos-ephemeral-workspace` → reusable per-operation overlay workspace helpers.
-  - `eos-isolated-workspace` → isolated session lifecycle, network setup, TTL/GC;
-    no `eos-layerstack` dependency.
+  - `eos-workspace` → reusable per-operation overlay workspace helpers plus
+    isolated session lifecycle, network setup, TTL/GC; isolated code must not
+    publish workspace changes.
   - `eos-command-session` / `eos-command-ops` → command-session mechanics and
     command runtime policy.
   - `eos-file-ops` → file operation semantics over direct and isolated backends.
@@ -153,7 +153,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 
 ## 5. Async and syscall boundaries — `async-*`
 
-- `tokio` is justified in `eos-daemon` and `eosd`; `eos-isolated-workspace` has Linux-target
+- `tokio` is justified in `eos-daemon` and `eosd`; `eos-workspace` has Linux-target
   `tokio` only for rtnetlink/netlink helpers. `eos-namespace` (both the holder and runner children)
   remains **single-threaded, syscall-only, NO tokio** (kernel requires a single-threaded caller
   for `unshare(CLONE_NEWUSER)` / `setns` into a userns — this is a correctness requirement, not a

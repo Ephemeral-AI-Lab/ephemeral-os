@@ -10,3 +10,14 @@
 pub mod ephemeral_workspace;
 pub mod isolated_workspace;
 pub mod shared;
+
+pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
+pub use isolated_workspace::{
+    CurrentExeNsRunnerLauncher, ExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
+    IsolatedWorkspaceId, LaunchError, NsRunnerLauncher, ResourceCaps, Rfc1918Egress,
+    WorkspaceHandle,
+};
+pub use shared::{
+    capture_upperdir, path_changes_to_wire, CaptureError, CapturedChanges, DirAllocationError,
+    OverlayDirs, OverlayDirsGuard, TreeResourceStats,
+};

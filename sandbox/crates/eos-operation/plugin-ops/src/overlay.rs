@@ -8,14 +8,14 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_ephemeral_workspace::{
-    capture_upperdir, overlay_run_dirs, path_changes_to_wire, OverlayDirs, OverlayDirsGuard,
-};
-use eos_isolated_workspace::NsRunnerLauncher;
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_namespace::protocol::Intent;
 use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use eos_plugin::ServiceMode;
+use eos_workspace::NsRunnerLauncher;
+use eos_workspace::{
+    capture_upperdir, overlay_run_dirs, path_changes_to_wire, OverlayDirs, OverlayDirsGuard,
+};
 use serde_json::{json, Value};
 
 use super::state::PluginRuntime;
@@ -118,7 +118,7 @@ pub struct PluginOverlayOutcome {
     pub lease_acquire_s: f64,
     pub capture_s: f64,
     pub occ_s: f64,
-    pub upperdir_stats: eos_ephemeral_workspace::TreeResourceStats,
+    pub upperdir_stats: eos_workspace::TreeResourceStats,
 }
 
 fn run_plugin_overlay_command(

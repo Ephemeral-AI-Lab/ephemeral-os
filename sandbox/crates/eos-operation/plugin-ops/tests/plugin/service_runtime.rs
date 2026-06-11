@@ -783,7 +783,8 @@ fn wait_until_dead(pid: u32) {
 }
 
 fn test_socket_root(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!("eos-runtime-ppc-{name}-{}", std::process::id()));
+    let root =
+        std::env::temp_dir().join(format!("eos-plugin-ops-ppc-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     root
 }
@@ -791,7 +792,7 @@ fn test_socket_root(name: &str) -> PathBuf {
 fn test_bound_workspace(name: &str) -> Result<(PathBuf, PathBuf), TestError> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let base = std::env::temp_dir().join(format!(
-        "eos-runtime-{name}-{}-{}",
+        "eos-plugin-ops-{name}-{}-{}",
         std::process::id(),
         COUNTER.fetch_add(1, Ordering::Relaxed)
     ));

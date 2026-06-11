@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::ensure::ParsedEnsure;
 use eos_config::configs::daemon::PluginRuntimeConfig;
-use eos_isolated_workspace::NsRunnerLauncher;
 use eos_plugin::PluginServiceStatus;
+use eos_workspace::NsRunnerLauncher;
 use serde::Serialize;
 
 use super::{process::PluginServiceProcess, service::PluginServiceSnapshot};

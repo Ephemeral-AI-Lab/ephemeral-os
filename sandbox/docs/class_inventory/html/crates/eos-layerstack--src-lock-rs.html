@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>13</b><span>modules</span></div>
-  <div><b>195</b><span>items</span></div>
-  <div><b>131</b><span>fields</span></div>
-  <div><b>81</b><span>methods</span></div>
+  <div><b>199</b><span>items</span></div>
+  <div><b>130</b><span>fields</span></div>
+  <div><b>80</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>mod.rs</span><small>7/10</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-worker-rs.html"><span>worker.rs</span><small>8/25</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fs-rs.html"><span>fs.rs</span><small>0/21</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-layerstack--src-lock-rs.html"><span>lock.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="eos-layerstack--src-service-rs.html"><span>service.rs</span><small>3/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-mod-rs.html"><span>mod.rs</span><small>6/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-workspace-rs.html"><span>workspace.rs</span><small>3/17</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>mod.rs</span><small>7/10</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-worker-rs.html"><span>worker.rs</span><small>7/25</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fs-rs.html"><span>fs.rs</span><small>1/22</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-layerstack--src-lock-rs.html"><span>lock.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="eos-layerstack--src-service-rs.html"><span>service.rs</span><small>3/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-mod-rs.html"><span>mod.rs</span><small>6/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-workspace-rs.html"><span>workspace.rs</span><small>3/18</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lock crates/eos-layerstack/src/lock.rs StorageWriterLockLease impl StorageWriterLockLease impl Drop for StorageWriterLockLease SharedGuard impl Drop for SharedGuard &lt; '_ &gt; ExclusiveGuard impl Drop for ExclusiveGuard &lt; '_ &gt; LockRecord ReentrantRwLock ReentrantRwState impl ReentrantRwLock registry lock_registry">
   <div class="module-head">
     <div>
@@ -64,9 +64,9 @@
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-SharedGuard-103">SharedGuard</a>&lt; &#x27;lease &gt;</code>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-SharedGuard-103">SharedGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-110"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-232">drop</a> (&amp; mut self)</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-SharedGuard-103">SharedGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-110"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-226">drop</a> (&amp; mut self)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-unlock-168">read_unlock</a>();
     }
 </code></pre>
@@ -81,9 +81,9 @@
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ExclusiveGuard-115">ExclusiveGuard</a>&lt; &#x27;lease &gt;</code>
   <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ExclusiveGuard-115">ExclusiveGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-122"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-232">drop</a> (&amp; mut self)</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-ExclusiveGuard-115">ExclusiveGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-122"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-226">drop</a> (&amp; mut self)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-write-unlock-209">write_unlock</a>();
     }
 </code></pre>
@@ -134,7 +134,7 @@
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-acquire-20">acquire</a>(storage_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
         std::fs::create_dir_all(storage_root)?;
-        <span class="rs-kw">let</span> key = <span class="rs-kw">crate</span>::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-canonical-key-13">canonical_key</a>(storage_root);
+        <span class="rs-kw">let</span> key = <span class="rs-kw">crate</span>::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-canonical-key-26">canonical_key</a>(storage_root);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-lock-registry-232">lock_registry</a>()?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;key) {
             record.refcount += 1;
@@ -142,7 +142,7 @@
         }
 
         <span class="rs-kw">let</span> lock_path = storage_root.join(<span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>);
-        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>()
+        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>()
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-149">read</a>(<span class="rs-kw">true</span>)
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-write-180">write</a>(<span class="rs-kw">true</span>)
             .create(<span class="rs-kw">true</span>)
@@ -163,16 +163,16 @@
             <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a> {
                 file,
                 refcount: 1,
-                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a>::default()),
+                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a>::default()),
             },
         );
-        <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(registry);
+        <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(registry);
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key })
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a></code></summary><table><tbody><tr id="method-drop-86"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-232">drop</a> (&amp; mut self)</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a></code></summary><table><tbody><tr id="method-drop-86"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack.html#method-drop-226">drop</a> (&amp; mut self)</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-registry-227">registry</a>()
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-lock-76">lock</a>()
             .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
@@ -240,7 +240,7 @@
             .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
         state.readers = state.readers.saturating_sub(1);
         <span class="rs-kw">if</span> state.readers == 0 {
-            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(state);
+            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(state);
             <span class="rs-self">self</span>.waiters.notify_all();
         }
     }
@@ -290,7 +290,7 @@
         state.write_depth = state.write_depth.saturating_sub(1);
         <span class="rs-kw">if</span> state.write_depth == 0 {
             state.writer = <span class="rs-type">None</span>;
-            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(state);
+            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(state);
             <span class="rs-self">self</span>.waiters.notify_all();
         }
     }
@@ -320,8 +320,8 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-registry-227">registry</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt; {
-    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>();
-    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>()))
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>()))
 }
 </code></pre>
 </details>
@@ -375,7 +375,7 @@
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> {
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-acquire-20">acquire</a>(storage_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
         std::fs::create_dir_all(storage_root)?;
-        <span class="rs-kw">let</span> key = <span class="rs-kw">crate</span>::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-canonical-key-13">canonical_key</a>(storage_root);
+        <span class="rs-kw">let</span> key = <span class="rs-kw">crate</span>::fs::<a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-canonical-key-26">canonical_key</a>(storage_root);
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-lock-registry-232">lock_registry</a>()?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;key) {
             record.refcount += 1;
@@ -383,7 +383,7 @@
         }
 
         <span class="rs-kw">let</span> lock_path = storage_root.join(<span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>);
-        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>()
+        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>()
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-149">read</a>(<span class="rs-kw">true</span>)
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-write-180">write</a>(<span class="rs-kw">true</span>)
             .create(<span class="rs-kw">true</span>)
@@ -404,10 +404,10 @@
             <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a> {
                 file,
                 refcount: 1,
-                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a>::default()),
+                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-ReentrantRwLock-134">ReentrantRwLock</a>::default()),
             },
         );
-        <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(registry);
+        <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(registry);
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key })
     }
 
@@ -439,7 +439,7 @@
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-StorageWriterLockLease-14">StorageWriterLockLease</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-registry-227">registry</a>()
             .<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-lock-76">lock</a>()
             .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
@@ -463,7 +463,7 @@
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-SharedGuard-103">SharedGuard</a>&lt;&#x27;_&gt; {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-unlock-168">read_unlock</a>();
     }
 }
@@ -475,7 +475,7 @@
 }
 
 <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-ExclusiveGuard-115">ExclusiveGuard</a>&lt;&#x27;_&gt; {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
         <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-write-unlock-209">write_unlock</a>();
     }
 }
@@ -528,7 +528,7 @@
             .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
         state.readers = state.readers.saturating_sub(1);
         <span class="rs-kw">if</span> state.readers == 0 {
-            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(state);
+            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(state);
             <span class="rs-self">self</span>.waiters.notify_all();
         }
     }
@@ -574,15 +574,15 @@
         state.write_depth = state.write_depth.saturating_sub(1);
         <span class="rs-kw">if</span> state.write_depth == 0 {
             state.writer = <span class="rs-type">None</span>;
-            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-232">drop</a>(state);
+            <a class="symbol-link rs-fn" href="eos-layerstack.html#method-drop-226">drop</a>(state);
             <span class="rs-self">self</span>.waiters.notify_all();
         }
     }
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-registry-227">registry</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt; {
-    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>();
-    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-167">new</a>()))
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>()))
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#item-fn-lock-registry-232">lock_registry</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lock-rs.html#item-struct-LockRecord-127">LockRecord</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {

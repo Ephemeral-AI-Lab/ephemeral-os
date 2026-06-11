@@ -46,7 +46,7 @@ pub use self::process::ServiceProcessStatus;
 pub use self::refresh::ServiceHealthReport;
 pub use self::state::{PluginRuntime, SetupFailure};
 pub use self::transport::{read_message_bytes, PpcClient};
-pub use eos_isolated_workspace::{LaunchError, NsRunnerLauncher};
+pub use eos_workspace::{LaunchError, NsRunnerLauncher};
 
 /// Failures surfaced by the plugin PPC transport and package pipeline.
 ///

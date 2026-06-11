@@ -1,18 +1,18 @@
 use std::path::Path;
 
 use eos_command_session::CommandResponse;
-use eos_ephemeral_workspace::{
-    capture_upperdir, path_changes_to_wire, EphemeralWorkspace, TreeResourceStats,
-};
 use eos_layerstack::service::Snapshot;
 use eos_layerstack::{service, FileResult};
+use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::{
+    capture_upperdir, path_changes_to_wire, EphemeralWorkspace, TreeResourceStats,
+};
 use serde_json::{json, Value};
 
 use crate::outcome::{
     ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceConflict,
     WorkspaceTimings,
 };
-use crate::CommandBinding;
 
 pub(crate) fn settle_ephemeral(
     root: &Path,
@@ -80,7 +80,7 @@ pub(crate) fn settle_ephemeral(
 }
 
 pub(crate) fn settle_isolated(
-    binding: &CommandBinding,
+    binding: &WorkspaceExecutionBinding,
     request: FinalizeCommandRequest,
 ) -> Result<CommandResponse, WorkspaceApiError> {
     let mut timings = base_timings(&binding.layer_stack_root)?;

@@ -1,30 +1,7 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub type WorkspaceTimings = BTreeMap<String, Value>;
-
-pub type ChangedPathKinds = BTreeMap<String, String>;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkspaceConflict {
-    pub reason: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub conflict_file: Option<String>,
-    pub message: String,
-}
-
-impl WorkspaceConflict {
-    #[must_use]
-    pub fn path(reason: &str, conflict_file: &str, message: &str) -> Self {
-        Self {
-            reason: reason.to_owned(),
-            conflict_file: Some(conflict_file.to_owned()),
-            message: message.to_owned(),
-        }
-    }
-}
+pub use eos_operation_core::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg(target_os = "linux")]

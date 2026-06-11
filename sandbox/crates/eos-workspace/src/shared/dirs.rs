@@ -27,11 +27,15 @@ pub struct OverlayDirsGuard(Option<PathBuf>);
 ///
 /// Returns [`DirAllocationError`] when the writable root or requested run dirs
 /// cannot be created.
-pub fn overlay_run_dirs(kind: &str, invocation_id: &str) -> Result<OverlayDirs, DirAllocationError> {
-    let writable_root = eos_overlay::overlay_writable_root().map_err(|error| DirAllocationError {
-        path: PathBuf::from("overlay_writable_root"),
-        reason: error.to_string(),
-    })?;
+pub fn overlay_run_dirs(
+    kind: &str,
+    invocation_id: &str,
+) -> Result<OverlayDirs, DirAllocationError> {
+    let writable_root =
+        eos_overlay::overlay_writable_root().map_err(|error| DirAllocationError {
+            path: PathBuf::from("overlay_writable_root"),
+            reason: error.to_string(),
+        })?;
     allocate_overlay_dirs(&writable_root.join("runtime"), kind, invocation_id)
 }
 
@@ -50,6 +54,16 @@ pub fn allocate_overlay_dirs(
         std::process::id(),
         sanitized_segment(token)
     ));
+    create_overlay_dirs(run_dir)
+}
+
+/// Create standard overlay scratch children under an already chosen run dir.
+///
+/// # Errors
+///
+/// Returns [`DirAllocationError`] when `run_dir`, `upper`, or `work` cannot be
+/// created.
+pub fn create_overlay_dirs(run_dir: PathBuf) -> Result<OverlayDirs, DirAllocationError> {
     let upperdir = run_dir.join("upper");
     let workdir = run_dir.join("work");
 

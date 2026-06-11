@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>55</b><span>fields</span></div>
-  <div><b>37</b><span>methods</span></div>
+  <div><b>54</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>36</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link active" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link active" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="settle crates/eos-operation/eos-command-ops/src/settle.rs settle_ephemeral settle_isolated discarded_response command_response insert_command_timings base_timings insert_cgroup_resource_timings insert_process_resource_timings merge_runner_timings conflict_from_file conflict_message insert_tree_resource_timings insert_resource_timing u64_to_f64_saturating usize_to_f64_saturating finalize_error">
   <div class="module-head">
     <div>
@@ -56,24 +56,24 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-settle-ephemeral-15" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_ephemeral pub(crate) pub(crate) fn settle_ephemeral (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : FinalizeCommandRequest ,) -&gt; Result &lt; CommandResponse , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-settle-ephemeral-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_ephemeral pub(crate) pub(crate) fn settle_ephemeral (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : FinalizeCommandRequest ,) -&gt; Result &lt; CommandResponse , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>settle_ephemeral</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-15">settle_ephemeral</a> (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> ,) -&gt; Result &lt; CommandResponse , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-17">settle_ephemeral</a> (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> ,) -&gt; Result &lt; CommandResponse , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-15">settle_ephemeral</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-17">settle_ephemeral</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot: &amp;<span class="rs-type">Snapshot</span>,
     workspace: &amp;<span class="rs-type">EphemeralWorkspace</span>,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(root)?;
-    <span class="rs-kw">let</span> captured = workspace.capture().map_err(finalize_error)?;
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(root)?;
+    <span class="rs-kw">let</span> captured = capture_upperdir(&amp;workspace.dirs().upperdir).map_err(finalize_error)?;
     <span class="rs-kw">let</span> publish_start = std::time::<span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> changeset = service::publish_capture(
         root,
@@ -84,31 +84,31 @@
     .map_err(finalize_error)?;
     <span class="rs-kw">let</span> publish_s = publish_start.elapsed().as_secs_f64();
 
-    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.path_kinds);
-    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.changes);
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
     <span class="rs-kw">let</span> first_conflict = changeset.first_conflict();
-    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>();
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>();
     <span class="rs-kw">let</span> publish_success = changeset.success();
 
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.upperdir&quot;,
         &amp;captured.stats,
     );
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.run_dir&quot;,
         &amp;<span class="rs-type">TreeResourceStats</span>::collect(&amp;workspace.dirs().run_dir),
     );
     <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;changeset.timings {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.clone(), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.clone(), json!(value));
     }
     <span class="rs-kw">let</span> occ_s = changeset
         .timings
-        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;occ.commit.total_s&quot;)
+        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;occ.commit.total_s&quot;)
         .copied()
         .unwrap_or(publish_s);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         changed_path_kinds.len(),
         captured.capture_s,
@@ -117,7 +117,7 @@
         <span class="rs-kw">false</span>,
     );
 
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         &quot;ephemeral&quot;,
         request,
         command_success &amp;&amp; publish_success,
@@ -125,7 +125,7 @@
         changed_path_kinds,
         &quot;overlay_capture&quot;,
         first_conflict.map(conflict_from_file),
-        first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file).to_owned()),
+        first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file).to_owned()),
         timings,
         <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
     ))
@@ -133,45 +133,34 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:15</p>
-</article><article id="item-fn-settle-isolated-80" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_isolated pub(crate) pub(crate) fn settle_isolated (binding : &amp; CommandBinding , request : FinalizeCommandRequest ,) -&gt; Result &lt; CommandResponse , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:17</p>
+</article><article id="item-fn-settle-isolated-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_isolated pub(crate) pub(crate) fn settle_isolated (binding : &amp; WorkspaceExecutionBinding , request : FinalizeCommandRequest ,) -&gt; Result &lt; CommandResponse , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>settle_isolated</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-80">settle_isolated</a> (binding : &amp; <a class="symbol-link" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a> , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> ,) -&gt; Result &lt; CommandResponse , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-82">settle_isolated</a> (binding : &amp; WorkspaceExecutionBinding , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> ,) -&gt; Result &lt; CommandResponse , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-80">settle_isolated</a>(
-    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(&amp;binding.layer_stack_root)?;
-    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;binding.upperdir)
-        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-385">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
-    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
-    <span class="rs-kw">let</span> changed_path_kinds = changes
-        .iter()
-        .map(|change| {
-            <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
-            };
-            (change.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>().as_str().to_owned(), kind.to_owned())
-        })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>&gt;();
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-82">settle_isolated</a>(
+    binding: &amp;<span class="rs-type">WorkspaceExecutionBinding</span>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(&amp;binding.layer_stack_root)?;
+    <span class="rs-kw">let</span> captured = capture_upperdir(&amp;binding.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-376">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> changed_path_kinds = path_changes_to_wire(&amp;captured.changes)
+        .into_iter()
+        .collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
     <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = changed_path_kinds.keys().cloned().collect();
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-330">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
-    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>();
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-321">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>();
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         changed_paths.len(),
-        capture_s,
+        captured.capture_s,
         0.0,
         request.command_elapsed_s,
         <span class="rs-kw">true</span>,
@@ -186,7 +175,7 @@
             },
             &quot;warnings&quot;: [],
     });
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         &quot;isolated&quot;,
         request,
         command_success,
@@ -204,58 +193,58 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:80</p>
-</article><article id="item-fn-discarded-response-138" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discarded_response pub(crate) pub(crate) fn discarded_response (workspace_kind : &amp; 'static str , request : FinalizeCommandRequest ,) -&gt; CommandResponse crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:82</p>
+</article><article id="item-fn-discarded-response-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discarded_response pub(crate) pub(crate) fn discarded_response (workspace_kind : &amp; 'static str , request : FinalizeCommandRequest ,) -&gt; CommandResponse crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>discarded_response</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-138">discarded_response</a> (workspace_kind : &amp; &#x27;static str , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> ,) -&gt; CommandResponse</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-129">discarded_response</a> (workspace_kind : &amp; &#x27;static str , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> ,) -&gt; CommandResponse</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-138">discarded_response</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-129">discarded_response</a>(
     workspace_kind: &amp;&#x27;<span class="rs-kw">static</span> str,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
 ) -&gt; <span class="rs-type">CommandResponse</span> {
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         workspace_kind,
         request,
         <span class="rs-kw">false</span>,
         <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(),
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>::default(),
+        <span class="rs-type">ChangedPathKinds</span>::default(),
         &quot;&quot;,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>::default(),
+        <span class="rs-type">WorkspaceTimings</span>::default(),
         <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
     )
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:138</p>
-</article><article id="item-fn-command-response-156" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_response private fn command_response (workspace_kind : &amp; 'static str , request : FinalizeCommandRequest , success : bool , changed_paths : Vec &lt; String &gt; , changed_path_kinds : ChangedPathKinds , mutation_source : &amp; 'static str , conflict : Option &lt; WorkspaceConflict &gt; , conflict_reason : Option &lt; String &gt; , timings : WorkspaceTimings , metadata : Value ,) -&gt; CommandResponse crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:129</p>
+</article><article id="item-fn-command-response-147" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_response private fn command_response (workspace_kind : &amp; 'static str , request : FinalizeCommandRequest , success : bool , changed_paths : Vec &lt; String &gt; , changed_path_kinds : ChangedPathKinds , mutation_source : &amp; 'static str , conflict : Option &lt; WorkspaceConflict &gt; , conflict_reason : Option &lt; String &gt; , timings : WorkspaceTimings , metadata : Value ,) -&gt; CommandResponse crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_response</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a> (workspace_kind : &amp; &#x27;static str , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> , success : bool , changed_paths : Vec &lt; String &gt; , changed_path_kinds : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a> , mutation_source : &amp; &#x27;static str , conflict : Option &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a> &gt; , conflict_reason : Option &lt; String &gt; , timings : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , metadata : Value ,) -&gt; CommandResponse</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a> (workspace_kind : &amp; &#x27;static str , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> , success : bool , changed_paths : Vec &lt; String &gt; , changed_path_kinds : ChangedPathKinds , mutation_source : &amp; &#x27;static str , conflict : Option &lt; WorkspaceConflict &gt; , conflict_reason : Option &lt; String &gt; , timings : WorkspaceTimings , metadata : Value ,) -&gt; CommandResponse</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
     workspace_kind: &amp;&#x27;<span class="rs-kw">static</span> str,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
     success: bool,
     changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    changed_path_kinds: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>,
+    changed_path_kinds: <span class="rs-type">ChangedPathKinds</span>,
     mutation_source: &amp;&#x27;<span class="rs-kw">static</span> str,
-    conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a>&gt;,
+    conflict: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkspaceConflict</span>&gt;,
     conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    timings: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+    timings: <span class="rs-type">WorkspaceTimings</span>,
     metadata: <span class="rs-type">Value</span>,
 ) -&gt; <span class="rs-type">CommandResponse</span> {
     <span class="rs-type">CommandResponse</span> {
@@ -280,19 +269,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:156</p>
-</article><article id="item-fn-insert-command-timings-188" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_command_timings private fn insert_command_timings (timings : &amp; mut WorkspaceTimings , changed_path_count : usize , capture_s : f64 , occ_s : f64 , elapsed_s : f64 , include_api_total : bool ,) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:147</p>
+</article><article id="item-fn-insert-command-timings-179" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_command_timings private fn insert_command_timings (timings : &amp; mut WorkspaceTimings , changed_path_count : usize , capture_s : f64 , occ_s : f64 , elapsed_s : f64 , include_api_total : bool ,) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_command_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , changed_path_count : usize , capture_s : f64 , occ_s : f64 , elapsed_s : f64 , include_api_total : bool ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a> (timings : &amp; mut WorkspaceTimings , changed_path_count : usize , capture_s : f64 , occ_s : f64 , elapsed_s : f64 , include_api_total : bool ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
-    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>,
     changed_path_count: usize,
     capture_s: f64,
     occ_s: f64,
@@ -302,49 +291,49 @@
     <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> [
         (
             &quot;resource.command_exec.changed_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(changed_path_count),
+            <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(changed_path_count),
         ),
         (&quot;command_exec.capture_upperdir_s&quot;, capture_s),
         (&quot;command_exec.occ_apply_s&quot;, occ_s),
         (&quot;command_exec.total_s&quot;, elapsed_s),
         (&quot;api.exec_command.dispatch_total_s&quot;, elapsed_s),
     ] {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(value));
     }
     <span class="rs-kw">if</span> include_api_total {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(&quot;api.exec_command.total_s&quot;.to_owned(), json!(elapsed_s));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(&quot;api.exec_command.total_s&quot;.to_owned(), json!(elapsed_s));
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:188</p>
-</article><article id="item-fn-base-timings-213" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_timings private fn base_timings (root : &amp; Path) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:179</p>
+</article><article id="item-fn-base-timings-204" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_timings private fn base_timings (root : &amp; Path) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>base_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a> (root : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a> (root : &amp; Path) -&gt; Result &lt; WorkspaceTimings , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceTimings</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
     <span class="rs-kw">let</span> manifest = service::active_manifest(root).map_err(|error| {
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
     })?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>();
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">WorkspaceTimings</span>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>();
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
         json!(0.0),
     );
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(manifest.depth())),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(manifest.depth())),
     );
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(manifest.depth())),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(manifest.depth())),
     );
     <span class="rs-kw">for</span> tree <span class="rs-kw">in</span> [&quot;run_dir&quot;, &quot;workspace&quot;, &quot;upperdir&quot;] {
         <span class="rs-kw">for</span> suffix <span class="rs-kw">in</span> [
@@ -355,31 +344,31 @@
             &quot;entry_count&quot;,
             &quot;truncated&quot;,
         ] {
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
                 format!(&quot;resource.command_exec.{tree}_tree_{suffix}&quot;),
                 json!(0.0),
             );
         }
     }
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-250">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-310">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-241">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-301">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
     <span class="rs-type">Ok</span>(timings)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:213</p>
-</article><article id="item-fn-insert-cgroup-resource-timings-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_cgroup_resource_timings private fn insert_cgroup_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:204</p>
+</article><article id="item-fn-insert-cgroup-resource-timings-241" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_cgroup_resource_timings private fn insert_cgroup_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_cgroup_resource_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-250">insert_cgroup_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-241">insert_cgroup_resource_timings</a> (timings : &amp; mut WorkspaceTimings)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-250">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-241">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>) {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
         <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
@@ -389,7 +378,7 @@
             <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
                 <span class="rs-kw">continue</span>;
             };
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
         }
     }
 
@@ -405,7 +394,7 @@
     ] {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
-                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(value));
+                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(value));
             }
         }
     }
@@ -413,7 +402,7 @@
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>([
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>([
         (&quot;rbytes&quot;, 0.0),
         (&quot;wbytes&quot;, 0.0),
         (&quot;rios&quot;, 0.0),
@@ -435,24 +424,24 @@
         }
     }
     <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:250</p>
-</article><article id="item-fn-insert-process-resource-timings-310" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_process_resource_timings private fn insert_process_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:241</p>
+</article><article id="item-fn-insert-process-resource-timings-301" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_process_resource_timings private fn insert_process_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_process_resource_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-310">insert_process_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-301">insert_process_resource_timings</a> (timings : &amp; mut WorkspaceTimings)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-310">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-301">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>) {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
     };
@@ -467,27 +456,27 @@
             .nth(1)
             .and_then(|value| value.parse::&lt;f64&gt;().ok())
         {
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(kib * 1024.0));
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(kib * 1024.0));
         }
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:310</p>
-</article><article id="item-fn-merge-runner-timings-330" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings private fn merge_runner_timings (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:301</p>
+</article><article id="item-fn-merge-runner-timings-321" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings private fn merge_runner_timings (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>merge_runner_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-330">merge_runner_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , runner_result : Option &lt; &amp; Value &gt;)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-321">merge_runner_timings</a> (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-330">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-321">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
-        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;timings&quot;))
+        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;timings&quot;))
         .and_then(<span class="rs-type">Value</span>::as_object)
     <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
@@ -499,145 +488,145 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:330</p>
-</article><article id="item-fn-conflict-from-file-342" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_from_file private fn conflict_from_file (file : &amp; FileResult) -&gt; WorkspaceConflict crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:321</p>
+</article><article id="item-fn-conflict-from-file-333" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_from_file private fn conflict_from_file (file : &amp; FileResult) -&gt; WorkspaceConflict crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>conflict_from_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-342">conflict_from_file</a> (file : &amp; FileResult) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-333">conflict_from_file</a> (file : &amp; FileResult) -&gt; WorkspaceConflict</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-342">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-333">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <span class="rs-type">WorkspaceConflict</span> {
     <span class="rs-kw">let</span> reason = file.status.wire_str();
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(reason))
+    <span class="rs-type">WorkspaceConflict</span>::path(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(reason))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:342</p>
-</article><article id="item-fn-conflict-message-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_message private fn conflict_message (file : &amp; FileResult) -&gt; &amp; str crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:333</p>
+</article><article id="item-fn-conflict-message-338" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_message private fn conflict_message (file : &amp; FileResult) -&gt; &amp; str crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>conflict_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a> (file : &amp; FileResult) -&gt; &amp; str</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a> (file : &amp; FileResult) -&gt; &amp; str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
-    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file.status.wire_str())
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
+    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file.status.wire_str())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:347</p>
-</article><article id="item-fn-insert-tree-resource-timings-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings private fn insert_tree_resource_timings (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:338</p>
+</article><article id="item-fn-insert-tree-resource-timings-342" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings private fn insert_tree_resource_timings (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_tree_resource_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , prefix : &amp; str , stats : &amp; TreeResourceStats ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a> (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
-    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>,
     prefix: &amp;str,
     stats: &amp;<span class="rs-type">TreeResourceStats</span>,
 ) {
     <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
     <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(
         timings,
         &amp;format!(&quot;{prefix}_tree_exists&quot;),
         entry_count.min(1),
     );
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:351</p>
-</article><article id="item-fn-insert-resource-timing-370" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:342</p>
+</article><article id="item-fn-insert-resource-timing-361" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_resource_timing</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> , key : &amp; str , value : u64)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a> (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, key: &amp;str, value: u64) {
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-374">u64_to_f64_saturating</a>(value)));
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-365">u64_to_f64_saturating</a>(value)));
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:370</p>
-</article><article id="item-fn-u64-to-f64-saturating-374" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_saturating private fn u64_to_f64_saturating (value : u64) -&gt; f64 crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:361</p>
+</article><article id="item-fn-u64-to-f64-saturating-365" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_saturating private fn u64_to_f64_saturating (value : u64) -&gt; f64 crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>u64_to_f64_saturating</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-374">u64_to_f64_saturating</a> (value : u64) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-365">u64_to_f64_saturating</a> (value : u64) -&gt; f64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-374">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-365">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
     <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
     <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(low))
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(low))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:374</p>
-</article><article id="item-fn-usize-to-f64-saturating-381" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:365</p>
+</article><article id="item-fn-usize-to-f64-saturating-372" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>usize_to_f64_saturating</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
-    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:381</p>
-</article><article id="item-fn-finalize-error-385" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_error private fn finalize_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-operation/eos-command-ops/src/settle.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:372</p>
+</article><article id="item-fn-finalize-error-376" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_error private fn finalize_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-operation/eos-command-ops/src/settle.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>finalize_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-385">finalize_error</a> (error : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-376">finalize_error</a> (error : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-385">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-376">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:385</p>
+  <p class="source">crates/eos-operation/eos-command-ops/src/settle.rs:376</p>
 </article></div>
 </section></div>
 </main>
@@ -649,25 +638,27 @@
   <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
 
 <span class="rs-kw">use</span> eos_command_session::<span class="rs-type">CommandResponse</span>;
-<span class="rs-kw">use</span> eos_ephemeral_workspace::{path_changes_to_wire, <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">TreeResourceStats</span>};
 <span class="rs-kw">use</span> eos_layerstack::service::<span class="rs-type">Snapshot</span>;
 <span class="rs-kw">use</span> eos_layerstack::{service, <span class="rs-type">FileResult</span>};
+<span class="rs-kw">use</span> eos_operation_core::<span class="rs-type">WorkspaceExecutionBinding</span>;
+<span class="rs-kw">use</span> eos_workspace::{
+    capture_upperdir, path_changes_to_wire, <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">TreeResourceStats</span>,
+};
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcome::{
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a>,
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+    <span class="rs-type">ChangedPathKinds</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>, <span class="rs-type">WorkspaceConflict</span>,
+    <span class="rs-type">WorkspaceTimings</span>,
 };
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-15">settle_ephemeral</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-17">settle_ephemeral</a>(
     root: &amp;<span class="rs-type">Path</span>,
     snapshot: &amp;<span class="rs-type">Snapshot</span>,
     workspace: &amp;<span class="rs-type">EphemeralWorkspace</span>,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(root)?;
-    <span class="rs-kw">let</span> captured = workspace.capture().map_err(finalize_error)?;
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(root)?;
+    <span class="rs-kw">let</span> captured = capture_upperdir(&amp;workspace.dirs().upperdir).map_err(finalize_error)?;
     <span class="rs-kw">let</span> publish_start = std::time::<span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> changeset = service::publish_capture(
         root,
@@ -678,31 +669,31 @@
     .map_err(finalize_error)?;
     <span class="rs-kw">let</span> publish_s = publish_start.elapsed().as_secs_f64();
 
-    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.path_kinds);
-    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.changes);
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
     <span class="rs-kw">let</span> first_conflict = changeset.first_conflict();
-    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>();
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>();
     <span class="rs-kw">let</span> publish_success = changeset.success();
 
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.upperdir&quot;,
         &amp;captured.stats,
     );
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         &quot;resource.command_exec.run_dir&quot;,
         &amp;<span class="rs-type">TreeResourceStats</span>::collect(&amp;workspace.dirs().run_dir),
     );
     <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;changeset.timings {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.clone(), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.clone(), json!(value));
     }
     <span class="rs-kw">let</span> occ_s = changeset
         .timings
-        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;occ.commit.total_s&quot;)
+        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;occ.commit.total_s&quot;)
         .copied()
         .unwrap_or(publish_s);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         changed_path_kinds.len(),
         captured.capture_s,
@@ -711,7 +702,7 @@
         <span class="rs-kw">false</span>,
     );
 
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         &quot;ephemeral&quot;,
         request,
         command_success &amp;&amp; publish_success,
@@ -719,40 +710,29 @@
         changed_path_kinds,
         &quot;overlay_capture&quot;,
         first_conflict.map(conflict_from_file),
-        first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file).to_owned()),
+        first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file).to_owned()),
         timings,
         <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
     ))
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-80">settle_isolated</a>(
-    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(&amp;binding.layer_stack_root)?;
-    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;binding.upperdir)
-        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-385">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
-    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
-    <span class="rs-kw">let</span> changed_path_kinds = changes
-        .iter()
-        .map(|change| {
-            <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
-                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
-            };
-            (change.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>().as_str().to_owned(), kind.to_owned())
-        })
-        .collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>&gt;();
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-82">settle_isolated</a>(
+    binding: &amp;<span class="rs-type">WorkspaceExecutionBinding</span>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">CommandResponse</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(&amp;binding.layer_stack_root)?;
+    <span class="rs-kw">let</span> captured = capture_upperdir(&amp;binding.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-376">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> changed_path_kinds = path_changes_to_wire(&amp;captured.changes)
+        .into_iter()
+        .collect::&lt;<span class="rs-type">ChangedPathKinds</span>&gt;();
     <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = changed_path_kinds.keys().cloned().collect();
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-330">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
-    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>();
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-321">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>();
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
         &amp;<span class="rs-kw">mut</span> timings,
         changed_paths.len(),
-        capture_s,
+        captured.capture_s,
         0.0,
         request.command_elapsed_s,
         <span class="rs-kw">true</span>,
@@ -767,7 +747,7 @@
             },
             &quot;warnings&quot;: [],
     });
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         &quot;isolated&quot;,
         request,
         command_success,
@@ -783,34 +763,34 @@
     <span class="rs-type">Ok</span>(response)
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-138">discarded_response</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-discarded-response-129">discarded_response</a>(
     workspace_kind: &amp;&#x27;<span class="rs-kw">static</span> str,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
 ) -&gt; <span class="rs-type">CommandResponse</span> {
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
         workspace_kind,
         request,
         <span class="rs-kw">false</span>,
         <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(),
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>::default(),
+        <span class="rs-type">ChangedPathKinds</span>::default(),
         &quot;&quot;,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>::default(),
+        <span class="rs-type">WorkspaceTimings</span>::default(),
         <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
     )
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-156">command_response</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-command-response-147">command_response</a>(
     workspace_kind: &amp;&#x27;<span class="rs-kw">static</span> str,
-    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a>,
     success: bool,
     changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    changed_path_kinds: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a>,
+    changed_path_kinds: <span class="rs-type">ChangedPathKinds</span>,
     mutation_source: &amp;&#x27;<span class="rs-kw">static</span> str,
-    conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a>&gt;,
+    conflict: <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkspaceConflict</span>&gt;,
     conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    timings: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+    timings: <span class="rs-type">WorkspaceTimings</span>,
     metadata: <span class="rs-type">Value</span>,
 ) -&gt; <span class="rs-type">CommandResponse</span> {
     <span class="rs-type">CommandResponse</span> {
@@ -833,8 +813,8 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-188">insert_command_timings</a>(
-    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-command-timings-179">insert_command_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>,
     changed_path_count: usize,
     capture_s: f64,
     occ_s: f64,
@@ -844,36 +824,36 @@
     <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> [
         (
             &quot;resource.command_exec.changed_path_count&quot;,
-            <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(changed_path_count),
+            <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(changed_path_count),
         ),
         (&quot;command_exec.capture_upperdir_s&quot;, capture_s),
         (&quot;command_exec.occ_apply_s&quot;, occ_s),
         (&quot;command_exec.total_s&quot;, elapsed_s),
         (&quot;api.exec_command.dispatch_total_s&quot;, elapsed_s),
     ] {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(value));
     }
     <span class="rs-kw">if</span> include_api_total {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(&quot;api.exec_command.total_s&quot;.to_owned(), json!(elapsed_s));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(&quot;api.exec_command.total_s&quot;.to_owned(), json!(elapsed_s));
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-213">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-204">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceTimings</span>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
     <span class="rs-kw">let</span> manifest = service::active_manifest(root).map_err(|error| {
-        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
     })?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>();
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">WorkspaceTimings</span>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>();
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
         json!(0.0),
     );
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(manifest.depth())),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(manifest.depth())),
     );
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
         &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
-        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(manifest.depth())),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(manifest.depth())),
     );
     <span class="rs-kw">for</span> tree <span class="rs-kw">in</span> [&quot;run_dir&quot;, &quot;workspace&quot;, &quot;upperdir&quot;] {
         <span class="rs-kw">for</span> suffix <span class="rs-kw">in</span> [
@@ -884,18 +864,18 @@
             &quot;entry_count&quot;,
             &quot;truncated&quot;,
         ] {
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(
                 format!(&quot;resource.command_exec.{tree}_tree_{suffix}&quot;),
                 json!(0.0),
             );
         }
     }
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-250">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-310">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-241">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-301">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
     <span class="rs-type">Ok</span>(timings)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-250">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-241">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>) {
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
         <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
@@ -905,7 +885,7 @@
             <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
                 <span class="rs-kw">continue</span>;
             };
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
         }
     }
 
@@ -921,7 +901,7 @@
     ] {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
-                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(value));
+                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(value));
             }
         }
     }
@@ -929,7 +909,7 @@
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
     };
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>([
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>([
         (&quot;rbytes&quot;, 0.0),
         (&quot;wbytes&quot;, 0.0),
         (&quot;rios&quot;, 0.0),
@@ -951,11 +931,11 @@
         }
     }
     <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
-        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-310">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-301">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>) {
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
     };
@@ -970,14 +950,14 @@
             .nth(1)
             .and_then(|value| value.parse::&lt;f64&gt;().ok())
         {
-            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(kib * 1024.0));
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(kib * 1024.0));
         }
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-330">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-321">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
-        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;timings&quot;))
+        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;timings&quot;))
         .and_then(<span class="rs-type">Value</span>::as_object)
     <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span>;
@@ -987,51 +967,51 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-342">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-333">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <span class="rs-type">WorkspaceConflict</span> {
     <span class="rs-kw">let</span> reason = file.status.wire_str();
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(reason))
+    <span class="rs-type">WorkspaceConflict</span>::path(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(reason))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
-    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-347">conflict_message</a>(file.status.wire_str())
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
+    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-338">conflict_message</a>(file.status.wire_str())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-351">insert_tree_resource_timings</a>(
-    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>,
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-342">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>,
     prefix: &amp;str,
     stats: &amp;<span class="rs-type">TreeResourceStats</span>,
 ) {
     <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
     <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(
         timings,
         &amp;format!(&quot;{prefix}_tree_exists&quot;),
         entry_count.min(1),
     );
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-370">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a>, key: &amp;str, value: u64) {
-    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-76">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-374">u64_to_f64_saturating</a>(value)));
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-361">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">WorkspaceTimings</span>, key: &amp;str, value: u64) {
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-75">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-365">u64_to_f64_saturating</a>(value)));
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-374">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-365">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
     <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
     <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
-    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(low))
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(low))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-381">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
-    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-372">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-385">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-376">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
 }
 </code></pre>
 </section>

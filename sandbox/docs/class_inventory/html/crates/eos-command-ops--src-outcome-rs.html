@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>55</b><span>fields</span></div>
-  <div><b>37</b><span>methods</span></div>
+  <div><b>54</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>36</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link active" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="outcome crates/eos-operation/eos-command-ops/src/outcome.rs WorkspaceTimings ChangedPathKinds WorkspaceConflict impl WorkspaceConflict WorkspaceApiError impl WorkspaceApiError impl std :: fmt :: Display for WorkspaceApiError impl std :: error :: Error for WorkspaceApiError impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError FinalizeCommandRequest impl FinalizeCommandRequest">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link active" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="outcome crates/eos-operation/eos-command-ops/src/outcome.rs WorkspaceApiError impl WorkspaceApiError impl std :: fmt :: Display for WorkspaceApiError impl std :: error :: Error for WorkspaceApiError impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError FinalizeCommandRequest impl FinalizeCommandRequest">
   <div class="module-head">
     <div>
       <h2>src/outcome.rs</h2>
@@ -50,113 +50,71 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>3 types</span>
-      <span>6 impls</span>
+      <span>2 types</span>
+      <span>5 impls</span>
       <span>0 fns</span>
-      <span>5 methods</span>
+      <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceConflict-10" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceConflict pub pub struct WorkspaceConflict crates/eos-operation/eos-command-ops/src/outcome.rs reason String conflict_file Option &lt; String &gt; message String ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>WorkspaceConflict</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a></code>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>reason</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict_file</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-path-19"><td>associated-fn</td><td>path</td><td><code>pub fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a> (reason : &amp; str , conflict_file : &amp; str , message : &amp; str) -&gt; Self</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            reason: reason.to_owned(),
-            conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
-            message: message.to_owned(),
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table>
-
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:10</p>
-</article><article id="item-struct-WorkspaceApiError-29" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceApiError pub pub struct WorkspaceApiError crates/eos-operation/eos-command-ops/src/outcome.rs 0 String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceApiError-6" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceApiError pub pub struct WorkspaceApiError crates/eos-operation/eos-command-ops/src/outcome.rs 0 String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkspaceApiError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a></code>
   <div class="tags"><span>cfg: target_os</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-35"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a> (_kind : &amp; str , message : String) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-12"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a> (_kind : &amp; str , message : String) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(_kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(message)
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a></code></summary><table><tbody><tr id="method-fmt-43"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-fmt-43">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a></code></summary><table><tbody><tr id="method-fmt-20"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-fmt-20">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-fmt-20">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.write_str(&amp;<span class="rs-self">self</span>.0)
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl std :: error :: Error for <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a></code></summary><table><tbody></tbody></table></details></div>
+</details></td></tr></tbody></table></details><details><summary><code>impl std :: error :: Error for <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a></code></summary><table><tbody></tbody></table></details></div>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:29</p>
-</article><article id="item-struct-FinalizeCommandRequest-58" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FinalizeCommandRequest pub pub struct FinalizeCommandRequest crates/eos-operation/eos-command-ops/src/outcome.rs runner_result Option &lt; Value &gt; command_elapsed_s f64 status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:6</p>
+</article><article id="item-struct-FinalizeCommandRequest-35" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FinalizeCommandRequest pub pub struct FinalizeCommandRequest crates/eos-operation/eos-command-ops/src/outcome.rs runner_result Option &lt; Value &gt; command_elapsed_s f64 status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>FinalizeCommandRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a></code>
   <div class="tags"><span>cfg: target_os</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>command_elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-command-succeeded-78"><td>method</td><td>command_succeeded</td><td><code>pub fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a> (&amp; self) -&gt; bool</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>command_elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-command-succeeded-55"><td>method</td><td>command_succeeded</td><td><code>pub fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a> (&amp; self) -&gt; bool</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
         <span class="rs-self">self</span>.status == &quot;ok&quot; &amp;&amp; <span class="rs-self">self</span>.exit_code == <span class="rs-type">Some</span>(0)
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:58</p>
-</article><div class="group-label">Aliases</div><article id="item-type-WorkspaceTimings-6" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WorkspaceTimings pub pub type WorkspaceTimings = BTreeMap &lt; String , Value &gt; crates/eos-operation/eos-command-ops/src/outcome.rs  ">
-  <div class="item-head">
-    <span class="kind">type</span>
-    <h3>WorkspaceTimings</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> = BTreeMap &lt; String , Value &gt;</code>
-  <div class="tags"></div>
-
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:6</p>
-</article><article id="item-type-ChangedPathKinds-8" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type ChangedPathKinds pub pub type ChangedPathKinds = BTreeMap &lt; String , String &gt; crates/eos-operation/eos-command-ops/src/outcome.rs  ">
-  <div class="item-head">
-    <span class="kind">type</span>
-    <h3>ChangedPathKinds</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a> = BTreeMap &lt; String , String &gt;</code>
-  <div class="tags"></div>
-
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:8</p>
-</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-From---WorkspaceApiError---for-eos-command-session----CommandSessionError-51" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError private impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError crates/eos-operation/eos-command-ops/src/outcome.rs  from fn from (error : WorkspaceApiError) -&gt; Self">
+  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:35</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-From---WorkspaceApiError---for-eos-command-session----CommandSessionError-28" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError private impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError crates/eos-operation/eos-command-ops/src/outcome.rs  from fn from (error : WorkspaceApiError) -&gt; Self">
   <div class="item-head">
     <span class="kind">impl</span>
     <h3>impl From &lt; WorkspaceApiError &gt; for eos_command_session :: CommandSessionError</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">impl From &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt; for eos_command_session :: CommandSessionError</code>
+  <code class="signature">impl From &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt; for eos_command_session :: CommandSessionError</code>
   <div class="tags"><span>cfg: target_os</span><span>impl</span><span>trait-impl</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-from-53"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a> (error : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>) -&gt; Self</code><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-from-30"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a> (error : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(error: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(error: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">Workspace</span>(error.to_string())
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:51</p>
+  <p class="source">crates/eos-operation/eos-command-ops/src/outcome.rs:28</p>
 </article></div>
 </section></div>
 </main>
@@ -165,40 +123,17 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-operation/eos-command-ops/src/outcome.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
-
-<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+  <pre class="file-source"><code><span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-6">WorkspaceTimings</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;;
-
-<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-8">ChangedPathKinds</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;;
-
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a> {
-    <span class="rs-kw">pub</span> reason: <span class="rs-type">String</span>,
-    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict_file: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-10">WorkspaceConflict</a> {
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            reason: reason.to_owned(),
-            conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
-            message: message.to_owned(),
-        }
-    }
-}
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_operation_core::{<span class="rs-type">ChangedPathKinds</span>, <span class="rs-type">WorkspaceConflict</span>, <span class="rs-type">WorkspaceTimings</span>};
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>(<span class="rs-type">String</span>);
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>(<span class="rs-type">String</span>);
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(_kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>(message)
@@ -206,25 +141,25 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-fmt-43">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-fmt-20">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
         f.write_str(&amp;<span class="rs-self">self</span>.0)
     }
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> std::error::<span class="rs-type">Error</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {}
+<span class="rs-kw">impl</span> std::error::<span class="rs-type">Error</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {}
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; <span class="rs-kw">for</span> eos_command_session::<span class="rs-type">CommandSessionError</span> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-53">from</a>(error: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>) -&gt; <span class="rs-self">Self</span> {
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; <span class="rs-kw">for</span> eos_command_session::<span class="rs-type">CommandSessionError</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-30">from</a>(error: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span>::<span class="rs-type">Workspace</span>(error.to_string())
     }
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> {
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
     <span class="rs-kw">pub</span> runner_result: <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;,
     #[serde(default)]
@@ -241,9 +176,9 @@
 }
 
 #[cfg(target_os = &quot;linux&quot;)]
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-58">FinalizeCommandRequest</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-35">FinalizeCommandRequest</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-78">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-55">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
         <span class="rs-self">self</span>.status == &quot;ok&quot; &amp;&amp; <span class="rs-self">self</span>.exit_code == <span class="rs-type">Some</span>(0)
     }
 }

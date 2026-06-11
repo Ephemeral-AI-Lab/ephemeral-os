@@ -42,7 +42,7 @@ pub enum DaemonError {
     Plugin(#[from] eos_plugin::PluginError),
 
     #[error(transparent)]
-    Isolated(#[from] eos_isolated_workspace::IsolatedError),
+    Isolated(#[from] eos_workspace::IsolatedError),
 }
 
 impl DaemonError {

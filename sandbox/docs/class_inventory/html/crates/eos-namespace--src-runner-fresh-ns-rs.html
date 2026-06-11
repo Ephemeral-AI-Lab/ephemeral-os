@@ -223,13 +223,13 @@
     mount_s: f64,
     run_start: <span class="rs-type">Instant</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-mod-rs.html#item-struct-RunResult-109">RunResult</a>, <a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
-    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-plugin-service-argv-15">plugin_service_argv</a>(request)?;
-    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-80">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-plugin-service-argv-10">plugin_service_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-73">shell_cwd</a>(request)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-namespace.html#method-new-58">new</a>(&amp;argv[0]);
     command
         .args(&amp;argv[1..])
         .current_dir(cwd)
-        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-123">command_environment</a>(&amp;request.tool_call.args))
+        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-114">command_environment</a>(&amp;request.tool_call.args))
         .stdin(<span class="rs-type">Stdio</span>::null())
         .stdout(<span class="rs-type">Stdio</span>::null())
         .stderr(<span class="rs-type">Stdio</span>::null())
@@ -237,7 +237,7 @@
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)?;
     <span class="rs-kw">let</span> child_pid = <span class="rs-type">Pid</span>::from_child(&amp;child);
-    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-21">wait_for_child</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-13">wait_for_child</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
         <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
         <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
         <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
@@ -279,8 +279,8 @@
     run_start: <span class="rs-type">Instant</span>,
     hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-mod-rs.html#item-struct-RunResult-109">RunResult</a>, <a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
-    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-argv-52">shell_argv</a>(request)?;
-    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-80">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-argv-46">shell_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-73">shell_cwd</a>(request)?;
     <span class="rs-comment">// Open a handle to the real /proc before the mount mask hides it, so the</span>
     <span class="rs-comment">// scope-wait can still enumerate same-pgid background processes even though</span>
     <span class="rs-comment">// the model shell sees an empty masked /proc.</span>
@@ -298,13 +298,13 @@
         .args(&amp;argv[1..])
         .current_dir(cwd)
         .env_clear()
-        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-123">command_environment</a>(&amp;request.tool_call.args))
+        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-114">command_environment</a>(&amp;request.tool_call.args))
         .stdin(<span class="rs-type">Stdio</span>::inherit())
         .stdout(<span class="rs-type">Stdio</span>::inherit())
         .stderr(<span class="rs-type">Stdio</span>::inherit());
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)?;
-    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-41">wait_for_command_execution_scope</a>(
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-32">wait_for_command_execution_scope</a>(
         &amp;<span class="rs-kw">mut</span> child,
         request.timeout_seconds,
         proc_dir.as_ref().map(std::os::fd::<span class="rs-type">AsFd</span>::as_fd),
@@ -573,13 +573,13 @@
     mount_s: f64,
     run_start: <span class="rs-type">Instant</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-mod-rs.html#item-struct-RunResult-109">RunResult</a>, <a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
-    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-plugin-service-argv-15">plugin_service_argv</a>(request)?;
-    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-80">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-plugin-service-argv-10">plugin_service_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-73">shell_cwd</a>(request)?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-namespace.html#method-new-58">new</a>(&amp;argv[0]);
     command
         .args(&amp;argv[1..])
         .current_dir(cwd)
-        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-123">command_environment</a>(&amp;request.tool_call.args))
+        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-114">command_environment</a>(&amp;request.tool_call.args))
         .stdin(<span class="rs-type">Stdio</span>::null())
         .stdout(<span class="rs-type">Stdio</span>::null())
         .stderr(<span class="rs-type">Stdio</span>::null())
@@ -587,7 +587,7 @@
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)?;
     <span class="rs-kw">let</span> child_pid = <span class="rs-type">Pid</span>::from_child(&amp;child);
-    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-21">wait_for_child</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-child-13">wait_for_child</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
         <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
         <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
         <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
@@ -616,8 +616,8 @@
     run_start: <span class="rs-type">Instant</span>,
     hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-mod-rs.html#item-struct-RunResult-109">RunResult</a>, <a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>&gt; {
-    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-argv-52">shell_argv</a>(request)?;
-    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-80">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-argv-46">shell_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-shell-cwd-73">shell_cwd</a>(request)?;
     <span class="rs-comment">// Open a handle to the real /proc before the mount mask hides it, so the</span>
     <span class="rs-comment">// scope-wait can still enumerate same-pgid background processes even though</span>
     <span class="rs-comment">// the model shell sees an empty masked /proc.</span>
@@ -635,13 +635,13 @@
         .args(&amp;argv[1..])
         .current_dir(cwd)
         .env_clear()
-        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-123">command_environment</a>(&amp;request.tool_call.args))
+        .envs(<a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-command-rs.html#item-fn-command-environment-114">command_environment</a>(&amp;request.tool_call.args))
         .stdin(<span class="rs-type">Stdio</span>::inherit())
         .stdout(<span class="rs-type">Stdio</span>::inherit())
         .stderr(<span class="rs-type">Stdio</span>::inherit());
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-namespace--src-runner-mod-rs.html#item-enum-RunnerError-19">RunnerError</a>::<span class="rs-type">Child</span>)?;
-    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-41">wait_for_command_execution_scope</a>(
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-namespace--src-runner-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-32">wait_for_command_execution_scope</a>(
         &amp;<span class="rs-kw">mut</span> child,
         request.timeout_seconds,
         proc_dir.as_ref().map(std::os::fd::<span class="rs-type">AsFd</span>::as_fd),

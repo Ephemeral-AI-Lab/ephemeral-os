@@ -11,11 +11,12 @@
 //! command execution (PTY and runner-protocol concerns live in their own
 //! crates).
 
-mod capture;
 mod workspace;
 
-pub use crate::shared::{path_changes_to_wire, OverlayDirs, OverlayDirsGuard, TreeResourceStats};
-pub use capture::{capture_upperdir, CapturedChanges};
+pub use crate::shared::{
+    capture_upperdir, path_changes_to_wire, CapturedChanges, OverlayDirs, OverlayDirsGuard,
+    TreeResourceStats,
+};
 pub use workspace::EphemeralWorkspace;
 
 use std::path::PathBuf;
@@ -29,9 +30,6 @@ pub enum EphemeralWorkspaceError {
     /// Fresh writable directory allocation failed.
     #[error("dir allocation failed at {}: {reason}", path.display())]
     DirAllocation { path: PathBuf, reason: String },
-    /// Upperdir capture failed.
-    #[error("capture failed: {reason}")]
-    CaptureFailed { reason: String },
 }
 
 impl From<shared::DirAllocationError> for EphemeralWorkspaceError {

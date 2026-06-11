@@ -19,11 +19,11 @@ pub(crate) mod request_args;
 pub(crate) mod response;
 #[path = "runtime/services.rs"]
 pub(crate) mod runtime_services;
-#[path = "runtime/workspace.rs"]
-pub(crate) mod workspace_runtime;
 #[path = "transport/server.rs"]
 pub(crate) mod server;
 pub mod wire;
+#[path = "runtime/workspace.rs"]
+pub(crate) mod workspace_runtime;
 
 pub use context::DispatchContext;
 pub use dispatcher::OpTable;

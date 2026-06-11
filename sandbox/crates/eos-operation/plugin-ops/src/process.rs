@@ -14,9 +14,9 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use crate::route::{PluginProcessSpec, ENV_PLUGIN_WORKSPACE_MOUNTED};
-use eos_isolated_workspace::NsRunnerLauncher;
 use eos_namespace::protocol::{Intent, RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use eos_plugin::PluginError;
+use eos_workspace::NsRunnerLauncher;
 use serde::Serialize;
 use serde_json::json;
 

@@ -198,12 +198,12 @@ fn wait_for_socket(root: &Path) -> std::io::Result<PathBuf> {
 /// Overlay-free spawns never reach the launcher; fail loudly if one does.
 struct NoLaunch;
 
-impl eos_isolated_workspace::NsRunnerLauncher for NoLaunch {
+impl eos_workspace::NsRunnerLauncher for NoLaunch {
     fn run(
         &self,
         _request: &eos_namespace::protocol::RunRequest,
-    ) -> Result<eos_namespace::protocol::RunResult, eos_isolated_workspace::LaunchError> {
-        Err(eos_isolated_workspace::LaunchError::Failed(
+    ) -> Result<eos_namespace::protocol::RunResult, eos_workspace::LaunchError> {
+        Err(eos_workspace::LaunchError::Failed(
             "no launcher in this test".to_owned(),
         ))
     }
@@ -211,8 +211,8 @@ impl eos_isolated_workspace::NsRunnerLauncher for NoLaunch {
     fn spawn_detached(
         &self,
         _request: &eos_namespace::protocol::RunRequest,
-    ) -> Result<std::process::Child, eos_isolated_workspace::LaunchError> {
-        Err(eos_isolated_workspace::LaunchError::Failed(
+    ) -> Result<std::process::Child, eos_workspace::LaunchError> {
+        Err(eos_workspace::LaunchError::Failed(
             "no launcher in this test".to_owned(),
         ))
     }
@@ -222,7 +222,7 @@ impl eos_isolated_workspace::NsRunnerLauncher for NoLaunch {
         _target_pid: u32,
         _request: &eos_namespace::protocol::RunRequest,
         _timeout: Duration,
-    ) -> Result<(), eos_isolated_workspace::LaunchError> {
+    ) -> Result<(), eos_workspace::LaunchError> {
         Ok(())
     }
 }

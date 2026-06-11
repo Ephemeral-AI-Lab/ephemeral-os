@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>55</b><span>fields</span></div>
-  <div><b>37</b><span>methods</span></div>
+  <div><b>54</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>36</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link active" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="prepare crates/eos-operation/eos-command-ops/src/prepare.rs PreparedCommand PrepareInputs prepare_ephemeral prepare_isolated tool_call finish_prepare ns_fds_from_map prepare_error">
   <div class="module-head">
     <div>
@@ -78,34 +78,36 @@
   <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>caller_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(crate)</td><td>command_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(crate)</td><td>invocation_id</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(crate)</td><td>cmd</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub(crate)</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr><tr><td>pub(crate)</td><td>session_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub(crate)</td><td>workspace_label</td><td><code>&amp; &#x27;a str</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:20</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-prepare-ephemeral-30" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_ephemeral pub(crate) pub(crate) fn prepare_ephemeral (inputs : PrepareInputs &lt; '_ &gt; , plan : MountPlan &lt; '_ &gt; , scratch_run_dir : &amp; Path ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-prepare-ephemeral-30" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_ephemeral pub(crate) pub(crate) fn prepare_ephemeral (inputs : PrepareInputs &lt; '_ &gt; , workspace_root : &amp; Path , layer_paths : &amp; [PathBuf] , dirs : &amp; OverlayDirs , scratch_run_dir : &amp; Path ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepare_ephemeral</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-ephemeral-30">prepare_ephemeral</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , plan : MountPlan &lt; &#x27;_ &gt; , scratch_run_dir : &amp; Path ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-ephemeral-30">prepare_ephemeral</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , workspace_root : &amp; Path , layer_paths : &amp; [PathBuf] , dirs : &amp; OverlayDirs , scratch_run_dir : &amp; Path ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-ephemeral-30">prepare_ephemeral</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
-    plan: <span class="rs-type">MountPlan</span>&lt;&#x27;_&gt;,
+    workspace_root: &amp;<span class="rs-type">Path</span>,
+    layer_paths: &amp;[<span class="rs-type">PathBuf</span>],
+    dirs: &amp;<span class="rs-type">OverlayDirs</span>,
     scratch_run_dir: &amp;<span class="rs-type">Path</span>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(&amp;inputs);
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(&amp;inputs);
     <span class="rs-kw">let</span> run_request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
         tool_call,
-        workspace_root: <span class="rs-type">WorkspaceRoot</span>(plan.workspace_root.to_path_buf()),
-        layer_paths: plan.layer_paths.to_vec(),
-        upperdir: <span class="rs-type">Some</span>(plan.upperdir.to_path_buf()),
-        workdir: <span class="rs-type">Some</span>(plan.workdir.to_path_buf()),
+        workspace_root: <span class="rs-type">WorkspaceRoot</span>(workspace_root.to_path_buf()),
+        layer_paths: layer_paths.to_vec(),
+        upperdir: <span class="rs-type">Some</span>(dirs.upperdir.clone()),
+        workdir: <span class="rs-type">Some</span>(dirs.workdir.clone()),
         ns_fds: <span class="rs-type">None</span>,
         cgroup_path: <span class="rs-type">None</span>,
         timeout_seconds: inputs.timeout_seconds,
     };
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(
         inputs,
         run_request,
         scratch_run_dir.join(&quot;command-runner-request.json&quot;),
@@ -116,22 +118,22 @@
 </details>
 
   <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:30</p>
-</article><article id="item-fn-prepare-isolated-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_isolated pub(crate) pub(crate) fn prepare_isolated (inputs : PrepareInputs &lt; '_ &gt; , binding : &amp; CommandBinding ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+</article><article id="item-fn-prepare-isolated-57" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_isolated pub(crate) pub(crate) fn prepare_isolated (inputs : PrepareInputs &lt; '_ &gt; , binding : &amp; WorkspaceExecutionBinding ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepare_isolated</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-55">prepare_isolated</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , binding : &amp; <a class="symbol-link" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-57">prepare_isolated</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , binding : &amp; WorkspaceExecutionBinding ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-55">prepare_isolated</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-57">prepare_isolated</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
-    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-121">ns_fds_from_map</a>(&amp;binding.ns_fds);
-    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(&amp;inputs);
+    binding: &amp;<span class="rs-type">WorkspaceExecutionBinding</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-123">ns_fds_from_map</a>(&amp;binding.ns_fds);
+    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(&amp;inputs);
     <span class="rs-kw">let</span> run_request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-kw">if</span> ns_fds.is_some() {
             <span class="rs-type">RunMode</span>::<span class="rs-type">SetNs</span>
@@ -149,23 +151,23 @@
     };
     <span class="rs-kw">let</span> request_path = inputs.session_dir.join(&quot;runner-request.json&quot;);
     <span class="rs-kw">let</span> output_path = inputs.session_dir.join(&quot;runner-result.json&quot;);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(inputs, run_request, request_path, output_path)
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(inputs, run_request, request_path, output_path)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:55</p>
-</article><article id="item-fn-tool-call-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_call private fn tool_call (inputs : &amp; PrepareInputs &lt; '_ &gt;) -&gt; ToolCall crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:57</p>
+</article><article id="item-fn-tool-call-83" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_call private fn tool_call (inputs : &amp; PrepareInputs &lt; '_ &gt;) -&gt; ToolCall crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_call</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a> (inputs : &amp; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt;) -&gt; ToolCall</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a> (inputs : &amp; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt;) -&gt; ToolCall</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(inputs: &amp;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">ToolCall</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(inputs: &amp;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">ToolCall</span> {
     <span class="rs-type">ToolCall</span> {
         invocation_id: inputs.invocation_id.to_owned(),
         caller_id: inputs.caller_id.to_owned(),
@@ -178,23 +180,23 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:81</p>
-</article><article id="item-fn-finish-prepare-92" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finish_prepare private fn finish_prepare (inputs : PrepareInputs &lt; '_ &gt; , run_request : RunRequest , request_path : PathBuf , output_path : PathBuf ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:83</p>
+</article><article id="item-fn-finish-prepare-94" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finish_prepare private fn finish_prepare (inputs : PrepareInputs &lt; '_ &gt; , run_request : RunRequest , request_path : PathBuf , output_path : PathBuf ,) -&gt; Result &lt; PreparedCommand , WorkspaceApiError &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>finish_prepare</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , run_request : RunRequest , request_path : PathBuf , output_path : PathBuf ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a> (inputs : <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a> &lt; &#x27;_ &gt; , run_request : RunRequest , request_path : PathBuf , output_path : PathBuf ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
     run_request: <span class="rs-type">RunRequest</span>,
     request_path: <span class="rs-type">PathBuf</span>,
     output_path: <span class="rs-type">PathBuf</span>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
     std::fs::create_dir_all(&amp;inputs.session_dir).map_err(prepare_error)?;
     std::fs::write(
         inputs.session_dir.join(&quot;metadata.json&quot;),
@@ -220,22 +222,22 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:92</p>
-</article><article id="item-fn-ns-fds-from-map-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ns_fds_from_map private fn ns_fds_from_map (map : &amp; std :: collections :: HashMap &lt; String , i32 &gt;) -&gt; Option &lt; NsFds &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:94</p>
+</article><article id="item-fn-ns-fds-from-map-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ns_fds_from_map private fn ns_fds_from_map (map : &amp; std :: collections :: HashMap &lt; String , i32 &gt;) -&gt; Option &lt; NsFds &gt; crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ns_fds_from_map</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-121">ns_fds_from_map</a> (map : &amp; std :: collections :: HashMap &lt; String , i32 &gt;) -&gt; Option &lt; NsFds &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-123">ns_fds_from_map</a> (map : &amp; std :: collections :: HashMap &lt; String , i32 &gt;) -&gt; Option &lt; NsFds &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-121">ns_fds_from_map</a>(map: &amp;std::collections::<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">NsFds</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-123">ns_fds_from_map</a>(map: &amp;std::collections::<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">NsFds</span>&gt; {
     <span class="rs-kw">if</span> map.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
-    <span class="rs-kw">let</span> fd = |name: &amp;str| map.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(name).copied().map(eos_namespace::protocol::<span class="rs-type">Fd</span>);
+    <span class="rs-kw">let</span> fd = |name: &amp;str| map.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(name).copied().map(eos_namespace::protocol::<span class="rs-type">Fd</span>);
     <span class="rs-type">Some</span>(<span class="rs-type">NsFds</span> {
         user: fd(&quot;user&quot;),
         mnt: fd(&quot;mnt&quot;),
@@ -246,24 +248,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:121</p>
-</article><article id="item-fn-prepare-error-134" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_error private fn prepare_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-operation/eos-command-ops/src/prepare.rs  ">
+  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:123</p>
+</article><article id="item-fn-prepare-error-136" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn prepare_error private fn prepare_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-operation/eos-command-ops/src/prepare.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>prepare_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-134">prepare_error</a> (error : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-136">prepare_error</a> (error : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-134">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_prepare_failed&quot;, error.to_string())
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-136">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_prepare_failed&quot;, error.to_string())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:134</p>
+  <p class="source">crates/eos-operation/eos-command-ops/src/prepare.rs:136</p>
 </article></div>
 </section></div>
 </main>
@@ -274,14 +276,14 @@
   </div>
   <pre class="file-source"><code><span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 
-<span class="rs-kw">use</span> eos_ephemeral_workspace::<span class="rs-type">MountPlan</span>;
 <span class="rs-kw">use</span> eos_namespace::protocol::{
     <span class="rs-type">Intent</span>, <span class="rs-type">NsFds</span>, <span class="rs-type">RunMode</span>, <span class="rs-type">RunRequest</span>, <span class="rs-type">RunnerVerb</span>, <span class="rs-type">ToolCall</span>, <span class="rs-type">WorkspaceRoot</span>,
 };
+<span class="rs-kw">use</span> eos_operation_core::<span class="rs-type">WorkspaceExecutionBinding</span>;
+<span class="rs-kw">use</span> eos_workspace::<span class="rs-type">OverlayDirs</span>;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcome::<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcome::<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a> {
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) run_request: <span class="rs-type">Value</span>,
@@ -303,22 +305,24 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-ephemeral-30">prepare_ephemeral</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
-    plan: <span class="rs-type">MountPlan</span>&lt;&#x27;_&gt;,
+    workspace_root: &amp;<span class="rs-type">Path</span>,
+    layer_paths: &amp;[<span class="rs-type">PathBuf</span>],
+    dirs: &amp;<span class="rs-type">OverlayDirs</span>,
     scratch_run_dir: &amp;<span class="rs-type">Path</span>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(&amp;inputs);
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(&amp;inputs);
     <span class="rs-kw">let</span> run_request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
         tool_call,
-        workspace_root: <span class="rs-type">WorkspaceRoot</span>(plan.workspace_root.to_path_buf()),
-        layer_paths: plan.layer_paths.to_vec(),
-        upperdir: <span class="rs-type">Some</span>(plan.upperdir.to_path_buf()),
-        workdir: <span class="rs-type">Some</span>(plan.workdir.to_path_buf()),
+        workspace_root: <span class="rs-type">WorkspaceRoot</span>(workspace_root.to_path_buf()),
+        layer_paths: layer_paths.to_vec(),
+        upperdir: <span class="rs-type">Some</span>(dirs.upperdir.clone()),
+        workdir: <span class="rs-type">Some</span>(dirs.workdir.clone()),
         ns_fds: <span class="rs-type">None</span>,
         cgroup_path: <span class="rs-type">None</span>,
         timeout_seconds: inputs.timeout_seconds,
     };
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(
         inputs,
         run_request,
         scratch_run_dir.join(&quot;command-runner-request.json&quot;),
@@ -326,12 +330,12 @@
     )
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-55">prepare_isolated</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-isolated-57">prepare_isolated</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
-    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-6">CommandBinding</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
-    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-121">ns_fds_from_map</a>(&amp;binding.ns_fds);
-    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(&amp;inputs);
+    binding: &amp;<span class="rs-type">WorkspaceExecutionBinding</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> ns_fds = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-123">ns_fds_from_map</a>(&amp;binding.ns_fds);
+    <span class="rs-kw">let</span> tool_call = <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(&amp;inputs);
     <span class="rs-kw">let</span> run_request = <span class="rs-type">RunRequest</span> {
         mode: <span class="rs-kw">if</span> ns_fds.is_some() {
             <span class="rs-type">RunMode</span>::<span class="rs-type">SetNs</span>
@@ -349,10 +353,10 @@
     };
     <span class="rs-kw">let</span> request_path = inputs.session_dir.join(&quot;runner-request.json&quot;);
     <span class="rs-kw">let</span> output_path = inputs.session_dir.join(&quot;runner-result.json&quot;);
-    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(inputs, run_request, request_path, output_path)
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(inputs, run_request, request_path, output_path)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-81">tool_call</a>(inputs: &amp;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">ToolCall</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-tool-call-83">tool_call</a>(inputs: &amp;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">ToolCall</span> {
     <span class="rs-type">ToolCall</span> {
         invocation_id: inputs.invocation_id.to_owned(),
         caller_id: inputs.caller_id.to_owned(),
@@ -363,12 +367,12 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-92">finish_prepare</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-finish-prepare-94">finish_prepare</a>(
     inputs: <a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PrepareInputs-20">PrepareInputs</a>&lt;&#x27;_&gt;,
     run_request: <span class="rs-type">RunRequest</span>,
     request_path: <span class="rs-type">PathBuf</span>,
     output_path: <span class="rs-type">PathBuf</span>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-prepare-rs.html#item-struct-PreparedCommand-12">PreparedCommand</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>&gt; {
     std::fs::create_dir_all(&amp;inputs.session_dir).map_err(prepare_error)?;
     std::fs::write(
         inputs.session_dir.join(&quot;metadata.json&quot;),
@@ -392,11 +396,11 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-121">ns_fds_from_map</a>(map: &amp;std::collections::<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">NsFds</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-ns-fds-from-map-123">ns_fds_from_map</a>(map: &amp;std::collections::<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, i32&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">NsFds</span>&gt; {
     <span class="rs-kw">if</span> map.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">None</span>;
     }
-    <span class="rs-kw">let</span> fd = |name: &amp;str| map.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(name).copied().map(eos_namespace::protocol::<span class="rs-type">Fd</span>);
+    <span class="rs-kw">let</span> fd = |name: &amp;str| map.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(name).copied().map(eos_namespace::protocol::<span class="rs-type">Fd</span>);
     <span class="rs-type">Some</span>(<span class="rs-type">NsFds</span> {
         user: fd(&quot;user&quot;),
         mnt: fd(&quot;mnt&quot;),
@@ -405,8 +409,8 @@
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-134">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a> {
-    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-29">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_prepare_failed&quot;, error.to_string())
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-prepare-rs.html#item-fn-prepare-error-136">prepare_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-6">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-41">new</a>(&quot;command_prepare_failed&quot;, error.to_string())
 }
 </code></pre>
 </section>

@@ -6,6 +6,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use serde_json::{json, Value};
 
 use crate::isolated_workspace::error::IsolatedError;
+use crate::shared::{create_overlay_dirs, directory_file_bytes, record_phase_ms};
 
 use super::{IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle};
 
@@ -31,31 +32,31 @@ impl IsolatedManager {
         handle.holder_pid = self
             .runtime
             .spawn_ns_holder(handle, self.caps.setup_timeout_s)?;
-        record_phase(&mut phases_ms, "spawn_ns_holder", phase_start);
+        record_phase_ms(&mut phases_ms, "spawn_ns_holder", phase_start);
         phase_start = Instant::now();
         handle.ns_fds = self.runtime.open_ns_fds(handle.holder_pid)?;
-        record_phase(&mut phases_ms, "open_ns_fds", phase_start);
+        record_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
         phase_start = Instant::now();
         self.network.initialize()?;
         handle.veth = Some(
             self.network
                 .install_veth(&handle.workspace_id.0, handle.holder_pid)?,
         );
-        record_phase(&mut phases_ms, "install_veth", phase_start);
+        record_phase_ms(&mut phases_ms, "install_veth", phase_start);
         phase_start = Instant::now();
         self.runtime
             .mount_overlay(handle, &handle.layer_paths.clone())?;
-        record_phase(&mut phases_ms, "mount_overlay", phase_start);
+        record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
         phase_start = Instant::now();
         let _dns_fallback_applied = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;
-        record_phase(&mut phases_ms, "configure_dns", phase_start);
+        record_phase_ms(&mut phases_ms, "configure_dns", phase_start);
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;
         phase_start = Instant::now();
         let cgroup_path = self.runtime.create_cgroup(handle)?;
-        record_phase(&mut phases_ms, "create_cgroup", phase_start);
+        record_phase_ms(&mut phases_ms, "create_cgroup", phase_start);
         if !cgroup_path.as_os_str().is_empty() {
             handle.cgroup_path = Some(cgroup_path);
         }
@@ -70,7 +71,7 @@ impl IsolatedManager {
         if handle.holder_pid > 0 {
             let _ = self.runtime.kill_holder(handle.holder_pid, 1.0);
         }
-        let _ = std::fs::remove_dir_all(&handle.scratch_dir);
+        let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
     }
 
     pub(super) fn teardown_handle(
@@ -88,21 +89,21 @@ impl IsolatedManager {
         } else {
             None
         };
-        record_phase(&mut phases_ms, "kill_holder", phase_start);
+        record_phase_ms(&mut phases_ms, "kill_holder", phase_start);
         close_handle_fds(handle);
         let phase_start = Instant::now();
         if let Some(veth) = handle.veth.as_ref() {
             self.network.teardown_veth(veth);
         }
-        record_phase(&mut phases_ms, "teardown_veth", phase_start);
+        record_phase_ms(&mut phases_ms, "teardown_veth", phase_start);
         let phase_start = Instant::now();
         if let Some(cgroup_path) = handle.cgroup_path.as_ref() {
             let _ = std::fs::remove_dir(cgroup_path);
         }
-        record_phase(&mut phases_ms, "cgroup_rmdir", phase_start);
+        record_phase_ms(&mut phases_ms, "cgroup_rmdir", phase_start);
         let phase_start = Instant::now();
-        let _ = std::fs::remove_dir_all(&handle.scratch_dir);
-        record_phase(&mut phases_ms, "rmtree_scratch", phase_start);
+        let _ = std::fs::remove_dir_all(&handle.dirs.run_dir);
+        record_phase_ms(&mut phases_ms, "rmtree_scratch", phase_start);
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
@@ -121,14 +122,14 @@ impl IsolatedManager {
                 .as_ref()
                 .map(|path| path.to_string_lossy().into_owned()),
             "cgroup_exists_after": cgroup_exists_after,
-            "scratch_dir": handle.scratch_dir.to_string_lossy(),
-            "scratch_exists_after": handle.scratch_dir.exists(),
-            "upperdir_exists_after": handle.upperdir.exists(),
-            "workdir_exists_after": handle.workdir.exists(),
+            "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
+            "scratch_exists_after": handle.dirs.run_dir.exists(),
+            "upperdir_exists_after": handle.dirs.upperdir.exists(),
+            "workdir_exists_after": handle.dirs.workdir.exists(),
             "mountinfo_reference_count_after": mountinfo_reference_count(&[
-                &handle.scratch_dir,
-                &handle.upperdir,
-                &handle.workdir,
+                &handle.dirs.run_dir,
+                &handle.dirs.upperdir,
+                &handle.dirs.workdir,
             ]),
         });
         (inspection, phases_ms)
@@ -170,14 +171,10 @@ impl IsolatedManager {
         self.check_host_capacity()?;
 
         let workspace_id = IsolatedWorkspaceId(next_handle_id());
-        let scratch_dir = self.scratch_root.join(&workspace_id.0);
-        let upperdir = scratch_dir.join("upper");
-        let workdir = scratch_dir.join("work");
-        std::fs::create_dir_all(&upperdir).map_err(|err| IsolatedError::SetupFailed {
-            step: format!("upperdir: {err}"),
-        })?;
-        std::fs::create_dir_all(&workdir).map_err(|err| IsolatedError::SetupFailed {
-            step: format!("workdir: {err}"),
+        let dirs = create_overlay_dirs(self.scratch_root.join(&workspace_id.0)).map_err(|err| {
+            IsolatedError::SetupFailed {
+                step: format!("{}: {}", err.path.display(), err.reason),
+            }
         })?;
 
         let now = monotonic_seconds();
@@ -188,9 +185,7 @@ impl IsolatedManager {
             manifest_version: snapshot.manifest_version,
             manifest_root_hash: snapshot.manifest_root_hash,
             workspace_root,
-            scratch_dir,
-            upperdir,
-            workdir,
+            dirs,
             layer_paths: snapshot.layer_paths,
             ns_fds: HashMap::new(),
             holder_pid: 0,
@@ -246,7 +241,7 @@ impl IsolatedManager {
             return Err(IsolatedError::NotOpen);
         };
         let timer = Instant::now();
-        let upperdir_bytes = directory_file_bytes(&handle.upperdir);
+        let upperdir_bytes = directory_file_bytes(&handle.dirs.upperdir);
         let (inspection, phases_ms) =
             self.teardown_handle(&handle, grace_s.unwrap_or(self.caps.exit_grace_s));
         let _ = self.persist_handles();
@@ -295,13 +290,6 @@ fn close_handle_fds(handle: &WorkspaceHandle) {
     }
 }
 
-fn record_phase(phases_ms: &mut HashMap<String, f64>, phase: &str, started_at: Instant) {
-    phases_ms.insert(
-        phase.to_owned(),
-        started_at.elapsed().as_secs_f64() * 1000.0,
-    );
-}
-
 pub(super) fn next_handle_id() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(1);
     let nanos = SystemTime::now()
@@ -314,25 +302,6 @@ pub(super) fn next_handle_id() -> String {
 pub(super) fn monotonic_seconds() -> f64 {
     static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
-}
-
-fn directory_file_bytes(path: &Path) -> u64 {
-    let mut total = 0_u64;
-    let Ok(entries) = std::fs::read_dir(path) else {
-        return 0;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let Ok(metadata) = entry.metadata() else {
-            continue;
-        };
-        if metadata.is_file() {
-            total = total.saturating_add(metadata.len());
-        } else if metadata.is_dir() {
-            total = total.saturating_add(directory_file_bytes(&path));
-        }
-    }
-    total
 }
 
 fn mountinfo_reference_count(paths: &[&Path]) -> Option<usize> {

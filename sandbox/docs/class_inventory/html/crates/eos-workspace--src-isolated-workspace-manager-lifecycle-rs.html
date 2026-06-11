@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-workspace · src/isolated_workspace/manager/lifecycle.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>21</b><span>modules</span></div>
+  <div><b>152</b><span>items</span></div>
+  <div><b>81</b><span>fields</span></div>
+  <div><b>61</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">ephemeral_workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace.html"><span>mod.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-workspace--src-ephemeral-workspace-workspace-rs.html"><span>workspace.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">isolated_workspace</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace--src-isolated-workspace-caps-rs.html"><span>caps.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">manager</span><ul class="file-tree"><li><a class="file-link active" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html"><span>mod.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-manager-recovery-rs.html"><span>recovery.rs</span><small>0/6</small></a></li></ul></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">namespace</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html"><span>mod.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-namespace-runner-launcher-rs.html"><span>runner_launcher.rs</span><small>3/8</small></a></li></ul></li><li><span class="folder">network</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace--src-isolated-workspace-network-mod-rs.html"><span>mod.rs</span><small>3/3</small></a></li><li><span class="folder">netfilter</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace--src-isolated-workspace-network-netfilter-exprs-rs.html"><span>exprs.rs</span><small>1/17</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-network-netfilter-mod-rs.html"><span>mod.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-network-netfilter-wire-rs.html"><span>wire.rs</span><small>0/30</small></a></li></ul></li><li><a class="file-link" href="eos-workspace--src-isolated-workspace-network-rtnl-rs.html"><span>rtnl.rs</span><small>0/11</small></a></li></ul></li></ul></li><li><a class="file-link" href="eos-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">shared</span><ul class="file-tree"><li><a class="file-link" href="eos-workspace--src-shared-capture-rs.html"><span>capture.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-workspace--src-shared-dirs-rs.html"><span>dirs.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-workspace--src-shared-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workspace--src-shared-timing-rs.html"><span>timing.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-workspace--src-shared-tree-rs.html"><span>tree.rs</span><small>1/3</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated_workspace::manager::lifecycle crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs ExitOutcome impl IsolatedManager close_handle_fds next_handle_id monotonic_seconds mountinfo_reference_count">
+  <div class="module-head">
+    <div>
+      <h2>src/isolated_workspace/manager/lifecycle.rs</h2>
+      <p class="path">module <code>isolated_workspace::manager::lifecycle</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>4 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ExitOutcome-13" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ExitOutcome pub pub struct ExitOutcome crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs workspace_id IsolatedWorkspaceId caller_id String lease_id String evicted_upperdir_bytes u64 lifetime_s f64 total_ms f64 phases_ms HashMap &lt; String , f64 &gt; inspection Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ExitOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_id</td><td><code><a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedWorkspaceId-25">IsolatedWorkspaceId</a></code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>lease_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>evicted_upperdir_bytes</td><td><code>u64</code></td></tr><tr><td>pub</td><td>lifetime_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>total_ms</td><td><code>f64</code></td></tr><tr><td>pub</td><td>phases_ms</td><td><code>HashMap &lt; String , f64 &gt;</code></td></tr><tr><td>pub</td><td>inspection</td><td><code>Value</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:13</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-next-handle-id-293" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_handle_id pub(super) pub(super) fn next_handle_id () -&gt; String crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>next_handle_id</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-next-handle-id-293">next_handle_id</a> () -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-next-handle-id-293">next_handle_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(1);
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    <span class="rs-kw">let</span> counter = <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>) &amp; 0x00ff_ffff;
+    format!(&quot;{counter:06x}{nanos:016x}&quot;)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:293</p>
+</article><article id="item-fn-monotonic-seconds-302" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn monotonic_seconds pub(super) pub(super) fn monotonic_seconds () -&gt; f64 crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>monotonic_seconds</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a> () -&gt; f64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:302</p>
+</article><article id="item-fn-close-handle-fds-280" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn close_handle_fds private fn close_handle_fds (handle : &amp; WorkspaceHandle) crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>close_handle_fds</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a> (handle : &amp; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>) {
+    <span class="rs-kw">for</span> fd <span class="rs-kw">in</span> handle.ns_fds.values().copied() {
+        <span class="rs-kw">if</span> fd &gt;= 0 {
+            <span class="rs-kw">let</span> _ = nix::unistd::close(fd);
+        }
+    }
+    <span class="rs-kw">for</span> fd <span class="rs-kw">in</span> [handle.readiness_fd, handle.control_fd] {
+        <span class="rs-kw">if</span> fd &gt;= 0 {
+            <span class="rs-kw">let</span> _ = nix::unistd::close(fd);
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:280</p>
+</article><article id="item-fn-mountinfo-reference-count-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mountinfo_reference_count private fn mountinfo_reference_count (paths : &amp; [&amp; Path]) -&gt; Option &lt; usize &gt; crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>mountinfo_reference_count</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-mountinfo-reference-count-307">mountinfo_reference_count</a> (paths : &amp; [&amp; Path]) -&gt; Option &lt; usize &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-mountinfo-reference-count-307">mountinfo_reference_count</a>(paths: &amp;[&amp;<span class="rs-type">Path</span>]) -&gt; <span class="rs-type">Option</span>&lt;usize&gt; {
+    <span class="rs-kw">let</span> mountinfo = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/mountinfo&quot;).ok()?;
+    <span class="rs-kw">let</span> needles = paths
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .filter(|path| !path.is_empty())
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+    <span class="rs-type">Some</span>(
+        mountinfo
+            .lines()
+            .filter(|line| needles.iter().any(|needle| line.contains(needle)))
+            .count(),
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:307</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-IsolatedManager-25" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedManager private impl IsolatedManager crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs  wire_handle pub(super) fn wire_handle (&amp; mut self , handle : &amp; mut WorkspaceHandle ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , IsolatedError &gt; rollback_partial pub(super) fn rollback_partial (&amp; mut self , handle : &amp; WorkspaceHandle) teardown_handle pub(super) fn teardown_handle (&amp; mut self , handle : &amp; WorkspaceHandle , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;) enter pub fn enter (&amp; mut self , caller_id : &amp; str , snapshot : IsolatedSnapshot ,) -&gt; Result &lt; WorkspaceHandle , IsolatedError &gt; validated_workspace_root fn validated_workspace_root (&amp; self) -&gt; Result &lt; String , IsolatedError &gt; exit pub fn exit (&amp; mut self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; ExitOutcome , IsolatedError &gt; ttl_sweep pub fn ttl_sweep (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; Vec &lt; ExitOutcome &gt;">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl IsolatedManager</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedManager-56">IsolatedManager</a></code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-wire-handle-26"><td>method</td><td>wire_handle</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-wire-handle-26">wire_handle</a> (&amp; mut self , handle : &amp; mut <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a> ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , <a class="symbol-link" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-wire-handle-26">wire_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
+        handle.holder_pid = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-spawn-ns-holder-66">spawn_ns_holder</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;spawn_ns_holder&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        handle.ns_fds = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-open-ns-fds-126">open_ns_fds</a>(handle.holder_pid)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;open_ns_fds&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#method-initialize-96">initialize</a>()?;
+        handle.veth = <span class="rs-type">Some</span>(
+            <span class="rs-self">self</span>.network
+                .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-install-veth-126">install_veth</a>(&amp;handle.workspace_id.0, handle.holder_pid)?,
+        );
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;install_veth&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-mount-overlay-153">mount_overlay</a>(handle, &amp;handle.layer_paths.clone())?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;mount_overlay&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _dns_fallback_applied = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-configure-dns-180">configure_dns</a>(handle, &amp;<span class="rs-self">self</span>.caps.fallback_dns)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;configure_dns&quot;, phase_start);
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-signal-net-ready-207">signal_net_ready</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> cgroup_path = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-create-cgroup-239">create_cgroup</a>(handle)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;create_cgroup&quot;, phase_start);
+        <span class="rs-kw">if</span> !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = <span class="rs-type">Some</span>(cgroup_path);
+        }
+        <span class="rs-type">Ok</span>(phases_ms)
+    }
+</code></pre>
+</details></td></tr><tr id="method-rollback-partial-66"><td>method</td><td>rollback_partial</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-rollback-partial-66">rollback_partial</a> (&amp; mut self , handle : &amp; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-rollback-partial-66">rollback_partial</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>) {
+        <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-teardown-veth-161">teardown_veth</a>(veth);
+        }
+        <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-kill-holder-252">kill_holder</a>(handle.holder_pid, 1.0);
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.dirs.run_dir);
+    }
+</code></pre>
+</details></td></tr><tr id="method-teardown-handle-77"><td>method</td><td>teardown_handle</td><td><code>pub(super) fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-teardown-handle-77">teardown_handle</a> (&amp; mut self , handle : &amp; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a> , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-teardown-handle-77">teardown_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>,
+        grace_s: f64,
+    ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-self">self</span>.runtime
+                .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-kill-holder-252">kill_holder</a>(handle.holder_pid, grace_s)
+                .err()
+                .map(|err| err.to_string())
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        };
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;kill_holder&quot;, phase_start);
+        <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-teardown-veth-161">teardown_veth</a>(veth);
+        }
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;teardown_veth&quot;, phase_start);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = handle.cgroup_path.as_ref() {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir(cgroup_path);
+        }
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;cgroup_rmdir&quot;, phase_start);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.dirs.run_dir);
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;rmtree_scratch&quot;, phase_start);
+        <span class="rs-kw">let</span> cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
+        <span class="rs-kw">let</span> inspection = json!({
+            &quot;handle_registered_after&quot;: <span class="rs-self">self</span>.handles.contains_key(&amp;handle.workspace_id),
+            &quot;agent_registered_after&quot;: <span class="rs-self">self</span>.by_caller.contains_key(&amp;handle.caller_id),
+            &quot;open_handle_count_after&quot;: <span class="rs-self">self</span>.handles.len(),
+            &quot;open_agent_count_after&quot;: <span class="rs-self">self</span>.by_caller.len(),
+            &quot;holder_pid&quot;: handle.holder_pid,
+            &quot;holder_kill_error&quot;: holder_kill_error,
+            &quot;ns_fd_count&quot;: handle.ns_fds.len(),
+            &quot;readiness_fd_was_open&quot;: handle.readiness_fd &gt;= 0,
+            &quot;control_fd_was_open&quot;: handle.control_fd &gt;= 0,
+            &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+            &quot;cgroup_path&quot;: handle
+                .cgroup_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            &quot;cgroup_exists_after&quot;: cgroup_exists_after,
+            &quot;scratch_dir&quot;: handle.dirs.run_dir.to_string_lossy(),
+            &quot;scratch_exists_after&quot;: handle.dirs.run_dir.exists(),
+            &quot;upperdir_exists_after&quot;: handle.dirs.upperdir.exists(),
+            &quot;workdir_exists_after&quot;: handle.dirs.workdir.exists(),
+            &quot;mountinfo_reference_count_after&quot;: <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-mountinfo-reference-count-307">mountinfo_reference_count</a>(&amp;[
+                &amp;handle.dirs.run_dir,
+                &amp;handle.dirs.upperdir,
+                &amp;handle.dirs.workdir,
+            ]),
+        });
+        (inspection, phases_ms)
+    }
+</code></pre>
+</details></td></tr><tr id="method-enter-138"><td>method</td><td>enter</td><td><code>pub fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-enter-138">enter</a> (&amp; mut self , caller_id : &amp; str , snapshot : <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedSnapshot-28">IsolatedSnapshot</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a> , <a class="symbol-link" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-enter-138">enter</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;str,
+        snapshot: <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedSnapshot-28">IsolatedSnapshot</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.caps.enabled {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">FeatureDisabled</span>);
+        }
+        <span class="rs-kw">if</span> caller_id.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-validated-workspace-root-212">validated_workspace_root</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.by_caller.contains_key(caller_id) {
+            <span class="rs-kw">let</span> existing = <span class="rs-self">self</span>
+                .by_caller
+                .get(caller_id)
+                .and_then(|workspace_id| <span class="rs-self">self</span>.handles.get(workspace_id))
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                    step: &quot;agent handle index is inconsistent&quot;.to_owned(),
+                })?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">AlreadyOpen</span> {
+                created_at: existing.created_at,
+                last_activity: existing.last_activity,
+            });
+        }
+        <span class="rs-kw">let</span> total_cap = usize::try_from(<span class="rs-self">self</span>.caps.total_cap).unwrap_or(usize::<span class="rs-type">MAX</span>);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handles.len() &gt;= total_cap {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">QuotaExceeded</span> {
+                total_cap: <span class="rs-self">self</span>.caps.total_cap,
+            });
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#method-check-host-capacity-88">check_host_capacity</a>()?;
+
+        <span class="rs-kw">let</span> workspace_id = <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedWorkspaceId-25">IsolatedWorkspaceId</a>(<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-next-handle-id-293">next_handle_id</a>());
+        <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-workspace--src-shared-dirs-rs.html#item-fn-create-overlay-dirs-60">create_overlay_dirs</a>(<span class="rs-self">self</span>.scratch_root.join(&amp;workspace_id.0)).map_err(|err| {
+            <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                step: format!(&quot;{}: {}&quot;, err.path.display(), err.reason),
+            }
+        })?;
+
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a> {
+            workspace_id: workspace_id.clone(),
+            caller_id: caller_id.to_owned(),
+            lease_id: snapshot.lease_id,
+            manifest_version: snapshot.manifest_version,
+            manifest_root_hash: snapshot.manifest_root_hash,
+            workspace_root,
+            dirs,
+            layer_paths: snapshot.layer_paths,
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(),
+            holder_pid: 0,
+            readiness_fd: -1,
+            control_fd: -1,
+            veth: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            created_at: now,
+            last_activity: now,
+        };
+
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-wire-handle-26">wire_handle</a>(&amp;<span class="rs-kw">mut</span> handle) {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-rollback-partial-66">rollback_partial</a>(&amp;handle);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-self">self</span>.by_caller
+            .insert(caller_id.to_owned(), workspace_id.clone());
+        <span class="rs-self">self</span>.handles.insert(workspace_id, handle.clone());
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-recovery-rs.html#method-persist-handles-129">persist_handles</a>();
+        <span class="rs-type">Ok</span>(handle)
+    }
+</code></pre>
+</details></td></tr><tr id="method-validated-workspace-root-212"><td>method</td><td>validated_workspace_root</td><td><code>fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-validated-workspace-root-212">validated_workspace_root</a> (&amp; self) -&gt; Result &lt; String , <a class="symbol-link" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-validated-workspace-root-212">validated_workspace_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.caps.eos_workspace_root.trim();
+        <span class="rs-kw">if</span> workspace_root.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;eos_workspace_root is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(workspace_root).is_absolute() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
+                &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
+            )));
+        }
+        <span class="rs-type">Ok</span>(workspace_root.to_owned())
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-227"><td>method</td><td>exit</td><td><code>pub fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-exit-227">exit</a> (&amp; mut self , caller_id : &amp; str , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a> , <a class="symbol-link" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-exit-227">exit</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;str,
+        grace_s: <span class="rs-type">Option</span>&lt;f64&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> caller_id.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workspace_id) = <span class="rs-self">self</span>.by_caller.remove(caller_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-self">self</span>.handles.remove(&amp;workspace_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> upperdir_bytes = <a class="symbol-link rs-fn" href="eos-workspace--src-shared-tree-rs.html#item-fn-directory-file-bytes-23">directory_file_bytes</a>(&amp;handle.dirs.upperdir);
+        <span class="rs-kw">let</span> (inspection, phases_ms) =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-teardown-handle-77">teardown_handle</a>(&amp;handle, grace_s.unwrap_or(<span class="rs-self">self</span>.caps.exit_grace_s));
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-recovery-rs.html#method-persist-handles-129">persist_handles</a>();
+        <span class="rs-kw">let</span> lifetime_s = (<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>() - handle.created_at).max(0.0);
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a> {
+            workspace_id: handle.workspace_id,
+            caller_id: handle.caller_id,
+            lease_id: handle.lease_id,
+            evicted_upperdir_bytes: upperdir_bytes,
+            lifetime_s,
+            total_ms: timer.elapsed().as_secs_f64() * 1000.0,
+            phases_ms,
+            inspection,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-ttl-sweep-261"><td>method</td><td>ttl_sweep</td><td><code>pub fn <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-ttl-sweep-261">ttl_sweep</a> (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; Vec &lt; <a class="symbol-link" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-ttl-sweep-261">ttl_sweep</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, active_callers: &amp;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.caps.ttl_s &lt;= 0.0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        }
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> stale = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .filter(|handle| now - handle.last_activity &gt; <span class="rs-self">self</span>.caps.ttl_s)
+            .filter(|handle| !active_callers.contains(&amp;handle.caller_id))
+            .map(|handle| handle.caller_id.clone())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        stale
+            .into_iter()
+            .filter_map(|caller_id| <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-exit-227">exit</a>(&amp;caller_id, <span class="rs-type">None</span>).ok())
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-shared-tree-rs.html#method-collect-15">collect</a>()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs:25</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace/src/isolated_workspace/manager/lifecycle.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::{<span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>};
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Instant</span>, <span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::isolated_workspace::error::<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::shared::{create_overlay_dirs, directory_file_bytes, record_phase_ms};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedManager-56">IsolatedManager</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedSnapshot-28">IsolatedSnapshot</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedWorkspaceId-25">IsolatedWorkspaceId</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>};
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a> {
+    <span class="rs-kw">pub</span> workspace_id: <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedWorkspaceId-25">IsolatedWorkspaceId</a>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> lease_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> evicted_upperdir_bytes: u64,
+    <span class="rs-kw">pub</span> lifetime_s: f64,
+    <span class="rs-kw">pub</span> total_ms: f64,
+    <span class="rs-kw">pub</span> phases_ms: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;,
+    <span class="rs-kw">pub</span> inspection: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedManager-56">IsolatedManager</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-wire-handle-26">wire_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
+        handle.holder_pid = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-spawn-ns-holder-66">spawn_ns_holder</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;spawn_ns_holder&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        handle.ns_fds = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-open-ns-fds-126">open_ns_fds</a>(handle.holder_pid)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;open_ns_fds&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#method-initialize-96">initialize</a>()?;
+        handle.veth = <span class="rs-type">Some</span>(
+            <span class="rs-self">self</span>.network
+                .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-install-veth-126">install_veth</a>(&amp;handle.workspace_id.0, handle.holder_pid)?,
+        );
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;install_veth&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-mount-overlay-153">mount_overlay</a>(handle, &amp;handle.layer_paths.clone())?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;mount_overlay&quot;, phase_start);
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _dns_fallback_applied = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-configure-dns-180">configure_dns</a>(handle, &amp;<span class="rs-self">self</span>.caps.fallback_dns)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;configure_dns&quot;, phase_start);
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-signal-net-ready-207">signal_net_ready</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> cgroup_path = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-create-cgroup-239">create_cgroup</a>(handle)?;
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;create_cgroup&quot;, phase_start);
+        <span class="rs-kw">if</span> !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = <span class="rs-type">Some</span>(cgroup_path);
+        }
+        <span class="rs-type">Ok</span>(phases_ms)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-rollback-partial-66">rollback_partial</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>) {
+        <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-teardown-veth-161">teardown_veth</a>(veth);
+        }
+        <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-kill-holder-252">kill_holder</a>(handle.holder_pid, 1.0);
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.dirs.run_dir);
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-teardown-handle-77">teardown_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>,
+        grace_s: f64,
+    ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-self">self</span>.runtime
+                .<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-namespace-mod-rs.html#method-kill-holder-252">kill_holder</a>(handle.holder_pid, grace_s)
+                .err()
+                .map(|err| err.to_string())
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        };
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;kill_holder&quot;, phase_start);
+        <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-teardown-veth-161">teardown_veth</a>(veth);
+        }
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;teardown_veth&quot;, phase_start);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = handle.cgroup_path.as_ref() {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir(cgroup_path);
+        }
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;cgroup_rmdir&quot;, phase_start);
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.dirs.run_dir);
+        <a class="symbol-link rs-fn" href="eos-workspace--src-shared-timing-rs.html#item-fn-record-phase-ms-4">record_phase_ms</a>(&amp;<span class="rs-kw">mut</span> phases_ms, &quot;rmtree_scratch&quot;, phase_start);
+        <span class="rs-kw">let</span> cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
+        <span class="rs-kw">let</span> inspection = json!({
+            &quot;handle_registered_after&quot;: <span class="rs-self">self</span>.handles.contains_key(&amp;handle.workspace_id),
+            &quot;agent_registered_after&quot;: <span class="rs-self">self</span>.by_caller.contains_key(&amp;handle.caller_id),
+            &quot;open_handle_count_after&quot;: <span class="rs-self">self</span>.handles.len(),
+            &quot;open_agent_count_after&quot;: <span class="rs-self">self</span>.by_caller.len(),
+            &quot;holder_pid&quot;: handle.holder_pid,
+            &quot;holder_kill_error&quot;: holder_kill_error,
+            &quot;ns_fd_count&quot;: handle.ns_fds.len(),
+            &quot;readiness_fd_was_open&quot;: handle.readiness_fd &gt;= 0,
+            &quot;control_fd_was_open&quot;: handle.control_fd &gt;= 0,
+            &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+            &quot;cgroup_path&quot;: handle
+                .cgroup_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            &quot;cgroup_exists_after&quot;: cgroup_exists_after,
+            &quot;scratch_dir&quot;: handle.dirs.run_dir.to_string_lossy(),
+            &quot;scratch_exists_after&quot;: handle.dirs.run_dir.exists(),
+            &quot;upperdir_exists_after&quot;: handle.dirs.upperdir.exists(),
+            &quot;workdir_exists_after&quot;: handle.dirs.workdir.exists(),
+            &quot;mountinfo_reference_count_after&quot;: <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-mountinfo-reference-count-307">mountinfo_reference_count</a>(&amp;[
+                &amp;handle.dirs.run_dir,
+                &amp;handle.dirs.upperdir,
+                &amp;handle.dirs.workdir,
+            ]),
+        });
+        (inspection, phases_ms)
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-enter-138">enter</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;str,
+        snapshot: <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedSnapshot-28">IsolatedSnapshot</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.caps.enabled {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">FeatureDisabled</span>);
+        }
+        <span class="rs-kw">if</span> caller_id.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-validated-workspace-root-212">validated_workspace_root</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.by_caller.contains_key(caller_id) {
+            <span class="rs-kw">let</span> existing = <span class="rs-self">self</span>
+                .by_caller
+                .get(caller_id)
+                .and_then(|workspace_id| <span class="rs-self">self</span>.handles.get(workspace_id))
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                    step: &quot;agent handle index is inconsistent&quot;.to_owned(),
+                })?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">AlreadyOpen</span> {
+                created_at: existing.created_at,
+                last_activity: existing.last_activity,
+            });
+        }
+        <span class="rs-kw">let</span> total_cap = usize::try_from(<span class="rs-self">self</span>.caps.total_cap).unwrap_or(usize::<span class="rs-type">MAX</span>);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handles.len() &gt;= total_cap {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">QuotaExceeded</span> {
+                total_cap: <span class="rs-self">self</span>.caps.total_cap,
+            });
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#method-check-host-capacity-88">check_host_capacity</a>()?;
+
+        <span class="rs-kw">let</span> workspace_id = <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-IsolatedWorkspaceId-25">IsolatedWorkspaceId</a>(<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-next-handle-id-293">next_handle_id</a>());
+        <span class="rs-kw">let</span> dirs = <a class="symbol-link rs-fn" href="eos-workspace--src-shared-dirs-rs.html#item-fn-create-overlay-dirs-60">create_overlay_dirs</a>(<span class="rs-self">self</span>.scratch_root.join(&amp;workspace_id.0)).map_err(|err| {
+            <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                step: format!(&quot;{}: {}&quot;, err.path.display(), err.reason),
+            }
+        })?;
+
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a> {
+            workspace_id: workspace_id.clone(),
+            caller_id: caller_id.to_owned(),
+            lease_id: snapshot.lease_id,
+            manifest_version: snapshot.manifest_version,
+            manifest_root_hash: snapshot.manifest_root_hash,
+            workspace_root,
+            dirs,
+            layer_paths: snapshot.layer_paths,
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(),
+            holder_pid: 0,
+            readiness_fd: -1,
+            control_fd: -1,
+            veth: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            created_at: now,
+            last_activity: now,
+        };
+
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-wire-handle-26">wire_handle</a>(&amp;<span class="rs-kw">mut</span> handle) {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-rollback-partial-66">rollback_partial</a>(&amp;handle);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-self">self</span>.by_caller
+            .insert(caller_id.to_owned(), workspace_id.clone());
+        <span class="rs-self">self</span>.handles.insert(workspace_id, handle.clone());
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-recovery-rs.html#method-persist-handles-129">persist_handles</a>();
+        <span class="rs-type">Ok</span>(handle)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-validated-workspace-root-212">validated_workspace_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.caps.eos_workspace_root.trim();
+        <span class="rs-kw">if</span> workspace_root.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;eos_workspace_root is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(workspace_root).is_absolute() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
+                &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
+            )));
+        }
+        <span class="rs-type">Ok</span>(workspace_root.to_owned())
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-exit-227">exit</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;str,
+        grace_s: <span class="rs-type">Option</span>&lt;f64&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> caller_id.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workspace_id) = <span class="rs-self">self</span>.by_caller.remove(caller_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-self">self</span>.handles.remove(&amp;workspace_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-error-rs.html#item-enum-IsolatedError-1">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> upperdir_bytes = <a class="symbol-link rs-fn" href="eos-workspace--src-shared-tree-rs.html#item-fn-directory-file-bytes-23">directory_file_bytes</a>(&amp;handle.dirs.upperdir);
+        <span class="rs-kw">let</span> (inspection, phases_ms) =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-teardown-handle-77">teardown_handle</a>(&amp;handle, grace_s.unwrap_or(<span class="rs-self">self</span>.caps.exit_grace_s));
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-recovery-rs.html#method-persist-handles-129">persist_handles</a>();
+        <span class="rs-kw">let</span> lifetime_s = (<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>() - handle.created_at).max(0.0);
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a> {
+            workspace_id: handle.workspace_id,
+            caller_id: handle.caller_id,
+            lease_id: handle.lease_id,
+            evicted_upperdir_bytes: upperdir_bytes,
+            lifetime_s,
+            total_ms: timer.elapsed().as_secs_f64() * 1000.0,
+            phases_ms,
+            inspection,
+        })
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-ttl-sweep-261">ttl_sweep</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, active_callers: &amp;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-struct-ExitOutcome-13">ExitOutcome</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.caps.ttl_s &lt;= 0.0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+        }
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> stale = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .filter(|handle| now - handle.last_activity &gt; <span class="rs-self">self</span>.caps.ttl_s)
+            .filter(|handle| !active_callers.contains(&amp;handle.caller_id))
+            .map(|handle| handle.caller_id.clone())
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        stale
+            .into_iter()
+            .filter_map(|caller_id| <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#method-exit-227">exit</a>(&amp;caller_id, <span class="rs-type">None</span>).ok())
+            .<a class="symbol-link rs-fn" href="eos-workspace--src-shared-tree-rs.html#method-collect-15">collect</a>()
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-close-handle-fds-280">close_handle_fds</a>(handle: &amp;<a class="symbol-link rs-type" href="eos-workspace--src-isolated-workspace-manager-mod-rs.html#item-struct-WorkspaceHandle-36">WorkspaceHandle</a>) {
+    <span class="rs-kw">for</span> fd <span class="rs-kw">in</span> handle.ns_fds.values().copied() {
+        <span class="rs-kw">if</span> fd &gt;= 0 {
+            <span class="rs-kw">let</span> _ = nix::unistd::close(fd);
+        }
+    }
+    <span class="rs-kw">for</span> fd <span class="rs-kw">in</span> [handle.readiness_fd, handle.control_fd] {
+        <span class="rs-kw">if</span> fd &gt;= 0 {
+            <span class="rs-kw">let</span> _ = nix::unistd::close(fd);
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-next-handle-id-293">next_handle_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>(1);
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    <span class="rs-kw">let</span> counter = <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>) &amp; 0x00ff_ffff;
+    format!(&quot;{counter:06x}{nanos:016x}&quot;)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-monotonic-seconds-302">monotonic_seconds</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-network-mod-rs.html#method-new-95">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace--src-isolated-workspace-manager-lifecycle-rs.html#item-fn-mountinfo-reference-count-307">mountinfo_reference_count</a>(paths: &amp;[&amp;<span class="rs-type">Path</span>]) -&gt; <span class="rs-type">Option</span>&lt;usize&gt; {
+    <span class="rs-kw">let</span> mountinfo = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/mountinfo&quot;).ok()?;
+    <span class="rs-kw">let</span> needles = paths
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .filter(|path| !path.is_empty())
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+    <span class="rs-type">Some</span>(
+        mountinfo
+            .lines()
+            .filter(|line| needles.iter().any(|needle| line.contains(needle)))
+            .count(),
+    )
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

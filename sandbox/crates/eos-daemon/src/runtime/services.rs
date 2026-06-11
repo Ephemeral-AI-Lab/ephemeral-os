@@ -38,7 +38,7 @@ impl RuntimeServices {
     pub fn new(
         plugin: PluginRuntimeConfig,
         isolated_workspace: IsolatedWorkspaceConfig,
-        launcher: Arc<dyn eos_isolated_workspace::NsRunnerLauncher>,
+        launcher: Arc<dyn eos_workspace::NsRunnerLauncher>,
     ) -> Self {
         Self {
             plugin: PluginRuntime::new(plugin, launcher),

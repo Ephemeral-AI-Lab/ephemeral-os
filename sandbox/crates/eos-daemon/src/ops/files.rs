@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use eos_command_ops::CommandBinding;
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_file_ops::{
     edit_file as edit_with_backend, read_file as read_with_backend,
@@ -10,6 +9,7 @@ use eos_file_ops::{
     FileOpsError, IsolatedBackend, MutationOutcome, ReadFileOutcome, ReadFileRequest,
     SearchReplaceEdit, WorkspaceConflict, WriteFileOutcome, WriteFileRequest,
 };
+use eos_operation_core::WorkspaceExecutionBinding;
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -50,8 +50,8 @@ pub(crate) fn op_read_file(
 ) -> Result<Value, DaemonError> {
     let request = read_request(args, context)?;
     let caller_id = super::caller_id_or_default(args);
-    let routed = route_read_file(file_context(args, context, &caller_id), request)
-        .map_err(file_op_error)?;
+    let routed =
+        route_read_file(file_context(args, context, &caller_id), request).map_err(file_op_error)?;
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(&layer_stack_root, &mut outcome.timings, 0);
@@ -86,12 +86,10 @@ pub(crate) fn op_edit_file(
 ) -> Result<Value, DaemonError> {
     let request = edit_request(args)?;
     let caller_id = super::caller_id_or_default(args);
-    let routed = route_edit_file(file_context(args, context, &caller_id), request)
-        .map_err(file_op_error)?;
-    let EditFileOutcome {
-        mut mutation,
-        applied_edits,
-    } = routed.outcome;
+    let routed =
+        route_edit_file(file_context(args, context, &caller_id), request).map_err(file_op_error)?;
+    let mut mutation = routed.outcome;
+    let applied_edits = mutation.applied_edits;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(
             &layer_stack_root,
@@ -152,7 +150,7 @@ fn route_edit_file(
 
 fn route_file_op<T>(
     context: FileOpContext<'_>,
-    isolated: impl FnOnce(&CommandBinding) -> Result<T, FileOpsError>,
+    isolated: impl FnOnce(&WorkspaceExecutionBinding) -> Result<T, FileOpsError>,
     direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
 ) -> Result<RoutedFileOutcome<T>, FileOpError> {
     if let Some(workspace) = context.workspace {
@@ -177,7 +175,7 @@ fn route_file_op<T>(
     })
 }
 
-fn isolated_backend(binding: &CommandBinding) -> IsolatedBackend {
+fn isolated_backend(binding: &WorkspaceExecutionBinding) -> IsolatedBackend {
     IsolatedBackend {
         layer_stack_root: binding.layer_stack_root.clone(),
         workspace_root: binding.workspace_root.clone(),

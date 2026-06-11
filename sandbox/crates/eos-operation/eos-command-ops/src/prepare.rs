@@ -1,13 +1,13 @@
 use std::path::{Path, PathBuf};
 
-use eos_ephemeral_workspace::OverlayDirs;
 use eos_namespace::protocol::{
     Intent, NsFds, RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot,
 };
+use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::OverlayDirs;
 use serde_json::{json, Value};
 
 use crate::outcome::WorkspaceApiError;
-use crate::CommandBinding;
 
 pub(crate) struct PreparedCommand {
     pub(crate) run_request: Value,
@@ -56,7 +56,7 @@ pub(crate) fn prepare_ephemeral(
 
 pub(crate) fn prepare_isolated(
     inputs: PrepareInputs<'_>,
-    binding: &CommandBinding,
+    binding: &WorkspaceExecutionBinding,
 ) -> Result<PreparedCommand, WorkspaceApiError> {
     let ns_fds = ns_fds_from_map(&binding.ns_fds);
     let tool_call = tool_call(&inputs);

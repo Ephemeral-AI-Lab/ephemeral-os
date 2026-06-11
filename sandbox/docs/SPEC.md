@@ -257,8 +257,7 @@ sandbox/
 │   ├── eos-overlay/                overlayfs mount/capture leaf
 │   ├── eos-namespace/              holder + runner namespace child support
 │   ├── eos-command-session/        PTY-backed command sessions
-│   ├── eos-ephemeral-workspace/    per-operation overlay workspace helpers
-│   ├── eos-isolated-workspace/     isolated session lifecycle + network setup
+│   ├── eos-workspace/              ephemeral + isolated workspace policy
 │   ├── eos-plugin/                 plugin contracts and PPC protocol
 │   ├── eos-operation/
 │   │   ├── eos-command-ops/        command lifecycle/runtime policy

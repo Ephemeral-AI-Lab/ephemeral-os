@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>7</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>55</b><span>fields</span></div>
-  <div><b>37</b><span>methods</span></div>
+  <div><b>54</b><span>items</span></div>
+  <div><b>40</b><span>fields</span></div>
+  <div><b>36</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link active" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link active" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime crates/eos-operation/eos-command-ops/src/runtime.rs command_ops configure_command_sessions command_session_config command_session_scratch_root command_session_config_cell active_command_sessions_for_caller cleanup_command_sessions_for_caller cancel_all_command_sessions command_session_reaper_sweep recover_orphaned_command_sessions">
   <div class="module-head">
     <div>
@@ -220,23 +220,23 @@
         <span class="rs-kw">return</span>;
     };
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
-        <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>();
+        <span class="rs-kw">let</span> path = entry.path();
         <span class="rs-kw">if</span> !path.is_dir() {
             <span class="rs-kw">continue</span>;
         }
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(bytes) = std::fs::read(path.join(&quot;metadata.json&quot;)) {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(meta) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes) {
                 <span class="rs-kw">let</span> id = meta
-                    .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;command_session_id&quot;)
+                    .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;command_session_id&quot;)
                     .and_then(<span class="rs-type">Value</span>::as_str)
                     .unwrap_or_default();
                 <span class="rs-kw">if</span> !id.is_empty() {
                     <span class="rs-kw">let</span> caller_id = meta
-                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;caller_id&quot;)
                         .and_then(<span class="rs-type">Value</span>::as_str)
                         .unwrap_or_default();
                     <span class="rs-kw">let</span> command = meta
-                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;command&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;command&quot;)
                         .and_then(<span class="rs-type">Value</span>::as_str)
                         .unwrap_or_default();
                     <span class="rs-kw">let</span> result = <span class="rs-type">CommandResponse</span> {
@@ -353,23 +353,23 @@
         <span class="rs-kw">return</span>;
     };
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
-        <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-19">path</a>();
+        <span class="rs-kw">let</span> path = entry.path();
         <span class="rs-kw">if</span> !path.is_dir() {
             <span class="rs-kw">continue</span>;
         }
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(bytes) = std::fs::read(path.join(&quot;metadata.json&quot;)) {
             <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(meta) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;bytes) {
                 <span class="rs-kw">let</span> id = meta
-                    .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;command_session_id&quot;)
+                    .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;command_session_id&quot;)
                     .and_then(<span class="rs-type">Value</span>::as_str)
                     .unwrap_or_default();
                 <span class="rs-kw">if</span> !id.is_empty() {
                     <span class="rs-kw">let</span> caller_id = meta
-                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;caller_id&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;caller_id&quot;)
                         .and_then(<span class="rs-type">Value</span>::as_str)
                         .unwrap_or_default();
                     <span class="rs-kw">let</span> command = meta
-                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-85">get</a>(&quot;command&quot;)
+                        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-84">get</a>(&quot;command&quot;)
                         .and_then(<span class="rs-type">Value</span>::as_str)
                         .unwrap_or_default();
                     <span class="rs-kw">let</span> result = <span class="rs-type">CommandResponse</span> {

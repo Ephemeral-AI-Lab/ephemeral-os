@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
-use eos_isolated_workspace::{IsolatedError, WorkspaceHandle};
+use eos_workspace::{IsolatedError, WorkspaceHandle};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;

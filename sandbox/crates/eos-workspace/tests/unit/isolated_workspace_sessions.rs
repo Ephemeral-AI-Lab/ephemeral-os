@@ -83,7 +83,7 @@ fn isolated_exit_discards_upperdir_and_returns_lease_for_release(
     let caller = "caller-1";
 
     let handle = sessions.enter(caller, snapshot())?;
-    let upperdir = handle.upperdir.clone();
+    let upperdir = handle.dirs.upperdir.clone();
     std::fs::write(upperdir.join("private.txt"), b"private bytes")?;
 
     let exit = sessions.exit(caller, Some(0.0))?;

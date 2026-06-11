@@ -5,7 +5,7 @@
 //! [`WorkspaceRuntime`] method, and shapes one response. This crate owns the
 //! cross-domain workspace-run policy: when leases are acquired and released,
 //! when sessions are torn down, and in what order — while namespace mechanics
-//! stay in `eos-isolated-workspace` and command-session internals stay in
+//! stay in `eos-workspace` and command-session internals stay in
 //! `eos-command-ops`. State lives on a [`WorkspaceRuntime`] instance, never in
 //! process globals.
 //!
@@ -19,15 +19,15 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use eos_command_ops::CommandBinding;
 use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
-use eos_isolated_workspace::{
+use eos_layerstack::{read_workspace_binding, LayerStack};
+use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::{
     IsolatedError, IsolatedManager, IsolatedSnapshot, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
 };
-use eos_layerstack::{LayerStack, read_workspace_binding};
 
 fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {
@@ -84,7 +84,7 @@ impl BoundState {
 /// inspection object.
 pub struct ExitOutcome {
     /// The namespace/cgroup/scratch teardown outcome from the isolated manager.
-    pub isolated: eos_isolated_workspace::ExitOutcome,
+    pub isolated: eos_workspace::ExitOutcome,
     /// Whether the workspace's snapshot lease was still held at release.
     pub lease_released: Option<bool>,
     /// Active leases remaining on the bound stack after release.
@@ -228,7 +228,7 @@ impl WorkspaceRuntime {
     /// The command-session binding for `caller_id`'s open workspace, or `None`
     /// when the caller is not isolated (callers then route ephemerally).
     #[must_use]
-    pub fn command_binding_for(&self, caller_id: &str) -> Option<CommandBinding> {
+    pub fn command_binding_for(&self, caller_id: &str) -> Option<WorkspaceExecutionBinding> {
         if caller_id.is_empty() {
             return None;
         }
@@ -400,17 +400,20 @@ impl WorkspaceRuntime {
     }
 }
 
-fn command_binding_from(layer_stack_root: &Path, handle: WorkspaceHandle) -> CommandBinding {
-    CommandBinding {
+fn command_binding_from(
+    layer_stack_root: &Path,
+    handle: WorkspaceHandle,
+) -> WorkspaceExecutionBinding {
+    WorkspaceExecutionBinding {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),
         manifest_version: handle.manifest_version,
         manifest_root_hash: handle.manifest_root_hash,
         workspace_root: PathBuf::from(handle.workspace_root),
-        scratch_dir: handle.scratch_dir,
-        upperdir: handle.upperdir,
-        workdir: handle.workdir,
+        scratch_dir: handle.dirs.run_dir,
+        upperdir: handle.dirs.upperdir,
+        workdir: handle.dirs.workdir,
         layer_paths: handle.layer_paths,
         ns_fds: handle.ns_fds,
         cgroup_path: handle.cgroup_path,
