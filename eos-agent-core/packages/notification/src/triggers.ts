@@ -12,7 +12,7 @@ import { z } from "zod";
  * this package — other operator configs have look-alike command shapes,
  * but each config's schema evolves independently.
  */
-export const CommandScriptSchema = z.object({
+const CommandScriptSchema = z.object({
   type: z.literal("command"),
   command: z.string().min(1),
   /** Working directory for relative command paths; runtime-filled when omitted. */

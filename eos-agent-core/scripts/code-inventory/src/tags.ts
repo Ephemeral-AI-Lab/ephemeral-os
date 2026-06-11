@@ -1,8 +1,4 @@
-import type {
-  ModuleKind,
-  SymbolInventory,
-  SymbolKind,
-} from "./types.js";
+import type { ModuleKind, SymbolKind } from "./types.js";
 
 export interface SymbolTagInput {
   packageName: string;
@@ -181,17 +177,6 @@ export function symbolTags(input: SymbolTagInput): string[] {
     tags.add("json-boundary");
   }
   return [...tags].sort();
-}
-
-export function mergeSymbolTags(
-  symbol: SymbolInventory,
-  extraTags: readonly string[],
-): SymbolInventory {
-  const tags = new Set(symbol.tags);
-  for (const tag of extraTags) {
-    tags.add(tag);
-  }
-  return { ...symbol, tags: [...tags].sort() };
 }
 
 function isDtoName(name: string): boolean {

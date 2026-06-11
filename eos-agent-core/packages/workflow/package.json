@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@eos/contracts": "workspace:*",
-    "@eos/db": "workspace:*",
-    "zod": "^4.4.3"
+    "@eos/db": "workspace:*"
   }
 }

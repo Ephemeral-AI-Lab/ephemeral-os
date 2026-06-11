@@ -27,7 +27,7 @@ import type {
 import { WorkflowService, type WorkflowServiceDependencies } from "../src/service.js";
 import { loadWorkflowTree, type WorkflowTree } from "../src/workflow-tree.js";
 
-export const PARENT_RUN = agentRunIdFrom("parent-run");
+const PARENT_RUN = agentRunIdFrom("parent-run");
 
 /** One recorded `port.launch`, drivable like a scripted child run. */
 export interface ScriptedLaunch {
@@ -169,7 +169,7 @@ export async function until(
   throw new Error(`timed out waiting for ${label}`);
 }
 
-export function messageText(message: InitialUserMessage): string {
+function messageText(message: InitialUserMessage): string {
   return message.content
     .filter((block) => block.type === "text")
     .map((block) => block.text)

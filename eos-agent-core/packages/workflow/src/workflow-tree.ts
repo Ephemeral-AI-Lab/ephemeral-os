@@ -33,8 +33,8 @@ export async function loadWorkflowTree(
   return rows ? buildWorkflowTree(rows) : null;
 }
 
-/** Pure derivation over one row load; exported for tests and synthesis. */
-export function buildWorkflowTree(rows: WorkflowRows): WorkflowTree {
+/** Pure derivation over one row load. */
+function buildWorkflowTree(rows: WorkflowRows): WorkflowTree {
   const iterations = rows.iterations.map((iteration) =>
     buildIteration(
       iteration,

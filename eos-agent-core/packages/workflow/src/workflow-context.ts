@@ -4,7 +4,7 @@ import { listContextSubtree, type ContextListingRow } from "./archive/listing.js
 import type { WorkflowContext } from "./archive/paths.js";
 import { resolveContextPath } from "./archive/resolve.js";
 
-export const DEFAULT_CONTEXT_PAGE_BYTES = 16_384;
+const DEFAULT_CONTEXT_PAGE_BYTES = 16_384;
 
 export type WorkflowContextRead =
   | { kind: "page"; page: ContextPage }
