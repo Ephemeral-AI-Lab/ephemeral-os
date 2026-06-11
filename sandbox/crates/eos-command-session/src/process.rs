@@ -382,7 +382,7 @@ fn open_pty_pair() -> io::Result<(File, File)> {
             .open(slave_name.to_string_lossy().as_ref())?
     };
 
-    Ok((File::from(master), File::from(slave)))
+    Ok((File::from(master), slave))
 }
 
 fn terminate_process_group(pgid: i32) {
