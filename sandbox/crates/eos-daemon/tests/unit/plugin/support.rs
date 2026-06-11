@@ -2,11 +2,11 @@ use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::wire::Request;
 use crate::DispatchContext;
+use crate::RuntimeServices;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_namespace::protocol::{RunRequest, RunResult};
 use eos_plugin_ops::{LaunchError, NsRunnerLauncher};
-use eos_runtime::RuntimeServices;
 use serde_json::{json, Value};
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -21,7 +21,7 @@ pub(super) type TestResult = Result<(), TestError>;
 /// One isolated daemon under test: an op table plus its own runtime services
 /// instance (no process-global state survives between tests). These adapter
 /// tests never start service processes; service runtime behavior lives in
-/// `eos-runtime/tests/`.
+/// the operation-runtime tests.
 pub(super) struct TestDaemon {
     table: OpTable,
     services: RuntimeServices,

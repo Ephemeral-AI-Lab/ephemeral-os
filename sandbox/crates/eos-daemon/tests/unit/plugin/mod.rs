@@ -1,7 +1,7 @@
 //! Plugin op adapter tests: wire arg parsing, response shaping, registered-op
 //! routing through the dispatcher, and the isolated-caller gate. Service
 //! process behavior (start/refresh/restart/health) lives in
-//! `eos-runtime/tests/`.
+//! the operation-runtime tests.
 
 mod support;
 

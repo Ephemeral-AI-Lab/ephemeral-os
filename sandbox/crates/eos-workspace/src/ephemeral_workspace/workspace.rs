@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use crate::dirs::{allocate_overlay_dirs, OverlayDirs};
-use crate::EphemeralWorkspaceError;
+use super::EphemeralWorkspaceError;
+use crate::shared::{allocate_overlay_dirs, OverlayDirs};
 
 /// One overlay transaction's scratch dirs.
 ///
@@ -43,5 +43,5 @@ impl Drop for EphemeralWorkspace {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/workspace.rs"]
+#[path = "../../tests/unit/ephemeral_workspace.rs"]
 mod tests;

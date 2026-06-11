@@ -17,13 +17,14 @@ use eos_config::configs::{
     isolated_workspace::IsolatedWorkspaceConfig,
 };
 use eos_isolated_workspace::CurrentExeNsRunnerLauncher;
-use eos_runtime::{maintenance::sweepers, RuntimeServices};
 
 use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 use crate::request_args::trimmed_string;
+use crate::runtime_services::sweepers;
 use crate::DispatchContext;
+use crate::RuntimeServices;
 
 const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
 const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;

@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::EphemeralWorkspaceError;
-
-/// Fresh writable paths allocated for one operation.
+/// Fresh writable paths allocated for one workspace operation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayDirs {
     pub run_dir: PathBuf,
@@ -10,30 +8,43 @@ pub struct OverlayDirs {
     pub workdir: PathBuf,
 }
 
+/// A failed attempt to allocate one overlay scratch path.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("dir allocation failed at {}: {reason}", path.display())]
+pub struct DirAllocationError {
+    pub path: PathBuf,
+    pub reason: String,
+}
+
 /// Best-effort cleanup guard for an allocated run directory, for callers that
-/// hold dirs without an [`crate::EphemeralWorkspace`] (e.g. plugin overlays).
+/// hold dirs outside a workspace owner.
 #[derive(Debug)]
 pub struct OverlayDirsGuard(Option<PathBuf>);
 
 /// Allocate daemon/runtime overlay dirs under the configured writable root.
-pub fn overlay_run_dirs(
-    kind: &str,
-    invocation_id: &str,
-) -> Result<OverlayDirs, EphemeralWorkspaceError> {
-    let writable_root = eos_overlay::overlay_writable_root().map_err(|error| {
-        EphemeralWorkspaceError::DirAllocation {
-            path: PathBuf::from("overlay_writable_root"),
-            reason: error.to_string(),
-        }
+///
+/// # Errors
+///
+/// Returns [`DirAllocationError`] when the writable root or requested run dirs
+/// cannot be created.
+pub fn overlay_run_dirs(kind: &str, invocation_id: &str) -> Result<OverlayDirs, DirAllocationError> {
+    let writable_root = eos_overlay::overlay_writable_root().map_err(|error| DirAllocationError {
+        path: PathBuf::from("overlay_writable_root"),
+        reason: error.to_string(),
     })?;
     allocate_overlay_dirs(&writable_root.join("runtime"), kind, invocation_id)
 }
 
-pub(crate) fn allocate_overlay_dirs(
+/// Allocate `run_dir`, `upperdir`, and `workdir` under `writable_root`.
+///
+/// # Errors
+///
+/// Returns [`DirAllocationError`] when any directory cannot be created.
+pub fn allocate_overlay_dirs(
     writable_root: &Path,
     kind: &str,
     token: &str,
-) -> Result<OverlayDirs, EphemeralWorkspaceError> {
+) -> Result<OverlayDirs, DirAllocationError> {
     let run_dir = writable_root.join(sanitized_segment(kind)).join(format!(
         "{}-{}",
         std::process::id(),
@@ -43,7 +54,7 @@ pub(crate) fn allocate_overlay_dirs(
     let workdir = run_dir.join("work");
 
     for path in [&run_dir, &upperdir, &workdir] {
-        std::fs::create_dir_all(path).map_err(|error| EphemeralWorkspaceError::DirAllocation {
+        std::fs::create_dir_all(path).map_err(|error| DirAllocationError {
             path: path.clone(),
             reason: error.to_string(),
         })?;

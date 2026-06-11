@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/eos-checkpoint",
     "crates/eos-operation/eos-command-ops",
+    "crates/eos-operation/operation-core",
     "crates/eos-command-session",
     "crates/eos-config",
     "crates/eosd",
@@ -15,7 +16,6 @@ members = [
     "crates/eos-overlay",
     "crates/eos-plugin",
     "crates/eos-operation/plugin-ops",
-    "crates/eos-runtime",
     "crates/eos-sandbox-host",
     "crates/eos-sandbox-gateway",
     "crates/eos-e2e-test",
@@ -63,10 +63,10 @@ eos-ephemeral-workspace = { path = "crates/eos-ephemeral-workspace" }
 eos-file-ops = { path = "crates/eos-operation/file-ops" }
 eos-isolated-workspace = { path = "crates/eos-isolated-workspace" }
 eos-layerstack = { path = "crates/eos-layerstack" }
+eos-operation-core = { path = "crates/eos-operation/operation-core" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-plugin = { path = "crates/eos-plugin" }
 eos-plugin-ops = { path = "crates/eos-operation/plugin-ops" }
-eos-runtime = { path = "crates/eos-runtime" }
 eos-namespace = { path = "crates/eos-namespace" }
 eos-daemon = { path = "crates/eos-daemon" }
 eosd = { path = "crates/eosd" }

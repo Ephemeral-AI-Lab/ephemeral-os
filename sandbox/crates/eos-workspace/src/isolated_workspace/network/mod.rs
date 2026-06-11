@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
-use crate::caps::{Rfc1918Egress, HANDLE_PREFIX};
-use crate::error::IsolatedError;
-use crate::namespace::test_harness_enabled;
+use crate::isolated_workspace::caps::{Rfc1918Egress, HANDLE_PREFIX};
+use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::namespace::test_harness_enabled;
 
 #[cfg(target_os = "linux")]
 mod netfilter;

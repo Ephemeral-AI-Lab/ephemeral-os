@@ -1,8 +1,8 @@
 use eos_config::configs::daemon::FileLimitsConfig;
-use eos_runtime::RuntimeServices;
 
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
+use crate::RuntimeServices;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
 #[derive(Clone, Copy, Default)]

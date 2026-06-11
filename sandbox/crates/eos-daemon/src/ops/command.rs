@@ -1,20 +1,45 @@
 //! Command-session dispatcher handlers, driving the caller-keyed
 //! command runtime in `eos-command-ops`.
 
-use eos_command_ops::{command_ops, command_session_config};
+use std::path::PathBuf;
+
+use eos_command_ops::{
+    command_ops, command_session_config, command_session_scratch_root, ExecTarget,
+};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CommandResponse, CommandSessionCompletion,
-    CommandSessionError, ReadCommandProgress, WriteStdin,
+    CommandSessionError, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
-use eos_runtime::routing::command_op::{self, CommandOpError, ExecCommandRequest};
 use serde_json::{json, Value};
+use thiserror::Error;
 
 use crate::error::DaemonError;
 use crate::request_args::{
     optional_path, optional_u64, require_command_string, require_nonempty_string, trimmed_string,
 };
 use crate::response::u64_to_f64_saturating;
-use crate::DispatchContext;
+use crate::{DispatchContext, WorkspaceRuntime};
+
+/// Typed command start request after daemon JSON parsing.
+struct ExecCommandRequest {
+    invocation_id: String,
+    caller_id: String,
+    cmd: String,
+    layer_stack_root: Option<PathBuf>,
+    timeout_seconds: Option<f64>,
+    yield_time_ms: u64,
+}
+
+/// Errors from routing or starting a workspace-bound command.
+#[derive(Debug, Error)]
+enum CommandOpError {
+    #[error("layer_stack_root is required")]
+    MissingLayerStackRoot,
+    #[error(transparent)]
+    LayerStack(#[from] eos_layerstack::LayerStackError),
+    #[error(transparent)]
+    Command(#[from] CommandSessionError),
+}
 
 /// `api.v1.exec_command` — command-session start contract.
 pub(crate) fn op_exec_command(
@@ -26,7 +51,7 @@ pub(crate) fn op_exec_command(
     let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
     let yield_time_ms =
         optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
-    let response = command_op::exec_command(
+    let response = exec_command(
         context.services().map(|services| &services.workspace),
         ExecCommandRequest {
             invocation_id: args
@@ -60,6 +85,57 @@ fn exec_timeout_seconds(args: &Value, config: &crate::config::CommandSessionConf
             .or_else(|| optional_u64(args, "timeout_seconds"))
             .unwrap_or(config.default_timeout_s),
     )
+}
+
+fn exec_command(
+    workspace: Option<&WorkspaceRuntime>,
+    request: ExecCommandRequest,
+) -> Result<CommandResponse, CommandOpError> {
+    let ExecCommandRequest {
+        invocation_id,
+        caller_id,
+        cmd,
+        layer_stack_root,
+        timeout_seconds,
+        yield_time_ms,
+    } = request;
+
+    if let Some(binding) = workspace.and_then(|workspace| workspace.command_binding_for(&caller_id))
+    {
+        return command_ops()
+            .exec_command(
+                StartCommandSession {
+                    invocation_id,
+                    caller_id: binding.caller_id.clone(),
+                    cmd,
+                    timeout_seconds,
+                    yield_time_ms,
+                },
+                ExecTarget::Isolated {
+                    binding: Box::new(binding),
+                },
+            )
+            .map_err(CommandOpError::Command);
+    }
+
+    let root = layer_stack_root.ok_or(CommandOpError::MissingLayerStackRoot)?;
+    let binding = eos_layerstack::require_workspace_binding(&root)?;
+    command_ops()
+        .exec_command(
+            StartCommandSession {
+                invocation_id,
+                caller_id,
+                cmd,
+                timeout_seconds,
+                yield_time_ms,
+            },
+            ExecTarget::Ephemeral {
+                root,
+                workspace_root: PathBuf::from(binding.workspace_root),
+                scratch_root: command_session_scratch_root(),
+            },
+        )
+        .map_err(CommandOpError::Command)
 }
 
 #[expect(

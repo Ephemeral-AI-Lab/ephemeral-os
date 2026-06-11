@@ -1,5 +1,5 @@
 //! Adapter-side isolated-workspace op tests. Lifecycle behavior lives in
-//! `eos-runtime/tests/workspace_lifecycle.rs`; dispatch-level coverage lives in the
+//! `workspace_runtime` unit tests; dispatch-level coverage lives in the
 //! daemon's `phase2_read_paths` integration tests.
 
 use super::*;

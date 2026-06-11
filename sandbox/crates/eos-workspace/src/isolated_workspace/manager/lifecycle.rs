@@ -5,7 +5,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Value};
 
-use crate::error::IsolatedError;
+use crate::isolated_workspace::error::IsolatedError;
 
 use super::{IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle};
 

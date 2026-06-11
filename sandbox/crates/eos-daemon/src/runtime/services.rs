@@ -1,12 +1,4 @@
-//! Host-neutral sandbox runtime services.
-//!
-//! Workspace runtime code owns isolated-workspace lease custody, lifecycle
-//! sweeps, and caller-keyed workspace-run cancellation. Routing code owns typed
-//! command/file target selection between isolated and direct workspace backends.
-//! Plugin operation machinery lives in `eos-plugin-ops`; this crate composes it
-//! with workspace state for cross-family policy.
-
-#![forbid(unsafe_code)]
+//! Daemon-owned runtime services shared by dispatch handlers.
 
 use std::sync::Arc;
 
@@ -16,31 +8,24 @@ use eos_plugin::PluginError;
 use eos_plugin_ops::{PluginRuntime, PluginRuntimeError};
 use serde_json::Value;
 
-pub mod workspace;
-pub mod maintenance {
-    pub mod sweepers {
-        use crate::WorkspaceRuntime;
+use crate::WorkspaceRuntime;
 
-        #[must_use]
-        pub fn sweep_workspace_ttl(workspace: &WorkspaceRuntime) -> usize {
-            workspace.ttl_sweep()
-        }
+pub(crate) mod sweepers {
+    use crate::WorkspaceRuntime;
 
-        pub fn sweep_command_sessions() {
-            eos_command_ops::runtime::command_session_reaper_sweep();
-        }
+    #[must_use]
+    pub(crate) fn sweep_workspace_ttl(workspace: &WorkspaceRuntime) -> usize {
+        workspace.ttl_sweep()
+    }
 
-        pub fn recover_orphaned_command_sessions() {
-            eos_command_ops::runtime::recover_orphaned_command_sessions();
-        }
+    pub(crate) fn sweep_command_sessions() {
+        eos_command_ops::runtime::command_session_reaper_sweep();
+    }
+
+    pub(crate) fn recover_orphaned_command_sessions() {
+        eos_command_ops::runtime::recover_orphaned_command_sessions();
     }
 }
-pub mod routing {
-    pub mod command_op;
-    pub mod file_op;
-}
-
-pub use workspace::{CallerCancel, ExitOutcome, WorkspaceEnterError, WorkspaceRuntime};
 
 /// Runtime service instances shared by daemon dispatch handlers.
 pub struct RuntimeServices {

@@ -30,8 +30,8 @@ use nix::unistd::{close, pipe2, read, Pid};
 #[cfg(target_os = "linux")]
 use serde_json::{json, Value};
 
-use crate::error::IsolatedError;
-use crate::manager::WorkspaceHandle;
+use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::manager::WorkspaceHandle;
 
 pub mod runner_launcher;
 
@@ -225,8 +225,8 @@ impl NamespaceRuntime {
                         "net-ready {} {} {} {}\n",
                         veth.ns_name,
                         veth.ns_ip,
-                        crate::network::BRIDGE_PREFIX_LEN,
-                        crate::network::GATEWAY
+                        crate::isolated_workspace::network::BRIDGE_PREFIX_LEN,
+                        crate::isolated_workspace::network::GATEWAY
                     )
                 },
             );
@@ -240,9 +240,9 @@ impl NamespaceRuntime {
         if self.stub {
             return Ok(PathBuf::new());
         }
-        let path = PathBuf::from(crate::caps::CGROUP_ROOT).join(format!(
+        let path = PathBuf::from(crate::isolated_workspace::caps::CGROUP_ROOT).join(format!(
             "{}{}",
-            crate::caps::HANDLE_PREFIX,
+            crate::isolated_workspace::caps::HANDLE_PREFIX,
             handle.workspace_id.0
         ));
         std::fs::create_dir_all(&path).map_err(setup_error)?;

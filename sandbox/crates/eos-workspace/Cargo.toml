@@ -1,5 +1,5 @@
 [package]
-name = "eos-isolated-workspace"
+name = "eos-workspace"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 eos-namespace.workspace = true
+eos-overlay.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

@@ -438,3 +438,7 @@ fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {
         eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/workspace_runtime.rs"]
+mod tests;

@@ -17,6 +17,10 @@ pub(crate) mod ops;
 pub(crate) mod request_args;
 #[path = "runtime/response.rs"]
 pub(crate) mod response;
+#[path = "runtime/services.rs"]
+pub(crate) mod runtime_services;
+#[path = "runtime/workspace.rs"]
+pub(crate) mod workspace_runtime;
 #[path = "transport/server.rs"]
 pub(crate) mod server;
 pub mod wire;
@@ -25,7 +29,9 @@ pub use context::DispatchContext;
 pub use dispatcher::OpTable;
 pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
+pub use runtime_services::RuntimeServices;
 pub use server::{DaemonServer, ServerConfig};
+pub use workspace_runtime::{CallerCancel, ExitOutcome, WorkspaceEnterError, WorkspaceRuntime};
 
 pub(crate) mod config {
     pub(crate) use eos_config::configs::daemon::CommandSessionConfig;

@@ -5,8 +5,9 @@
 use std::path::{Path, PathBuf};
 
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use eos_runtime::WorkspaceRuntime;
 use serde_json::{json, Value};
+
+use super::WorkspaceRuntime;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
@@ -143,7 +144,7 @@ fn isolated_runtime(scratch_root: &Path, workspace_root: &Path) -> WorkspaceRunt
 
 fn test_root(label: &str) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
-        "eos-runtime-workspace-{label}-{}",
+        "eos-daemon-workspace-{label}-{}",
         std::process::id()
     ));
     let _ = std::fs::remove_dir_all(&root);

@@ -3,17 +3,17 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::caps::ResourceCaps;
-use crate::error::IsolatedError;
-use crate::namespace::NamespaceRuntime;
-use crate::network::{IsolatedNetwork, VethAllocation};
+use crate::isolated_workspace::caps::ResourceCaps;
+use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::namespace::NamespaceRuntime;
+use crate::isolated_workspace::network::{IsolatedNetwork, VethAllocation};
 
 use self::lifecycle::monotonic_seconds;
 
 mod lifecycle;
 mod recovery;
 #[cfg(test)]
-#[path = "../../tests/unit/sessions.rs"]
+#[path = "../../../tests/unit/isolated_workspace_sessions.rs"]
 mod tests;
 
 pub use lifecycle::ExitOutcome;

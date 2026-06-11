@@ -1,5 +1,3 @@
-#![forbid(unsafe_code)]
-
 mod caps;
 mod error;
 mod manager;

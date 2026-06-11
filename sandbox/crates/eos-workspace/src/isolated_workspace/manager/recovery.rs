@@ -1,9 +1,9 @@
 use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 
-use crate::caps::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
-use crate::error::IsolatedError;
-use crate::network::VethAllocation;
+use crate::isolated_workspace::caps::{HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION};
+use crate::isolated_workspace::error::IsolatedError;
+use crate::isolated_workspace::network::VethAllocation;
 use serde_json::{json, Value};
 
 use super::IsolatedManager;

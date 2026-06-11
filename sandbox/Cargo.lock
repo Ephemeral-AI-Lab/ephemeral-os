@@ -169,6 +169,7 @@ dependencies = [
  "eos-ephemeral-workspace",
  "eos-layerstack",
  "eos-namespace",
+ "eos-operation-core",
  "eos-overlay",
  "serde",
  "serde_json",
@@ -210,10 +211,10 @@ dependencies = [
  "eos-isolated-workspace",
  "eos-layerstack",
  "eos-namespace",
+ "eos-operation-core",
  "eos-overlay",
  "eos-plugin",
  "eos-plugin-ops",
- "eos-runtime",
  "proptest",
  "serde",
  "serde_json",
@@ -248,6 +249,7 @@ name = "eos-file-ops"
 version = "0.1.0"
 dependencies = [
  "eos-layerstack",
+ "eos-operation-core",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -298,6 +300,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-operation-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "eos-overlay"
 version = "0.1.0"
 dependencies = [
@@ -332,24 +342,6 @@ dependencies = [
  "sha2",
  "thiserror 2.0.18",
  "uuid",
-]
-
-[[package]]
-name = "eos-runtime"
-version = "0.1.0"
-dependencies = [
- "eos-command-ops",
- "eos-command-session",
- "eos-config",
- "eos-file-ops",
- "eos-isolated-workspace",
- "eos-layerstack",
- "eos-namespace",
- "eos-plugin",
- "eos-plugin-ops",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
 ]
 
 [[package]]

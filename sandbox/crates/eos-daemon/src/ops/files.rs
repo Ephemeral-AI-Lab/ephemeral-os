@@ -1,17 +1,47 @@
 //! Workspace file op router.
 
+use std::path::PathBuf;
+
+use eos_command_ops::CommandBinding;
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_file_ops::{
-    EditFileOutcome, EditFileRequest, MutationOutcome, ReadFileOutcome, ReadFileRequest,
-    SearchReplaceEdit, WorkspaceConflict, WriteFileRequest,
+    edit_file as edit_with_backend, read_file as read_with_backend,
+    write_file as write_with_backend, DirectBackend, EditFileOutcome, EditFileRequest,
+    FileOpsError, IsolatedBackend, MutationOutcome, ReadFileOutcome, ReadFileRequest,
+    SearchReplaceEdit, WorkspaceConflict, WriteFileOutcome, WriteFileRequest,
 };
-use eos_runtime::routing::file_op::{self, FileOpContext, FileOpError, FileRoute};
 use serde_json::{json, Value};
+use thiserror::Error;
 
 use crate::error::DaemonError;
 use crate::request_args::{optional_path, require_raw_string, require_string};
 use crate::response::GuardedResponse;
-use crate::DispatchContext;
+use crate::{DispatchContext, WorkspaceRuntime};
+
+#[derive(Debug, Clone)]
+enum FileRoute {
+    Direct { layer_stack_root: PathBuf },
+    Isolated,
+}
+
+struct RoutedFileOutcome<T> {
+    route: FileRoute,
+    outcome: T,
+}
+
+struct FileOpContext<'a> {
+    workspace: Option<&'a WorkspaceRuntime>,
+    caller_id: &'a str,
+    layer_stack_root: Option<PathBuf>,
+}
+
+#[derive(Debug, Error)]
+enum FileOpError {
+    #[error("layer_stack_root is required")]
+    MissingLayerStackRoot,
+    #[error(transparent)]
+    File(#[from] FileOpsError),
+}
 
 /// `api.v1.read_file` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(
@@ -20,7 +50,7 @@ pub(crate) fn op_read_file(
 ) -> Result<Value, DaemonError> {
     let request = read_request(args, context)?;
     let caller_id = super::caller_id_or_default(args);
-    let routed = file_op::read_file(file_context(args, context, &caller_id), request)
+    let routed = route_read_file(file_context(args, context, &caller_id), request)
         .map_err(file_op_error)?;
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
@@ -36,7 +66,7 @@ pub(crate) fn op_write_file(
 ) -> Result<Value, DaemonError> {
     let request = write_request(args, context)?;
     let caller_id = super::caller_id_or_default(args);
-    let routed = file_op::write_file(file_context(args, context, &caller_id), request)
+    let routed = route_write_file(file_context(args, context, &caller_id), request)
         .map_err(file_op_error)?;
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
@@ -56,7 +86,7 @@ pub(crate) fn op_edit_file(
 ) -> Result<Value, DaemonError> {
     let request = edit_request(args)?;
     let caller_id = super::caller_id_or_default(args);
-    let routed = file_op::edit_file(file_context(args, context, &caller_id), request)
+    let routed = route_edit_file(file_context(args, context, &caller_id), request)
         .map_err(file_op_error)?;
     let EditFileOutcome {
         mut mutation,
@@ -81,6 +111,80 @@ fn file_context<'a, 'ctx: 'a>(
         workspace: context.services().map(|services| &services.workspace),
         caller_id,
         layer_stack_root: optional_path(args, "layer_stack_root"),
+    }
+}
+
+fn route_read_file(
+    context: FileOpContext<'_>,
+    request: ReadFileRequest,
+) -> Result<RoutedFileOutcome<ReadFileOutcome>, FileOpError> {
+    let direct_request = request.clone();
+    route_file_op(
+        context,
+        |binding| read_with_backend(&isolated_backend(binding), request),
+        |root| read_with_backend(&DirectBackend::new(root), direct_request),
+    )
+}
+
+fn route_write_file(
+    context: FileOpContext<'_>,
+    request: WriteFileRequest,
+) -> Result<RoutedFileOutcome<WriteFileOutcome>, FileOpError> {
+    let direct_request = request.clone();
+    route_file_op(
+        context,
+        |binding| write_with_backend(&isolated_backend(binding), request),
+        |root| write_with_backend(&DirectBackend::new(root), direct_request),
+    )
+}
+
+fn route_edit_file(
+    context: FileOpContext<'_>,
+    request: EditFileRequest,
+) -> Result<RoutedFileOutcome<EditFileOutcome>, FileOpError> {
+    let direct_request = request.clone();
+    route_file_op(
+        context,
+        |binding| edit_with_backend(&isolated_backend(binding), request),
+        |root| edit_with_backend(&DirectBackend::new(root), direct_request),
+    )
+}
+
+fn route_file_op<T>(
+    context: FileOpContext<'_>,
+    isolated: impl FnOnce(&CommandBinding) -> Result<T, FileOpsError>,
+    direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
+) -> Result<RoutedFileOutcome<T>, FileOpError> {
+    if let Some(workspace) = context.workspace {
+        if let Some(binding) = workspace.command_binding_for(context.caller_id) {
+            let outcome = isolated(&binding)?;
+            workspace.touch(&binding.caller_id);
+            return Ok(RoutedFileOutcome {
+                route: FileRoute::Isolated,
+                outcome,
+            });
+        }
+    }
+    let root = context
+        .layer_stack_root
+        .ok_or(FileOpError::MissingLayerStackRoot)?;
+    let outcome = direct(root.clone())?;
+    Ok(RoutedFileOutcome {
+        route: FileRoute::Direct {
+            layer_stack_root: root,
+        },
+        outcome,
+    })
+}
+
+fn isolated_backend(binding: &CommandBinding) -> IsolatedBackend {
+    IsolatedBackend {
+        layer_stack_root: binding.layer_stack_root.clone(),
+        workspace_root: binding.workspace_root.clone(),
+        upperdir: binding.upperdir.clone(),
+        layer_paths: binding.layer_paths.clone(),
+        manifest_version: binding.manifest_version,
+        manifest_root_hash: binding.manifest_root_hash.clone(),
     }
 }
 
