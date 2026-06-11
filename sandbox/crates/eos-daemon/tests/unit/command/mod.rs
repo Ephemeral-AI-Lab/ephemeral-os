@@ -51,8 +51,9 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 
 #[test]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
-    let manager =
-        eos_command_ops::CommandOps::new(eos_command_session::CommandSessionConfig::default());
+    let manager = eos_operation::command::CommandOps::new(
+        eos_command_session::CommandSessionConfig::default(),
+    );
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
     manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
 

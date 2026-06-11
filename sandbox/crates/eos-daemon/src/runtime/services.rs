@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use eos_operation::plugin::{PluginRuntime, PluginRuntimeError};
 use eos_plugin::PluginError;
-use eos_plugin_ops::{PluginRuntime, PluginRuntimeError};
 use serde_json::Value;
 
 use crate::WorkspaceRuntime;
@@ -19,11 +19,11 @@ pub(crate) mod sweepers {
     }
 
     pub(crate) fn sweep_command_sessions() {
-        eos_command_ops::runtime::command_session_reaper_sweep();
+        eos_operation::command::runtime::command_session_reaper_sweep();
     }
 
     pub(crate) fn recover_orphaned_command_sessions() {
-        eos_command_ops::runtime::recover_orphaned_command_sessions();
+        eos_operation::command::runtime::recover_orphaned_command_sessions();
     }
 }
 
@@ -47,7 +47,7 @@ impl RuntimeServices {
     }
 
     pub fn ensure_plugin_family_allowed(&self, args: &Value) -> Result<(), PluginRuntimeError> {
-        eos_plugin_ops::ensure::validate_plugin_caller_fields(args)?;
+        eos_operation::plugin::ensure::validate_plugin_caller_fields(args)?;
         let caller_id = args
             .get("caller_id")
             .and_then(Value::as_str)

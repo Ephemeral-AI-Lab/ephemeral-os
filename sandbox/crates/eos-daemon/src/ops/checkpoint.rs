@@ -1,15 +1,15 @@
 //! Workspace checkpoint adapters: LayerStack base/binding/metrics plus the
-//! `eos_checkpoint` commit seam.
+//! `eos_operation::checkpoint` commit module.
 
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eos_checkpoint::{CommitOutcome, CommitRequest};
 use eos_layerstack::{
     build_workspace_base as build_layer_stack_workspace_base,
     ensure_workspace_base as ensure_layer_stack_workspace_base, read_workspace_binding,
     require_workspace_binding, LayerStack,
 };
+use eos_operation::checkpoint::{CommitOutcome, CommitRequest};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -138,7 +138,7 @@ pub(crate) fn commit_to_git(
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
     let message = require_string(args, "message")?;
     let raw_paths = raw_commit_paths(args)?;
-    let outcome = eos_checkpoint::commit_to_git(&CommitRequest {
+    let outcome = eos_operation::checkpoint::commit_to_git(&CommitRequest {
         layer_stack_root: &layer_stack_root,
         workspace_root: &workspace_root,
         message: &message,

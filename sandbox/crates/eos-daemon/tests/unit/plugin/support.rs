@@ -6,7 +6,7 @@ use crate::RuntimeServices;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_namespace::protocol::{RunRequest, RunResult};
-use eos_plugin_ops::{LaunchError, NsRunnerLauncher};
+use eos_operation::plugin::{LaunchError, NsRunnerLauncher};
 use serde_json::{json, Value};
 use std::error::Error;
 use std::path::{Path, PathBuf};

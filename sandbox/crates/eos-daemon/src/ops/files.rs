@@ -3,13 +3,13 @@
 use std::path::PathBuf;
 
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_file_ops::{
+use eos_operation::file::{
     edit_file as edit_with_backend, read_file as read_with_backend,
     write_file as write_with_backend, DirectBackend, EditFileOutcome, EditFileRequest,
     FileOpsError, IsolatedBackend, MutationOutcome, ReadFileOutcome, ReadFileRequest,
     SearchReplaceEdit, WorkspaceConflict, WriteFileOutcome, WriteFileRequest,
 };
-use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::IsolatedWorkspaceBinding;
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -150,7 +150,7 @@ fn route_edit_file(
 
 fn route_file_op<T>(
     context: FileOpContext<'_>,
-    isolated: impl FnOnce(&WorkspaceExecutionBinding) -> Result<T, FileOpsError>,
+    isolated: impl FnOnce(&IsolatedWorkspaceBinding) -> Result<T, FileOpsError>,
     direct: impl FnOnce(PathBuf) -> Result<T, FileOpsError>,
 ) -> Result<RoutedFileOutcome<T>, FileOpError> {
     if let Some(workspace) = context.workspace {
@@ -175,7 +175,7 @@ fn route_file_op<T>(
     })
 }
 
-fn isolated_backend(binding: &WorkspaceExecutionBinding) -> IsolatedBackend {
+fn isolated_backend(binding: &IsolatedWorkspaceBinding) -> IsolatedBackend {
     IsolatedBackend {
         layer_stack_root: binding.layer_stack_root.clone(),
         workspace_root: binding.workspace_root.clone(),
@@ -278,7 +278,7 @@ fn conflict_value(conflict: WorkspaceConflict) -> Value {
 /// layer's enrichment, so the file-ops crate stays free of process telemetry.
 fn enrich_direct_timings(
     root: &std::path::Path,
-    timings: &mut eos_file_ops::WorkspaceTimings,
+    timings: &mut eos_operation::file::WorkspaceTimings,
     changed_path_count: usize,
 ) {
     if let Ok(manifest) = eos_layerstack::service::active_manifest(root) {

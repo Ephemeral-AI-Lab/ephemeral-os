@@ -1,14 +1,14 @@
 //! Command-session dispatcher handlers, driving the caller-keyed
-//! command runtime in `eos-command-ops`.
+//! command runtime in `eos_operation::command`.
 
 use std::path::PathBuf;
 
-use eos_command_ops::{
-    command_ops, command_session_config, command_session_scratch_root, ExecTarget,
-};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CommandResponse, CommandSessionCompletion,
     CommandSessionError, ReadCommandProgress, StartCommandSession, WriteStdin,
+};
+use eos_operation::command::{
+    command_ops, command_session_config, command_session_scratch_root, ExecTarget,
 };
 use serde_json::{json, Value};
 use thiserror::Error;

@@ -64,9 +64,9 @@ impl DaemonError {
     }
 }
 
-impl From<eos_plugin_ops::PluginRuntimeError> for DaemonError {
-    fn from(err: eos_plugin_ops::PluginRuntimeError) -> Self {
-        use eos_plugin_ops::PluginRuntimeError;
+impl From<eos_operation::plugin::PluginRuntimeError> for DaemonError {
+    fn from(err: eos_operation::plugin::PluginRuntimeError) -> Self {
+        use eos_operation::plugin::PluginRuntimeError;
         match err {
             PluginRuntimeError::Plugin(source) => Self::Plugin(source),
             PluginRuntimeError::Ppc(source) => Self::from(source),
@@ -81,9 +81,9 @@ impl From<eos_plugin_ops::PluginRuntimeError> for DaemonError {
     }
 }
 
-impl From<eos_plugin_ops::LaunchError> for DaemonError {
-    fn from(err: eos_plugin_ops::LaunchError) -> Self {
-        use eos_plugin_ops::LaunchError;
+impl From<eos_operation::plugin::LaunchError> for DaemonError {
+    fn from(err: eos_operation::plugin::LaunchError) -> Self {
+        use eos_operation::plugin::LaunchError;
         match err {
             LaunchError::InvalidRequest(message) => Self::InvalidEnvelope(message),
             LaunchError::Io(source) => Self::Io(source),
@@ -92,9 +92,9 @@ impl From<eos_plugin_ops::LaunchError> for DaemonError {
     }
 }
 
-impl From<eos_plugin_ops::PpcError> for DaemonError {
-    fn from(err: eos_plugin_ops::PpcError) -> Self {
-        use eos_plugin_ops::PpcError;
+impl From<eos_operation::plugin::PpcError> for DaemonError {
+    fn from(err: eos_operation::plugin::PpcError) -> Self {
+        use eos_operation::plugin::PpcError;
         match err {
             PpcError::Plugin(source) => Self::Plugin(source),
             // The plugin channel frames with its own copy of the wire framing
@@ -110,9 +110,9 @@ impl From<eos_plugin_ops::PpcError> for DaemonError {
     }
 }
 
-impl From<eos_checkpoint::CheckpointError> for DaemonError {
-    fn from(err: eos_checkpoint::CheckpointError) -> Self {
-        use eos_checkpoint::CheckpointError;
+impl From<eos_operation::checkpoint::CheckpointError> for DaemonError {
+    fn from(err: eos_operation::checkpoint::CheckpointError) -> Self {
+        use eos_operation::checkpoint::CheckpointError;
         match err {
             CheckpointError::InvalidEnvelope(message) => Self::InvalidEnvelope(message),
             CheckpointError::Forbidden(message) => Self::Forbidden(message),

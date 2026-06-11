@@ -1,13 +1,13 @@
 //! Plugin op adapters: wire arg parsing, response shaping over the typed
-//! [`eos_plugin_ops`] outcomes, and the
+//! `eos_operation::plugin` outcomes, and the
 //! resource-telemetry splice for oneshot overlay runs.
 
 use std::time::Instant;
 
 use eos_layerstack::LayerStack;
-use eos_plugin_ops::needs_upload_response;
-use eos_plugin_ops::route::{PluginOperationRoute, PluginProcessSpec};
-use eos_plugin_ops::PackageEnsureReport;
+use eos_operation::plugin::needs_upload_response;
+use eos_operation::plugin::route::{PluginOperationRoute, PluginProcessSpec};
+use eos_operation::plugin::PackageEnsureReport;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -16,7 +16,7 @@ use crate::response::{
     merge_runner_timings, resource_timings, TreeResourceStats,
 };
 use crate::DispatchContext;
-use eos_plugin_ops::{
+use eos_operation::plugin::{
     EnsureOutcome, EnsureReady, LoadedPluginStatus, PluginDispatchOutcome, PluginOverlayOutcome,
     ServiceHealthReport, StatusOutcome,
 };

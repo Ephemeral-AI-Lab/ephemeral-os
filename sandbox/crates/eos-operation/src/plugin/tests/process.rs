@@ -1,0 +1,228 @@
+//! Unit tests for plugin service process specs (spec/env, spawn, PPC connect).
+//!
+//! Referenced from `src/process.rs` via `#[path]` so they can
+//! reach the `pub(super)` spec/process types and `ENV_*` constants.
+
+use super::super::route::{
+    ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_ID, ENV_PLUGIN_LAYER_STACK_ROOT,
+    ENV_PLUGIN_PACKAGE_ROOT, ENV_PLUGIN_PPC_PROTOCOL_VERSION, ENV_PLUGIN_PPC_SOCKET,
+    ENV_PLUGIN_SERVICE_ID, ENV_PLUGIN_WORKSPACE_ROOT,
+};
+use super::*;
+use eos_plugin::{PluginServiceKey, PluginServiceKeyParts, RefreshStrategy, ServiceMode};
+
+type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+fn key(profile: &str) -> std::result::Result<PluginServiceKey, PluginError> {
+    PluginServiceKey::new(PluginServiceKeyParts {
+        layer_stack_root: "/eos/plugin/layer-stack".to_owned(),
+        workspace_root: "/eos/plugin/workspace".to_owned(),
+        plugin_id: "demo".to_owned(),
+        plugin_digest: "digest-a".to_owned(),
+        service_id: "indexer".to_owned(),
+        service_profile_digest: profile.to_owned(),
+        service_mode: ServiceMode::WorkspaceSnapshotRefresh,
+        refresh_strategy: RefreshStrategy::RemountWorkspaceAndNotify,
+    })
+}
+
+#[test]
+fn process_spec_uses_stable_eos_plugin_socket_and_env() -> TestResult {
+    let spec = new_spec_for_test(
+        key("profile-a")?,
+        vec!["demo-indexer".to_owned(), "--stdio".to_owned()],
+        1,
+    )?;
+    let env = spec.environment();
+
+    assert!(env[ENV_PLUGIN_PPC_SOCKET].starts_with("/eos/plugin/ppc/"));
+    assert!(std::path::Path::new(&env[ENV_PLUGIN_PPC_SOCKET])
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock")));
+    assert_eq!(env[ENV_PLUGIN_LAYER_STACK_ROOT], "/eos/plugin/layer-stack");
+    assert_eq!(env[ENV_PLUGIN_WORKSPACE_ROOT], "/eos/plugin/workspace");
+    assert_eq!(
+        env[ENV_PLUGIN_PACKAGE_ROOT],
+        "/eos/runtime/plugins/catalog/demo/digest-a"
+    );
+    assert_eq!(
+        env[ENV_PLUGIN_DEPENDENCY_ROOT],
+        "/eos/runtime/packages/demo/digest-a"
+    );
+    assert_eq!(env[ENV_PLUGIN_ID], "demo");
+    assert_eq!(env[ENV_PLUGIN_SERVICE_ID], "indexer");
+    assert_eq!(env[ENV_PLUGIN_PPC_PROTOCOL_VERSION], "1");
+    Ok(())
+}
+
+#[test]
+fn process_spec_key_changes_socket_path() -> TestResult {
+    let first = new_spec_for_test(key("profile-a")?, vec!["svc".to_owned()], 1)?;
+    let second = new_spec_for_test(key("profile-b")?, vec!["svc".to_owned()], 1)?;
+
+    assert_ne!(
+        first.environment()[ENV_PLUGIN_PPC_SOCKET],
+        second.environment()[ENV_PLUGIN_PPC_SOCKET]
+    );
+    Ok(())
+}
+
+#[test]
+fn process_spec_rejects_empty_command() -> TestResult {
+    let service_key = key("profile-a")?;
+    assert!(matches!(
+        new_spec_for_test(service_key, Vec::new(), 1),
+        Err(PluginError::Manifest(message)) if message.contains("launch command")
+    ));
+    Ok(())
+}
+
+#[test]
+fn spawned_process_reports_running_then_tears_down() -> TestResult {
+    let spec = new_spec_for_test(
+        key("profile-a")?,
+        vec![
+            "/bin/sh".to_owned(),
+            "-c".to_owned(),
+            "test \"$EOS_PLUGIN_SERVICE_ID\" = indexer && sleep 30".to_owned(),
+        ],
+        1,
+    )?;
+    let mut process = spawn(&spec)?;
+
+    let status = process.status();
+    assert_eq!(status.service_id, "indexer");
+    assert!(status.running);
+    assert!(status.pid > 0);
+
+    process.teardown();
+    let status = process.status();
+    assert!(!status.running);
+    Ok(())
+}
+
+#[test]
+fn spawn_connected_accepts_ppc_socket() -> TestResult {
+    let root = test_socket_root("spawn-connected");
+    let spec = new_spec_with_socket_root(
+        key("profile-a")?,
+        vec!["/bin/sh".to_owned(), "-c".to_owned(), "sleep 30".to_owned()],
+        1,
+        &root,
+    )?;
+    let socket_root = root.clone();
+    let connector = std::thread::spawn(move || {
+        let socket = wait_for_socket(&socket_root)?;
+        std::os::unix::net::UnixStream::connect(socket).map(|_| ())
+    });
+
+    let launcher = NoLaunch;
+    let (mut process, _client) =
+        match spawn_connected_with_overlay(&launcher, &spec, None, Duration::from_secs(5)) {
+            Ok(pair) => pair,
+            Err(err) => {
+                let _ = connector.join();
+                return Err(err.into());
+            }
+        };
+    match connector.join() {
+        Ok(result) => result?,
+        Err(_) => {
+            return Err(std::io::Error::other("connector thread panicked").into());
+        }
+    }
+    process.teardown();
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+fn new_spec_for_test(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+) -> Result<PluginProcessSpec, PluginError> {
+    let socket_root = eos_config::configs::daemon::PluginRuntimeConfig::default().ppc_root;
+    new_spec_with_socket_root(key, command, ppc_protocol_version, socket_root)
+}
+
+fn new_spec_with_socket_root(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+    socket_root: impl AsRef<Path>,
+) -> Result<PluginProcessSpec, PluginError> {
+    let package_root = PathBuf::from("/eos/runtime/plugins/catalog")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest);
+    let dependency_root = PathBuf::from("/eos/runtime/packages")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest);
+    PluginProcessSpec::new_with_package_paths(
+        key,
+        command,
+        package_root,
+        dependency_root,
+        PathBuf::from("."),
+        ppc_protocol_version,
+        socket_root,
+    )
+}
+
+fn test_socket_root(name: &str) -> PathBuf {
+    let root = PathBuf::from("target").join(format!("ppc-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    root
+}
+
+fn wait_for_socket(root: &Path) -> std::io::Result<PathBuf> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Ok(entries) = std::fs::read_dir(root) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|ext| ext.to_str()) == Some("sock") {
+                    return Ok(path);
+                }
+            }
+        }
+        if Instant::now() >= deadline {
+            return Err(std::io::Error::new(
+                ErrorKind::TimedOut,
+                format!("timed out waiting for socket under {}", root.display()),
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+/// Overlay-free spawns never reach the launcher; fail loudly if one does.
+struct NoLaunch;
+
+impl eos_workspace::NsRunnerLauncher for NoLaunch {
+    fn run(
+        &self,
+        _request: &eos_namespace::protocol::RunRequest,
+    ) -> Result<eos_namespace::protocol::RunResult, eos_workspace::LaunchError> {
+        Err(eos_workspace::LaunchError::Failed(
+            "no launcher in this test".to_owned(),
+        ))
+    }
+
+    fn spawn_detached(
+        &self,
+        _request: &eos_namespace::protocol::RunRequest,
+    ) -> Result<std::process::Child, eos_workspace::LaunchError> {
+        Err(eos_workspace::LaunchError::Failed(
+            "no launcher in this test".to_owned(),
+        ))
+    }
+
+    fn remount_in(
+        &self,
+        _target_pid: u32,
+        _request: &eos_namespace::protocol::RunRequest,
+        _timeout: Duration,
+    ) -> Result<(), eos_workspace::LaunchError> {
+        Ok(())
+    }
+}

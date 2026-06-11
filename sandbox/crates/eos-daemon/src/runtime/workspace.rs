@@ -6,7 +6,7 @@
 //! cross-domain workspace-run policy: when leases are acquired and released,
 //! when sessions are torn down, and in what order — while namespace mechanics
 //! stay in `eos-workspace` and command-session internals stay in
-//! `eos-command-ops`. State lives on a [`WorkspaceRuntime`] instance, never in
+//! `eos_operation::command`. State lives on a [`WorkspaceRuntime`] instance, never in
 //! process globals.
 //!
 //! Lock-order discipline: the workspace state lock is acquired before any
@@ -23,7 +23,7 @@ use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
 use eos_layerstack::{read_workspace_binding, LayerStack};
-use eos_operation_core::WorkspaceExecutionBinding;
+use eos_workspace::IsolatedWorkspaceBinding;
 use eos_workspace::{
     IsolatedError, IsolatedManager, IsolatedSnapshot, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
@@ -147,7 +147,7 @@ impl WorkspaceRuntime {
         root: &Path,
     ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
         let active_command_sessions =
-            eos_command_ops::active_command_sessions_for_caller(caller_id);
+            eos_operation::command::active_command_sessions_for_caller(caller_id);
         if active_command_sessions > 0 {
             return Err(WorkspaceEnterError::ActiveCommandSessions {
                 active_command_sessions,
@@ -228,7 +228,7 @@ impl WorkspaceRuntime {
     /// The command-session binding for `caller_id`'s open workspace, or `None`
     /// when the caller is not isolated (callers then route ephemerally).
     #[must_use]
-    pub fn command_binding_for(&self, caller_id: &str) -> Option<WorkspaceExecutionBinding> {
+    pub fn command_binding_for(&self, caller_id: &str) -> Option<IsolatedWorkspaceBinding> {
         if caller_id.is_empty() {
             return None;
         }
@@ -243,7 +243,7 @@ impl WorkspaceRuntime {
     /// — sessions are cancelled before the isolated namespace/lease teardown.
     pub fn cancel_runs_for_caller(&self, caller_id: &str, grace_s: Option<f64>) -> CallerCancel {
         let cancelled_sessions =
-            eos_command_ops::cleanup_command_sessions_for_caller(caller_id, grace_s);
+            eos_operation::command::cleanup_command_sessions_for_caller(caller_id, grace_s);
         let isolated = self.exit(caller_id, grace_s);
         CallerCancel {
             cancelled_sessions,
@@ -256,7 +256,7 @@ impl WorkspaceRuntime {
     /// cgroup/scratch resources. Returns the per-substrate counts as
     /// `(cancelled_sessions, isolated_callers_exited)`.
     pub fn cancel_all_runs(&self, grace_s: Option<f64>) -> (usize, usize) {
-        let cancelled_sessions = eos_command_ops::cancel_all_command_sessions(grace_s);
+        let cancelled_sessions = eos_operation::command::cancel_all_command_sessions(grace_s);
         let isolated_exited = self.exit_all_and_reap(grace_s);
         (cancelled_sessions, isolated_exited)
     }
@@ -289,7 +289,7 @@ impl WorkspaceRuntime {
             .manager
             .list_open_callers()
             .into_iter()
-            .filter(|caller| eos_command_ops::active_command_sessions_for_caller(caller) > 0)
+            .filter(|caller| eos_operation::command::active_command_sessions_for_caller(caller) > 0)
             .collect::<HashSet<_>>();
         let evicted = state.manager.ttl_sweep(&active_callers);
         let count = evicted.len();
@@ -403,8 +403,8 @@ impl WorkspaceRuntime {
 fn command_binding_from(
     layer_stack_root: &Path,
     handle: WorkspaceHandle,
-) -> WorkspaceExecutionBinding {
-    WorkspaceExecutionBinding {
+) -> IsolatedWorkspaceBinding {
+    IsolatedWorkspaceBinding {
         caller_id: handle.caller_id,
         workspace_handle_id: handle.workspace_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),

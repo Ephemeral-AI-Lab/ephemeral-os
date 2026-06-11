@@ -151,31 +151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-checkpoint"
-version = "0.1.0"
-dependencies = [
- "eos-layerstack",
- "eos-overlay",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "eos-command-ops"
-version = "0.1.0"
-dependencies = [
- "eos-command-session",
- "eos-layerstack",
- "eos-namespace",
- "eos-operation-core",
- "eos-overlay",
- "eos-workspace",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "eos-command-session"
 version = "0.1.0"
 dependencies = [
@@ -202,17 +177,13 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
- "eos-checkpoint",
- "eos-command-ops",
  "eos-command-session",
  "eos-config",
- "eos-file-ops",
  "eos-layerstack",
  "eos-namespace",
- "eos-operation-core",
+ "eos-operation",
  "eos-overlay",
  "eos-plugin",
- "eos-plugin-ops",
  "eos-workspace",
  "proptest",
  "serde",
@@ -233,17 +204,6 @@ dependencies = [
  "eos-sandbox-host",
  "serde_json",
  "sha2",
-]
-
-[[package]]
-name = "eos-file-ops"
-version = "0.1.0"
-dependencies = [
- "eos-layerstack",
- "eos-operation-core",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -275,11 +235,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-operation-core"
+name = "eos-operation"
 version = "0.1.0"
 dependencies = [
+ "eos-command-session",
+ "eos-config",
+ "eos-layerstack",
+ "eos-namespace",
+ "eos-overlay",
+ "eos-plugin",
+ "eos-workspace",
+ "nix 0.29.0",
  "serde",
  "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]
@@ -299,23 +270,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-plugin-ops"
-version = "0.1.0"
-dependencies = [
- "eos-config",
- "eos-layerstack",
- "eos-namespace",
- "eos-plugin",
- "eos-workspace",
- "nix 0.29.0",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.18",
- "uuid",
 ]
 
 [[package]]

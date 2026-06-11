@@ -260,10 +260,12 @@ sandbox/
 │   ├── eos-workspace/              ephemeral + isolated workspace policy
 │   ├── eos-plugin/                 plugin contracts and PPC protocol
 │   ├── eos-operation/
-│   │   ├── operation-core/         shared operation outcome + workspace binding contracts
-│   │   ├── eos-command-ops/        command lifecycle/runtime policy
-│   │   ├── file-ops/               file operation semantics
-│   │   └── plugin-ops/             plugin package/process/dispatch runtime
+│   │   └── src/
+│   │       ├── core/               shared operation outcome contracts
+│   │       ├── command/            command lifecycle/runtime policy
+│   │       ├── file/               file operation semantics
+│   │       ├── plugin/             plugin package/process/dispatch runtime
+│   │       └── checkpoint/         checkpoint commit pipeline
 │   └── eos-e2e-test/               live protocol tests
 ├── docs/
 │   ├── README.md                   index

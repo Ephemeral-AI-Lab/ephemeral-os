@@ -125,7 +125,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   **`eos-workspace::isolated_workspace`**, which must not own publish paths.
   `eos-plugin` is even narrower now:
   it is a pure contract/PPC crate, while snapshot/overlay/publish/process
-  behavior stays in `eos-plugin-ops`. Verified edges (get these EXACTLY right):
+  behavior stays in `eos_operation::plugin`. Verified edges (get these EXACTLY right):
   - `contract/` → data/prose only; no compiled crate.
   - `eos-layerstack` → storage, leases, CAS hashes, route/commit policy.
   - `eos-overlay` → overlayfs mechanics and captured path changes.
@@ -133,13 +133,17 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   - `eos-workspace` → reusable per-operation overlay workspace helpers plus
     isolated session lifecycle, network setup, TTL/GC; isolated code must not
     publish workspace changes.
-  - `eos-command-session` / `eos-command-ops` → command-session mechanics and
-    command runtime policy.
-  - `eos-file-ops` → file operation semantics over direct and isolated backends.
+  - `eos-command-session` / `eos_operation::command` → command-session
+    mechanics and command runtime policy.
+  - `eos_operation::core` → shared operation outcome contracts re-exported from
+    the crate root.
+  - `eos_operation::file` → file operation semantics over direct and isolated
+    backends.
   - `eos-plugin` → plugin contracts and PPC framing; **NOT overlay/layerstack
     process ownership**.
-  - `eos-plugin-ops` → plugin package publishing, service processes, PPC
+  - `eos_operation::plugin` → plugin package publishing, service processes, PPC
     transport, dispatch, refresh, OCC callbacks, and oneshot overlays.
+  - `eos_operation::checkpoint` → checkpoint commit pipeline.
   - `eos-daemon` → transport, dispatch, wire, adapters, service composition,
     daemon-owned plugin/checkpoint process glue.
   - `eosd` → binary subcommand dispatch over daemon/namespace/overlay support.

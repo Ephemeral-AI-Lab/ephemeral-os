@@ -43,8 +43,7 @@ drift gate.
   `eos-sandbox-host`. Box
   side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol),
   `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command-session`,
-  `eos-command-ops`, `eos-workspace`, `eos-file-ops`, `eos-plugin`, and
-  `eos-plugin-ops`.
+  `eos-operation`, `eos-workspace`, and `eos-plugin`.
 - `docs/API.md` — the public op reference, generated from `contract/ops.json`
   (`cargo run -p xtask -- gen-docs`).
 - `docs/contract/` — the frozen historical wire/CAS/audit contracts.

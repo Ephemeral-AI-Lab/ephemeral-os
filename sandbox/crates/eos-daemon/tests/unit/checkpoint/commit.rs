@@ -1,6 +1,6 @@
 //! Adapter-side `commit_to_git` tests: stable wire response keys over the
-//! typed [`eos_checkpoint::CommitOutcome`] and the checkpoint-to-daemon error
-//! mapping. Pipeline behavior lives in `eos-checkpoint/tests/`.
+//! typed [`eos_operation::checkpoint::CommitOutcome`] and the checkpoint-to-daemon error
+//! mapping. Pipeline behavior lives in `eos-operation`'s checkpoint tests.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

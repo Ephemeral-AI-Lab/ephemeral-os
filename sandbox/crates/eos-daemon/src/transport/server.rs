@@ -90,7 +90,7 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        eos_command_ops::configure_command_sessions(&daemon_config.command_sessions);
+        eos_operation::command::configure_command_sessions(&daemon_config.command_sessions);
         eos_layerstack::configure_auto_squash_max_depth(
             daemon_config.layer_stack.auto_squash_max_depth,
         );
