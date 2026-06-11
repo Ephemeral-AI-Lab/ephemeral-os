@@ -250,6 +250,28 @@ DB-derived render.
     token and `Running` status before stamping `agent_run_id` and calling
     `AgentLaunchPort.launch`. A cancel or settlement that wins the race changes
     the row first; the guarded launcher skips instead of starting stale work.
+22. **One `reconcile*` transition per entity; submission drives a fixed
+    bottom-up pipeline.** Each entity's `transitions.ts` exports one status
+    mutation - `reconcilePlan` / `reconcileWorkItem` (the two leaf entries,
+    carrying the submission payload), `reconcileAttempt`,
+    `reconcileIteration`, `reconcileWorkflow` - that re-derives its
+    entity's status from its children's rows and returns a decision:
+    success and failure are return values of one function, never separate
+    functions, so death and compose synthesis (§2.14, §2.19) reuse the
+    identical path with a synthesized failed payload. The transitions
+    never call each other and never create entities: `binding.submit`
+    sequences them bottom-up in one transaction, interleaving the
+    `creation.ts` descends on the two continue decisions (attempt `Failed`
+    with budget left → `createAttempt`; iteration `Success` with a
+    deferral → `createIteration`) before the next level reconciles -
+    "retry stops at attempt" and "deferral stops at iteration" are
+    therefore no-op decisions over fresh rows, not conditional call
+    topology - and ends with one `claimLaunchable` sweep. Each reconcile
+    mutates only its own entity's rows and reads children through `trx`
+    (in-transaction reads see the pipeline's earlier writes; the loaded
+    `WorkflowTree` provides immutable context only). The cancel cascade
+    stays outside this family: top-down imposition, not bottom-up
+    derivation.
 
 ## 3. Phase 05 Amendments
 
@@ -276,12 +298,13 @@ everything not listed is implemented as written there.
 | §2.16/§8 `AgentLaunchPort.launch(agentName, initialMessages)` | becomes `launch(agentName, initialMessages, options?)`, where `options` carries `SubmissionBinding` and the workflow cancellation signal | §2.19, §2.21 |
 | §2.17/§9 tool family: `delegate_workflow` + `read_workflow_context` + `query_workflow_context` | the family is `delegate_workflow` alone; cancel rides `cancel_background_session`; the read/query tool surface is deferred to a later discussion | §2.18 |
 | §2.8-§2.9 `WorkflowCell`, `liveRuns`, and per-workflow promise queue | removed; DB rows carry claims, launch tokens, terminal guards, and cancellation generations; `WorkflowService` keeps only active terminal resolvers and workflow abort controllers | §2.21 |
+| §2.15 orchestration functions (`delegateWorkflow`, `materializeWorkItems`, `recordWorkerOutcome`, `reconcileAttempt`) | one uniform `reconcile*` transition per entity (§14), sequenced bottom-up by the `binding.submit` pipeline with `creation.ts` descends and one `claimLaunchable` sweep; the idempotent terminal-guard rule survives unchanged | §2.22 |
 
 Unchanged and re-affirmed: §2.3 status enum, §2.4 minted IDs, §2.8-2.12
 session machinery, §2.18 bound functions. §2.7 (settlement consumption),
-§2.8-§2.9 (active runtime shape), §2.16 (port signature), and §2.17
-(read tools) are amended by the rows above; the §2.7 synthesis rule itself
-survives as the death path.
+§2.8-§2.9 (active runtime shape), §2.15 (orchestration function set),
+§2.16 (port signature), and §2.17 (read tools) are amended by the rows
+above; the §2.7 synthesis rule itself survives as the death path.
 
 ## 4. Companion Spec Status
 
@@ -305,7 +328,8 @@ Phase 05):
   `loadWorkflowContext` (context path universe), per-field projection + tree
   listing (replacing `render/`), the §2.17 disk mirror, launch context
   builders + default composition policy (replacing `context.ts`), the composer seam on
-  the launcher, materialization-time declaration rules, the §14
+  the launcher, materialization-time declaration rules, the §2.22
+  per-entity `reconcile*` transitions and submission pipeline, the §14
   entity-oriented module layout,
 - `@eos/tool`: `tools/workflow/delegate-workflow.ts` (tool name
   `delegate_workflow`; the family's only
@@ -929,9 +953,10 @@ process.stdin.on("end", () => {
 ## 11. Lifecycle and Transition Flow
 
 Against Phase 05 §8; everything not named is unchanged. The submission
-tools drive every mid-workflow transition through the §2.19 bound seam;
-settlement callbacks contribute only death synthesis, and cancellation is
-the background-session handle calling `WorkflowService.cancel`.
+tools drive every mid-workflow transition through the §2.19 bound seam
+and the §2.22 reconcile pipeline; settlement callbacks contribute only
+death synthesis, and cancellation is the background-session handle
+calling `WorkflowService.cancel`.
 
 ```text
 delegate_workflow(goal)                              caller's run
