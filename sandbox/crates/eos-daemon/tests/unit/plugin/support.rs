@@ -1,25 +1,29 @@
 use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::runtime::context::DispatchContext;
-use crate::runtime::services::Services;
 use crate::wire::Request;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use eos_namespace::protocol::{RunRequest, RunResult};
+use eos_runtime::{LaunchError, NsRunnerLauncher, RuntimeServices};
 use serde_json::{json, Value};
 use std::error::Error;
 use std::path::{Path, PathBuf};
+use std::process::Child;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 pub(super) type TestError = Box<dyn Error + Send + Sync + 'static>;
 pub(super) type TestResult = Result<(), TestError>;
 
-/// One isolated daemon under test: an op table plus its own `Services`
+/// One isolated daemon under test: an op table plus its own runtime services
 /// instance (no process-global state survives between tests). These adapter
 /// tests never start service processes; service runtime behavior lives in
 /// `eos-runtime/tests/`.
 pub(super) struct TestDaemon {
     table: OpTable,
-    services: Services,
+    services: RuntimeServices,
 }
 
 impl TestDaemon {
@@ -45,7 +49,7 @@ impl TestDaemon {
     fn with_configs(plugin: PluginRuntimeConfig, isolated: IsolatedWorkspaceConfig) -> Self {
         Self {
             table: OpTable::with_builtins(),
-            services: Services::new(plugin, isolated),
+            services: RuntimeServices::new(plugin, isolated, Arc::new(NoLaunch)),
         }
     }
 
@@ -66,6 +70,33 @@ impl TestDaemon {
     /// `api.plugin.status` through the adapter.
     pub(super) fn op_status(&self, args: &Value) -> Result<Value, DaemonError> {
         crate::ops::plugin::op_status(args, self.context())
+    }
+}
+
+struct NoLaunch;
+
+impl NsRunnerLauncher for NoLaunch {
+    fn run(&self, _request: &RunRequest) -> Result<RunResult, LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
+    }
+
+    fn spawn_detached(&self, _request: &RunRequest) -> Result<Child, LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
+    }
+
+    fn remount_in(
+        &self,
+        _target_pid: u32,
+        _request: &RunRequest,
+        _timeout: Duration,
+    ) -> Result<(), LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
     }
 }
 

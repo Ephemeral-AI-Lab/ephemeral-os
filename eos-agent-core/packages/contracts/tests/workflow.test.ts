@@ -23,13 +23,16 @@ function snapshot() {
   return {
     workflow: {
       id: "wf-1",
-      original_goal: "ship it",
-      current_goal: "ship it",
+      goal: "ship it",
       status: "Running",
       context_path: "workflow_wf-1",
       iterations: [],
     },
   };
+}
+
+function legacyWorkflowGoalKey(kind: "original" | "current"): string {
+  return `${kind}_goal`;
 }
 
 describe("workflow ids and status", () => {
@@ -135,6 +138,30 @@ describe("context-script inputs", () => {
     expect(
       PlannerContextInputSchema.safeParse({ ...input, revision: 3 }).success,
       "envelope metadata fields must be rejected",
+    ).toBe(false);
+    expect(
+      PlannerContextInputSchema.safeParse({
+        ...input,
+        workflow_context: {
+          workflow: {
+            ...input.workflow_context.workflow,
+            [legacyWorkflowGoalKey("original")]: "ship it",
+          },
+        },
+      }).success,
+      "legacy workflow goal field rejected",
+    ).toBe(false);
+    expect(
+      PlannerContextInputSchema.safeParse({
+        ...input,
+        workflow_context: {
+          workflow: {
+            ...input.workflow_context.workflow,
+            [legacyWorkflowGoalKey("current")]: "ship it",
+          },
+        },
+      }).success,
+      "derived workflow goal field rejected",
     ).toBe(false);
   });
 

@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 
 use eos_layerstack::{LayerChange, LayerPath};
-use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use eos_plugin::{PluginError, PpcDirection, PpcMessage};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -20,11 +20,11 @@ pub(super) const OCC_APPLY_CHANGESET_OP: &str = "daemon.occ.apply_changeset";
 
 pub(super) fn handle_callback_for_root(
     expected_root: &Path,
-    request: PpcEnvelope,
-) -> Result<PpcEnvelope, PluginRuntimeError> {
+    request: PpcMessage,
+) -> Result<PpcMessage, PluginRuntimeError> {
     if request.direction != PpcDirection::Request {
         return Err(PluginError::Ppc(
-            "daemon plugin callback handling requires a request envelope".to_owned(),
+            "daemon plugin callback handling requires a request message".to_owned(),
         )
         .into());
     }
@@ -36,8 +36,8 @@ pub(super) fn handle_callback_for_root(
 
 fn handle_apply_changeset(
     expected_root: &Path,
-    request: PpcEnvelope,
-) -> Result<PpcEnvelope, PluginRuntimeError> {
+    request: PpcMessage,
+) -> Result<PpcMessage, PluginRuntimeError> {
     let body: ApplyChangesetRequest = serde_json::from_str(&request.body)
         .map_err(|err| PluginError::Ppc(format!("invalid OCC callback payload: {err}")))?;
     let root = require_absolute_root(&body.layer_stack_root)?;
@@ -87,7 +87,7 @@ fn handle_apply_changeset(
         "published_manifest_version": result.published_manifest_version,
         "timings": result.timings,
     });
-    Ok(PpcEnvelope {
+    Ok(PpcMessage {
         message_id: request.message_id,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),

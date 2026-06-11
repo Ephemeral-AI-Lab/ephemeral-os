@@ -3,14 +3,12 @@
 
 use std::path::PathBuf;
 
-use eos_command_ops::{
-    command_ops, command_session_config, command_session_scratch_root, ExecTarget,
-};
+use eos_command_ops::{command_ops, command_session_config};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CommandResponse, CommandSessionCompletion,
-    CommandSessionError, ReadCommandProgress, StartCommandSession, WriteStdin,
+    CommandSessionError, ReadCommandProgress, WriteStdin,
 };
-use eos_layerstack::require_workspace_binding;
+use eos_runtime::routing::command_op::{self, CommandOpError, ExecCommandRequest};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -28,37 +26,32 @@ pub(crate) fn op_exec_command(
     let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
     let yield_time_ms =
         optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
-    let isolated_binding = context.services().and_then(|services| {
-        services
-            .workspace
-            .command_binding_for(&super::caller_id_or_default(args))
-    });
-    if let Some(binding) = isolated_binding {
-        return start_manager_command_session(
-            args,
-            &cmd,
+    let response = command_op::exec_command(
+        context.services().map(|services| &services.workspace),
+        ExecCommandRequest {
+            invocation_id: args
+                .get("invocation_id")
+                .and_then(Value::as_str)
+                .unwrap_or("exec_command")
+                .to_owned(),
+            caller_id: super::caller_id_or_default(args),
+            cmd,
+            layer_stack_root: optional_layer_stack_root(args),
             timeout_seconds,
             yield_time_ms,
-            binding.caller_id.clone(),
-            ExecTarget::Isolated {
-                binding: Box::new(binding),
-            },
-        );
-    }
-    let root = PathBuf::from(require_command_string(args, "layer_stack_root")?);
-    let binding = require_workspace_binding(&root)?;
-    start_manager_command_session(
-        args,
-        &cmd,
-        timeout_seconds,
-        yield_time_ms,
-        caller_id_arg(args).to_owned(),
-        ExecTarget::Ephemeral {
-            root,
-            workspace_root: PathBuf::from(binding.workspace_root),
-            scratch_root: command_session_scratch_root(),
         },
     )
+    .map_err(command_op_error)?;
+    let wire = command_response_to_wire(response);
+    if wire
+        .get("status")
+        .and_then(Value::as_str)
+        .is_some_and(|status| status == "running")
+    {
+        Ok(wire)
+    } else {
+        Ok(strip_session_id(wire))
+    }
 }
 
 fn exec_timeout_seconds(args: &Value, config: &crate::config::CommandSessionConfig) -> f64 {
@@ -125,40 +118,6 @@ pub(crate) fn op_command_session_count(
     Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
 }
 
-fn start_manager_command_session(
-    args: &Value,
-    cmd: &str,
-    timeout_seconds: Option<f64>,
-    yield_time_ms: u64,
-    caller_id: String,
-    target: ExecTarget,
-) -> Result<Value, DaemonError> {
-    let request = StartCommandSession {
-        invocation_id: args
-            .get("invocation_id")
-            .and_then(Value::as_str)
-            .unwrap_or("exec_command")
-            .to_owned(),
-        caller_id,
-        cmd: cmd.to_owned(),
-        timeout_seconds,
-        yield_time_ms,
-    };
-    let response = command_ops()
-        .exec_command(request, target)
-        .map_err(command_session_error)?;
-    let wire = command_response_to_wire(response);
-    if wire
-        .get("status")
-        .and_then(Value::as_str)
-        .is_some_and(|status| status == "running")
-    {
-        Ok(wire)
-    } else {
-        Ok(strip_session_id(wire))
-    }
-}
-
 fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     let request = WriteStdin {
         command_session_id: require_command_string(args, "command_session_id")?,
@@ -197,18 +156,20 @@ fn command_session_response_to_wire(
     }
 }
 
-fn caller_id_arg(args: &Value) -> &str {
-    args.get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or("default")
-}
-
 fn optional_u64(args: &Value, key: &str) -> Option<u64> {
     args.get(key).and_then(|value| {
         value
             .as_u64()
             .or_else(|| value.as_i64().and_then(|value| u64::try_from(value).ok()))
     })
+}
+
+fn optional_layer_stack_root(args: &Value) -> Option<PathBuf> {
+    args.get("layer_stack_root")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|root| !root.is_empty())
+        .map(PathBuf::from)
 }
 
 fn command_result(
@@ -251,6 +212,16 @@ fn command_session_error(error: CommandSessionError) -> DaemonError {
     match error {
         CommandSessionError::Io(message) => DaemonError::OverlayPipeline(message),
         other => DaemonError::InvalidEnvelope(other.to_string()),
+    }
+}
+
+fn command_op_error(error: CommandOpError) -> DaemonError {
+    match error {
+        CommandOpError::MissingLayerStackRoot => {
+            DaemonError::InvalidEnvelope("layer_stack_root is required".to_owned())
+        }
+        CommandOpError::LayerStack(error) => DaemonError::LayerStack(error),
+        CommandOpError::Command(error) => command_session_error(error),
     }
 }
 

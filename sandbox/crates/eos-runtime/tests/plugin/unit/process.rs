@@ -1,6 +1,6 @@
 //! Unit tests for plugin service process specs (spec/env, spawn, PPC connect).
 //!
-//! Referenced from `src/services/plugin/process.rs` via `#[path]` so they can
+//! Referenced from `src/plugin/process.rs` via `#[path]` so they can
 //! reach the `pub(super)` spec/process types and `ENV_*` constants.
 
 use super::*;
@@ -198,19 +198,23 @@ fn wait_for_socket(root: &Path) -> std::io::Result<PathBuf> {
 /// Overlay-free spawns never reach the launcher; fail loudly if one does.
 struct NoLaunch;
 
-impl crate::launcher::NsRunnerLauncher for NoLaunch {
+impl eos_isolated_workspace::NsRunnerLauncher for NoLaunch {
     fn run(
         &self,
         _request: &eos_namespace::protocol::RunRequest,
-    ) -> Result<eos_namespace::protocol::RunResult, crate::LaunchError> {
-        Err(crate::LaunchError::Failed("no launcher in this test".to_owned()))
+    ) -> Result<eos_namespace::protocol::RunResult, eos_isolated_workspace::LaunchError> {
+        Err(eos_isolated_workspace::LaunchError::Failed(
+            "no launcher in this test".to_owned(),
+        ))
     }
 
     fn spawn_detached(
         &self,
         _request: &eos_namespace::protocol::RunRequest,
-    ) -> Result<std::process::Child, crate::LaunchError> {
-        Err(crate::LaunchError::Failed("no launcher in this test".to_owned()))
+    ) -> Result<std::process::Child, eos_isolated_workspace::LaunchError> {
+        Err(eos_isolated_workspace::LaunchError::Failed(
+            "no launcher in this test".to_owned(),
+        ))
     }
 
     fn remount_in(
@@ -218,7 +222,7 @@ impl crate::launcher::NsRunnerLauncher for NoLaunch {
         _target_pid: u32,
         _request: &eos_namespace::protocol::RunRequest,
         _timeout: Duration,
-    ) -> Result<(), crate::LaunchError> {
+    ) -> Result<(), eos_isolated_workspace::LaunchError> {
         Ok(())
     }
 }

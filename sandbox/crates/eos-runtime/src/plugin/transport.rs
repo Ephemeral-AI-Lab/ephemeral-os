@@ -3,13 +3,13 @@
 //! This is the boundary the daemon uses once a plugin service has connected its
 //! `AF_UNIX` socket. Daemon callers use a synchronous API, but plugin operation
 //! serialization is forbidden: the connection itself can carry many in-flight
-//! operation requests. A dedicated reader thread routes reply frames by
+//! operation requests. A dedicated reader thread routes reply messages by
 //! `message_id`; self-managed plugin operations can also service
 //! plugin-originated callback requests on the same socket before their final
 //! operation reply arrives. Concurrent callback-capable operations are routed by
 //! `parent_message_id` in the callback body.
 
-mod frame_io;
+mod message_io;
 mod pending;
 
 use std::os::unix::net::UnixStream;
@@ -17,19 +17,19 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use eos_plugin::{PluginError, PpcDirection, PpcMessage};
 use serde_json::json;
 
-use self::frame_io::FrameWriter;
+use self::message_io::MessageWriter;
 use self::pending::{CallbackHandler, PendingCalls};
 use crate::PpcError;
 
-pub use self::frame_io::read_frame;
+pub use self::message_io::read_message_bytes;
 
 /// A connected plugin service's PPC client: a synchronous request/reply façade
 /// over the service socket, multiplexed by a background reader thread.
 pub struct PpcClient {
-    writer: FrameWriter,
+    writer: MessageWriter,
     pending: PendingCalls,
 }
 
@@ -43,7 +43,7 @@ impl PpcClient {
     /// Wrap a connected service `stream`, spawning the reply-routing reader.
     pub fn new(stream: UnixStream) -> Result<Self, PpcError> {
         let reader_stream = stream.try_clone()?;
-        let writer = FrameWriter::new(stream);
+        let writer = MessageWriter::new(stream);
         let pending = PendingCalls::default();
         spawn_reader_thread(reader_stream, writer.clone(), pending.clone())?;
         Ok(Self { writer, pending })
@@ -52,9 +52,9 @@ impl PpcClient {
     /// Send a request and await its reply (no callbacks serviced).
     pub fn round_trip(
         &self,
-        request: &PpcEnvelope,
+        request: &PpcMessage,
         timeout: Duration,
-    ) -> Result<PpcEnvelope, PpcError> {
+    ) -> Result<PpcMessage, PpcError> {
         self.send_request(request, timeout, None)
     }
 
@@ -62,32 +62,32 @@ impl PpcClient {
     /// requests with `handle_callback` until the final reply arrives.
     pub fn round_trip_with_callbacks<F>(
         &self,
-        request: &PpcEnvelope,
+        request: &PpcMessage,
         timeout: Duration,
         handle_callback: F,
-    ) -> Result<PpcEnvelope, PpcError>
+    ) -> Result<PpcMessage, PpcError>
     where
-        F: FnMut(PpcEnvelope) -> Result<PpcEnvelope, PpcError> + Send + 'static,
+        F: FnMut(PpcMessage) -> Result<PpcMessage, PpcError> + Send + 'static,
     {
         let callback = Arc::new(Mutex::new(handle_callback));
-        let handler: CallbackHandler = Arc::new(move |frame| {
+        let handler: CallbackHandler = Arc::new(move |message| {
             let mut callback = callback
                 .lock()
                 .map_err(|_| PpcError::LockPoisoned("plugin ppc callback handler"))?;
-            callback(frame)
+            callback(message)
         });
         self.send_request(request, timeout, Some(handler))
     }
 
     fn send_request(
         &self,
-        request: &PpcEnvelope,
+        request: &PpcMessage,
         timeout: Duration,
         callback_handler: Option<CallbackHandler>,
-    ) -> Result<PpcEnvelope, PpcError> {
+    ) -> Result<PpcMessage, PpcError> {
         if request.direction != PpcDirection::Request {
             return Err(PluginError::Ppc(
-                "daemon PPC round trip requires a request envelope".to_owned(),
+                "daemon PPC round trip requires a request message".to_owned(),
             )
             .into());
         }
@@ -121,7 +121,7 @@ impl PpcClient {
 
 fn spawn_reader_thread(
     mut stream: UnixStream,
-    writer: FrameWriter,
+    writer: MessageWriter,
     pending: PendingCalls,
 ) -> Result<(), PpcError> {
     thread::Builder::new()
@@ -130,26 +130,26 @@ fn spawn_reader_thread(
     Ok(())
 }
 
-fn reader_loop(stream: &mut UnixStream, writer: &FrameWriter, pending: &PendingCalls) {
+fn reader_loop(stream: &mut UnixStream, writer: &MessageWriter, pending: &PendingCalls) {
     loop {
-        let frame = match frame_io::read_envelope(stream) {
-            Ok(frame) => frame,
+        let message = match message_io::read_message(stream) {
+            Ok(message) => message,
             Err(err) => {
                 pending.fail_all(err.to_string());
                 return;
             }
         };
 
-        match frame.direction {
-            PpcDirection::Reply => pending.complete_reply(frame),
-            PpcDirection::Request => handle_callback(frame, writer, pending),
+        match message.direction {
+            PpcDirection::Reply => pending.complete_reply(message),
+            PpcDirection::Request => handle_callback(message, writer, pending),
         }
     }
 }
 
-fn handle_callback(frame: PpcEnvelope, writer: &FrameWriter, pending: &PendingCalls) {
-    let callback_message_id = frame.message_id.clone();
-    let (owner_id, handler) = match pending.callback_handler_for_frame(&frame) {
+fn handle_callback(message: PpcMessage, writer: &MessageWriter, pending: &PendingCalls) {
+    let callback_message_id = message.message_id.clone();
+    let (owner_id, handler) = match pending.callback_handler_for_message(&message) {
         Ok(found) => found,
         Err(message) => {
             let _ = write_callback_error(writer, &callback_message_id, &message);
@@ -157,7 +157,7 @@ fn handle_callback(frame: PpcEnvelope, writer: &FrameWriter, pending: &PendingCa
         }
     };
 
-    match handler(frame) {
+    match handler(message) {
         Ok(reply) => {
             if reply.direction != PpcDirection::Reply {
                 pending.fail_one(
@@ -189,7 +189,7 @@ fn handle_callback(frame: PpcEnvelope, writer: &FrameWriter, pending: &PendingCa
 }
 
 fn write_callback_error(
-    writer: &FrameWriter,
+    writer: &MessageWriter,
     callback_message_id: &str,
     message: &str,
 ) -> Result<(), PpcError> {
@@ -200,7 +200,7 @@ fn write_callback_error(
             "message": message,
         },
     });
-    writer.write(&PpcEnvelope {
+    writer.write(&PpcMessage {
         message_id: callback_message_id.to_owned(),
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),

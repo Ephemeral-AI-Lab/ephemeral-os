@@ -11,7 +11,7 @@ import type { WorkflowTree } from "../workflow-tree.js";
 export interface CreateWorkflowInit {
   workflowId: WorkflowId;
   parentRunId: AgentRunId;
-  originalGoal: string;
+  goal: string;
   maxAttempts: number;
 }
 
@@ -26,7 +26,7 @@ export async function createWorkflow(
     .values({
       id: init.workflowId,
       parent_run_id: init.parentRunId,
-      original_goal: init.originalGoal,
+      goal: init.goal,
       status: "Running",
       created_at: now,
       updated_at: now,

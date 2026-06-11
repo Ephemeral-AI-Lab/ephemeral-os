@@ -1,5 +1,5 @@
-//! Plugin service process *lifecycle* — the daemon's impure half over the
-//! host-neutral [`PluginProcessSpec`] launch contract (`crate::route`).
+//! Plugin service process lifecycle over the host-neutral
+//! [`PluginProcessSpec`] launch contract (`crate::route`).
 //!
 //! This module owns the PPC accept handshake, the run-request shapes for
 //! overlay-backed services, and teardown (`Drop` = `killpg`). The ns-runner
@@ -13,14 +13,14 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use eos_namespace::protocol::{Intent, RunMode, RunRequest, ToolCall, WorkspaceRoot};
-use eos_plugin::PluginError;
 use crate::route::{PluginProcessSpec, ENV_PLUGIN_WORKSPACE_MOUNTED};
 use crate::transport::PpcClient;
+use eos_isolated_workspace::NsRunnerLauncher;
+use eos_namespace::protocol::{Intent, RunMode, RunRequest, ToolCall, WorkspaceRoot};
+use eos_plugin::PluginError;
 use serde::Serialize;
 use serde_json::json;
 
-use crate::launcher::NsRunnerLauncher;
 use crate::PluginRuntimeError;
 
 #[derive(Debug, Clone)]

@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>12</b><span>modules</span></div>
-  <div><b>65</b><span>items</span></div>
+  <div><b>67</b><span>items</span></div>
   <div><b>114</b><span>fields</span></div>
-  <div><b>22</b><span>methods</span></div>
+  <div><b>24</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -64,13 +64,13 @@
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-config--src-configs-runner-rs.html#item-struct-RunnerConfig-16">RunnerConfig</a></code>
   <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>child_wait_poll_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>env</td><td><code><a class="symbol-link" href="eos-config--src-configs-runner-rs.html#item-struct-RunnerEnvConfig-24">RunnerEnvConfig</a></code></td></tr><tr><td>pub</td><td>mount_mask</td><td><code><a class="symbol-link" href="eos-config--src-configs-runner-rs.html#item-struct-RunnerMountMaskConfig-33">RunnerMountMaskConfig</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-40"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-configs-daemon-rs.html#method-validate-87">validate</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code><p class="docstring">Validate semantic constraints that YAML deserialization cannot express.<br># Errors<br>Returns an error when a field violates runner policy.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>child_wait_poll_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>env</td><td><code><a class="symbol-link" href="eos-config--src-configs-runner-rs.html#item-struct-RunnerEnvConfig-24">RunnerEnvConfig</a></code></td></tr><tr><td>pub</td><td>mount_mask</td><td><code><a class="symbol-link" href="eos-config--src-configs-runner-rs.html#item-struct-RunnerMountMaskConfig-33">RunnerMountMaskConfig</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-40"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code><p class="docstring">Validate semantic constraints that YAML deserialization cannot express.<br># Errors<br>Returns an error when a field violates runner policy.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Validate semantic constraints that YAML deserialization cannot express.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error when a field violates runner policy.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-87">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-377">require_u64_at_least</a>(<span class="rs-self">self</span>.child_wait_poll_ms, 1, &quot;runner.child_wait_poll_ms&quot;)?;
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(&amp;<span class="rs-self">self</span>.env.inherit_keys, &quot;runner.env.inherit_keys&quot;)?;
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(&amp;<span class="rs-self">self</span>.env.restricted_keys, &quot;runner.env.restricted_keys&quot;)?;
@@ -167,7 +167,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error when a field violates runner policy.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-87">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-377">require_u64_at_least</a>(<span class="rs-self">self</span>.child_wait_poll_ms, 1, &quot;runner.child_wait_poll_ms&quot;)?;
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(&amp;<span class="rs-self">self</span>.env.inherit_keys, &quot;runner.env.inherit_keys&quot;)?;
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(&amp;<span class="rs-self">self</span>.env.restricted_keys, &quot;runner.env.restricted_keys&quot;)?;

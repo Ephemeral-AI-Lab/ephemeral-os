@@ -11,3 +11,4 @@ pub use error::IsolatedError;
 pub use manager::{
     ExitOutcome, IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
 };
+pub use namespace::runner_launcher::{CurrentExeNsRunnerLauncher, LaunchError, NsRunnerLauncher};

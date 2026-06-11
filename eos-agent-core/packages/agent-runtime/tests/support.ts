@@ -242,7 +242,7 @@ export function writeContextScript(dir: string, name = "context.cjs"): string {
 process.stdin.on("data", (c) => (input += c));
 process.stdin.on("end", () => {
   const ctx = JSON.parse(input);
-  const text = "workflow goal: " + ctx.workflow_context.workflow.current_goal;
+  const text = "workflow goal: " + ctx.workflow_context.workflow.goal;
   process.stdout.write(
     JSON.stringify({
       initial_messages: [{ role: "user", content: [{ type: "text", text }] }],

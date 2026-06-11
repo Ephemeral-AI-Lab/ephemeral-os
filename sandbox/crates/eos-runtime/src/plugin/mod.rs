@@ -15,7 +15,6 @@ mod callbacks;
 mod connected;
 mod dispatch;
 pub mod ensure;
-pub mod launcher;
 mod overlay;
 pub(crate) mod package;
 mod process;
@@ -42,13 +41,13 @@ use self::state::loaded_matches_parsed;
 use self::state::{connected_ppc_routes, connected_ppc_services, setup_failure_key};
 
 pub use self::dispatch::PluginDispatchOutcome;
-pub use self::launcher::{LaunchError, NsRunnerLauncher};
 pub use self::overlay::PluginOverlayOutcome;
 pub use self::package::{ensure_package, needs_upload_response, PackageEnsureReport};
 pub use self::process::ServiceProcessStatus;
 pub use self::refresh::ServiceHealthReport;
 pub use self::state::{PluginRuntime, SetupFailure};
-pub use self::transport::{read_frame, PpcClient};
+pub use self::transport::{read_message_bytes, PpcClient};
+pub use eos_isolated_workspace::{LaunchError, NsRunnerLauncher};
 
 /// Failures surfaced by the plugin PPC transport and package pipeline.
 ///
@@ -58,13 +57,13 @@ pub use self::transport::{read_frame, PpcClient};
 /// still classifies `ForbiddenInIsolatedWorkspace` correctly).
 #[derive(Debug, thiserror::Error)]
 pub enum PpcError {
-    /// A typed plugin-contract failure (PPC framing, ensure, manifest, …).
+    /// A typed plugin-contract failure (PPC wire messages, ensure, manifest, …).
     #[error(transparent)]
     Plugin(#[from] eos_plugin::PluginError),
 
-    /// A PPC envelope could not be framed / parsed.
+    /// A PPC message could not be encoded / parsed.
     #[error(transparent)]
-    Protocol(#[from] eos_plugin::framing::ProtocolError),
+    Protocol(#[from] eos_plugin::wire::WireError),
 
     /// A socket / filesystem I/O operation failed.
     #[error("plugin ppc io error: {0}")]

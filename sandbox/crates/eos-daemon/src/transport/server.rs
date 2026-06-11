@@ -35,13 +35,14 @@ use eos_config::configs::{
     daemon::{DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
+use eos_isolated_workspace::CurrentExeNsRunnerLauncher;
+use eos_runtime::{maintenance::sweepers, RuntimeServices};
 
 use super::framing::{read_request_line, signal_shutdown, MAX_REQUEST_BYTES};
 use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 use crate::runtime::context::DispatchContext;
-use crate::runtime::services::Services;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -68,7 +69,7 @@ pub struct ServerConfig {
 pub struct DaemonServer {
     config: ServerConfig,
     op_table: Arc<OpTable>,
-    services: Arc<Services>,
+    services: Arc<RuntimeServices>,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
     isolated_sweeper_interval_ms: u64,
@@ -83,7 +84,7 @@ impl DaemonServer {
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
-            services: Arc::new(Services::default()),
+            services: Arc::new(default_runtime_services()),
             file_limits: default_file_limits(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
@@ -109,9 +110,10 @@ impl DaemonServer {
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
-            services: Arc::new(Services::new(
+            services: Arc::new(RuntimeServices::new(
                 daemon_config.plugin.clone(),
                 isolated_config.clone(),
+                Arc::new(CurrentExeNsRunnerLauncher),
             )),
             file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(
@@ -166,7 +168,7 @@ impl DaemonServer {
                         () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
                             let services = Arc::clone(&services);
                             let _ = tokio::task::spawn_blocking(move || {
-                                services.workspace.ttl_sweep()
+                                sweepers::sweep_workspace_ttl(&services.workspace)
                             })
                             .await;
                         }
@@ -184,7 +186,7 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let _ = tokio::task::spawn_blocking(
-                                eos_command_ops::command_session_reaper_sweep,
+                                sweepers::sweep_command_sessions,
                             )
                             .await;
                         }
@@ -193,7 +195,7 @@ impl DaemonServer {
             })
         };
         // Reap stale command sessions left by a prior daemon, before accepting.
-        eos_command_ops::recover_orphaned_command_sessions();
+        sweepers::recover_orphaned_command_sessions();
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -416,6 +418,15 @@ impl DaemonServer {
         Ok(value)
     }
 }
+
+fn default_runtime_services() -> RuntimeServices {
+    RuntimeServices::new(
+        eos_config::configs::daemon::PluginRuntimeConfig::default(),
+        IsolatedWorkspaceConfig::default(),
+        Arc::new(CurrentExeNsRunnerLauncher),
+    )
+}
+
 fn default_file_limits() -> FileLimitsConfig {
     FileLimitsConfig {
         max_read_bytes: eos_config::configs::daemon::MAX_READ_BYTES,

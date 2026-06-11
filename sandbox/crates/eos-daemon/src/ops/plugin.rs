@@ -1,24 +1,21 @@
-//! Plugin op adapters: wire arg parsing, the caller-family gate, response
-//! shaping over the typed [`eos_runtime`] outcomes, and the
+//! Plugin op adapters: wire arg parsing, response shaping over the typed
+//! [`eos_runtime`] outcomes, and the
 //! resource-telemetry splice for oneshot overlay runs.
 
 use std::time::Instant;
 
 use eos_layerstack::LayerStack;
-use eos_plugin::PluginError;
-use eos_runtime::ensure::validate_plugin_caller_fields;
-use eos_runtime::needs_upload_response;
-use eos_runtime::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_runtime::PackageEnsureReport;
-use serde_json::{json, Value};
+use eos_runtime::route::{PluginOperationRoute, PluginProcessSpec};
+use eos_runtime::needs_upload_response;
+use serde_json::{Value, json};
 
 use crate::error::DaemonError;
 use crate::response::{
-    attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    merge_runner_timings, resource_timings, TreeResourceStats,
+    TreeResourceStats, attach_runner_shell_fields, guarded_changeset_response,
+    insert_tree_resource_timings, merge_runner_timings, resource_timings,
 };
 use crate::runtime::context::DispatchContext;
-use crate::runtime::services::Services;
 use eos_runtime::{
     EnsureOutcome, EnsureReady, LoadedPluginStatus, PluginDispatchOutcome, PluginOverlayOutcome,
     ServiceHealthReport, StatusOutcome,
@@ -26,7 +23,7 @@ use eos_runtime::{
 
 pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    ensure_plugin_family_allowed(services, args)?;
+    services.ensure_plugin_family_allowed(args)?;
     let start_services = args
         .get("start_services")
         .and_then(Value::as_bool)
@@ -45,7 +42,7 @@ pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Va
 
 pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    ensure_plugin_family_allowed(services, args)?;
+    services.ensure_plugin_family_allowed(args)?;
     let probe_services = args
         .get("probe_services")
         .and_then(Value::as_bool)
@@ -78,11 +75,13 @@ pub(crate) fn dispatch_registered_op(
     };
     // Single caller-family gate for the whole registered-op dispatch chain; the
     // routing below it trusts the already-validated args.
-    if let Err(err) = ensure_plugin_family_allowed(services, args) {
-        return Some(Err(err));
+    if let Err(err) = services.ensure_plugin_family_allowed(args) {
+        return Some(Err(DaemonError::from(err)));
     }
     let total_start = Instant::now();
-    let outcome = services.plugin.dispatch_registered_op(op, invocation_id, args)?;
+    let outcome = services
+        .plugin
+        .dispatch_registered_op(op, invocation_id, args)?;
     Some(
         outcome
             .map_err(DaemonError::from)
@@ -93,25 +92,6 @@ pub(crate) fn dispatch_registered_op(
                 }
             }),
     )
-}
-
-/// The plugin caller-family gate: validate the caller fields, then refuse the
-/// whole `api.plugin.*` + registered-op family for callers inside an isolated
-/// workspace. Composed here so the plugin runtime never reaches into
-/// isolated-workspace state.
-fn ensure_plugin_family_allowed(services: &Services, args: &Value) -> Result<(), DaemonError> {
-    validate_plugin_caller_fields(args).map_err(DaemonError::from)?;
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim();
-    if !caller_id.is_empty() && services.workspace.caller_has_active_handle(caller_id) {
-        return Err(DaemonError::Plugin(
-            PluginError::ForbiddenInIsolatedWorkspace,
-        ));
-    }
-    Ok(())
 }
 
 fn ensure_response(ready: &EnsureReady) -> Value {

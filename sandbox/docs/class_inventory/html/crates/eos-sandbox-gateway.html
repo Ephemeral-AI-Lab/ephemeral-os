@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-sandbox-gateway · src/gateway.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-sandbox-gateway File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>3</b><span>modules</span></div>
+  <div><b>35</b><span>items</span></div>
+  <div><b>14</b><span>fields</span></div>
+  <div><b>17</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-sandbox-gateway.html"><span>gateway.rs</span><small>9/18</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-serve-rs.html"><span>serve.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="gateway crates/eos-sandbox-gateway/src/gateway.rs Visibility HostVerb Route OpEntry Catalog impl Catalog host_verb str_field Engine impl Engine for SandboxHost status_value Surface impl Surface handle forward host_call unknown_sandbox operator_socket_path serve serve_with_catalog bind accept_loop handle_connection ClientRequest WireError impl WireError read_request_line parse_request take_string error_envelope response_line">
+  <div class="module-head">
+    <div>
+      <h2>src/gateway.rs</h2>
+      <p class="path">module <code>gateway</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>9 types</span>
+      <span>4 impls</span>
+      <span>18 fns</span>
+      <span>16 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OpEntry-39" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OpEntry pub(crate) pub(crate) struct OpEntry crates/eos-sandbox-gateway/src/gateway.rs name String route Route visibility Visibility mutates_state bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OpEntry</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>name</td><td><code>String</code></td></tr><tr><td>pub(crate)</td><td>route</td><td><code><a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a></code></td></tr><tr><td>pub(crate)</td><td>visibility</td><td><code><a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a></code></td></tr><tr><td>private</td><td>mutates_state</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:39</p>
+</article><article id="item-struct-Catalog-47" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Catalog pub(crate) pub(crate) struct Catalog crates/eos-sandbox-gateway/src/gateway.rs by_name HashMap &lt; String , Arc &lt; OpEntry &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Catalog</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_name</td><td><code>HashMap &lt; String , Arc &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-lookup-94"><td>method</td><td>lookup</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-lookup-94">lookup</a> (&amp; self , op : &amp; str) -&gt; Option &lt; &amp; Arc &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-lookup-94">lookup</a>(&amp;<span class="rs-self">self</span>, op: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.get(op)
+    }
+</code></pre>
+</details></td></tr><tr id="method-entries-98"><td>method</td><td>entries</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-entries-98">entries</a> (&amp; self) -&gt; Vec &lt; &amp; Arc &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-entries-98">entries</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.values().collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-load-builtin-52"><td>associated-fn</td><td>load_builtin</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-load-builtin-52">load_builtin</a> () -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-load-builtin-52">load_builtin</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(<span class="rs-type">OPS_JSON</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-parse-56"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-parse-56">parse</a> (ops_json : &amp; str) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(ops_json: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> document: <span class="rs-type">Value</span> = serde_json::from_str(ops_json).context(&quot;parse ops.json&quot;)?;
+        <span class="rs-kw">let</span> ops = document
+            .get(&quot;ops&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .context(&quot;ops.json must carry an `ops` array&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_name = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> ops {
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;name&quot;)?.to_owned();
+            <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;served_by&quot;)? {
+                &quot;daemon&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Daemon</span>,
+                &quot;host&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Host</span>(<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-verb-104">host_verb</a>(&amp;name)?),
+                other =&gt; bail!(&quot;op {name}: unknown served_by {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> visibility = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;visibility&quot;)? {
+                &quot;public&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Public</span>,
+                &quot;operator&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Operator</span>,
+                &quot;internal&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Internal</span>,
+                &quot;test&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Test</span>,
+                other =&gt; bail!(&quot;op {name}: unknown visibility {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> mutates_state = op
+                .get(&quot;mutates_state&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_bool)
+                .with_context(|| format!(&quot;op {name}: missing mutates_state&quot;))?;
+            <span class="rs-kw">let</span> entry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> {
+                name: name.clone(),
+                route,
+                visibility,
+                mutates_state,
+            });
+            <span class="rs-kw">if</span> by_name.insert(name.clone(), entry).is_some() {
+                bail!(&quot;catalog name claimed twice: {name}&quot;);
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { by_name })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:47</p>
+</article><article id="item-struct-ClientRequest-355" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ClientRequest pub(crate) pub(crate) struct ClientRequest crates/eos-sandbox-gateway/src/gateway.rs op String sandbox_id Option &lt; String &gt; invocation_id String args Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ClientRequest</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a></code>
+  <div class="tags"><span>derive: Debug</span><span>dto</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>op</td><td><code>String</code></td></tr><tr><td>private</td><td>sandbox_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>private</td><td>args</td><td><code>Value</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:355</p>
+</article><article id="item-struct-WireError-363" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WireError pub(crate) pub(crate) struct WireError crates/eos-sandbox-gateway/src/gateway.rs kind &amp; 'static str message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WireError</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>kind</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-370"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-new-370">new</a> (kind : &amp; &#x27;static str , message : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(kind: &amp;&#x27;<span class="rs-kw">static</span> str, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            kind,
+            message: message.into(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:363</p>
+</article><article id="item-enum-Visibility-17" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Visibility pub(crate) pub(crate) enum Visibility crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Visibility</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Public</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr><tr><td>Internal</td><td><code></code></td></tr><tr><td>Test</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:17</p>
+</article><article id="item-enum-HostVerb-25" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum HostVerb pub(crate) pub(crate) enum HostVerb crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>HostVerb</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Acquire</td><td><code></code></td></tr><tr><td>Release</td><td><code></code></td></tr><tr><td>Status</td><td><code></code></td></tr><tr><td>List</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:25</p>
+</article><article id="item-enum-Route-33" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Route pub(crate) pub(crate) enum Route crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Route</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Host</td><td><code>0: <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a></code></td></tr><tr><td>Daemon</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:33</p>
+</article><article id="item-enum-Surface-181" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum Surface pub(crate) pub(crate) enum Surface crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Surface</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) enum <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Client</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-allows-188"><td>method</td><td>allows</td><td><code>const fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-allows-188">allows</a> (self , visibility : <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(<span class="rs-self">self</span>, visibility: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>) -&gt; bool {
+        <span class="rs-kw">match</span> visibility {
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Public</span> =&gt; <span class="rs-kw">true</span>,
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Operator</span> =&gt; matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Operator</span>),
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Internal</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Test</span> =&gt; <span class="rs-kw">false</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:181</p>
+</article><article id="item-trait-Engine-120" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait Engine pub(crate) pub(crate) trait Engine crates/eos-sandbox-gateway/src/gateway.rs  acquire fn acquire (&amp; self) -&gt; Result &lt; String &gt; release fn release (&amp; self , sandbox_id : &amp; str) -&gt; bool status fn status (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt; list fn list (&amp; self) -&gt; Vec &lt; Value &gt; forward fn forward (&amp; self , sandbox_id : &amp; str , mutates_state : bool , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>Engine</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) trait <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a></code>
+  <div class="tags"></div>
+  <h4>Methods</h4><table><tbody><tr id="method-acquire-121"><td>required</td><td>acquire</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a> (&amp; self) -&gt; Result &lt; String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-release-122"><td>required</td><td>release</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-release-122">release</a> (&amp; self , sandbox_id : &amp; str) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; bool;
+</code></pre>
+</details></td></tr><tr id="method-status-123"><td>required</td><td>status</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-status-123">status</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-124"><td>required</td><td>list</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-list-124">list</a> (&amp; self) -&gt; Vec &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-forward-125"><td>required</td><td>forward</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-forward-125">forward</a> (&amp; self , sandbox_id : &amp; str , mutates_state : bool , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        mutates_state: bool,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:120</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-handle-197" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn handle pub(crate) pub(crate) fn handle (catalog : &amp; Catalog , engine : &amp; dyn Engine , surface : Surface , request : &amp; ClientRequest ,) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>handle</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a> (catalog : &amp; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> , engine : &amp; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> , surface : <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a> , request : &amp; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> ,) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(
+    catalog: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>,
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>,
+    surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>,
+    request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = catalog.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-lookup-94">lookup</a>(&amp;request.op) <span class="rs-kw">else</span> {
+        <span class="rs-kw">if</span> request.op.starts_with(&quot;plugin.&quot;) {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, <span class="rs-kw">true</span>);
+        }
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
+    };
+    <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(entry.visibility) {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(
+            &quot;forbidden&quot;,
+            &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
+        );
+    }
+    <span class="rs-kw">match</span> entry.route {
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Daemon</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, entry.mutates_state),
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Host</span>(verb) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-call-243">host_call</a>(engine, verb, request),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:197</p>
+</article><article id="item-fn-operator-socket-path-276" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn operator_socket_path pub(crate) pub(crate) fn operator_socket_path (listen : &amp; Path) -&gt; PathBuf crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>operator_socket_path</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a> (listen : &amp; Path) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> name = listen.file_name().unwrap_or_default().to_os_string();
+    name.push(&quot;.operator&quot;);
+    listen.with_file_name(name)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:276</p>
+</article><article id="item-fn-serve-282" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serve pub(crate) pub(crate) fn serve (listen : &amp; Path , engine : Arc &lt; dyn Engine &gt;) -&gt; Result &lt; () &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serve</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-serve-282">serve</a> (listen : &amp; Path , engine : Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> &gt;) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-282">serve</a>(listen: &amp;<span class="rs-type">Path</span>, engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-load-builtin-52">load_builtin</a>()?);
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-with-catalog-287">serve_with_catalog</a>(listen, catalog, engine)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:282</p>
+</article><article id="item-fn-serve-with-catalog-287" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serve_with_catalog pub(crate) pub(crate) fn serve_with_catalog (listen : &amp; Path , catalog : Arc &lt; Catalog &gt; , engine : Arc &lt; dyn Engine &gt; ,) -&gt; Result &lt; () &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serve_with_catalog</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-serve-with-catalog-287">serve_with_catalog</a> (listen : &amp; Path , catalog : Arc &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> &gt; , engine : Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> &gt; ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-with-catalog-287">serve_with_catalog</a>(
+    listen: &amp;<span class="rs-type">Path</span>,
+    catalog: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>&gt;,
+    engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> operator = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen))?;
+    {
+        <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::clone(&amp;catalog);
+        <span class="rs-kw">let</span> engine = <span class="rs-type">Arc</span>::clone(&amp;engine);
+        std::thread::spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(&amp;operator, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>::<span class="rs-type">Operator</span>, catalog, engine));
+    }
+    <span class="rs-kw">let</span> client = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(listen)?;
+    eprintln!(
+        &quot;eos-sandbox-gateway: serving {} (operator: {})&quot;,
+        listen.display(),
+        <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen).display()
+    );
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(&amp;client, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>::<span class="rs-type">Client</span>, catalog, engine);
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:287</p>
+</article><article id="item-fn-parse-request-399" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_request pub(crate) pub(crate) fn parse_request (line : &amp; [u8]) -&gt; Result &lt; ClientRequest , WireError &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>parse_request</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a> (line : &amp; [u8]) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> , <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> = serde_json::from_slice(line)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;bad_json&quot;, format!(&quot;request is not valid <span class="rs-type">JSON</span>: {err}&quot;)))?;
+    <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">mut</span> object) = value <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            &quot;request must be a <span class="rs-type">JSON</span> object&quot;,
+        ));
+    };
+    <span class="rs-kw">let</span> op = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;op&quot;)?;
+    <span class="rs-kw">if</span> op.trim().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;op is required&quot;));
+    }
+    <span class="rs-kw">let</span> invocation_id = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;invocation_id&quot;)?;
+    <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> object.remove(&quot;sandbox_id&quot;) {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>) =&gt; <span class="rs-type">None</span>,
+        <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(id)) =&gt; <span class="rs-type">Some</span>(id),
+        <span class="rs-type">Some</span>(_) =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+                &quot;invalid_envelope&quot;,
+                &quot;sandbox_id must be a string&quot;,
+            ))
+        }
+    };
+    <span class="rs-kw">let</span> args = object.remove(&quot;args&quot;).unwrap_or_else(|| json!({}));
+    <span class="rs-kw">if</span> !args.is_object() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;args must be an object&quot;));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> {
+        op,
+        sandbox_id,
+        invocation_id,
+        args,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:399</p>
+</article><article id="item-fn-host-verb-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_verb private fn host_verb (name : &amp; str) -&gt; Result &lt; HostVerb &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_verb</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-host-verb-104">host_verb</a> (name : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-verb-104">host_verb</a>(name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>&gt; {
+    <span class="rs-kw">match</span> name {
+        &quot;sandbox.acquire&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span>),
+        &quot;sandbox.release&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span>),
+        &quot;sandbox.status&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span>),
+        &quot;sandbox.list&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span>),
+        other =&gt; bail!(&quot;host-served op {other} has no router implementation&quot;),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:104</p>
+</article><article id="item-fn-str-field-114" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn str_field private fn str_field &lt; 'a &gt; (op : &amp; 'a Value , field : &amp; str) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>str_field</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a> &lt; &#x27;a &gt; (op : &amp; &#x27;a Value , field : &amp; str) -&gt; Result &lt; &amp; &#x27;a str &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> str_field&lt;&#x27;a&gt;(op: &amp;&#x27;a <span class="rs-type">Value</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a str&gt; {
+    op.get(field)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .with_context(|| format!(&quot;catalog op missing string field {field}&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:114</p>
+</article><article id="item-fn-status-value-167" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn status_value private fn status_value (status : &amp; SandboxStatus , embed_daemon : bool) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>status_value</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a> (status : &amp; SandboxStatus , embed_daemon : bool) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(status: &amp;<span class="rs-type">SandboxStatus</span>, embed_daemon: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;sandbox_id&quot;: status.sandbox_id,
+        &quot;container&quot;: status.container,
+        &quot;endpoint&quot;: status.endpoint.map(|addr| addr.to_string()),
+        &quot;created_by&quot;: status.created_by,
+    });
+    <span class="rs-kw">if</span> embed_daemon {
+        value[&quot;daemon&quot;] = status.daemon.clone();
+    }
+    value
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:167</p>
+</article><article id="item-fn-forward-221" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn forward private fn forward (engine : &amp; dyn Engine , request : &amp; ClientRequest , mutates_state : bool) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>forward</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-forward-125">forward</a> (engine : &amp; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> , request : &amp; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> , mutates_state : bool) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, mutates_state: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+    };
+    <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        sandbox_id,
+        mutates_state,
+        &amp;request.op,
+        &amp;request.invocation_id,
+        &amp;request.args,
+    ) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(response)) =&gt; response,
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(message))) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;uncertain_outcome&quot;, &amp;message)
+        }
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(message))) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;message)
+        }
+        <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:221</p>
+</article><article id="item-fn-host-call-243" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_call private fn host_call (engine : &amp; dyn Engine , verb : HostVerb , request : &amp; ClientRequest) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_call</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-host-call-243">host_call</a> (engine : &amp; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> , verb : <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a> , request : &amp; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-call-243">host_call</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, verb: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> verb {
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>() {
+            <span class="rs-type">Ok</span>(sandbox_id) =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id}),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
+        },
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>()}),
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+            };
+            <span class="rs-kw">match</span> verb {
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> =&gt; {
+                    <span class="rs-kw">if</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(sandbox_id) {
+                        json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id})
+                    } <span class="rs-kw">else</span> {
+                        <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id)
+                    }
+                }
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(sandbox_id) {
+                    <span class="rs-type">Some</span>(status) =&gt; status,
+                    <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
+                },
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; unreachable!(),
+            }
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:243</p>
+</article><article id="item-fn-unknown-sandbox-272" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unknown_sandbox private fn unknown_sandbox (sandbox_id : &amp; str) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>unknown_sandbox</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a> (sandbox_id : &amp; str) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:272</p>
+</article><article id="item-fn-bind-308" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bind private fn bind (path : &amp; Path) -&gt; Result &lt; UnixListener &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>bind</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a> (path : &amp; Path) -&gt; Result &lt; UnixListener &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">UnixListener</span>&gt; {
+    <span class="rs-kw">if</span> path.exists() {
+        std::fs::remove_file(path)
+            .with_context(|| format!(&quot;remove stale socket {}&quot;, path.display()))?;
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!(&quot;create socket dir {}&quot;, parent.display()))?;
+    }
+    <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(path).with_context(|| format!(&quot;bind {}&quot;, path.display()))?;
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+        std::fs::set_permissions(path, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o600))
+            .with_context(|| format!(&quot;chmod 600 {}&quot;, path.display()))?;
+    }
+    <span class="rs-type">Ok</span>(listener)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:308</p>
+</article><article id="item-fn-accept-loop-327" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn accept_loop private fn accept_loop (listener : &amp; UnixListener , surface : Surface , catalog : Arc &lt; Catalog &gt; , engine : Arc &lt; dyn Engine &gt; ,) crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>accept_loop</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a> (listener : &amp; UnixListener , surface : <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a> , catalog : Arc &lt; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> &gt; , engine : Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> &gt; ,)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(
+    listener: &amp;<span class="rs-type">UnixListener</span>,
+    surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>,
+    catalog: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>&gt;,
+    engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;,
+) {
+    loop {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>((stream, _)) = listener.accept() <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::clone(&amp;catalog);
+        <span class="rs-kw">let</span> engine = <span class="rs-type">Arc</span>::clone(&amp;engine);
+        std::thread::spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-connection-343">handle_connection</a>(stream, surface, &amp;catalog, &amp;*engine));
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:327</p>
+</article><article id="item-fn-handle-connection-343" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn handle_connection private fn handle_connection (stream : UnixStream , surface : Surface , catalog : &amp; Catalog , engine : &amp; dyn Engine) crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>handle_connection</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-handle-connection-343">handle_connection</a> (stream : UnixStream , surface : <a class="symbol-link" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a> , catalog : &amp; <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> , engine : &amp; dyn <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-connection-343">handle_connection</a>(stream: <span class="rs-type">UnixStream</span>, surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>, catalog: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>, engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>) {
+    <span class="rs-kw">let</span> _ = stream.set_read_timeout(<span class="rs-type">Some</span>(<span class="rs-type">REQUEST_READ_TIMEOUT</span>));
+    <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(&amp;stream).and_then(|line| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(&amp;line)) {
+        <span class="rs-type">Ok</span>(request) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(catalog, engine, surface, &amp;request),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(err.kind, &amp;err.message),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = stream;
+    <span class="rs-kw">let</span> _ = stream.write_all(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(&amp;response));
+    <span class="rs-kw">let</span> _ = stream.flush();
+    <span class="rs-kw">let</span> _ = stream.shutdown(std::net::<span class="rs-type">Shutdown</span>::<span class="rs-type">Write</span>);
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:343</p>
+</article><article id="item-fn-read-request-line-378" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_request_line private fn read_request_line (stream : impl Read) -&gt; Result &lt; Vec &lt; u8 &gt; , WireError &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_request_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a> (stream : impl Read) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(stream: <span class="rs-kw">impl</span> <span class="rs-type">Read</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(stream.take(<span class="rs-type">MAX_REQUEST_BYTES</span> <span class="rs-kw">as</span> u64 + 1));
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
+    reader
+        .read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> line)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, format!(&quot;read request: {err}&quot;)))?;
+    <span class="rs-kw">if</span> line.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            &quot;connection closed before a request line&quot;,
+        ));
+    }
+    <span class="rs-kw">if</span> line.len() &gt; <span class="rs-type">MAX_REQUEST_BYTES</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;request_too_large&quot;,
+            format!(&quot;request exceeds {<span class="rs-type">MAX_REQUEST_BYTES</span>} bytes&quot;),
+        ));
+    }
+    <span class="rs-type">Ok</span>(line)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:378</p>
+</article><article id="item-fn-take-string-435" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn take_string private fn take_string (object : &amp; mut Map &lt; String , Value &gt; , field : &amp; str) -&gt; Result &lt; String , WireError &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>take_string</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a> (object : &amp; mut Map &lt; String , Value &gt; , field : &amp; str) -&gt; Result &lt; String , <a class="symbol-link" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(object: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">match</span> object.remove(field) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(value)) =&gt; <span class="rs-type">Ok</span>(value),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            format!(&quot;{field} is required and must be a string&quot;),
+        )),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:435</p>
+</article><article id="item-fn-error-envelope-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope private fn error_envelope (kind : &amp; str , message : &amp; str) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>error_envelope</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a> (kind : &amp; str , message : &amp; str) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;warnings&quot;: [],
+        &quot;timings&quot;: {},
+        &quot;error&quot;: {
+            &quot;kind&quot;: kind,
+            &quot;message&quot;: message,
+            &quot;details&quot;: {},
+        },
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:445</p>
+</article><article id="item-fn-response-line-458" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn response_line private fn response_line (response : &amp; Value) -&gt; Vec &lt; u8 &gt; crates/eos-sandbox-gateway/src/gateway.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>response_line</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a> (response : &amp; Value) -&gt; Vec &lt; u8 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = serde_json::to_vec(response).unwrap_or_default();
+    line.push(b&#x27;\n&#x27;);
+    line
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:458</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-Engine-for-SandboxHost-135" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl Engine for SandboxHost private impl Engine for SandboxHost crates/eos-sandbox-gateway/src/gateway.rs  acquire fn acquire (&amp; self) -&gt; Result &lt; String &gt; release fn release (&amp; self , sandbox_id : &amp; str) -&gt; bool status fn status (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt; list fn list (&amp; self) -&gt; Vec &lt; Value &gt; forward fn forward (&amp; self , sandbox_id : &amp; str , mutates_state : bool , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl Engine for SandboxHost</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> for SandboxHost</code>
+  <div class="tags"><span>impl</span><span>trait-impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-acquire-136"><td>method</td><td>acquire</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a> (&amp; self) -&gt; Result &lt; String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(<span class="rs-self">self</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-release-140"><td>method</td><td>release</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-release-122">release</a> (&amp; self , sandbox_id : &amp; str) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; bool {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(<span class="rs-self">self</span>, sandbox_id)
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-144"><td>method</td><td>status</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-status-123">status</a> (&amp; self , sandbox_id : &amp; str) -&gt; Option &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(<span class="rs-self">self</span>, sandbox_id).map(|status| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(&amp;status, <span class="rs-kw">true</span>))
+    }
+</code></pre>
+</details></td></tr><tr id="method-list-148"><td>method</td><td>list</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-list-124">list</a> (&amp; self) -&gt; Vec &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(<span class="rs-self">self</span>)
+            .iter()
+            .map(|status| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(status, <span class="rs-kw">false</span>))
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-forward-155"><td>method</td><td>forward</td><td><code>fn <a class="symbol-link" href="eos-sandbox-gateway.html#method-forward-125">forward</a> (&amp; self , sandbox_id : &amp; str , mutates_state : bool , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Option &lt; Result &lt; Value , ForwardError &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        mutates_state: bool,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(<span class="rs-self">self</span>, sandbox_id, mutates_state, op, invocation_id, args)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:135</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-sandbox-gateway/src/gateway.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::io::{<span class="rs-type">BufRead</span>, <span class="rs-type">BufReader</span>, <span class="rs-type">Read</span>, <span class="rs-type">Write</span>};
+<span class="rs-kw">use</span> std::os::unix::net::{<span class="rs-type">UnixListener</span>, <span class="rs-type">UnixStream</span>};
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> eos_sandbox_host::{<span class="rs-type">ForwardError</span>, <span class="rs-type">SandboxHost</span>, <span class="rs-type">SandboxStatus</span>};
+
+<span class="rs-kw">const</span> <span class="rs-type">OPS_JSON</span>: &amp;str = include_str!(&quot;../../../contract/ops.json&quot;);
+<span class="rs-kw">const</span> <span class="rs-type">REQUEST_READ_TIMEOUT</span>: <span class="rs-type">Duration</span> = <span class="rs-type">Duration</span>::from_secs(30);
+<span class="rs-kw">const</span> <span class="rs-type">MAX_REQUEST_BYTES</span>: usize = eos_sandbox_host::<span class="rs-type">MAX_REQUEST_BYTES</span>;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a> {
+    <span class="rs-type">Public</span>,
+    <span class="rs-type">Operator</span>,
+    <span class="rs-type">Internal</span>,
+    <span class="rs-type">Test</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a> {
+    <span class="rs-type">Acquire</span>,
+    <span class="rs-type">Release</span>,
+    <span class="rs-type">Status</span>,
+    <span class="rs-type">List</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a> {
+    <span class="rs-type">Host</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>),
+    <span class="rs-type">Daemon</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) name: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) route: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) visibility: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>,
+    mutates_state: bool,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> {
+    by_name: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a>&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-load-builtin-52">load_builtin</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(<span class="rs-type">OPS_JSON</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-parse-56">parse</a>(ops_json: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> document: <span class="rs-type">Value</span> = serde_json::from_str(ops_json).context(&quot;parse ops.json&quot;)?;
+        <span class="rs-kw">let</span> ops = document
+            .get(&quot;ops&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .context(&quot;ops.json must carry an `ops` array&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_name = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> ops {
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;name&quot;)?.to_owned();
+            <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;served_by&quot;)? {
+                &quot;daemon&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Daemon</span>,
+                &quot;host&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Host</span>(<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-verb-104">host_verb</a>(&amp;name)?),
+                other =&gt; bail!(&quot;op {name}: unknown served_by {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> visibility = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-str-field-114">str_field</a>(op, &quot;visibility&quot;)? {
+                &quot;public&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Public</span>,
+                &quot;operator&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Operator</span>,
+                &quot;internal&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Internal</span>,
+                &quot;test&quot; =&gt; <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Test</span>,
+                other =&gt; bail!(&quot;op {name}: unknown visibility {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> mutates_state = op
+                .get(&quot;mutates_state&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_bool)
+                .with_context(|| format!(&quot;op {name}: missing mutates_state&quot;))?;
+            <span class="rs-kw">let</span> entry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a> {
+                name: name.clone(),
+                route,
+                visibility,
+                mutates_state,
+            });
+            <span class="rs-kw">if</span> by_name.insert(name.clone(), entry).is_some() {
+                bail!(&quot;catalog name claimed twice: {name}&quot;);
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { by_name })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-lookup-94">lookup</a>(&amp;<span class="rs-self">self</span>, op: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.get(op)
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-entries-98">entries</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-OpEntry-39">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.values().collect()
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-verb-104">host_verb</a>(name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>&gt; {
+    <span class="rs-kw">match</span> name {
+        &quot;sandbox.acquire&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span>),
+        &quot;sandbox.release&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span>),
+        &quot;sandbox.status&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span>),
+        &quot;sandbox.list&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span>),
+        other =&gt; bail!(&quot;host-served op {other} has no router implementation&quot;),
+    }
+}
+
+<span class="rs-kw">fn</span> str_field&lt;&#x27;a&gt;(op: &amp;&#x27;a <span class="rs-type">Value</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a str&gt; {
+    op.get(field)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .with_context(|| format!(&quot;catalog op missing string field {field}&quot;))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; bool;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        mutates_state: bool,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt;;
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a> <span class="rs-kw">for</span> <span class="rs-type">SandboxHost</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>(<span class="rs-self">self</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; bool {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(<span class="rs-self">self</span>, sandbox_id)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(&amp;<span class="rs-self">self</span>, sandbox_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(<span class="rs-self">self</span>, sandbox_id).map(|status| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(&amp;status, <span class="rs-kw">true</span>))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>(<span class="rs-self">self</span>)
+            .iter()
+            .map(|status| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(status, <span class="rs-kw">false</span>))
+            .collect()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;str,
+        mutates_state: bool,
+        op: &amp;str,
+        invocation_id: &amp;str,
+        args: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <span class="rs-type">ForwardError</span>&gt;&gt; {
+        <span class="rs-type">SandboxHost</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(<span class="rs-self">self</span>, sandbox_id, mutates_state, op, invocation_id, args)
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-status-value-167">status_value</a>(status: &amp;<span class="rs-type">SandboxStatus</span>, embed_daemon: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;sandbox_id&quot;: status.sandbox_id,
+        &quot;container&quot;: status.container,
+        &quot;endpoint&quot;: status.endpoint.map(|addr| addr.to_string()),
+        &quot;created_by&quot;: status.created_by,
+    });
+    <span class="rs-kw">if</span> embed_daemon {
+        value[&quot;daemon&quot;] = status.daemon.clone();
+    }
+    value
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a> {
+    <span class="rs-type">Client</span>,
+    <span class="rs-type">Operator</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a> {
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(<span class="rs-self">self</span>, visibility: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>) -&gt; bool {
+        <span class="rs-kw">match</span> visibility {
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Public</span> =&gt; <span class="rs-kw">true</span>,
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Operator</span> =&gt; matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Operator</span>),
+            <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Internal</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Visibility-17">Visibility</a>::<span class="rs-type">Test</span> =&gt; <span class="rs-kw">false</span>,
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(
+    catalog: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>,
+    engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>,
+    surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>,
+    request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = catalog.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-lookup-94">lookup</a>(&amp;request.op) <span class="rs-kw">else</span> {
+        <span class="rs-kw">if</span> request.op.starts_with(&quot;plugin.&quot;) {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, <span class="rs-kw">true</span>);
+        }
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
+    };
+    <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(entry.visibility) {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(
+            &quot;forbidden&quot;,
+            &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
+        );
+    }
+    <span class="rs-kw">match</span> entry.route {
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Daemon</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, entry.mutates_state),
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Route-33">Route</a>::<span class="rs-type">Host</span>(verb) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-call-243">host_call</a>(engine, verb, request),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, mutates_state: bool) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+    };
+    <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
+        sandbox_id,
+        mutates_state,
+        &amp;request.op,
+        &amp;request.invocation_id,
+        &amp;request.args,
+    ) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(response)) =&gt; response,
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(message))) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;uncertain_outcome&quot;, &amp;message)
+        }
+        <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(message))) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;message)
+        }
+        <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-host-call-243">host_call</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, verb: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> verb {
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>() {
+            <span class="rs-type">Ok</span>(sandbox_id) =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id}),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
+        },
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>()}),
+        <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+            };
+            <span class="rs-kw">match</span> verb {
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> =&gt; {
+                    <span class="rs-kw">if</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-release-122">release</a>(sandbox_id) {
+                        json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id})
+                    } <span class="rs-kw">else</span> {
+                        <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id)
+                    }
+                }
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-status-123">status</a>(sandbox_id) {
+                    <span class="rs-type">Some</span>(status) =&gt; status,
+                    <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
+                },
+                <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; unreachable!(),
+            }
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> name = listen.file_name().unwrap_or_default().to_os_string();
+    name.push(&quot;.operator&quot;);
+    listen.with_file_name(name)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-282">serve</a>(listen: &amp;<span class="rs-type">Path</span>, engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-load-builtin-52">load_builtin</a>()?);
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-with-catalog-287">serve_with_catalog</a>(listen, catalog, engine)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-serve-with-catalog-287">serve_with_catalog</a>(
+    listen: &amp;<span class="rs-type">Path</span>,
+    catalog: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>&gt;,
+    engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> operator = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen))?;
+    {
+        <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::clone(&amp;catalog);
+        <span class="rs-kw">let</span> engine = <span class="rs-type">Arc</span>::clone(&amp;engine);
+        std::thread::spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(&amp;operator, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>::<span class="rs-type">Operator</span>, catalog, engine));
+    }
+    <span class="rs-kw">let</span> client = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(listen)?;
+    eprintln!(
+        &quot;eos-sandbox-gateway: serving {} (operator: {})&quot;,
+        listen.display(),
+        <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen).display()
+    );
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(&amp;client, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>::<span class="rs-type">Client</span>, catalog, engine);
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">UnixListener</span>&gt; {
+    <span class="rs-kw">if</span> path.exists() {
+        std::fs::remove_file(path)
+            .with_context(|| format!(&quot;remove stale socket {}&quot;, path.display()))?;
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!(&quot;create socket dir {}&quot;, parent.display()))?;
+    }
+    <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-bind-308">bind</a>(path).with_context(|| format!(&quot;bind {}&quot;, path.display()))?;
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
+        std::fs::set_permissions(path, std::fs::<span class="rs-type">Permissions</span>::from_mode(0o600))
+            .with_context(|| format!(&quot;chmod 600 {}&quot;, path.display()))?;
+    }
+    <span class="rs-type">Ok</span>(listener)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-accept-loop-327">accept_loop</a>(
+    listener: &amp;<span class="rs-type">UnixListener</span>,
+    surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>,
+    catalog: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>&gt;,
+    engine: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>&gt;,
+) {
+    loop {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>((stream, _)) = listener.accept() <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::clone(&amp;catalog);
+        <span class="rs-kw">let</span> engine = <span class="rs-type">Arc</span>::clone(&amp;engine);
+        std::thread::spawn(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-connection-343">handle_connection</a>(stream, surface, &amp;catalog, &amp;*engine));
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-connection-343">handle_connection</a>(stream: <span class="rs-type">UnixStream</span>, surface: <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-Surface-181">Surface</a>, catalog: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-Catalog-47">Catalog</a>, engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>) {
+    <span class="rs-kw">let</span> _ = stream.set_read_timeout(<span class="rs-type">Some</span>(<span class="rs-type">REQUEST_READ_TIMEOUT</span>));
+    <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(&amp;stream).and_then(|line| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(&amp;line)) {
+        <span class="rs-type">Ok</span>(request) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(catalog, engine, surface, &amp;request),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(err.kind, &amp;err.message),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = stream;
+    <span class="rs-kw">let</span> _ = stream.write_all(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(&amp;response));
+    <span class="rs-kw">let</span> _ = stream.flush();
+    <span class="rs-kw">let</span> _ = stream.shutdown(std::net::<span class="rs-type">Shutdown</span>::<span class="rs-type">Write</span>);
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) op: <span class="rs-type">String</span>,
+    sandbox_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    invocation_id: <span class="rs-type">String</span>,
+    args: <span class="rs-type">Value</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a> {
+    kind: &amp;&#x27;<span class="rs-kw">static</span> str,
+    message: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(kind: &amp;&#x27;<span class="rs-kw">static</span> str, message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            kind,
+            message: message.into(),
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(stream: <span class="rs-kw">impl</span> <span class="rs-type">Read</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(stream.take(<span class="rs-type">MAX_REQUEST_BYTES</span> <span class="rs-kw">as</span> u64 + 1));
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
+    reader
+        .read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> line)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, format!(&quot;read request: {err}&quot;)))?;
+    <span class="rs-kw">if</span> line.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            &quot;connection closed before a request line&quot;,
+        ));
+    }
+    <span class="rs-kw">if</span> line.len() &gt; <span class="rs-type">MAX_REQUEST_BYTES</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;request_too_large&quot;,
+            format!(&quot;request exceeds {<span class="rs-type">MAX_REQUEST_BYTES</span>} bytes&quot;),
+        ));
+    }
+    <span class="rs-type">Ok</span>(line)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> = serde_json::from_slice(line)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;bad_json&quot;, format!(&quot;request is not valid <span class="rs-type">JSON</span>: {err}&quot;)))?;
+    <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">mut</span> object) = value <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            &quot;request must be a <span class="rs-type">JSON</span> object&quot;,
+        ));
+    };
+    <span class="rs-kw">let</span> op = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;op&quot;)?;
+    <span class="rs-kw">if</span> op.trim().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;op is required&quot;));
+    }
+    <span class="rs-kw">let</span> invocation_id = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;invocation_id&quot;)?;
+    <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> object.remove(&quot;sandbox_id&quot;) {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>) =&gt; <span class="rs-type">None</span>,
+        <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(id)) =&gt; <span class="rs-type">Some</span>(id),
+        <span class="rs-type">Some</span>(_) =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+                &quot;invalid_envelope&quot;,
+                &quot;sandbox_id must be a string&quot;,
+            ))
+        }
+    };
+    <span class="rs-kw">let</span> args = object.remove(&quot;args&quot;).unwrap_or_else(|| json!({}));
+    <span class="rs-kw">if</span> !args.is_object() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;args must be an object&quot;));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> {
+        op,
+        sandbox_id,
+        invocation_id,
+        args,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(object: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>&gt; {
+    <span class="rs-kw">match</span> object.remove(field) {
+        <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(value)) =&gt; <span class="rs-type">Ok</span>(value),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
+            &quot;invalid_envelope&quot;,
+            format!(&quot;{field} is required and must be a string&quot;),
+        )),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;warnings&quot;: [],
+        &quot;timings&quot;: {},
+        &quot;error&quot;: {
+            &quot;kind&quot;: kind,
+            &quot;message&quot;: message,
+            &quot;details&quot;: {},
+        },
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = serde_json::to_vec(response).unwrap_or_default();
+    line.push(b&#x27;\n&#x27;);
+    line
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

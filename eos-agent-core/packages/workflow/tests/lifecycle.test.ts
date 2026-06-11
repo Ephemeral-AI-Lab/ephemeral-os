@@ -21,8 +21,8 @@ describe("delegation (§16 case 4)", () => {
 
     const tree = await h.tree(wf.workflowId);
     expect(tree.workflow.status).toBe("Running");
-    expect(tree.workflow.originalGoal).toBe("ship the parser");
-    expect(tree.workflow.currentGoal).toBe("ship the parser");
+    expect(tree.workflow.goal).toBe("ship the parser");
+    expect(tree.workflow.activeGoal).toBe("ship the parser");
     expect(tree.iterations).toHaveLength(1);
     expect(tree.iterations[0].status).toBe("Running");
     expect(tree.iterations[0].origin).toBe("initial");
@@ -137,7 +137,7 @@ describe("success cascade (§16 case 7)", () => {
     expect(tree.iterations[0].status).toBe("Success");
     expect(tree.iterations[1].origin).toBe("deferred_goal");
     expect(tree.iterations[1].status).toBe("Running");
-    expect(tree.workflow.currentGoal, "current_goal advanced to the deferral").toBe(
+    expect(tree.workflow.activeGoal, "active goal advanced to the deferral").toBe(
       "second half",
     );
     expect(tree.workflow.status).toBe("Running");

@@ -3,12 +3,12 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use eos_plugin::{PluginError, PpcDirection, PpcMessage};
 use serde_json::{json, Value};
 
 use super::{callbacks as occ_callbacks, state::PluginRuntime};
-use crate::PluginRuntimeError;
 use crate::route::PluginOperationRoute;
+use crate::PluginRuntimeError;
 
 impl PluginRuntime {
     pub(super) fn dispatch_connected_read_only_route(
@@ -51,7 +51,7 @@ impl PluginRuntime {
             return Ok(None);
         };
         let timeout = Duration::from_millis(route.timeout_ms.unwrap_or(self.config.ppc_timeout_ms));
-        let request = PpcEnvelope {
+        let request = PpcMessage {
             message_id: invocation_id.to_owned(),
             direction: PpcDirection::Request,
             op: route.public_op.clone(),
@@ -82,7 +82,7 @@ impl PluginRuntime {
 
     pub(super) fn response_payload_from_reply(
         &self,
-        reply: &PpcEnvelope,
+        reply: &PpcMessage,
     ) -> Result<Option<Value>, PluginRuntimeError> {
         let max_response_bytes = self.config.max_response_bytes;
         if reply.body.len() > max_response_bytes {

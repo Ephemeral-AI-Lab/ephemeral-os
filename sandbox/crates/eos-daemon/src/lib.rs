@@ -19,7 +19,7 @@
 //! owning service modules or sibling crates. [`dispatch::registry`] is the
 //! single table binding wire op names to those handlers. Overlay and workspace
 //! helpers live in the sibling crates that own those domains, with daemon code
-//! keeping only process launch and service orchestration. Write-capable
+//! keeping only service orchestration. Write-capable
 //! shared-workspace operations route through `eos_layerstack::service`, the
 //! per-root single writer shared with the live dispatcher.
 //!
@@ -44,7 +44,6 @@ pub use dispatcher::OpTable;
 pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
 pub use runtime::context::DispatchContext;
-pub use runtime::services::Services;
 pub(crate) use runtime::{config, error, invocation_registry};
 pub(crate) use runtime::{request_args, response};
 pub use transport::server::{DaemonServer, ServerConfig};

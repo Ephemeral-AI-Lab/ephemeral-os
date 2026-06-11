@@ -228,10 +228,7 @@ fn unix_socket_round_trip_serves_one_request_per_connection() {
 }
 
 fn test_socket_path(tag: &str) -> PathBuf {
-    std::env::temp_dir().join(format!(
-        "eos-sandbox-gateway-contract-{tag}-{}.sock",
-        std::process::id()
-    ))
+    PathBuf::from(format!("/tmp/esg-{tag}-{}.sock", std::process::id()))
 }
 
 fn round_trip_when_ready(socket: &PathBuf, line: &[u8]) -> Value {

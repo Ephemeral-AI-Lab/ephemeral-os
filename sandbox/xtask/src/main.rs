@@ -346,9 +346,17 @@ fn package(args: &PackageArgs) -> Result<()> {
     set_executable(&artifact)?;
 
     let sha = sha256_file(&artifact)?;
-    write_protocol_version(&out_dir)?;
+    let protocol_version = read_protocol_version(&root)?;
+    write_protocol_version(&out_dir, protocol_version)?;
     write_checksums(&out_dir)?;
-    write_manifest(&out_dir, &args.target, arch, &artifact_name, &sha)?;
+    write_manifest(
+        &out_dir,
+        &args.target,
+        arch,
+        &artifact_name,
+        &sha,
+        protocol_version,
+    )?;
 
     if args.sign {
         let key = args
@@ -360,9 +368,7 @@ fn package(args: &PackageArgs) -> Result<()> {
 
     println!(
         "packaged {artifact_name} target={} sha256={} protocol_version={}",
-        args.target,
-        sha,
-        eos_daemon::wire::DAEMON_PROTOCOL_VERSION
+        args.target, sha, protocol_version
     );
     Ok(())
 }
@@ -475,10 +481,22 @@ fn sha256_file(path: &Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-fn write_protocol_version(out_dir: &Path) -> Result<()> {
+fn read_protocol_version(root: &Path) -> Result<i64> {
+    let path = root.join("contract").join("ops.json");
+    let document: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?,
+    )
+    .context("parse contract/ops.json")?;
+    document
+        .get("protocol_version")
+        .and_then(serde_json::Value::as_i64)
+        .context("contract/ops.json missing protocol_version")
+}
+
+fn write_protocol_version(out_dir: &Path, protocol_version: i64) -> Result<()> {
     fs::write(
         out_dir.join("protocol_version"),
-        format!("{}\n", eos_daemon::wire::DAEMON_PROTOCOL_VERSION),
+        format!("{protocol_version}\n"),
     )
     .with_context(|| format!("write {}", out_dir.join("protocol_version").display()))
 }
@@ -515,6 +533,7 @@ fn write_manifest(
     arch: &str,
     artifact_name: &str,
     sha256: &str,
+    protocol_version: i64,
 ) -> Result<()> {
     let body = format!(
         concat!(
@@ -529,7 +548,7 @@ fn write_manifest(
         ),
         artifact_name,
         arch,
-        eos_daemon::wire::DAEMON_PROTOCOL_VERSION,
+        protocol_version,
         sha256,
         target,
         env!("CARGO_PKG_VERSION"),

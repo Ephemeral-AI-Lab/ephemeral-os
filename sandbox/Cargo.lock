@@ -324,8 +324,10 @@ name = "eos-runtime"
 version = "0.1.0"
 dependencies = [
  "eos-command-ops",
+ "eos-command-session",
  "eos-config",
  "eos-ephemeral-workspace",
+ "eos-file-ops",
  "eos-isolated-workspace",
  "eos-layerstack",
  "eos-namespace",
@@ -1566,7 +1568,6 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "eos-daemon",
  "serde_json",
  "sha2",
 ]

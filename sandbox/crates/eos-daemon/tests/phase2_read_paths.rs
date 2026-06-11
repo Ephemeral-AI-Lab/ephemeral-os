@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
+use std::process::Child;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
 
 // Integration test crates receive every normal `eos-daemon` dependency even
@@ -8,11 +10,13 @@ use std::sync::Mutex;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_daemon::wire::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
-use eos_daemon::{DaemonServer, ServerConfig, Services};
+use eos_daemon::{DaemonServer, ServerConfig};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
 use eos_layerstack as _;
+use eos_namespace::protocol::{RunRequest, RunResult};
 use eos_overlay as _;
 use eos_plugin as _;
+use eos_runtime::{LaunchError, NsRunnerLauncher, RuntimeServices};
 use serde as _;
 use serde_json::{json, Value};
 use thiserror as _;
@@ -25,19 +29,22 @@ static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-/// One daemon under test: the builtin op table plus its own `Services`.
+/// One daemon under test: the builtin op table plus its own runtime services.
 struct TestDaemon {
     table: OpTable,
-    services: Services,
+    services: RuntimeServices,
 }
 
 impl TestDaemon {
     fn new() -> Self {
-        Self::with_services(Services::default())
+        Self::with_services(test_services(
+            PluginRuntimeConfig::default(),
+            IsolatedWorkspaceConfig::default(),
+        ))
     }
 
     fn with_isolated_workspace(scratch_root: &Path) -> Self {
-        Self::with_services(Services::new(
+        Self::with_services(test_services(
             PluginRuntimeConfig::default(),
             IsolatedWorkspaceConfig {
                 enabled: true,
@@ -47,7 +54,7 @@ impl TestDaemon {
         ))
     }
 
-    fn with_services(services: Services) -> Self {
+    fn with_services(services: RuntimeServices) -> Self {
         Self {
             table: OpTable::with_builtins(),
             services,
@@ -57,6 +64,40 @@ impl TestDaemon {
     fn dispatch(&self, request: &Request) -> Value {
         self.table
             .dispatch_with_context(request, DispatchContext::with_services(&self.services))
+    }
+}
+
+fn test_services(
+    plugin: PluginRuntimeConfig,
+    isolated_workspace: IsolatedWorkspaceConfig,
+) -> RuntimeServices {
+    RuntimeServices::new(plugin, isolated_workspace, Arc::new(NoLaunch))
+}
+
+struct NoLaunch;
+
+impl NsRunnerLauncher for NoLaunch {
+    fn run(&self, _request: &RunRequest) -> Result<RunResult, LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
+    }
+
+    fn spawn_detached(&self, _request: &RunRequest) -> Result<Child, LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
+    }
+
+    fn remount_in(
+        &self,
+        _target_pid: u32,
+        _request: &RunRequest,
+        _timeout: std::time::Duration,
+    ) -> Result<(), LaunchError> {
+        Err(LaunchError::Failed(
+            "test launcher does not start ns-runner".to_owned(),
+        ))
     }
 }
 

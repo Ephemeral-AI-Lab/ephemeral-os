@@ -7,7 +7,7 @@
 //! in-process per call. The Rust path replaces that with daemon-owned service
 //! processes connected over a bidirectional PPC channel on an `AF_UNIX` socket.
 //! This crate deliberately owns only the pure contract pieces: plugin manifests,
-//! service keys/status, refresh messages, public op names, and PPC frames. The
+//! service keys/status, refresh messages, public op names, and PPC messages. The
 //! live process registry, per-op overlay, and OCC callback handling stay in
 //! `eos-daemon`.
 //!
@@ -35,19 +35,19 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
-pub mod framing;
 pub mod manifest;
 pub mod ppc;
 pub mod refresh;
 pub mod service;
 pub mod service_registry;
+pub mod wire;
 
 pub use error::{PluginError, Result};
 pub use manifest::{
     PluginDependencyScope, PluginManifest, PluginOperationManifest, PluginPackageManifest,
     PluginServiceManifest, PluginSetupManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER,
 };
-pub use ppc::{PpcDirection, PpcEnvelope};
+pub use ppc::{PpcDirection, PpcMessage};
 pub use refresh::{RefreshAck, RefreshRequest};
 pub use service::{PluginServiceKey, PluginServiceKeyParts, RefreshStrategy, ServiceMode};
 pub use service_registry::{PluginServiceState, PluginServiceStatus};

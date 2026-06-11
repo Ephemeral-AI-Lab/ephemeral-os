@@ -1,7 +1,7 @@
 //! Registered plugin op routing.
 //!
-//! The caller-family gate (caller-field validation + the isolated-workspace
-//! refusal) runs in the `ops::plugin` adapter before any of this; routing here
+//! The caller-family gate (caller-field validation + isolated-workspace
+//! refusal) runs through `RuntimeServices` before any of this; routing here
 //! trusts already-validated args.
 
 use eos_namespace::protocol::Intent;
@@ -9,8 +9,8 @@ use serde_json::{json, Value};
 
 use super::overlay::PluginOverlayOutcome;
 use super::state::PluginRuntime;
-use crate::PluginRuntimeError;
 use crate::route::PluginOperationRoute;
+use crate::PluginRuntimeError;
 
 /// Result of dispatching one registered plugin op. Connected routes carry the
 /// plugin's reply payload through unchanged; oneshot overlay runs come back
@@ -62,7 +62,9 @@ impl PluginRuntime {
             }
         }
         if route.intent == Intent::WriteAllowed && route.auto_workspace_overlay {
-            if let Some(outcome) = self.dispatch_oneshot_overlay_route(route, invocation_id, args)? {
+            if let Some(outcome) =
+                self.dispatch_oneshot_overlay_route(route, invocation_id, args)?
+            {
                 return Ok(PluginDispatchOutcome::OneshotOverlay(Box::new(outcome)));
             }
         }

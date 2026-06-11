@@ -11,6 +11,7 @@ use std::time::Instant;
 use eos_ephemeral_workspace::{
     capture_upperdir, overlay_run_dirs, path_changes_to_wire, OverlayDirs, OverlayDirsGuard,
 };
+use eos_isolated_workspace::NsRunnerLauncher;
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_namespace::protocol::Intent;
 use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
@@ -19,7 +20,6 @@ use serde_json::{json, Value};
 
 use super::state::PluginRuntime;
 use crate::PluginRuntimeError;
-use crate::launcher::NsRunnerLauncher;
 
 use crate::route::PluginOperationRoute;
 
@@ -42,63 +42,63 @@ impl PluginRuntime {
         invocation_id: &str,
         args: &Value,
     ) -> Result<Option<PluginOverlayOutcome>, PluginRuntimeError> {
-    if route.service_mode != Some(ServiceMode::OneshotOverlay) {
-        return Ok(None);
-    }
-    let Some(layer_stack_root) = route.layer_stack_root.clone() else {
-        return Ok(None);
-    };
-    let Some(service_key) = route.service_key.clone() else {
-        return Ok(None);
-    };
-    if route.service_command.is_empty() {
-        return Ok(None);
-    }
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or("default")
-        .to_owned();
-    let mut env = BTreeMap::from([
-        (
-            "EOS_PLUGIN_LAYER_STACK_ROOT".to_owned(),
-            service_key.layer_stack_root,
-        ),
-        (
-            "EOS_PLUGIN_WORKSPACE_ROOT".to_owned(),
-            service_key.workspace_root,
-        ),
-        ("EOS_PLUGIN_ID".to_owned(), service_key.plugin_id),
-        ("EOS_PLUGIN_DIGEST".to_owned(), service_key.plugin_digest),
-        ("EOS_PLUGIN_SERVICE_ID".to_owned(), service_key.service_id),
-        (
-            "EOS_PLUGIN_SERVICE_PROFILE_DIGEST".to_owned(),
-            service_key.service_profile_digest,
-        ),
-        (
-            "EOS_PLUGIN_PPC_PROTOCOL_VERSION".to_owned(),
-            route.service_ppc_protocol_version.unwrap_or(1).to_string(),
-        ),
-        (
-            "EOS_PLUGIN_SERVICE_MODE".to_owned(),
-            "oneshot_overlay".to_owned(),
-        ),
-    ]);
-    env.insert("EOS_PLUGIN_PUBLIC_OP".to_owned(), route.public_op.clone());
-    let timeout_seconds = route
-        .timeout_ms
-        .map(|timeout| u64_to_f64_saturating(timeout) / 1000.0);
-    let overlay_command = PluginOverlayCommand {
-        layer_stack_root: PathBuf::from(layer_stack_root),
-        invocation_id: invocation_id.to_owned(),
-        caller_id,
-        public_op: route.public_op.clone(),
-        plugin_id: route.plugin_id.clone(),
-        op_name: route.op_name.clone(),
-        command: route.service_command.clone(),
-        env,
-        timeout_seconds,
-    };
+        if route.service_mode != Some(ServiceMode::OneshotOverlay) {
+            return Ok(None);
+        }
+        let Some(layer_stack_root) = route.layer_stack_root.clone() else {
+            return Ok(None);
+        };
+        let Some(service_key) = route.service_key.clone() else {
+            return Ok(None);
+        };
+        if route.service_command.is_empty() {
+            return Ok(None);
+        }
+        let caller_id = args
+            .get("caller_id")
+            .and_then(Value::as_str)
+            .unwrap_or("default")
+            .to_owned();
+        let mut env = BTreeMap::from([
+            (
+                "EOS_PLUGIN_LAYER_STACK_ROOT".to_owned(),
+                service_key.layer_stack_root,
+            ),
+            (
+                "EOS_PLUGIN_WORKSPACE_ROOT".to_owned(),
+                service_key.workspace_root,
+            ),
+            ("EOS_PLUGIN_ID".to_owned(), service_key.plugin_id),
+            ("EOS_PLUGIN_DIGEST".to_owned(), service_key.plugin_digest),
+            ("EOS_PLUGIN_SERVICE_ID".to_owned(), service_key.service_id),
+            (
+                "EOS_PLUGIN_SERVICE_PROFILE_DIGEST".to_owned(),
+                service_key.service_profile_digest,
+            ),
+            (
+                "EOS_PLUGIN_PPC_PROTOCOL_VERSION".to_owned(),
+                route.service_ppc_protocol_version.unwrap_or(1).to_string(),
+            ),
+            (
+                "EOS_PLUGIN_SERVICE_MODE".to_owned(),
+                "oneshot_overlay".to_owned(),
+            ),
+        ]);
+        env.insert("EOS_PLUGIN_PUBLIC_OP".to_owned(), route.public_op.clone());
+        let timeout_seconds = route
+            .timeout_ms
+            .map(|timeout| u64_to_f64_saturating(timeout) / 1000.0);
+        let overlay_command = PluginOverlayCommand {
+            layer_stack_root: PathBuf::from(layer_stack_root),
+            invocation_id: invocation_id.to_owned(),
+            caller_id,
+            public_op: route.public_op.clone(),
+            plugin_id: route.plugin_id.clone(),
+            op_name: route.op_name.clone(),
+            command: route.service_command.clone(),
+            env,
+            timeout_seconds,
+        };
         Ok(Some(run_plugin_overlay_command(
             &*self.launcher,
             &overlay_command,
@@ -139,7 +139,8 @@ fn run_plugin_overlay_command(
         spec.caller_id, spec.invocation_id
     ))?;
     let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
-    let run_result = run_plugin_overlay_once(launcher, spec, args, &binding, &lease, lease_acquire_s);
+    let run_result =
+        run_plugin_overlay_once(launcher, spec, args, &binding, &lease, lease_acquire_s);
     let _ = stack.release_lease(&lease.lease_id);
     run_result
 }

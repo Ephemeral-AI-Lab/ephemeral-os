@@ -1,4 +1,4 @@
-//! Error type for plugin registration, manifests, service state, and PPC framing.
+//! Error type for plugin registration, manifests, service state, and PPC wire messages.
 
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ use thiserror::Error;
 /// The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`
 /// / `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum
 /// reproduces those failure classes as a typed surface the daemon translates into
-/// the wire error envelope. Concrete overlay/OCC failures are daemon-owned.
+/// the wire error response. Concrete overlay/OCC failures are daemon-owned.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum PluginError {
@@ -34,7 +34,7 @@ pub enum PluginError {
     #[error("plugin projection stale: {0}")]
     ProjectionStale(String),
 
-    /// A PPC envelope could not be framed/parsed, or the service process reply
+    /// A PPC message could not be encoded/parsed, or the service process reply
     /// carried an unknown / unmatched message id.
     #[error("ppc channel error: {0}")]
     Ppc(String),

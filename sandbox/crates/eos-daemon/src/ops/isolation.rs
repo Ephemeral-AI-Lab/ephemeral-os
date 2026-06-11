@@ -1,14 +1,13 @@
 //! Isolated-workspace op adapters behind `api.isolated_workspace.*`: wire arg
-//! parsing, the command-session entry gate, and response/error shaping over
-//! [`eos_runtime::WorkspaceRuntime`].
+//! parsing and response/error shaping over [`eos_runtime::WorkspaceRuntime`].
 
 use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use eos_isolated_workspace::{IsolatedError, WorkspaceHandle};
-use eos_runtime::ExitOutcome;
-use serde_json::{json, Value};
+use eos_runtime::{ExitOutcome, WorkspaceEnterError};
+use serde_json::{Value, json};
 
 use crate::error::DaemonError;
 use crate::runtime::context::DispatchContext;
@@ -27,16 +26,6 @@ pub(crate) fn op_enter(args: &Value, context: DispatchContext<'_>) -> Result<Val
         Err(error) => return Ok(error),
     };
     let workspace = &context.require_services()?.workspace;
-    // Cross-domain entry gate: a caller with live command sessions cannot
-    // switch its runs into an isolated workspace mid-flight.
-    let active_command_sessions = eos_command_ops::active_command_sessions_for_caller(&caller_id);
-    if active_command_sessions > 0 {
-        return Ok(error_json(
-            "active_background_work",
-            "cannot enter isolated workspace while command sessions are active",
-            json!({"active_command_sessions": active_command_sessions}),
-        ));
-    }
     match workspace.enter(&caller_id, &root) {
         Ok(handle) => Ok(json!({
             "success": true,
@@ -45,7 +34,14 @@ pub(crate) fn op_enter(args: &Value, context: DispatchContext<'_>) -> Result<Val
             "workspace_handle_id": handle.workspace_id.0,
             "workspace_root": handle.workspace_root,
         })),
-        Err(error) => Ok(error_payload(&error)),
+        Err(WorkspaceEnterError::ActiveCommandSessions {
+            active_command_sessions,
+        }) => Ok(error_json(
+            "active_background_work",
+            "cannot enter isolated workspace while command sessions are active",
+            json!({"active_command_sessions": active_command_sessions}),
+        )),
+        Err(WorkspaceEnterError::Isolated(error)) => Ok(error_payload(&error)),
     }
 }
 
@@ -62,7 +58,10 @@ pub(crate) fn op_exit(args: &Value, context: DispatchContext<'_>) -> Result<Valu
     workspace
         .cancel_runs_for_caller(&caller_id, grace_s)
         .isolated
-        .map_or_else(|error| Ok(error_payload(&error)), |exit| Ok(exit_response(exit)))
+        .map_or_else(
+            |error| Ok(error_payload(&error)),
+            |exit| Ok(exit_response(exit)),
+        )
 }
 
 pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {

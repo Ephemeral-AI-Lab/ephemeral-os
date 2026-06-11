@@ -44,21 +44,21 @@ export function buildWorkflowTree(rows: WorkflowRows): WorkflowTree {
     ),
   );
 
-  // Goal chain: original for the first iteration, then each predecessor's
-  // effective deferral; current_goal is the latest iteration's goal.
+  // Goal chain: workflow goal for the first iteration, then each predecessor's
+  // effective deferral; activeGoal is the latest iteration's goal.
   const goals = deriveGoalChain(
-    rows.workflow.original_goal,
+    rows.workflow.goal,
     iterations.map((iteration) => iteration.deferredGoal),
   );
   const withGoals = iterations.map((iteration, index) =>
-    Object.freeze({ ...iteration, goal: goals[index] ?? rows.workflow.original_goal }),
+    Object.freeze({ ...iteration, goal: goals[index] ?? rows.workflow.goal }),
   );
 
   const workflow: WorkflowState = Object.freeze({
     id: rows.workflow.id,
     parentRunId: rows.workflow.parent_run_id,
-    originalGoal: rows.workflow.original_goal,
-    currentGoal: withGoals.at(-1)?.goal ?? rows.workflow.original_goal,
+    goal: rows.workflow.goal,
+    activeGoal: withGoals.at(-1)?.goal ?? rows.workflow.goal,
     status: rows.workflow.status,
     closedAt: rows.workflow.closed_at,
   });

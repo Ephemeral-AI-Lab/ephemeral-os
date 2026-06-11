@@ -10,8 +10,7 @@ export function workflowFieldFiles(
   iterations: readonly IterationState[],
 ): EntityFieldFile[] {
   const files: EntityFieldFile[] = [
-    { name: "original_goal.md", content: workflow.originalGoal },
-    { name: "current_goal.md", content: workflow.currentGoal },
+    { name: "goal.md", content: workflow.goal },
   ];
   if (isWorkflowEntityTerminal(workflow.status)) {
     files.push({

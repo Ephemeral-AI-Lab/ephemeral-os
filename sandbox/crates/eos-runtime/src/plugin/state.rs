@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use eos_config::configs::daemon::PluginRuntimeConfig;
-use crate::launcher::NsRunnerLauncher;
-use eos_plugin::PluginServiceStatus;
 use crate::ensure::ParsedEnsure;
+use eos_config::configs::daemon::PluginRuntimeConfig;
+use eos_isolated_workspace::NsRunnerLauncher;
+use eos_plugin::PluginServiceStatus;
 use serde::Serialize;
 
 use super::{process::PluginServiceProcess, service::PluginServiceSnapshot};
@@ -43,7 +43,7 @@ pub struct PluginRuntime {
 }
 
 impl PluginRuntime {
-    /// Build a plugin runtime over its typed config and the daemon-provided
+    /// Build a plugin runtime over its typed config and embedding-provided
     /// ns-runner launcher.
     #[must_use]
     pub fn new(config: PluginRuntimeConfig, launcher: Arc<dyn NsRunnerLauncher>) -> Self {
@@ -54,7 +54,9 @@ impl PluginRuntime {
         }
     }
 
-    pub(super) fn lock_state(&self) -> Result<MutexGuard<'_, DaemonPluginState>, PluginRuntimeError> {
+    pub(super) fn lock_state(
+        &self,
+    ) -> Result<MutexGuard<'_, DaemonPluginState>, PluginRuntimeError> {
         self.state
             .lock()
             .map_err(|_| PluginRuntimeError::StateLockPoisoned("plugin registry"))

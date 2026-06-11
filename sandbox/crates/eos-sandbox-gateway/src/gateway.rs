@@ -95,6 +95,7 @@ impl Catalog {
         self.by_name.get(op)
     }
 
+    #[cfg(test)]
     pub(crate) fn entries(&self) -> Vec<&Arc<OpEntry>> {
         self.by_name.values().collect()
     }

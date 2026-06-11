@@ -1,13 +1,13 @@
 use eos_config::configs::daemon::FileLimitsConfig;
+use eos_runtime::RuntimeServices;
 
 use crate::error::DaemonError;
 use crate::runtime::invocation_registry::InFlightRegistry;
-use crate::runtime::services::Services;
 
 /// Per-dispatch daemon services used by handlers that need runtime state.
 #[derive(Clone, Copy, Default)]
 pub struct DispatchContext<'ctx> {
-    services: Option<&'ctx Services>,
+    services: Option<&'ctx RuntimeServices>,
     invocation_registry: Option<&'ctx InFlightRegistry>,
     file_limits: Option<FileLimitsConfig>,
     read_request_s: Option<f64>,
@@ -27,7 +27,7 @@ impl<'ctx> DispatchContext<'ctx> {
 
     /// Context carrying the server's owned services.
     #[must_use]
-    pub const fn with_services(services: &'ctx Services) -> Self {
+    pub const fn with_services(services: &'ctx RuntimeServices) -> Self {
         Self {
             services: Some(services),
             invocation_registry: None,
@@ -51,7 +51,7 @@ impl<'ctx> DispatchContext<'ctx> {
     /// limits, and measured request read duration.
     #[must_use]
     pub const fn with_runtime_config(
-        services: &'ctx Services,
+        services: &'ctx RuntimeServices,
         invocation_registry: &'ctx InFlightRegistry,
         file_limits: FileLimitsConfig,
         read_request_s: f64,
@@ -66,13 +66,13 @@ impl<'ctx> DispatchContext<'ctx> {
 
     /// The owned daemon services, when threaded. Handlers that can degrade
     /// (e.g. isolated-workspace routing checks) treat `None` as "no state".
-    pub(crate) const fn services(&self) -> Option<&'ctx Services> {
+    pub(crate) const fn services(&self) -> Option<&'ctx RuntimeServices> {
         self.services
     }
 
     /// The owned daemon services, required. Handlers that cannot operate
     /// without service state fail closed with a structured internal error.
-    pub(crate) const fn require_services(&self) -> Result<&'ctx Services, DaemonError> {
+    pub(crate) const fn require_services(&self) -> Result<&'ctx RuntimeServices, DaemonError> {
         match self.services {
             Some(services) => Ok(services),
             None => Err(DaemonError::ServicesUnavailable),

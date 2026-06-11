@@ -12,11 +12,11 @@ use std::time::{Duration, Instant};
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_layerstack::{LayerChange, LayerPath, LayerStack};
-use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
+use eos_plugin::{PluginError, PpcDirection, PpcMessage};
 use eos_runtime::ensure::{validate_plugin_caller_fields, MAX_PLUGIN_CALLER_FIELD_CHARS};
 use eos_runtime::{
-    read_frame, EnsureOutcome, EnsureReady, LaunchError, NsRunnerLauncher, PluginDispatchOutcome,
-    PluginRuntime, PluginRuntimeError,
+    read_message_bytes, EnsureOutcome, EnsureReady, LaunchError, NsRunnerLauncher,
+    PluginDispatchOutcome, PluginRuntime, PluginRuntimeError,
 };
 use serde_json::{json, Value};
 
@@ -99,7 +99,10 @@ fn concurrent_connected_ops_share_one_client_with_out_of_order_replies() -> Test
     });
 
     let seen = both_seen_rx.recv_timeout(Duration::from_secs(2))?;
-    assert_eq!(seen, vec!["concurrent-a".to_owned(), "concurrent-b".to_owned()]);
+    assert_eq!(
+        seen,
+        vec!["concurrent-a".to_owned(), "concurrent-b".to_owned()]
+    );
     let first_response = join_value_thread(first, "first dispatch thread panicked")?;
     let second_response = join_value_thread(second, "second dispatch thread panicked")?;
     assert_eq!(first_response["seq"], 1);
@@ -196,7 +199,7 @@ fn self_managed_service_refreshes_and_services_occ_callback() -> TestResult {
             let request = serve_refresh_until_op(&mut stream)?;
             assert_eq!(request.op, "plugin.generic.apply");
 
-            let callback = PpcEnvelope {
+            let callback = PpcMessage {
                 message_id: "apply-callback".to_owned(),
                 direction: PpcDirection::Request,
                 op: "daemon.occ.apply_changeset".to_owned(),
@@ -324,7 +327,8 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
         .ok_or("route should dispatch")?;
     let err = failed.err().ok_or("dead service must fail closed")?;
     assert!(
-        err.to_string().contains("process exited before plugin dispatch"),
+        err.to_string()
+            .contains("process exited before plugin dispatch"),
         "unexpected error: {err}"
     );
 
@@ -576,7 +580,10 @@ fn ensure_started(
     layer_stack_root: &Path,
     workspace_root: &Path,
 ) -> Result<Box<EnsureReady>, TestError> {
-    ensure_ready(runtime, &ensure_args(layer_stack_root, workspace_root, true))
+    ensure_ready(
+        runtime,
+        &ensure_args(layer_stack_root, workspace_root, true),
+    )
 }
 
 fn ensure_ready(runtime: &PluginRuntime, args: &Value) -> Result<Box<EnsureReady>, TestError> {
@@ -636,7 +643,7 @@ fn spawn_refresh_server(
 /// the prepare/swap/health steps were all seen.
 fn serve_refresh_until_op(
     stream: &mut std::os::unix::net::UnixStream,
-) -> Result<PpcEnvelope, TestError> {
+) -> Result<PpcMessage, TestError> {
     let mut refresh_types = Vec::new();
     let mut current_manifest_key = String::new();
     loop {
@@ -675,9 +682,9 @@ fn serve_refresh_until_op(
 fn read_ppc_request(
     stream: &mut std::os::unix::net::UnixStream,
     context: &'static str,
-) -> Result<PpcEnvelope, TestError> {
-    let frame = read_frame(stream)?;
-    PpcEnvelope::decode(&frame)
+) -> Result<PpcMessage, TestError> {
+    let message = read_message_bytes(stream)?;
+    PpcMessage::decode(&message)
         .map_err(|err| std::io::Error::other(format!("{context}: {err}")).into())
 }
 
@@ -686,7 +693,7 @@ fn write_ppc_reply(
     message_id: String,
     body: &'static str,
 ) -> TestResult {
-    let reply = PpcEnvelope {
+    let reply = PpcMessage {
         message_id,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
@@ -701,7 +708,7 @@ fn write_ppc_reply_json(
     message_id: String,
     body: &Value,
 ) -> TestResult {
-    let reply = PpcEnvelope {
+    let reply = PpcMessage {
         message_id,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
@@ -776,10 +783,7 @@ fn wait_until_dead(pid: u32) {
 }
 
 fn test_socket_root(name: &str) -> PathBuf {
-    let root = std::env::temp_dir().join(format!(
-        "eos-runtime-ppc-{name}-{}",
-        std::process::id()
-    ));
+    let root = std::env::temp_dir().join(format!("eos-runtime-ppc-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     root
 }

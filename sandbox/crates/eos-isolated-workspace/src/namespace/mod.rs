@@ -25,6 +25,7 @@ use crate::manager::WorkspaceHandle;
 
 #[cfg(target_os = "linux")]
 mod runner_child;
+pub mod runner_launcher;
 #[cfg(target_os = "linux")]
 use runner_child::{
     clear_cloexec, expect_line, lock_holder_children, ns_fds_from_map, open_inheritable_fd,

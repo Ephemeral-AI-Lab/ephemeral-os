@@ -23,7 +23,7 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>1</b><span>modules</span></div>
-  <div><b>25</b><span>items</span></div>
+  <div><b>26</b><span>items</span></div>
   <div><b>8</b><span>fields</span></div>
   <div><b>1</b><span>methods</span></div>
 </section>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">xtask</span><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="xtask.html"><span>main.rs</span><small>2/22</small></a></li></ul></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin xtask/src/main.rs main gen_docs render_api_doc check_contract ConformanceSuite check_name_integrity capture_stdout run_cargo PackageArgs impl PackageArgs package next_string workspace_root absolutize arch_for_target run_build cargo_build_command rustflags_with_rust_lld set_executable sha256_file write_protocol_version write_checksums write_manifest sign_artifact print_help">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">xtask</span><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="xtask.html"><span>main.rs</span><small>2/23</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin xtask/src/main.rs main gen_docs render_api_doc check_contract ConformanceSuite check_name_integrity capture_stdout run_cargo PackageArgs impl PackageArgs package next_string workspace_root absolutize arch_for_target run_build cargo_build_command rustflags_with_rust_lld set_executable sha256_file read_protocol_version write_protocol_version write_checksums write_manifest sign_artifact print_help">
   <div class="module-head">
     <div>
       <h2>xtask/src/main.rs</h2>
@@ -52,7 +52,7 @@
       <span>file owns</span>
       <span>2 types</span>
       <span>1 impls</span>
-      <span>22 fns</span>
+      <span>23 fns</span>
       <span>1 methods</span>
     </div>
   </div>
@@ -95,16 +95,16 @@
                 .into_string()
                 .map_err(|_| anyhow::anyhow!(&quot;xtask arguments must be valid <span class="rs-type">UTF</span>-8&quot;))?;
             <span class="rs-kw">match</span> arg.as_str() {
-                &quot;--target&quot; =&gt; target = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--target&quot;)?),
-                &quot;--out-dir&quot; =&gt; out_dir = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--out-dir&quot;)?),
+                &quot;--target&quot; =&gt; target = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--target&quot;)?),
+                &quot;--out-dir&quot; =&gt; out_dir = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--out-dir&quot;)?),
                 &quot;--no-build&quot; =&gt; no_build = <span class="rs-kw">true</span>,
-                &quot;--builder&quot; =&gt; builder = <a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--builder&quot;)?,
+                &quot;--builder&quot; =&gt; builder = <a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--builder&quot;)?,
                 &quot;--sign&quot; =&gt; sign = <span class="rs-kw">true</span>,
                 &quot;--minisign-key&quot; =&gt; {
-                    minisign_key = <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--minisign-key&quot;)?));
+                    minisign_key = <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--minisign-key&quot;)?));
                 }
                 &quot;--help&quot; | &quot;-h&quot; =&gt; {
-                    <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>();
+                    <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>();
                     std::process::exit(0);
                 }
                 other =&gt; bail!(&quot;unknown package option {other:?}&quot;),
@@ -112,7 +112,7 @@
         }
 
         <span class="rs-kw">let</span> target = target.unwrap_or_else(|| <span class="rs-type">AMD64_TARGET</span>.to_owned());
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(&amp;target)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(&amp;target)?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             target,
             out_dir,
@@ -148,7 +148,7 @@
         <span class="rs-type">Some</span>(&quot;check-contract&quot;) =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-check-contract-148">check_contract</a>(),
         <span class="rs-type">Some</span>(&quot;gen-docs&quot;) =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-gen-docs-40">gen_docs</a>(),
         <span class="rs-type">Some</span>(&quot;help&quot; | &quot;--help&quot; | &quot;-h&quot;) | <span class="rs-type">None</span> =&gt; {
-            <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>();
+            <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>();
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; bail!(&quot;unknown xtask command {other:?}; run `cargo run -p xtask -- help`&quot;),
@@ -171,7 +171,7 @@
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Regenerate `docs/API.md` from the committed `contract/ops.json`.</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-gen-docs-40">gen_docs</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
     <span class="rs-kw">let</span> rendered = <a class="symbol-link rs-fn" href="xtask.html#item-fn-render-api-doc-50">render_api_doc</a>(&amp;root)?;
     <span class="rs-kw">let</span> path = root.join(&quot;docs&quot;).join(&quot;<span class="rs-type">API</span>.md&quot;);
     fs::write(&amp;path, rendered).with_context(|| format!(&quot;write {}&quot;, path.display()))?;
@@ -253,11 +253,11 @@
         (
             &quot;public&quot;,
             &quot;<span class="rs-type">Public</span> ops (client socket)&quot;,
-            &quot;<span class="rs-type">The</span> complete public vocabulary served on the `eos-api` client socket.&quot;,
+            &quot;<span class="rs-type">The</span> complete public vocabulary served on the `eos-sandbox-gateway` client socket.&quot;,
         ),
         (
             &quot;operator&quot;,
-            &quot;<span class="rs-type">Operator</span> ops (`eos-api admin`)&quot;,
+            &quot;<span class="rs-type">Operator</span> ops (operator socket)&quot;,
             &quot;<span class="rs-type">Served</span> only on the operator socket beside the client socket; never the client socket.&quot;,
         ),
         (
@@ -268,7 +268,7 @@
         (
             &quot;test&quot;,
             &quot;<span class="rs-type">Test</span> ops&quot;,
-            &quot;<span class="rs-type">Daemon</span>-side test hooks; refused by `eos-api` and exercised only by direct-daemon test harnesses.&quot;,
+            &quot;<span class="rs-type">Daemon</span>-side test hooks; refused by `eos-sandbox-gateway` and exercised only by direct-daemon test harnesses.&quot;,
         ),
     ] {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rows) = sections.get(key) <span class="rs-kw">else</span> {
@@ -310,7 +310,7 @@
 <span class="rs-comment">/// 2. Name integrity: canonical names unique.</span>
 <span class="rs-comment">/// 3. Both sides' conformance test suites pass against `contract/fixtures/`.</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-check-contract-148">check_contract</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
 
     <span class="rs-kw">let</span> committed_path = root.join(&quot;contract&quot;).join(&quot;ops.json&quot;);
     <span class="rs-kw">let</span> committed = fs::read_to_string(&amp;committed_path)
@@ -449,16 +449,16 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-package-324">package</a>(args: &amp;<a class="symbol-link rs-type" href="xtask.html#item-struct-PackageArgs-267">PackageArgs</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
-    <span class="rs-kw">let</span> out_dir = <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-387">absolutize</a>(&amp;root, &amp;args.out_dir);
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
+    <span class="rs-kw">let</span> out_dir = <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-393">absolutize</a>(&amp;root, &amp;args.out_dir);
     fs::create_dir_all(&amp;out_dir)
         .with_context(|| format!(&quot;create artifact dir {}&quot;, out_dir.display()))?;
 
     <span class="rs-kw">if</span> !args.no_build {
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-405">run_build</a>(&amp;root, &amp;args.builder, &amp;args.target)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-411">run_build</a>(&amp;root, &amp;args.builder, &amp;args.target)?;
     }
 
-    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(&amp;args.target)?;
+    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(&amp;args.target)?;
     <span class="rs-kw">let</span> built = root
         .join(&quot;target&quot;)
         .join(&amp;args.target)
@@ -470,26 +470,32 @@
         .with_context(|| format!(&quot;copy {} to {}&quot;, built.display(), artifact.display()))?;
 
     #[cfg(unix)]
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-451">set_executable</a>(&amp;artifact)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-457">set_executable</a>(&amp;artifact)?;
 
-    <span class="rs-kw">let</span> sha = <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(&amp;artifact)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-478">write_protocol_version</a>(&amp;out_dir)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-486">write_checksums</a>(&amp;out_dir)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-512">write_manifest</a>(&amp;out_dir, &amp;args.target, arch, &amp;artifact_name, &amp;sha)?;
+    <span class="rs-kw">let</span> sha = <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(&amp;artifact)?;
+    <span class="rs-kw">let</span> protocol_version = <a class="symbol-link rs-fn" href="xtask.html#item-fn-read-protocol-version-484">read_protocol_version</a>(&amp;root)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-496">write_protocol_version</a>(&amp;out_dir, protocol_version)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-504">write_checksums</a>(&amp;out_dir)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-530">write_manifest</a>(
+        &amp;out_dir,
+        &amp;args.target,
+        arch,
+        &amp;artifact_name,
+        &amp;sha,
+        protocol_version,
+    )?;
 
     <span class="rs-kw">if</span> args.sign {
         <span class="rs-kw">let</span> key = args
             .minisign_key
             .as_deref()
             .context(&quot;--sign requires --minisign-key &lt;path&gt;&quot;)?;
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-545">sign_artifact</a>(&amp;artifact, key)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-564">sign_artifact</a>(&amp;artifact, key)?;
     }
 
     println!(
         &quot;packaged {artifact_name} target={} sha256={} protocol_version={}&quot;,
-        args.target,
-        sha,
-        eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>
+        args.target, sha, protocol_version
     );
     <span class="rs-type">Ok</span>(())
 }
@@ -497,13 +503,13 @@
 </details>
 
   <p class="source">xtask/src/main.rs:324</p>
-</article><article id="item-fn-next-string-370" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_string private fn next_string &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; , xtask/src/main.rs  ">
+</article><article id="item-fn-next-string-376" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_string private fn next_string &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; , xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>next_string</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-next-string-370">next_string</a> &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; ,</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-next-string-376">next_string</a> &lt; I &gt; (iter : &amp; mut I , flag : &amp; str) -&gt; Result &lt; String &gt; where I : Iterator &lt; Item = OsString &gt; ,</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -519,18 +525,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:370</p>
-</article><article id="item-fn-workspace-root-380" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_root private fn workspace_root () -&gt; Result &lt; PathBuf &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:376</p>
+</article><article id="item-fn-workspace-root-386" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_root private fn workspace_root () -&gt; Result &lt; PathBuf &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-workspace-root-380">workspace_root</a> () -&gt; Result &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-workspace-root-386">workspace_root</a> () -&gt; Result &lt; PathBuf &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Path</span>::new(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
         .parent()
         .map(<span class="rs-type">Path</span>::to_path_buf)
@@ -539,18 +545,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:380</p>
-</article><article id="item-fn-absolutize-387" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absolutize private fn absolutize (root : &amp; Path , path : &amp; Path) -&gt; PathBuf xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:386</p>
+</article><article id="item-fn-absolutize-393" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absolutize private fn absolutize (root : &amp; Path , path : &amp; Path) -&gt; PathBuf xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>absolutize</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-absolutize-387">absolutize</a> (root : &amp; Path , path : &amp; Path) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-absolutize-393">absolutize</a> (root : &amp; Path , path : &amp; Path) -&gt; PathBuf</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-387">absolutize</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-393">absolutize</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
     <span class="rs-kw">if</span> path.is_absolute() {
         path.to_path_buf()
     } <span class="rs-kw">else</span> {
@@ -560,18 +566,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:387</p>
-</article><article id="item-fn-arch-for-target-395" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arch_for_target private fn arch_for_target (target : &amp; str) -&gt; Result &lt; &amp; 'static str &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:393</p>
+</article><article id="item-fn-arch-for-target-401" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arch_for_target private fn arch_for_target (target : &amp; str) -&gt; Result &lt; &amp; 'static str &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>arch_for_target</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a> (target : &amp; str) -&gt; Result &lt; &amp; &#x27;static str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a> (target : &amp; str) -&gt; Result &lt; &amp; &#x27;static str &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
     <span class="rs-kw">match</span> target {
         <span class="rs-type">AMD64_TARGET</span> =&gt; <span class="rs-type">Ok</span>(&quot;amd64&quot;),
         <span class="rs-type">ARM64_TARGET</span> =&gt; <span class="rs-type">Ok</span>(&quot;arm64&quot;),
@@ -583,25 +589,25 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:395</p>
-</article><article id="item-fn-run-build-405" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_build private fn run_build (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:401</p>
+</article><article id="item-fn-run-build-411" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_build private fn run_build (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_build</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-run-build-405">run_build</a> (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-run-build-411">run_build</a> (root : &amp; Path , builder : &amp; str , target : &amp; str) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-405">run_build</a>(root: &amp;<span class="rs-type">Path</span>, builder: &amp;str, target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-411">run_build</a>(root: &amp;<span class="rs-type">Path</span>, builder: &amp;str, target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-kw">match</span> builder {
         &quot;rust-lld&quot; =&gt; {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target);
-            command.env(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-436">rustflags_with_rust_lld</a>());
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target);
+            command.env(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-442">rustflags_with_rust_lld</a>());
             command
         }
-        &quot;cargo&quot; =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target),
+        &quot;cargo&quot; =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target),
         &quot;cross&quot; =&gt; {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&quot;cross&quot;);
             command.args([&quot;build&quot;, &quot;--release&quot;, &quot;-p&quot;, &quot;eosd&quot;, &quot;--target&quot;, target]);
@@ -621,18 +627,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:405</p>
-</article><article id="item-fn-cargo-build-command-430" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cargo_build_command private fn cargo_build_command (target : &amp; str) -&gt; Command xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:411</p>
+</article><article id="item-fn-cargo-build-command-436" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cargo_build_command private fn cargo_build_command (target : &amp; str) -&gt; Command xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cargo_build_command</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a> (target : &amp; str) -&gt; Command</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a> (target : &amp; str) -&gt; Command</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target: &amp;str) -&gt; <span class="rs-type">Command</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target: &amp;str) -&gt; <span class="rs-type">Command</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&quot;cargo&quot;);
     command.args([&quot;build&quot;, &quot;--release&quot;, &quot;-p&quot;, &quot;eosd&quot;, &quot;--target&quot;, target]);
     command
@@ -640,18 +646,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:430</p>
-</article><article id="item-fn-rustflags-with-rust-lld-436" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rustflags_with_rust_lld private fn rustflags_with_rust_lld () -&gt; String xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:436</p>
+</article><article id="item-fn-rustflags-with-rust-lld-442" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rustflags_with_rust_lld private fn rustflags_with_rust_lld () -&gt; String xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rustflags_with_rust_lld</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-rustflags-with-rust-lld-436">rustflags_with_rust_lld</a> () -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-rustflags-with-rust-lld-442">rustflags_with_rust_lld</a> () -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-436">rustflags_with_rust_lld</a>() -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-442">rustflags_with_rust_lld</a>() -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> existing = env::var(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;).unwrap_or_default();
     <span class="rs-kw">if</span> existing
         .split_whitespace()
@@ -668,19 +674,19 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:436</p>
-</article><article id="item-fn-set-executable-451" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_executable private fn set_executable (path : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:442</p>
+</article><article id="item-fn-set-executable-457" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn set_executable private fn set_executable (path : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>set_executable</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-set-executable-451">set_executable</a> (path : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-set-executable-457">set_executable</a> (path : &amp; Path) -&gt; Result &lt; () &gt;</code>
   <div class="tags"><span>cfg: unix</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>#[cfg(unix)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-451">set_executable</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-457">set_executable</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> perms = fs::metadata(path)
@@ -692,18 +698,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:451</p>
-</article><article id="item-fn-sha256-file-462" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sha256_file private fn sha256_file (path : &amp; Path) -&gt; Result &lt; String &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:457</p>
+</article><article id="item-fn-sha256-file-468" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sha256_file private fn sha256_file (path : &amp; Path) -&gt; Result &lt; String &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>sha256_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-sha256-file-462">sha256_file</a> (path : &amp; Path) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-sha256-file-468">sha256_file</a> (path : &amp; Path) -&gt; Result &lt; String &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = fs::<span class="rs-type">File</span>::open(path).with_context(|| format!(&quot;open {}&quot;, path.display()))?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::new();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = vec![0_u8; 64 * 1024];
@@ -721,39 +727,64 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:462</p>
-</article><article id="item-fn-write-protocol-version-478" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_protocol_version private fn write_protocol_version (out_dir : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:468</p>
+</article><article id="item-fn-read-protocol-version-484" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_protocol_version private fn read_protocol_version (root : &amp; Path) -&gt; Result &lt; i64 &gt; xtask/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>read_protocol_version</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-read-protocol-version-484">read_protocol_version</a> (root : &amp; Path) -&gt; Result &lt; i64 &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-read-protocol-version-484">read_protocol_version</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;i64&gt; {
+    <span class="rs-kw">let</span> path = root.join(&quot;contract&quot;).join(&quot;ops.json&quot;);
+    <span class="rs-kw">let</span> document: serde_json::<span class="rs-type">Value</span> = serde_json::from_str(
+        &amp;fs::read_to_string(&amp;path).with_context(|| format!(&quot;read {}&quot;, path.display()))?,
+    )
+    .context(&quot;parse contract/ops.json&quot;)?;
+    document
+        .get(&quot;protocol_version&quot;)
+        .and_then(serde_json::<span class="rs-type">Value</span>::as_i64)
+        .context(&quot;contract/ops.json missing protocol_version&quot;)
+}
+</code></pre>
+</details>
+
+  <p class="source">xtask/src/main.rs:484</p>
+</article><article id="item-fn-write-protocol-version-496" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_protocol_version private fn write_protocol_version (out_dir : &amp; Path , protocol_version : i64) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_protocol_version</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-protocol-version-478">write_protocol_version</a> (out_dir : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-protocol-version-496">write_protocol_version</a> (out_dir : &amp; Path , protocol_version : i64) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-478">write_protocol_version</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-496">write_protocol_version</a>(out_dir: &amp;<span class="rs-type">Path</span>, protocol_version: i64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     fs::write(
         out_dir.join(&quot;protocol_version&quot;),
-        format!(&quot;{}\n&quot;, eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>),
+        format!(&quot;{protocol_version}\n&quot;),
     )
     .with_context(|| format!(&quot;write {}&quot;, out_dir.join(&quot;protocol_version&quot;).display()))
 }
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:478</p>
-</article><article id="item-fn-write-checksums-486" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksums private fn write_checksums (out_dir : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:496</p>
+</article><article id="item-fn-write-checksums-504" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksums private fn write_checksums (out_dir : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_checksums</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-checksums-486">write_checksums</a> (out_dir : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-checksums-504">write_checksums</a> (out_dir : &amp; Path) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-486">write_checksums</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-504">write_checksums</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> artifacts = fs::read_dir(out_dir)
         .with_context(|| format!(&quot;read {}&quot;, out_dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
@@ -772,7 +803,7 @@
             .file_name()
             .and_then(|name| name.to_str())
             .context(&quot;artifact filename must be valid <span class="rs-type">UTF</span>-8&quot;)?;
-        writeln!(&amp;<span class="rs-kw">mut</span> body, &quot;{}  {name}&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(&amp;path)?)
+        writeln!(&amp;<span class="rs-kw">mut</span> body, &quot;{}  {name}&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(&amp;path)?)
             .map_err(|_| anyhow::anyhow!(&quot;write checksum body&quot;))?;
     }
     fs::write(out_dir.join(&quot;<span class="rs-type">SHA256SUMS</span>&quot;), body)
@@ -781,23 +812,24 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:486</p>
-</article><article id="item-fn-write-manifest-512" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_manifest private fn write_manifest (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str ,) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:504</p>
+</article><article id="item-fn-write-manifest-530" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_manifest private fn write_manifest (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str , protocol_version : i64 ,) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-manifest-512">write_manifest</a> (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str ,) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-write-manifest-530">write_manifest</a> (out_dir : &amp; Path , target : &amp; str , arch : &amp; str , artifact_name : &amp; str , sha256 : &amp; str , protocol_version : i64 ,) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-512">write_manifest</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-530">write_manifest</a>(
     out_dir: &amp;<span class="rs-type">Path</span>,
     target: &amp;str,
     arch: &amp;str,
     artifact_name: &amp;str,
     sha256: &amp;str,
+    protocol_version: i64,
 ) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> body = format!(
         concat!(
@@ -812,7 +844,7 @@
         ),
         artifact_name,
         arch,
-        eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>,
+        protocol_version,
         sha256,
         target,
         env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;),
@@ -827,18 +859,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:512</p>
-</article><article id="item-fn-sign-artifact-545" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sign_artifact private fn sign_artifact (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:530</p>
+</article><article id="item-fn-sign-artifact-564" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sign_artifact private fn sign_artifact (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt; xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>sign_artifact</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-sign-artifact-545">sign_artifact</a> (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-sign-artifact-564">sign_artifact</a> (artifact : &amp; Path , key : &amp; Path) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-545">sign_artifact</a>(artifact: &amp;<span class="rs-type">Path</span>, key: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-564">sign_artifact</a>(artifact: &amp;<span class="rs-type">Path</span>, key: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> signature = artifact.with_extension(&quot;minisig&quot;);
     <span class="rs-kw">let</span> status = <span class="rs-type">Command</span>::new(&quot;minisign&quot;)
         .args([&quot;-<span class="rs-type">S</span>&quot;, &quot;-s&quot;])
@@ -857,18 +889,18 @@
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:545</p>
-</article><article id="item-fn-print-help-562" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn print_help private fn print_help () xtask/src/main.rs  ">
+  <p class="source">xtask/src/main.rs:564</p>
+</article><article id="item-fn-print-help-581" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn print_help private fn print_help () xtask/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>print_help</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-print-help-562">print_help</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="xtask.html#item-fn-print-help-581">print_help</a> ()</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>() {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>() {
     println!(
         &quot;\
 xtask commands:
@@ -888,7 +920,7 @@ xtask commands:
 </code></pre>
 </details>
 
-  <p class="source">xtask/src/main.rs:562</p>
+  <p class="source">xtask/src/main.rs:581</p>
 </article></div>
 </section></div>
 </main>
@@ -929,7 +961,7 @@ xtask commands:
         <span class="rs-type">Some</span>(&quot;check-contract&quot;) =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-check-contract-148">check_contract</a>(),
         <span class="rs-type">Some</span>(&quot;gen-docs&quot;) =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-gen-docs-40">gen_docs</a>(),
         <span class="rs-type">Some</span>(&quot;help&quot; | &quot;--help&quot; | &quot;-h&quot;) | <span class="rs-type">None</span> =&gt; {
-            <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>();
+            <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>();
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; bail!(&quot;unknown xtask command {other:?}; run `cargo run -p xtask -- help`&quot;),
@@ -938,7 +970,7 @@ xtask commands:
 
 <span class="rs-comment">/// Regenerate `docs/API.md` from the committed `contract/ops.json`.</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-gen-docs-40">gen_docs</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
     <span class="rs-kw">let</span> rendered = <a class="symbol-link rs-fn" href="xtask.html#item-fn-render-api-doc-50">render_api_doc</a>(&amp;root)?;
     <span class="rs-kw">let</span> path = root.join(&quot;docs&quot;).join(&quot;<span class="rs-type">API</span>.md&quot;);
     fs::write(&amp;path, rendered).with_context(|| format!(&quot;write {}&quot;, path.display()))?;
@@ -1006,11 +1038,11 @@ xtask commands:
         (
             &quot;public&quot;,
             &quot;<span class="rs-type">Public</span> ops (client socket)&quot;,
-            &quot;<span class="rs-type">The</span> complete public vocabulary served on the `eos-api` client socket.&quot;,
+            &quot;<span class="rs-type">The</span> complete public vocabulary served on the `eos-sandbox-gateway` client socket.&quot;,
         ),
         (
             &quot;operator&quot;,
-            &quot;<span class="rs-type">Operator</span> ops (`eos-api admin`)&quot;,
+            &quot;<span class="rs-type">Operator</span> ops (operator socket)&quot;,
             &quot;<span class="rs-type">Served</span> only on the operator socket beside the client socket; never the client socket.&quot;,
         ),
         (
@@ -1021,7 +1053,7 @@ xtask commands:
         (
             &quot;test&quot;,
             &quot;<span class="rs-type">Test</span> ops&quot;,
-            &quot;<span class="rs-type">Daemon</span>-side test hooks; refused by `eos-api` and exercised only by direct-daemon test harnesses.&quot;,
+            &quot;<span class="rs-type">Daemon</span>-side test hooks; refused by `eos-sandbox-gateway` and exercised only by direct-daemon test harnesses.&quot;,
         ),
     ] {
         <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rows) = sections.get(key) <span class="rs-kw">else</span> {
@@ -1049,7 +1081,7 @@ xtask commands:
 <span class="rs-comment">/// 2. Name integrity: canonical names unique.</span>
 <span class="rs-comment">/// 3. Both sides' conformance test suites pass against `contract/fixtures/`.</span>
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-check-contract-148">check_contract</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
 
     <span class="rs-kw">let</span> committed_path = root.join(&quot;contract&quot;).join(&quot;ops.json&quot;);
     <span class="rs-kw">let</span> committed = fs::read_to_string(&amp;committed_path)
@@ -1109,8 +1141,8 @@ xtask commands:
         tests: &amp;[&quot;contract&quot;],
     },
     <a class="symbol-link rs-type" href="xtask.html#item-struct-ConformanceSuite-190">ConformanceSuite</a> {
-        package: &quot;eos-api&quot;,
-        tests: &amp;[&quot;contract&quot;],
+        package: &quot;eos-sandbox-gateway&quot;,
+        tests: &amp;[],
     },
 ];
 
@@ -1191,16 +1223,16 @@ xtask commands:
                 .into_string()
                 .map_err(|_| anyhow::anyhow!(&quot;xtask arguments must be valid <span class="rs-type">UTF</span>-8&quot;))?;
             <span class="rs-kw">match</span> arg.as_str() {
-                &quot;--target&quot; =&gt; target = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--target&quot;)?),
-                &quot;--out-dir&quot; =&gt; out_dir = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--out-dir&quot;)?),
+                &quot;--target&quot; =&gt; target = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--target&quot;)?),
+                &quot;--out-dir&quot; =&gt; out_dir = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--out-dir&quot;)?),
                 &quot;--no-build&quot; =&gt; no_build = <span class="rs-kw">true</span>,
-                &quot;--builder&quot; =&gt; builder = <a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--builder&quot;)?,
+                &quot;--builder&quot; =&gt; builder = <a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--builder&quot;)?,
                 &quot;--sign&quot; =&gt; sign = <span class="rs-kw">true</span>,
                 &quot;--minisign-key&quot; =&gt; {
-                    minisign_key = <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-370">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--minisign-key&quot;)?));
+                    minisign_key = <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="xtask.html#item-fn-next-string-376">next_string</a>(&amp;<span class="rs-kw">mut</span> iter, &quot;--minisign-key&quot;)?));
                 }
                 &quot;--help&quot; | &quot;-h&quot; =&gt; {
-                    <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>();
+                    <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>();
                     std::process::exit(0);
                 }
                 other =&gt; bail!(&quot;unknown package option {other:?}&quot;),
@@ -1208,7 +1240,7 @@ xtask commands:
         }
 
         <span class="rs-kw">let</span> target = target.unwrap_or_else(|| <span class="rs-type">AMD64_TARGET</span>.to_owned());
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(&amp;target)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(&amp;target)?;
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
             target,
             out_dir,
@@ -1221,16 +1253,16 @@ xtask commands:
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-package-324">package</a>(args: &amp;<a class="symbol-link rs-type" href="xtask.html#item-struct-PackageArgs-267">PackageArgs</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>()?;
-    <span class="rs-kw">let</span> out_dir = <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-387">absolutize</a>(&amp;root, &amp;args.out_dir);
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>()?;
+    <span class="rs-kw">let</span> out_dir = <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-393">absolutize</a>(&amp;root, &amp;args.out_dir);
     fs::create_dir_all(&amp;out_dir)
         .with_context(|| format!(&quot;create artifact dir {}&quot;, out_dir.display()))?;
 
     <span class="rs-kw">if</span> !args.no_build {
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-405">run_build</a>(&amp;root, &amp;args.builder, &amp;args.target)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-411">run_build</a>(&amp;root, &amp;args.builder, &amp;args.target)?;
     }
 
-    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(&amp;args.target)?;
+    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(&amp;args.target)?;
     <span class="rs-kw">let</span> built = root
         .join(&quot;target&quot;)
         .join(&amp;args.target)
@@ -1242,26 +1274,32 @@ xtask commands:
         .with_context(|| format!(&quot;copy {} to {}&quot;, built.display(), artifact.display()))?;
 
     #[cfg(unix)]
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-451">set_executable</a>(&amp;artifact)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-457">set_executable</a>(&amp;artifact)?;
 
-    <span class="rs-kw">let</span> sha = <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(&amp;artifact)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-478">write_protocol_version</a>(&amp;out_dir)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-486">write_checksums</a>(&amp;out_dir)?;
-    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-512">write_manifest</a>(&amp;out_dir, &amp;args.target, arch, &amp;artifact_name, &amp;sha)?;
+    <span class="rs-kw">let</span> sha = <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(&amp;artifact)?;
+    <span class="rs-kw">let</span> protocol_version = <a class="symbol-link rs-fn" href="xtask.html#item-fn-read-protocol-version-484">read_protocol_version</a>(&amp;root)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-496">write_protocol_version</a>(&amp;out_dir, protocol_version)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-504">write_checksums</a>(&amp;out_dir)?;
+    <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-530">write_manifest</a>(
+        &amp;out_dir,
+        &amp;args.target,
+        arch,
+        &amp;artifact_name,
+        &amp;sha,
+        protocol_version,
+    )?;
 
     <span class="rs-kw">if</span> args.sign {
         <span class="rs-kw">let</span> key = args
             .minisign_key
             .as_deref()
             .context(&quot;--sign requires --minisign-key &lt;path&gt;&quot;)?;
-        <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-545">sign_artifact</a>(&amp;artifact, key)?;
+        <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-564">sign_artifact</a>(&amp;artifact, key)?;
     }
 
     println!(
         &quot;packaged {artifact_name} target={} sha256={} protocol_version={}&quot;,
-        args.target,
-        sha,
-        eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>
+        args.target, sha, protocol_version
     );
     <span class="rs-type">Ok</span>(())
 }
@@ -1276,14 +1314,14 @@ xtask commands:
         .map_err(|_| anyhow::anyhow!(&quot;{flag} value must be valid <span class="rs-type">UTF</span>-8&quot;))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-380">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-workspace-root-386">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
     <span class="rs-type">Path</span>::new(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
         .parent()
         .map(<span class="rs-type">Path</span>::to_path_buf)
         .context(&quot;xtask manifest directory has no parent&quot;)
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-387">absolutize</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-absolutize-393">absolutize</a>(root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
     <span class="rs-kw">if</span> path.is_absolute() {
         path.to_path_buf()
     } <span class="rs-kw">else</span> {
@@ -1291,7 +1329,7 @@ xtask commands:
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-395">arch_for_target</a>(target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-arch-for-target-401">arch_for_target</a>(target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
     <span class="rs-kw">match</span> target {
         <span class="rs-type">AMD64_TARGET</span> =&gt; <span class="rs-type">Ok</span>(&quot;amd64&quot;),
         <span class="rs-type">ARM64_TARGET</span> =&gt; <span class="rs-type">Ok</span>(&quot;arm64&quot;),
@@ -1301,14 +1339,14 @@ xtask commands:
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-405">run_build</a>(root: &amp;<span class="rs-type">Path</span>, builder: &amp;str, target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-run-build-411">run_build</a>(root: &amp;<span class="rs-type">Path</span>, builder: &amp;str, target: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-kw">match</span> builder {
         &quot;rust-lld&quot; =&gt; {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target);
-            command.env(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-436">rustflags_with_rust_lld</a>());
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target);
+            command.env(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-442">rustflags_with_rust_lld</a>());
             command
         }
-        &quot;cargo&quot; =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target),
+        &quot;cargo&quot; =&gt; <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target),
         &quot;cross&quot; =&gt; {
             <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&quot;cross&quot;);
             command.args([&quot;build&quot;, &quot;--release&quot;, &quot;-p&quot;, &quot;eosd&quot;, &quot;--target&quot;, target]);
@@ -1326,13 +1364,13 @@ xtask commands:
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-430">cargo_build_command</a>(target: &amp;str) -&gt; <span class="rs-type">Command</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-cargo-build-command-436">cargo_build_command</a>(target: &amp;str) -&gt; <span class="rs-type">Command</span> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&quot;cargo&quot;);
     command.args([&quot;build&quot;, &quot;--release&quot;, &quot;-p&quot;, &quot;eosd&quot;, &quot;--target&quot;, target]);
     command
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-436">rustflags_with_rust_lld</a>() -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-rustflags-with-rust-lld-442">rustflags_with_rust_lld</a>() -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> existing = env::var(&quot;<span class="rs-type">RUSTFLAGS</span>&quot;).unwrap_or_default();
     <span class="rs-kw">if</span> existing
         .split_whitespace()
@@ -1348,7 +1386,7 @@ xtask commands:
 }
 
 #[cfg(unix)]
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-451">set_executable</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-set-executable-457">set_executable</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">use</span> std::os::unix::fs::<span class="rs-type">PermissionsExt</span>;
 
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> perms = fs::metadata(path)
@@ -1358,7 +1396,7 @@ xtask commands:
     fs::set_permissions(path, perms).with_context(|| format!(&quot;chmod 755 {}&quot;, path.display()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = fs::<span class="rs-type">File</span>::open(path).with_context(|| format!(&quot;open {}&quot;, path.display()))?;
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::new();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buf = vec![0_u8; 64 * 1024];
@@ -1374,15 +1412,27 @@ xtask commands:
     <span class="rs-type">Ok</span>(format!(&quot;{:x}&quot;, hasher.finalize()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-478">write_protocol_version</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-read-protocol-version-484">read_protocol_version</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;i64&gt; {
+    <span class="rs-kw">let</span> path = root.join(&quot;contract&quot;).join(&quot;ops.json&quot;);
+    <span class="rs-kw">let</span> document: serde_json::<span class="rs-type">Value</span> = serde_json::from_str(
+        &amp;fs::read_to_string(&amp;path).with_context(|| format!(&quot;read {}&quot;, path.display()))?,
+    )
+    .context(&quot;parse contract/ops.json&quot;)?;
+    document
+        .get(&quot;protocol_version&quot;)
+        .and_then(serde_json::<span class="rs-type">Value</span>::as_i64)
+        .context(&quot;contract/ops.json missing protocol_version&quot;)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-protocol-version-496">write_protocol_version</a>(out_dir: &amp;<span class="rs-type">Path</span>, protocol_version: i64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     fs::write(
         out_dir.join(&quot;protocol_version&quot;),
-        format!(&quot;{}\n&quot;, eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>),
+        format!(&quot;{protocol_version}\n&quot;),
     )
     .with_context(|| format!(&quot;write {}&quot;, out_dir.join(&quot;protocol_version&quot;).display()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-486">write_checksums</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-checksums-504">write_checksums</a>(out_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> artifacts = fs::read_dir(out_dir)
         .with_context(|| format!(&quot;read {}&quot;, out_dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
@@ -1401,19 +1451,20 @@ xtask commands:
             .file_name()
             .and_then(|name| name.to_str())
             .context(&quot;artifact filename must be valid <span class="rs-type">UTF</span>-8&quot;)?;
-        writeln!(&amp;<span class="rs-kw">mut</span> body, &quot;{}  {name}&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-462">sha256_file</a>(&amp;path)?)
+        writeln!(&amp;<span class="rs-kw">mut</span> body, &quot;{}  {name}&quot;, <a class="symbol-link rs-fn" href="xtask.html#item-fn-sha256-file-468">sha256_file</a>(&amp;path)?)
             .map_err(|_| anyhow::anyhow!(&quot;write checksum body&quot;))?;
     }
     fs::write(out_dir.join(&quot;<span class="rs-type">SHA256SUMS</span>&quot;), body)
         .with_context(|| format!(&quot;write {}&quot;, out_dir.join(&quot;<span class="rs-type">SHA256SUMS</span>&quot;).display()))
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-512">write_manifest</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-write-manifest-530">write_manifest</a>(
     out_dir: &amp;<span class="rs-type">Path</span>,
     target: &amp;str,
     arch: &amp;str,
     artifact_name: &amp;str,
     sha256: &amp;str,
+    protocol_version: i64,
 ) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> body = format!(
         concat!(
@@ -1428,7 +1479,7 @@ xtask commands:
         ),
         artifact_name,
         arch,
-        eos_daemon::wire::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>,
+        protocol_version,
         sha256,
         target,
         env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;),
@@ -1441,7 +1492,7 @@ xtask commands:
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-545">sign_artifact</a>(artifact: &amp;<span class="rs-type">Path</span>, key: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-sign-artifact-564">sign_artifact</a>(artifact: &amp;<span class="rs-type">Path</span>, key: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     <span class="rs-kw">let</span> signature = artifact.with_extension(&quot;minisig&quot;);
     <span class="rs-kw">let</span> status = <span class="rs-type">Command</span>::new(&quot;minisign&quot;)
         .args([&quot;-<span class="rs-type">S</span>&quot;, &quot;-s&quot;])
@@ -1458,7 +1509,7 @@ xtask commands:
     <span class="rs-type">Ok</span>(())
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-562">print_help</a>() {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="xtask.html#item-fn-print-help-581">print_help</a>() {
     println!(
         &quot;\
 xtask commands:

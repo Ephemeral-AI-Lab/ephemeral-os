@@ -8,7 +8,7 @@ Protocol version: **1**
 
 ## Public ops (client socket)
 
-The complete public vocabulary served on the `eos-api` client socket.
+The complete public vocabulary served on the `eos-sandbox-gateway` client socket.
 
 | Op | Served by | Family | Mutates | Summary |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@ The complete public vocabulary served on the `eos-api` client socket.
 | `sandbox.command.count` | daemon | CommandSession | no | Count live command sessions. |
 | `sandbox.run.end` | daemon | WorkspaceRun | yes | End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace. |
 
-## Operator ops (`eos-api admin`)
+## Operator ops (operator socket)
 
 Served only on the operator socket beside the client socket; never the client socket.
 
@@ -60,7 +60,7 @@ Reserved for the host recovery machine; not served from any socket.
 
 ## Test ops
 
-Daemon-side test hooks; refused by `eos-api` and exercised only by direct-daemon test harnesses.
+Daemon-side test hooks; refused by `eos-sandbox-gateway` and exercised only by direct-daemon test harnesses.
 
 | Op | Served by | Family | Mutates | Summary |
 |---|---|---|---|---|

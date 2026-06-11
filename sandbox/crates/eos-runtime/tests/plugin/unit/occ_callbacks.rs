@@ -15,7 +15,7 @@ fn occ_callback_applies_changeset_through_daemon_writer() -> TestResult {
     let fixture = Fixture::new("apply")?;
     let reply = handle_callback_for_root(
         &fixture.root,
-        PpcEnvelope {
+        PpcMessage {
             message_id: "callback-1".to_owned(),
             direction: PpcDirection::Request,
             op: OCC_APPLY_CHANGESET_OP.to_owned(),
@@ -47,7 +47,7 @@ fn occ_callback_rejects_unknown_callback_op() -> TestResult {
     let err = callback_error(
         handle_callback_for_root(
             &fixture.root,
-            PpcEnvelope {
+            PpcMessage {
                 message_id: "callback-unknown".to_owned(),
                 direction: PpcDirection::Request,
                 op: "daemon.unknown".to_owned(),
@@ -69,7 +69,7 @@ fn occ_callback_rejects_ambiguous_write_content() -> TestResult {
     let err = callback_error(
         handle_callback_for_root(
             &fixture.root,
-            PpcEnvelope {
+            PpcMessage {
                 message_id: "callback-bad-content".to_owned(),
                 direction: PpcDirection::Request,
                 op: OCC_APPLY_CHANGESET_OP.to_owned(),
@@ -98,7 +98,7 @@ fn occ_callback_rejects_wrong_layer_stack_root() -> TestResult {
     let err = callback_error(
         handle_callback_for_root(
             &fixture.root,
-            PpcEnvelope {
+            PpcMessage {
                 message_id: "callback-wrong-root".to_owned(),
                 direction: PpcDirection::Request,
                 op: OCC_APPLY_CHANGESET_OP.to_owned(),
@@ -120,7 +120,7 @@ fn occ_callback_rejects_wrong_layer_stack_root() -> TestResult {
 }
 
 fn callback_error(
-    result: Result<PpcEnvelope, PluginRuntimeError>,
+    result: Result<PpcMessage, PluginRuntimeError>,
     context: &'static str,
 ) -> Result<PluginRuntimeError, TestError> {
     match result {

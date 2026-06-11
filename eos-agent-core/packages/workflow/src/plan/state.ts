@@ -18,7 +18,7 @@ export interface PlanState {
 }
 
 /**
- * One append-only declaration: a peel of `current_goal` recorded on the
+ * One append-only declaration: a peel of the active workflow goal recorded on the
  * submitting plan row. The iteration's focus, deferred goal, and archives
  * are all views over the ordered list of these.
  */

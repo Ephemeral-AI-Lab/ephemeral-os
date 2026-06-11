@@ -101,7 +101,7 @@ export class WorkflowService {
       createWorkflow(trx, {
         workflowId,
         parentRunId,
-        originalGoal: input.goal,
+        goal: input.goal,
         maxAttempts:
           input.max_attempts ?? this.#deps.defaultMaxAttempts ?? DEFAULT_MAX_ATTEMPTS,
       }),

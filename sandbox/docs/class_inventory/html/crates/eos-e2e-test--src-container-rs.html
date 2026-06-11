@@ -56,13 +56,13 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-reap-e2e-containers-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_e2e_containers pub pub fn reap_e2e_containers () -&gt; Result &lt; usize &gt; crates/eos-e2e-test/src/container.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-reap-e2e-containers-113" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_e2e_containers pub pub fn reap_e2e_containers () -&gt; Result &lt; usize &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reap_e2e_containers</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-112">reap_e2e_containers</a> () -&gt; Result &lt; usize &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-113">reap_e2e_containers</a> () -&gt; Result &lt; usize &gt;</code>
   <p class="docstring">Remove all `eos-e2e-*` containers left by prior harness runs.<br># Errors<br>Returns an error if Docker is reachable but listing or removing containers<br>fails.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -72,20 +72,20 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if Docker is reachable but listing or removing containers</span>
 <span class="rs-comment">/// fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-112">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-113">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
     remove_labeled_containers(<span class="rs-type">POOL_LABEL</span>)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/container.rs:112</p>
-</article><article id="item-fn-start-node-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_node pub(crate) pub(crate) fn start_node (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonContainer &gt; crates/eos-e2e-test/src/container.rs  ">
+  <p class="source">crates/eos-e2e-test/src/container.rs:113</p>
+</article><article id="item-fn-start-node-22" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_node pub(crate) pub(crate) fn start_node (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonContainer &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>start_node</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-21">start_node</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonContainer &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-22">start_node</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonContainer &gt;</code>
   <p class="docstring">Start a fresh e2e daemon container from the harness config.<br># Errors<br>Returns an error if any docker step fails or the daemon never becomes ready.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -94,10 +94,10 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if any docker step fails or the daemon never becomes ready.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-21">start_node</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
-    <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-30">unique_suffix</a>());
-    <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-30">unique_suffix</a>());
-    <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config, config_yaml)?;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-22">start_node</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
+    <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>());
+    <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>());
+    <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config, config_yaml)?;
     <span class="rs-kw">let</span> keep = config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>;
     <span class="rs-kw">let</span> container = <span class="rs-type">ContainerSpec</span> {
         name,
@@ -119,19 +119,19 @@
             }
         },
     };
-    <span class="rs-type">DaemonContainer</span>::start(&amp;container, &amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config, config_yaml)?, token)
+    <span class="rs-type">DaemonContainer</span>::start(&amp;container, &amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config, config_yaml)?, token)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/container.rs:21</p>
-</article><article id="item-fn-adopt-healthy-53" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn adopt_healthy pub(crate) pub(crate) fn adopt_healthy (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; DaemonContainer &gt; crates/eos-e2e-test/src/container.rs  ">
+  <p class="source">crates/eos-e2e-test/src/container.rs:22</p>
+</article><article id="item-fn-adopt-healthy-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn adopt_healthy pub(crate) pub(crate) fn adopt_healthy (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; DaemonContainer &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>adopt_healthy</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-53">adopt_healthy</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; DaemonContainer &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-54">adopt_healthy</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; DaemonContainer &gt;</code>
   <p class="docstring">Adopt already-running warm e2e containers for this image.<br>Containers are accepted only when their auth label is present, their config<br>digest matches, their published daemon port resolves, and the daemon passes<br>the ready gate.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -141,11 +141,11 @@
 <span class="rs-comment">/// Containers are accepted only when their auth label is present, their config</span>
 <span class="rs-comment">/// digest matches, their published daemon port resolves, and the daemon passes</span>
 <span class="rs-comment">/// the ready gate.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-53">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-54">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     };
-    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(daemon) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config, config_yaml) <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(daemon) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config, config_yaml) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     };
     running_container_ids(&amp;[
@@ -162,20 +162,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/container.rs:53</p>
-</article><article id="item-fn-daemon-spec-77" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_spec pub(crate) pub(crate) fn daemon_spec (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonSpec &gt; crates/eos-e2e-test/src/container.rs  ">
+  <p class="source">crates/eos-e2e-test/src/container.rs:54</p>
+</article><article id="item-fn-daemon-spec-78" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_spec pub(crate) pub(crate) fn daemon_spec (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonSpec &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>daemon_spec</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonSpec &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; DaemonSpec &gt;</code>
   <p class="docstring">The daemon bring-up spec shared by start, adopt, and restart.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// The daemon bring-up spec shared by start, adopt, and restart.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonSpec</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonSpec</span>&gt; {
     <span class="rs-kw">let</span> remote_config_path = <span class="rs-type">ConfigPath</span>::prd()
         .context(&quot;resolve compiled daemon config path&quot;)?
         .as_path()
@@ -195,21 +195,21 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/container.rs:77</p>
-</article><article id="item-fn-runtime-digest-96" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest private fn runtime_digest (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+  <p class="source">crates/eos-e2e-test/src/container.rs:78</p>
+</article><article id="item-fn-runtime-digest-97" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest private fn runtime_digest (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>runtime_digest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt;</code>
   <p class="docstring">Identity digest for warm-container adoption: the merged config document<br>plus the exact `eosd` binary bytes.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Identity digest for warm-container adoption: the merged config document</span>
 <span class="rs-comment">/// plus the exact `eosd` binary bytes.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     hasher.update(config_yaml.as_bytes());
     hasher.update(b&quot;\0eosd\0&quot;);
@@ -225,7 +225,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/container.rs:96</p>
+  <p class="source">crates/eos-e2e-test/src/container.rs:97</p>
 </article></div>
 </section></div>
 </main>
@@ -234,7 +234,7 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-e2e-test/src/container.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! E2E adapter over [`eos_sandbox_host::container`]: maps the harness config</span>
+  <pre class="file-source"><code><span class="rs-comment">//! E2E adapter over [`eos_sandbox_host::e2e_support`]: maps the harness config</span>
 <span class="rs-comment">//! onto container/daemon specs, owns the e2e label vocabulary, and implements</span>
 <span class="rs-comment">//! warm-pool adoption keyed by a config+binary digest.</span>
 
@@ -242,10 +242,11 @@
 <span class="rs-kw">use</span> eos_config::<span class="rs-type">ConfigPath</span>;
 <span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_sandbox_host::container::<span class="rs-type">DaemonContainer</span>;
-<span class="rs-kw">use</span> eos_sandbox_host::container::{<span class="rs-type">ContainerLifetime</span>, <span class="rs-type">ContainerSpec</span>, <span class="rs-type">DaemonSpec</span>};
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_sandbox_host::docker::docker_available;
-<span class="rs-kw">use</span> eos_sandbox_host::docker::{container_label, remove_labeled_containers, running_container_ids};
+<span class="rs-kw">use</span> eos_sandbox_host::e2e_support::{
+    container_label, remove_labeled_containers, running_container_ids, <span class="rs-type">ContainerLifetime</span>,
+    <span class="rs-type">ContainerSpec</span>, <span class="rs-type">DaemonSpec</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_sandbox_host::e2e_support::{docker_available, <span class="rs-type">DaemonContainer</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">Config</span>, <span class="rs-type">NodeMode</span>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::unique_suffix;
@@ -258,10 +259,10 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if any docker step fails or the daemon never becomes ready.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-21">start_node</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
-    <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-30">unique_suffix</a>());
-    <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-30">unique_suffix</a>());
-    <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config, config_yaml)?;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-start-node-22">start_node</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
+    <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>());
+    <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-32">unique_suffix</a>());
+    <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config, config_yaml)?;
     <span class="rs-kw">let</span> keep = config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>;
     <span class="rs-kw">let</span> container = <span class="rs-type">ContainerSpec</span> {
         name,
@@ -283,7 +284,7 @@
             }
         },
     };
-    <span class="rs-type">DaemonContainer</span>::start(&amp;container, &amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config, config_yaml)?, token)
+    <span class="rs-type">DaemonContainer</span>::start(&amp;container, &amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config, config_yaml)?, token)
 }
 
 <span class="rs-comment">/// Adopt already-running warm e2e containers for this image.</span>
@@ -291,11 +292,11 @@
 <span class="rs-comment">/// Containers are accepted only when their auth label is present, their config</span>
 <span class="rs-comment">/// digest matches, their published daemon port resolves, and the daemon passes</span>
 <span class="rs-comment">/// the ready gate.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-53">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-adopt-healthy-54">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">DaemonContainer</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     };
-    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(daemon) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config, config_yaml) <span class="rs-kw">else</span> {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(daemon) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config, config_yaml) <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     };
     running_container_ids(&amp;[
@@ -311,7 +312,7 @@
 }
 
 <span class="rs-comment">/// The daemon bring-up spec shared by start, adopt, and restart.</span>
-<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-77">daemon_spec</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonSpec</span>&gt; {
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-daemon-spec-78">daemon_spec</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">DaemonSpec</span>&gt; {
     <span class="rs-kw">let</span> remote_config_path = <span class="rs-type">ConfigPath</span>::prd()
         .context(&quot;resolve compiled daemon config path&quot;)?
         .as_path()
@@ -331,7 +332,7 @@
 
 <span class="rs-comment">/// Identity digest for warm-container adoption: the merged config document</span>
 <span class="rs-comment">/// plus the exact `eosd` binary bytes.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-96">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-97">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-new-40">new</a>();
     hasher.update(config_yaml.as_bytes());
     hasher.update(b&quot;\0eosd\0&quot;);
@@ -350,7 +351,7 @@
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">/// Returns an error if Docker is reachable but listing or removing containers</span>
 <span class="rs-comment">/// fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-112">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-113">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
     remove_labeled_containers(<span class="rs-type">POOL_LABEL</span>)
 }
 

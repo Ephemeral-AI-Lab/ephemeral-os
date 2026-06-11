@@ -11,7 +11,7 @@ export function applyWorkflowMigration(database: Database): void {
     CREATE TABLE IF NOT EXISTS workflows (
       id TEXT PRIMARY KEY,
       parent_run_id TEXT NOT NULL,
-      original_goal TEXT NOT NULL,
+      goal TEXT NOT NULL,
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,

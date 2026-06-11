@@ -71,8 +71,7 @@ export function snapshotWorkflowContext(tree: WorkflowTree): WorkflowContextSnap
   return {
     workflow: {
       id: tree.workflow.id,
-      original_goal: tree.workflow.originalGoal,
-      current_goal: tree.workflow.currentGoal,
+      goal: tree.workflow.goal,
       status: tree.workflow.status,
       context_path: root,
       iterations: tree.iterations.map((iteration) =>

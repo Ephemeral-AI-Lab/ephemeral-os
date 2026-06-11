@@ -1,9 +1,9 @@
 //! Isolated-workspace runtime: lease custody, session lifecycle, TTL sweep
 //! policy, and the caller-keyed workspace-run cancel coordinator.
 //!
-//! The daemon composes this service: it parses wire args, gates cross-domain
-//! policy, calls one [`WorkspaceRuntime`] method, and shapes one response.
-//! This crate owns the policy half — when leases are acquired and released,
+//! The daemon composes this service: it parses wire args, calls one
+//! [`WorkspaceRuntime`] method, and shapes one response. This crate owns the
+//! cross-domain workspace-run policy: when leases are acquired and released,
 //! when sessions are torn down, and in what order — while namespace mechanics
 //! stay in `eos-isolated-workspace` and command-session internals stay in
 //! `eos-command-ops`. State lives on a [`WorkspaceRuntime`] instance, never in
@@ -27,7 +27,7 @@ use eos_isolated_workspace::{
     IsolatedError, IsolatedManager, IsolatedSnapshot, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
 };
-use eos_layerstack::{read_workspace_binding, LayerStack};
+use eos_layerstack::{LayerStack, read_workspace_binding};
 
 fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {
@@ -102,6 +102,20 @@ pub struct CallerCancel {
     pub isolated: Result<ExitOutcome, IsolatedError>,
 }
 
+/// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
+#[derive(Debug, thiserror::Error)]
+pub enum WorkspaceEnterError {
+    /// The caller has live command sessions and cannot switch workspace mode.
+    #[error("cannot enter isolated workspace while command sessions are active")]
+    ActiveCommandSessions {
+        /// Live command sessions for this caller.
+        active_command_sessions: usize,
+    },
+    /// The isolated-workspace lifecycle failed.
+    #[error(transparent)]
+    Isolated(#[from] IsolatedError),
+}
+
 /// Instance-owned isolated-workspace service state: the typed config plus the
 /// lazily bound layer-stack + manager pair.
 pub struct WorkspaceRuntime {
@@ -124,11 +138,23 @@ impl WorkspaceRuntime {
     ///
     /// # Errors
     ///
-    /// Returns [`IsolatedError::FeatureDisabled`] when isolation is disabled,
-    /// and the manager's enter/setup errors otherwise.
-    pub fn enter(&self, caller_id: &str, root: &Path) -> Result<WorkspaceHandle, IsolatedError> {
+    /// Returns [`WorkspaceEnterError::ActiveCommandSessions`] when the caller
+    /// has live command sessions, [`IsolatedError::FeatureDisabled`] when
+    /// isolation is disabled, and the manager's enter/setup errors otherwise.
+    pub fn enter(
+        &self,
+        caller_id: &str,
+        root: &Path,
+    ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
+        let active_command_sessions =
+            eos_command_ops::active_command_sessions_for_caller(caller_id);
+        if active_command_sessions > 0 {
+            return Err(WorkspaceEnterError::ActiveCommandSessions {
+                active_command_sessions,
+            });
+        }
         self.ensure_state(root)?;
-        self.with_state(|state| {
+        Ok(self.with_state(|state| {
             let snapshot = state.acquire_snapshot(caller_id)?;
             let lease_id = snapshot.lease_id.clone();
             match state.manager.enter(caller_id, snapshot) {
@@ -138,7 +164,7 @@ impl WorkspaceRuntime {
                     Err(error)
                 }
             }
-        })
+        })?)
     }
 
     /// Tear down `caller_id`'s isolated workspace if open: namespace/network/
@@ -150,7 +176,11 @@ impl WorkspaceRuntime {
     ///
     /// Returns [`IsolatedError::NotOpen`] when the caller is not isolated (the
     /// cancel surface treats that as a no-op), and teardown errors otherwise.
-    pub fn exit(&self, caller_id: &str, grace_s: Option<f64>) -> Result<ExitOutcome, IsolatedError> {
+    pub fn exit(
+        &self,
+        caller_id: &str,
+        grace_s: Option<f64>,
+    ) -> Result<ExitOutcome, IsolatedError> {
         self.with_state(|state| state.exit_caller(caller_id, grace_s))
     }
 

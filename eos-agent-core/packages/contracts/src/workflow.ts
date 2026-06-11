@@ -228,8 +228,7 @@ export type WorkflowContextIteration = z.infer<typeof WorkflowContextIterationSc
 export const WorkflowContextSnapshotSchema = z.strictObject({
   workflow: z.strictObject({
     id: z.string(),
-    original_goal: z.string(),
-    current_goal: z.string(),
+    goal: z.string(),
     status: WorkflowEntityRunStatusSchema,
     context_path: z.string(),
     iterations: z.array(WorkflowContextIterationSchema),

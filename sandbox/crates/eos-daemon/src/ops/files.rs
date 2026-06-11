@@ -3,12 +3,11 @@
 use std::path::PathBuf;
 
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
-use eos_file_ops::IsolatedBackend;
 use eos_file_ops::{
-    edit_file, read_file, write_file, DirectBackend, EditFileOutcome, EditFileRequest,
-    FileOpsError, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit, WorkspaceConflict,
-    WriteFileOutcome, WriteFileRequest,
+    EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
+    WorkspaceConflict, WriteFileOutcome, WriteFileRequest,
 };
+use eos_runtime::routing::file_op::{self, FileOpContext, FileOpError, FileRoute};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
@@ -22,15 +21,13 @@ pub(crate) fn op_read_file(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = read_request(args, context)?;
-    if let Some((workspace, binding)) = isolated_route(args, context) {
-        let outcome = read_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        workspace.touch(&binding.caller_id);
-        return Ok(read_response(outcome));
+    let caller_id = super::caller_id_or_default(args);
+    let routed = file_op::read_file(file_context(args, context, &caller_id), request)
+        .map_err(file_op_error)?;
+    let mut outcome = routed.outcome;
+    if let FileRoute::Direct { layer_stack_root } = routed.route {
+        enrich_direct_timings(&layer_stack_root, &mut outcome.timings, 0);
     }
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome =
-        read_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
-    enrich_direct_timings(&root, &mut outcome.timings, 0);
     Ok(read_response(outcome))
 }
 
@@ -40,15 +37,17 @@ pub(crate) fn op_write_file(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = write_request(args, context)?;
-    if let Some((workspace, binding)) = isolated_route(args, context) {
-        let outcome = write_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        workspace.touch(&binding.caller_id);
-        return Ok(write_response(outcome));
+    let caller_id = super::caller_id_or_default(args);
+    let routed = file_op::write_file(file_context(args, context, &caller_id), request)
+        .map_err(file_op_error)?;
+    let mut outcome = routed.outcome;
+    if let FileRoute::Direct { layer_stack_root } = routed.route {
+        enrich_direct_timings(
+            &layer_stack_root,
+            &mut outcome.timings,
+            outcome.changed_paths.len(),
+        );
     }
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome =
-        write_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
-    enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(write_response(outcome))
 }
 
@@ -58,30 +57,30 @@ pub(crate) fn op_edit_file(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = edit_request(args)?;
-    if let Some((workspace, binding)) = isolated_route(args, context) {
-        let outcome = edit_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        workspace.touch(&binding.caller_id);
-        return Ok(edit_response(outcome));
+    let caller_id = super::caller_id_or_default(args);
+    let routed = file_op::edit_file(file_context(args, context, &caller_id), request)
+        .map_err(file_op_error)?;
+    let mut outcome = routed.outcome;
+    if let FileRoute::Direct { layer_stack_root } = routed.route {
+        enrich_direct_timings(
+            &layer_stack_root,
+            &mut outcome.timings,
+            outcome.changed_paths.len(),
+        );
     }
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let mut outcome =
-        edit_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
-    enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(edit_response(outcome))
 }
 
-/// The caller's open isolated binding, when services are threaded and the
-/// caller has one. `None` routes to the ephemeral (direct layer-stack) path.
-fn isolated_route<'ctx>(
+fn file_context<'a, 'ctx: 'a>(
     args: &Value,
     context: DispatchContext<'ctx>,
-) -> Option<(
-    &'ctx eos_runtime::WorkspaceRuntime,
-    eos_command_ops::CommandBinding,
-)> {
-    let workspace = &context.services()?.workspace;
-    let binding = workspace.command_binding_for(&super::caller_id_or_default(args))?;
-    Some((workspace, binding))
+    caller_id: &'a str,
+) -> FileOpContext<'a> {
+    FileOpContext {
+        workspace: context.services().map(|services| &services.workspace),
+        caller_id,
+        layer_stack_root: optional_layer_stack_root(args),
+    }
 }
 
 fn read_request(
@@ -94,6 +93,14 @@ fn read_request(
             .file_limits()
             .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
     })
+}
+
+fn optional_layer_stack_root(args: &Value) -> Option<PathBuf> {
+    args.get("layer_stack_root")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|root| !root.is_empty())
+        .map(PathBuf::from)
 }
 
 fn write_request(
@@ -203,18 +210,11 @@ fn enrich_direct_timings(
     }
 }
 
-fn workspace_error(error: FileOpsError) -> DaemonError {
-    DaemonError::InvalidEnvelope(error.to_string())
-}
-
-/// Build the isolated file backend from the caller's open binding.
-fn isolated_backend(binding: &eos_command_ops::CommandBinding) -> IsolatedBackend {
-    IsolatedBackend {
-        layer_stack_root: binding.layer_stack_root.clone(),
-        workspace_root: binding.workspace_root.clone(),
-        upperdir: binding.upperdir.clone(),
-        layer_paths: binding.layer_paths.clone(),
-        manifest_version: binding.manifest_version,
-        manifest_root_hash: binding.manifest_root_hash.clone(),
+fn file_op_error(error: FileOpError) -> DaemonError {
+    match error {
+        FileOpError::MissingLayerStackRoot => {
+            DaemonError::InvalidEnvelope("layer_stack_root is required".to_owned())
+        }
+        FileOpError::File(error) => DaemonError::InvalidEnvelope(error.to_string()),
     }
 }

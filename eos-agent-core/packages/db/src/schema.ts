@@ -16,7 +16,7 @@ import type { Generated, Selectable } from "kysely";
 export interface WorkflowsTable {
   id: WorkflowId;
   parent_run_id: AgentRunId;
-  original_goal: string;
+  goal: string;
   status: WorkflowEntityRunStatus;
   created_at: string;
   updated_at: string;

@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use eos_plugin::{
-    PluginError, PluginServiceKey, PluginServiceState, PpcDirection, PpcEnvelope, RefreshAck,
+    PluginError, PluginServiceKey, PluginServiceState, PpcDirection, PpcMessage, RefreshAck,
     RefreshRequest, RefreshStrategy, ServiceMode,
 };
 
@@ -81,8 +81,8 @@ impl PluginRuntime {
         targets
             .into_iter()
             .enumerate()
-            .map(|(index, target)| {
-                match probe_connected_service_health(&target, index, timeout) {
+            .map(
+                |(index, target)| match probe_connected_service_health(&target, index, timeout) {
                     Ok(accepted) => ServiceHealthReport {
                         success: true,
                         plugin: target.plugin_id,
@@ -110,8 +110,8 @@ impl PluginRuntime {
                             teardown_error,
                         }
                     }
-                }
-            })
+                },
+            )
             .collect()
     }
 
@@ -440,13 +440,13 @@ fn probe_connected_service_health(
     let request = RefreshRequest::Health {
         manifest_key: target.manifest_key.clone(),
     };
-    let envelope = PpcEnvelope {
+    let message = PpcMessage {
         message_id: format!("api.plugin.status:health:{index}"),
         direction: PpcDirection::Request,
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,
     };
-    let reply = target.client.round_trip(&envelope, timeout)?;
+    let reply = target.client.round_trip(&message, timeout)?;
     let ack: RefreshAck =
         serde_json::from_str(&reply.body).map_err(|err| PluginError::Ppc(err.to_string()))?;
     ack.require_manifest(&target.manifest_key)?;
@@ -461,13 +461,13 @@ fn send_refresh_request(
     snapshot: &PluginServiceSnapshot,
     timeout: Duration,
 ) -> Result<(), PluginRuntimeError> {
-    let envelope = PpcEnvelope {
+    let message = PpcMessage {
         message_id: format!("{invocation_id}:refresh:{index}"),
         direction: PpcDirection::Request,
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,
     };
-    let reply = client.round_trip(&envelope, timeout)?;
+    let reply = client.round_trip(&message, timeout)?;
     let ack: RefreshAck =
         serde_json::from_str(&reply.body).map_err(|err| PluginError::Ppc(err.to_string()))?;
     ack.require_manifest(&snapshot.manifest_key)?;

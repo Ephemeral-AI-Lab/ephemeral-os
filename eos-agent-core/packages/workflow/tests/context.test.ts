@@ -13,6 +13,10 @@ import {
   type Harness,
 } from "./support.js";
 
+function legacyGoalPath(kind: "current" | "original"): string {
+  return `${kind}_goal.md`;
+}
+
 async function refocusedWorkflow(h: Harness) {
   const wf = await h.delegate("whole goal", 3);
   await h.launches[0].submitPlanner(
@@ -48,7 +52,7 @@ describe("loadWorkflowTree derived views (§16 case 2)", () => {
     expect(iteration.attempts[0].isConsistentWithIterationFocus).toBe(false);
     expect(iteration.attempts[1].isConsistentWithIterationFocus).toBe(true);
     expect(iteration.maxAttempts, "budget unchanged by refocus").toBe(3);
-    expect(tree.workflow.currentGoal, "current_goal never advances mid-iteration").toBe(
+    expect(tree.workflow.activeGoal, "active goal never advances mid-iteration").toBe(
       "whole goal",
     );
   });
@@ -85,7 +89,9 @@ describe("loadWorkflowTree derived views (§16 case 2)", () => {
     expect(tree.iterations[1].goal).toBe("second half");
 
     const snapshot = snapshotWorkflowContext(tree);
-    expect(snapshot.workflow.current_goal).toBe("second half");
+    expect(snapshot.workflow.goal).toBe("whole goal");
+    expect(legacyGoalPath("current").slice(0, -3) in snapshot.workflow).toBe(false);
+    expect(legacyGoalPath("original").slice(0, -3) in snapshot.workflow).toBe(false);
     expect(snapshot.workflow.iterations).toHaveLength(2);
     expect(snapshot.workflow.iterations[0].attempts[0].work_items).toHaveLength(1);
     expect(snapshot.workflow.iterations[0].attempts[0].context_path).toContain(
@@ -102,8 +108,9 @@ describe("context path universe (§16 case 3)", () => {
     const tree = await h.tree(wf.workflowId);
     const context = buildWorkflowContext(tree);
 
-    expect(context.files.get("original_goal.md")?.content).toBe("the goal");
-    expect(context.files.get("current_goal.md")?.content).toBe("the goal");
+    expect(context.files.get("goal.md")?.content).toBe("the goal");
+    expect(context.files.has(legacyGoalPath("current"))).toBe(false);
+    expect(context.files.has(legacyGoalPath("original"))).toBe(false);
     expect(context.files.has("outcome.md"), "no outcome before terminal").toBe(false);
 
     const iteration = tree.iterations[0];
@@ -135,7 +142,7 @@ describe("context path universe (§16 case 3)", () => {
     const wf = await h.delegate("0123456789");
     const context = buildWorkflowContext(await h.tree(wf.workflowId));
     const first = readWorkflowContext(context, {
-      path: "original_goal.md",
+      path: "goal.md",
       maxBytes: 4,
     });
     expect(first.kind).toBe("page");
@@ -145,7 +152,7 @@ describe("context path universe (§16 case 3)", () => {
     expect(first.page.next_offset).toBe(4);
 
     const rest = readWorkflowContext(context, {
-      path: "original_goal.md",
+      path: "goal.md",
       offset: 4,
     });
     if (rest.kind !== "page") throw new Error("expected a page");
@@ -165,12 +172,12 @@ describe("context path universe (§16 case 3)", () => {
     if (read.kind !== "listing") return;
 
     const byPath = new Map(read.rows.map((row) => [row.path, row]));
-    expect(byPath.get("original_goal.md")?.status).toBe("Running");
+    expect(byPath.get("goal.md")?.status).toBe("Running");
     const planRow = read.rows.find((row) => row.path.includes("/plan_"));
     expect(planRow?.summary, "summary first line only").toBe("first line of plan");
   });
 
-  it("derives the iteration outcome from the closing attempt and archives the goal on promotion", async () => {
+  it("derives the iteration outcome from the closing attempt without archiving the iteration goal on promotion", async () => {
     const h = harness();
     const wf = await h.delegate("whole goal");
     await h.launches[0].submitPlanner(
@@ -193,21 +200,25 @@ describe("context path universe (§16 case 3)", () => {
     expect(outcome?.content).toContain("worker outcome");
 
     expect(
-      context.files.get(`archived/iteration_${first.id}/current_goal.md`)?.content,
-      "the goal in effect DURING the closed iteration",
-    ).toBe("whole goal");
-    expect(context.files.get("current_goal.md")?.content, "live head").toBe(
-      "second half",
+      context.directories.has(`archived/iteration_${first.id}`),
+      "closed iterations are not copied under a root archive",
+    ).toBe(false);
+    expect(
+      context.files.has(`archived/iteration_${first.id}/goal.md`),
+      "the iteration goal has no archived field",
+    ).toBe(false);
+    expect(context.files.get("goal.md")?.content, "root workflow goal").toBe(
+      "whole goal",
     );
   });
 
-  it("workflow Success keeps current_goal.md live and adds outcome.md", async () => {
+  it("workflow Success keeps goal.md live and adds outcome.md", async () => {
     const h = harness();
     const wf = await h.delegate("only goal");
     await h.launches[0].submitPlanner(plannerPayload());
     await h.launches[1].submitWorker(workerPayload());
     const context = buildWorkflowContext(await h.tree(wf.workflowId));
-    expect(context.files.get("current_goal.md")?.content).toBe("only goal");
+    expect(context.files.get("goal.md")?.content).toBe("only goal");
     expect(context.files.has("archived"), "nothing archived without a successor").toBe(
       false,
     );
@@ -335,9 +346,8 @@ describe("keep vs refocus paths (§16 case 6)", () => {
     expect(priorRows, "prior iteration collapses to one status row").toHaveLength(1);
     expect(priorRows[0].status).toBe("Success");
 
-    const archivedRows = read.rows.filter((row) => row.path.startsWith("archived/"));
-    expect(archivedRows).toHaveLength(1);
-    expect(archivedRows[0].summary, "status row only").toBeUndefined();
+    const rootArchiveRows = read.rows.filter((row) => row.path.startsWith("archived/"));
+    expect(rootArchiveRows, "no root archive rows remain").toHaveLength(0);
 
     const insideArchived = readWorkflowContext(context, {
       path: `iteration_${first.id}/archived/attempt_${first.attempts[0].id}`,

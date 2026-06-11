@@ -90,26 +90,13 @@ export function buildWorkflowContext(tree: WorkflowTree): WorkflowContext {
     files.set(file.name, { owner: workflowRef, content: file.content });
   }
 
-  const lastIndex = tree.iterations.length - 1;
-  tree.iterations.forEach((iteration, index) => {
+  tree.iterations.forEach((iteration) => {
     const iterationRef: ContextEntityRef = {
       kind: "iteration",
       id: iteration.id,
       status: iteration.status,
       summaryFirstLine: null,
     };
-
-    // §2.8: the superseded goal VALUE archives iff a successor exists; the
-    // iteration folder itself stays live.
-    if (index < lastIndex) {
-      directories.set("archived", { owner: workflowRef, archived: true });
-      const dir = `archived/${iterationDirName(iteration.id)}`;
-      directories.set(dir, { owner: iterationRef, archived: true });
-      files.set(`${dir}/current_goal.md`, {
-        owner: iterationRef,
-        content: iteration.goal,
-      });
-    }
 
     const iterationDir = iterationDirName(iteration.id);
     directories.set(iterationDir, { owner: iterationRef, archived: false });

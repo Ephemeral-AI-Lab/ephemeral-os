@@ -41,7 +41,7 @@ function plannerMessages(input: PlannerContextInput): InitialUserMessage[] {
   const iteration = workflow.iterations.find(
     (candidate) => candidate.id === input.current.iteration_id,
   );
-  const messages = [user(`# Current goal\n${workflow.current_goal}`)];
+  const messages = [user(`# Current goal\n${goalForIteration(input)}`)];
 
   const standingFocus = iteration?.focus ?? null;
   if (!iteration || standingFocus === null) {
@@ -59,7 +59,7 @@ function plannerMessages(input: PlannerContextInput): InitialUserMessage[] {
   messages.push(user(`# Iteration focus\n${standingFocus}`));
   // Only attempts consistent with the standing focus, fully expanded; the
   // standing deferred_goal and superseded attempts are deliberately omitted
-  // (§2.5) - a refocus would re-peel from an unchanged current_goal.
+  // (§2.5) - a refocus would re-peel from an unchanged workflow goal.
   const failed = iteration.attempts.filter(
     (attempt) =>
       attempt.is_consistent_with_iteration_focus && attempt.status === "Failed",
@@ -76,6 +76,18 @@ function plannerMessages(input: PlannerContextInput): InitialUserMessage[] {
     ),
   );
   return messages;
+}
+
+function goalForIteration(input: PlannerContextInput | WorkerContextInput): string {
+  const workflow = input.workflow_context.workflow;
+  const index = workflow.iterations.findIndex(
+    (iteration) => iteration.id === input.current.iteration_id,
+  );
+  let goal = workflow.goal;
+  for (let cursor = 1; cursor <= index; cursor += 1) {
+    goal = workflow.iterations[cursor - 1]?.deferred_goal ?? goal;
+  }
+  return goal;
 }
 
 function failedAttemptReport(attempt: WorkflowContextAttempt): string {

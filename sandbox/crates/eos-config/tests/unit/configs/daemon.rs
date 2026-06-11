@@ -47,15 +47,17 @@ fn config_validation_rejects_invalid_daemon_values() {
 }
 
 #[test]
-fn config_plugin_child_module_does_not_own_config_rs() {
+fn plugin_runtime_module_does_not_own_config_rs() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let daemon_dir = manifest_dir
+    let sandbox_dir = manifest_dir
         .ancestors()
         .nth(2)
         .expect("eos-config lives below sandbox/crates")
-        .join("crates/eos-daemon");
+        .to_path_buf();
     assert!(
-        !daemon_dir.join("src/services/plugins/config.rs").exists(),
+        !sandbox_dir
+            .join("crates/eos-runtime/src/plugin/config.rs")
+            .exists(),
         "plugin config must be owned by eos-config/src/configs/daemon.rs"
     );
 }

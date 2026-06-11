@@ -22,22 +22,23 @@ achievement is a collection of attempts whose intents may all differ - the
 iteration has no stable identity to judge its closure against. Phase 05.1
 replaces that model with a planner-declared **iteration focus**:
 
-- the workflow stores only the immutable `original_goal`; the goal in effect
-  (what remains to be done) is never stored or projected - it is always
-  inferred from the last iteration (§2.1),
-- each iteration commits to one `focus` - the slice of the goal in effect it
-  will complete - optionally peeling off a `deferred_goal` (the declared
+- the workflow goal is the immutable `goal` - the only content the
+  workflow keeps; an iteration's goal (what remains to be done) is never
+  stored or projected, always inferred from the last iteration (§2.1),
+- each iteration commits to one `focus` - the slice of its goal it will
+  complete - optionally peeling off a `deferred_goal` (the declared
   remainder, promoted to the next iteration's goal on success),
-- declarations are append-only rows on plans; the current focus and the goal
-  in effect are derived views over them,
+- declarations are append-only rows on plans; the current focus, each
+  iteration's goal, and the drifted-attempt archive are all derived views
+  over them,
 - the closure outcome of an iteration comes from its last attempt, and only
   attempts with `is_consistent_with_iteration_focus` count as the iteration's
   achievement.
 
 The projection layer is rebuilt to match: composed `spec.md`/`brief.md`
-projections are replaced by a per-field file universe (one fact, one path),
-persisted to disk as a post-commit mirror (§2.17), and the fixed
-launch-context policy is replaced by
+projections are replaced by a per-field file universe (one fact, one path)
+with derived `archived/` sections, persisted to disk as a post-commit
+mirror (§2.17), and the fixed launch-context policy is replaced by
 `workflow_context` snapshots composed either by a built-in default policy or
 by a user-configured context script with the same ergonomics as the existing
 `.eos-agents/hooks` command hooks.
@@ -53,29 +54,29 @@ and context reads use the latest DB-derived render.
 
 ## 2. Design Decisions
 
-1. **Goal model: immutable `original_goal`; the goal in effect is inferred,
-   never materialized.** The workflow stores only the caller's ask. The goal
-   in effect is the head of the deferral chain: it equals `original_goal`
-   until an iteration closes `Success` carrying a `deferred_goal`, at which
-   point it advances to that deferral. It is always inferred from the last
-   iteration - the predecessor's `deferred_goal`, `original_goal` for the
-   first - wherever a consumer needs it: no `current_goal` column, snapshot
-   field, or projected file exists, because storing it beside a
-   reconstructible chain would create a second copy to keep in sync.
+1. **Goal model: the workflow goal is `goal`, the workflow's only
+   content; iteration goals are inferred.** The workflow stores the
+   caller's ask and nothing else. An iteration's goal is never
+   materialized: it is the workflow goal for the first iteration and the
+   predecessor's `deferred_goal` afterwards, so what remains to be done is
+   always inferred from the last iteration wherever a consumer needs it.
+   No separate active-goal column, snapshot field, or projected file exists:
+   storing a goal beside a reconstructible chain would create a second copy
+   to keep in sync.
 2. **Focus is iteration-scoped and planner-declared.** `plan_spec` is
    deleted. The first planner submission of an iteration must declare
    `focus`; until then the iteration has no focus and the planner's job is
-   exactly to peel one off the goal in effect. Scoping moves from
+   exactly to peel one off the iteration's goal. Scoping moves from
    creation-time inheritance (Phase 05 `iterations.goal`) to plan-time
    declaration.
 3. **Declarations are append-only and atomic.** A declaration is the pair
-   `(iteration_focus, deferred_goal?)` - one peel of the goal in effect -
+   `(iteration_focus, deferred_goal?)` - one peel of the iteration's goal -
    recorded on the submitting plan row as `declared_focus` /
    `declared_deferred_goal`. Submitting the pair resets both; omitting it
    keeps the standing declaration. No iteration column mutates: the
    iteration's current focus and deferred goal are views over its ordered
-   plan rows. A `deferred_goal` can never exist without the focus that
-   produced it.
+   plan rows, which is also what makes the §9 archive derivable. A
+   `deferred_goal` can never exist without the focus that produced it.
 4. **Refocus supersedes in place; the budget counts all attempts.** A retry
    planner that re-declares focus supersedes the prior declaration inside
    the same iteration - it does not open a new one (a new iteration would
@@ -85,9 +86,9 @@ and context reads use the latest DB-derived render.
    every attempt in the iteration, refocused or not; a planner that wants a
    fresh budget has the honest path of declaring the work in `deferred_goal`.
 5. **`deferred_goal` is a handoff declaration, not load-bearing state.**
-   The goal in effect advances only at successful iteration close, so a
-   refocus that drops the previous deferral loses nothing: the next planner
-   re-peels from an unchanged goal. This is also why retry-planner context
+   An iteration's goal is fixed at creation (§2.1), so a refocus that
+   drops the previous deferral loses nothing: the next planner re-peels
+   from the iteration's unchanged goal. This is also why retry-planner context
    omits the standing `deferred_goal` by default (§2.13) - it is not part of
    the iteration's focus.
 6. **Plan survives as the planning-act record.** With `plan_spec` gone a
@@ -103,19 +104,24 @@ and context reads use the latest DB-derived render.
    Status rides the structured DTO layer (`ContextPage`, listing rows),
    never the content. Reads and mirror writes follow an overwrite pattern:
    the latest DB-derived render is authoritative.
-8. **Nothing archives; drifted attempts stay in place.** A *drifted
-   attempt* - one superseded by a later focus declaration - keeps its §9
-   folder and its full content; `is_consistent_with_iteration_focus = false` is
-   its only marker, carried by the snapshot and by listing rows (§2.16
-   collapses drifted attempts to status rows). Closed iterations likewise
-   stay live - they are the workflow's achievement chain, not abandoned
-   work. No `archived/` section exists anywhere in the universe, no event
-   ever relocates an entity's path, and superseded goal values are not
-   projected: the goal an iteration ran under is inferred from its
-   predecessor (§2.1), and superseded declarations survive on their plan
-   rows (snapshot `declared_focus` / `declared_deferred_goal`), not as
-   files. Drift stays purely derived (a later declaration exists), so it is
-   automatically correct under idempotent transitions and cancel races.
+8. **The iteration archive holds what the focus story excludes.**
+   `iteration/archived/attempt_<a>/` is a *drifted attempt* - one
+   superseded by a later focus declaration - relocated whole: its
+   `fail_reason.md`, plan summary, and work items render there in their
+   live shapes, plus `focus.md` / `deferred_goal.md` at the attempt root
+   when attempt `a`'s plan made the now-superseded declaration.
+   Non-declaring drifted attempts relocate without declaration files; they
+   ran under the nearest preceding sibling's declaration. This is the only
+   archive: closed iterations stay live (they are the workflow's
+   achievement chain, not abandoned work), and superseded goal values are
+   not projected - the goal an iteration ran under is inferred from its
+   predecessor (§2.1). Nothing archives at mutation time: "archived" is
+   purely derived (a later declaration exists), so the archive stays
+   automatically correct under idempotent transitions and cancel races,
+   and the live attempt set under `iteration_<id>/` is exactly the set
+   with `is_consistent_with_iteration_focus` true - an iteration's folder
+   always reads as the current focus's story. A refocus is the one event
+   that changes an entity's path; §9 names the recovery rules.
 9. **The tree listing is the overview projection.** A read path (the
    `read_workflow_context` surface - tool exposure deferred, §2.18; the
    resolver and listing ship package-side and these semantics bind when
@@ -123,15 +129,15 @@ and context reads use the latest DB-derived render.
    listing: one row per path with the owning entity's status and, where a
    summary field exists, its first line. This replaces the Phase 05 default
    root `brief.md`.
-10. **One fact, one path - drifted attempts excluded from search by
-    default.** With no composed projections and no archives, every fact has
-    exactly one path, so Phase 05 §2.17's dedup rule holds by construction
-    and `field` in a search hit is simply the filename.
-    `query_workflow_context` (deferred tool, §2.18) skips the subtrees of
-    drifted attempts unless `scope` names a path inside one:
-    abandoned-direction outcomes stop surfacing to current-focus agents by
-    default, while retry planners still receive them through the §2.11
-    variables, which read the `WorkflowTree`, not paths.
+10. **One fact, one path - `archived/` excluded from search by default.**
+    With no composed projections, every fact has exactly one live path, so
+    Phase 05 §2.17's dedup rule holds by construction and `field` in a
+    search hit is simply the filename. `query_workflow_context` (deferred
+    tool, §2.18) skips `archived/` subtrees unless `scope` names a path
+    inside one: abandoned-direction outcomes stop surfacing to
+    current-focus agents by default, while retry planners still receive
+    them through the §2.11 variables, which read the `WorkflowTree`, not
+    paths.
 11. **Launch context = `workflow_context` snapshot + pluggable composer.** The
     runtime-side context builders produce a typed snapshot per agent kind
     containing *all* facts - including ones the default policy hides
@@ -159,10 +165,10 @@ and context reads use the latest DB-derived render.
     in-package fallback for engine-free `@eos/workflow` tests that bypass
     runtime profiles; profile-based planner/worker runtime launches must name
     a script.
-13. **Default composition policy.** Initial planner: the goal in effect
+13. **Default composition policy.** Initial planner: the iteration's goal
     (inferred from the last iteration, §2.1), then a directive to declare
     focus (and optionally `deferred_goal`) and plan work items. Retry
-    planner: the goal in effect, the standing focus, the
+    planner: the iteration's goal, the standing focus, the
     failed attempts with `is_consistent_with_iteration_focus` true (work items
     with summaries/outcomes and `fail_reason`), then a directive to re-plan
     within the focus or refocus (naming that refocus resets both fields) -
@@ -189,17 +195,17 @@ and context reads use the latest DB-derived render.
 16. **Closure outcomes derive from the last attempt.** An iteration's
     `outcome.md` is composed at render time from its closing attempt's plan
     summary and work-item summaries/outcomes. Prior iterations collapse to
-    a status row in listings (the Phase 05 §2.20 rule), and drifted
-    attempts collapse the same way (§2.8) - the listing reads as the
-    current focus's story while every file stays readable in place. The
+    a status row in listings (the Phase 05 §2.20 rule), and rows under
+    `archived/` subtrees render as status rows only; with drifted attempts
+    relocated (§2.8) the live iteration subtree needs no further collapse -
+    it contains only attempts with `is_consistent_with_iteration_focus` true. The
     workflow terminal summary mechanism is unchanged.
 17. **The context tree persists to disk as a post-commit mirror.** Each
     mutation, after commit and before guarded launches, re-renders the §9
     universe from the fresh `WorkflowTree` and mirrors it under
     `<workflowContextRoot>/workflow_<id>/` (default
     `.eos-agents/workflow/context/`): temp-file + atomic rename per file,
-    and paths that left the universe (a field gone absent, such as
-    `deferred_goal.md` after a refocus that drops the deferral) are pruned.
+    and paths that left the universe (a refocus relocation) are pruned.
     The DB stays authoritative, rendering never reads these files, and the
     tools keep rendering from the `WorkflowTree` - the mirror serves humans
     tailing a workflow and the deferred sandboxed-worker seam. Per-field
@@ -303,10 +309,10 @@ everything not listed is implemented as written there.
 | §2.2 projection is virtual only; the physical writer is a deferred seam | the disk mirror is in scope as a post-commit cache under `.eos-agents/workflow/context/`; virtual rendering stays the tool contract | §2.17 |
 | §2.13 ten brief/spec renderers + two combinators; companion §8 templates | replaced by field-file renders and the tree listing; no composed projections exist | §2.7, §2.9 |
 | §2.14 goals ride the launch directive, briefs stay goal-free | moot - the composer owns placement over the full `workflow_context` snapshot | §2.11, §2.13 |
-| §2.20 prior iterations collapse in the workflow brief | becomes listing policy; drifted attempts collapse to status rows in place beside prior iterations | §2.8, §2.16 |
-| §2.17 search over entity-local fields only, dedup rule | one fact one path by construction; `field` = filename; drifted attempts excluded by default | §2.10 |
+| §2.20 prior iterations collapse in the workflow brief | becomes listing policy; drifted attempts relocate under `archived/` instead of collapsing in place | §2.8, §2.16 |
+| §2.17 search over entity-local fields only, dedup rule | one fact one path by construction; `field` = filename; `archived/` excluded by default | §2.10 |
 | §6 `PlannerOutcomePayloadSchema` (`plan_spec`, top-level `deferred_goal_for_next_iteration`) | flattened optional `iteration_focus` plus sibling `deferred_goal` replace both; `plan_spec` deleted | §7 |
-| §6 schema: `workflows.goal`, `iterations.goal`, `plans.plan_spec`/`deferred_goal` | `workflows.original_goal`; iterations carry no goal/focus columns; plans gain `declared_focus`/`declared_deferred_goal` | §8 |
+| §6 schema: `workflows.goal`, `iterations.goal`, `plans.plan_spec`/`deferred_goal` | `workflows.goal`; iterations carry no goal/focus columns; plans gain `declared_focus`/`declared_deferred_goal` | §8 |
 | §6/§8 workflow read model | named `loadWorkflowTree` for the complete UI/render graph and `loadWorkflowContext` for the context path universe | §8 |
 | §7 `context.ts` fixed launch policy | launch-context builders + injected composer + default policy + profile-selected `workflow_context_script` files under `.eos-agents/workflow/scripts/` | §2.12, §10 |
 | §7 default read at workflow root = `brief.md` | directory paths (root included) return subtree listings | §2.9 |
@@ -375,17 +381,18 @@ plan rows (none is needed).
 
 ```text
 delegate_workflow(goal)
-  Workflow: original_goal  (immutable, the caller's ask)
-            goal in effect (inferred from the last iteration: the
-                            predecessor's deferred_goal, original_goal first)
+  Workflow: goal  (immutable, the caller's ask - the workflow's
+                            only content)
     │
     ▼
-  Iteration: focus = none until the first planner declares
+  Iteration: goal inferred at creation (§2.1): the predecessor's
+             deferred_goal, goal for the first
+             focus = none until the first planner declares
     │
-    ├─ Attempt 1 → planner sees (goal in effect)
+    ├─ Attempt 1 → planner sees (iteration goal)
     │              submits (focus, deferred_goal?, work_items)   focus REQUIRED
     │
-    ├─ Attempt n (retry) → planner sees (goal in effect, focus,
+    ├─ Attempt n (retry) → planner sees (iteration goal, focus,
     │              prior attempts with is_consistent_with_iteration_focus=true
     │              + fail_reasons)
     │              submits (work_items)                          keep focus
@@ -394,18 +401,17 @@ delegate_workflow(goal)
     │                                                            prior attempts
     └─ closes Success from the last attempt:
          deferred_goal declared → next Iteration (origin 'deferred_goal');
-                                  the goal in effect becomes that deferral
-                                  by inference
+                                  its goal is that deferral, by inference
          none                   → Workflow Success
        closes Failed (budget exhausted) → Workflow Failed
 ```
 
 Invariants:
 
-1. The goal in effect advances only when an iteration closes `Success`
-   carrying a `deferred_goal`; it never changes mid-iteration. It is never
-   stored or projected: consumers always infer it from the last iteration
-   (§2.1).
+1. The workflow goal is `goal`, the workflow's only content. An
+   iteration's goal is fixed at creation and never changes mid-iteration;
+   it is never stored or projected - consumers always infer it from the
+   last iteration (§2.1).
 2. Every non-first iteration's predecessor closed `Success` with a deferral,
    so the goal chain has no gaps.
 3. `(focus, deferred_goal)` declare and reset atomically; a deferral never
@@ -414,8 +420,8 @@ Invariants:
    latest declaration among the iteration's plans.
 5. An attempt has `is_consistent_with_iteration_focus = true` iff no later plan in
    its iteration declared; closure outcomes and retry context consider only
-   those attempts. Drifted attempts keep their paths and collapse to status
-   rows in listings (§2.8).
+   those attempts, and the live attempt paths are exactly those attempts -
+   drifted attempts resolve under `archived/` (§2.8).
 6. `max_attempts` bounds the iteration's total attempts across refocuses.
 7. The iteration's first materialized plan must carry a declaration
    (§2.15); the first declaration may come from a later attempt when an
@@ -457,7 +463,7 @@ envelope metadata fields):
 interface WorkflowContextSnapshot {
   workflow: {
     id: string;
-    original_goal: string;
+    goal: string;
     status: string;
     context_path: string;                      // entity context folder path
     iterations: WorkflowContextIteration[];
@@ -482,7 +488,7 @@ interface WorkflowContextAttempt {
   status: string;
   fail_reason: string | null;
   is_consistent_with_iteration_focus: boolean;       // §6 invariant 5
-  context_path: string;                         // entity context folder path
+  context_path: string;                         // live or archived folder path
   plan: {
     id: string;
     status: string;
@@ -561,7 +567,7 @@ starts.
 
 Every `context_path` field is the folder path for that entity's context inside
 the §9 tree. Field files are addressed by appending the field filename to that
-folder; paths are stable for the entity's lifetime (§2.8).
+folder; scripts do not receive separate live/archived path objects.
 
 `ContextSearch` keeps its Phase 05 shape; `ContextPage` gains `status`
 (the owning entity's), replacing the dropped in-content status line (§2.7);
@@ -570,7 +576,7 @@ a search hit's `field` is the filename of the matched file.
 ## 8. Store (`@eos/db`)
 
 ```text
-workflows    id PK, parent_run_id, original_goal, status,
+workflows    id PK, parent_run_id, goal, status,
              created_at, updated_at, closed_at
 iterations   id PK, workflow_id, sequence, origin ('initial'|'deferred_goal'),
              max_attempts, status, timestamps          -- no goal/focus columns
@@ -602,28 +608,43 @@ and exposes file/directory render data for `context-projection.ts` and the
 deferred read/query tools. It never reads the disk mirror; the DB-derived tree
 stays authoritative.
 
-The derived views are computed once inside `loadWorkflowTree`, except the
-goal in effect, which is never materialized - consumers infer it on demand
-(§2.1):
+The derived views are computed once inside `loadWorkflowTree`, except
+iteration goals, which are never materialized - consumers infer them on
+demand (§2.1):
 
 | View | Derivation |
 | --- | --- |
-| goal in effect for iteration `k` | `original_goal` for the first iteration; otherwise iteration `k-1`'s effective `deferred_goal` (§6 invariant 2) - inference-only, never a tree or snapshot field |
+| iteration `k`'s goal | `goal` for the first iteration; otherwise iteration `k-1`'s effective `deferred_goal` (§6 invariant 2) - inference-only, never a tree or snapshot field |
 | iteration focus / deferred goal | latest plan in the iteration with non-null `declared_focus` |
 | `is_consistent_with_iteration_focus` | no later plan in the iteration declared |
+| drifted-attempt archive set | every attempt superseded by a later declaration, with declaration files keyed by the declaring attempt |
 | iteration outcome | closing attempt's plan summary + work-item summaries/outcomes |
 
 ## 9. Context Path Universe and Projection
 
 ```text
 workflow_<id>/
-  original_goal.md
+  goal.md
   outcome.md                               terminal only (derived)
   iteration_<id>/
     focus.md                               latest declaration (derived)
     deferred_goal.md                       absent if none declared
     outcome.md                             terminal only (derived, §2.16)
-    attempt_<id>/                          every attempt, drifted or not
+    archived/
+      attempt_<id>/                        a drifted attempt, relocated whole
+        focus.md                           the superseded declaration; both
+        deferred_goal.md                   files only on the attempt whose
+                                           plan declared it (deferred file
+                                           absent if none was carried)
+        fail_reason.md                     …plus the attempt's full content,
+        plan_<id>/                         identical shapes to a live attempt
+          summary.md
+        work_item_<id>/
+          description.md
+          spec.md
+          summary.md
+          outcome.md
+    attempt_<id>/                          is_consistent_with_iteration_focus only
                                            (§2.8)
       fail_reason.md                       failed attempts only
       plan_<id>/
@@ -646,13 +667,17 @@ Rules:
 - A path resolving to a directory (the workflow root by default) renders the
   subtree listing: per row the relative path, the owning entity's status,
   and the first line of the owning entity's summary field where one exists.
-  Prior iterations and drifted attempts appear as their status row only
-  (§2.16); their files remain readable at full fidelity.
-- Paths are stable: no event relocates an entity's folder (§2.8), so a
-  paging continuation always reads the latest bytes at its offset. The only
-  paths that leave the universe are fields gone absent - `deferred_goal.md`
-  after a refocus that carries no deferral - and a read against one errors
-  naming the valid children.
+  Prior iterations and rows under `archived/` subtrees appear as their
+  status row only (§2.16); their files remain readable at full fidelity.
+- The archive label is the scope that ran under the superseded declaration
+  (§2.8): the iteration archive keeps every drifted attempt under its own
+  id, with the declaration files riding the attempt that declared.
+- A refocus is the one event that changes entity paths: from the next
+  render the drifted attempts resolve only under `archived/`. A fresh read
+  against an old live path errors naming the valid children (`archived/`
+  among them). A paging continuation against a still-valid path reads the
+  latest bytes at that offset; against a moved path it gets the same path
+  resolution error as a fresh read.
 - The same universe persists on disk: the §2.17 mirror writes it 1:1 under
   `<workflowContextRoot>/workflow_<id>/` (default
   `.eos-agents/workflow/context/`), where real directories play the
@@ -734,10 +759,6 @@ scripts):
 // .eos-agents/workflow/scripts/variable_reference_map.cjs
 function create_variable_reference_map(ctx) {
   const workflow = ctx.workflow_context.workflow;
-  // the goal in effect, inferred from the last iteration (§6 invariant 1):
-  // the predecessor's deferred_goal, or original_goal for the first
-  const workflow_goal =
-    workflow.iterations.at(-2)?.deferred_goal ?? workflow.original_goal;
   const current_iteration = workflow.iterations.find(
     (i) => i.id === ctx.current.iteration_id,
   ) ?? null;
@@ -747,6 +768,10 @@ function create_variable_reference_map(ctx) {
         (i) => current_iteration && i.sequence < current_iteration.sequence,
       )
       .at(-1) ?? null;
+  // an iteration's goal is inferred (§6 invariant 1): the predecessor's
+  // deferred_goal, or the workflow goal for the first iteration
+  const current_iteration_goal =
+    previous_iteration?.deferred_goal ?? workflow.goal;
   const all_attempts = current_iteration?.attempts ?? [];
   const current_attempt = current_iteration?.attempts.find(
     (a) => a.id === ctx.current.attempt_id,
@@ -797,14 +822,14 @@ function create_variable_reference_map(ctx) {
 
     workflow_id: workflow.id,
     workflow_status: workflow.status,
-    workflow_goal,
-    original_workflow_goal: workflow.original_goal,
+    workflow_goal: workflow.goal,
     workflow_context_path: workflow.context_path,
 
     current_iteration_id: current_iteration?.id ?? null,
     current_iteration_sequence: current_iteration?.sequence ?? null,
     current_iteration_origin: current_iteration?.origin ?? null,
     current_iteration_status: current_iteration?.status ?? null,
+    current_iteration_goal,
     current_iteration_focus: current_iteration?.focus ?? null,
     current_iteration_deferred_goal: current_iteration?.deferred_goal ?? null,
     current_iteration_max_attempts: current_iteration?.max_attempts ?? null,
@@ -892,7 +917,7 @@ const { create_variable_reference_map } = require("./variable_reference_map.cjs"
 
 function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
-  const messages = [user(`# Workflow goal\n${vars.workflow_goal}`)];
+  const messages = [user(`# Iteration goal\n${vars.current_iteration_goal}`)];
 
   if (vars.current_iteration_focus === null) {
     messages.push(user("Declare this iteration's focus and work items."));
@@ -962,7 +987,7 @@ calling `WorkflowService.cancel`.
 ```text
 delegate_workflow(goal)                              caller's run
   one transaction:
-    createWorkflow(Running, original_goal)
+    createWorkflow(Running, goal)
       → createIteration(Running, origin 'initial', no focus)
         → createAttempt(sequence 1)
           → createPlan(NotStarted)
@@ -996,8 +1021,8 @@ submit_worker_outcome({ is_pass, … })                worker run (§2.19, §2.2
                          exhausted → escalate ↑
     reconcileIteration closing attempt Success → Iteration → Success:
                          deferred_goal declared → createIteration (next
-                           Iteration + Attempt + Plan; the goal in effect
-                           advances by inference, §2.1)
+                           Iteration + Attempt + Plan; the new iteration's
+                           goal is that deferral, by inference §2.1)
                          none declared → escalate ↑
                        budget exhausted → Iteration → Failed ↑
     reconcileWorkflow  Iteration Success without deferral → Workflow →
@@ -1022,21 +1047,20 @@ onSettlement(entity, settlement)
 
 Deltas retained from the focus model:
 
-- `delegate` stores `original_goal`; the first iteration is created with no
+- `delegate` stores `goal`; the first iteration is created with no
   focus (origin `'initial'`).
 - Planner materialization: payload `iteration_focus` present → record the pair
-  on the plan row (this supersedes any prior declaration and resets both
-  fields; the now-drifted attempts keep their paths and flip
-  `is_consistent_with_iteration_focus` purely by derivation - no mutation or
-  relocation step exists); absent → the plan keeps the
+  on the plan row (this supersedes any prior declaration, resets both fields,
+  and relocates the now-drifted attempts' projections under `archived/` purely
+  by derivation - no mutation step exists); absent → the plan keeps the
   standing declaration. Validation errors return in-run results (§2.15);
   only a run that settles without a valid submission burns the attempt
   through death synthesis. Work-item materialization and ready-launch are
   unchanged.
 - Iteration close (`Success`, from the last attempt): derive the outcome
   (§2.16); if the effective declaration carries a `deferred_goal`, create
-  the next iteration (origin `'deferred_goal'`) - the goal in effect
-  advances by inference (§2.1); otherwise close the workflow `Success`.
+  the next iteration (origin `'deferred_goal'`), whose goal is that
+  deferral by inference (§2.1); otherwise close the workflow `Success`.
 - Failure/retry: unchanged, except the retry planner's variables carry only
   prior attempts with `is_consistent_with_iteration_focus` true in expanded form
   and the budget counts all attempts (§2.4).
@@ -1062,7 +1086,7 @@ rides the background family, and the read/query surface awaits a later
 discussion.
 
 `delegate_workflow` (input `{ goal, max_attempts? }`; `goal` becomes
-`original_goal`). The factory takes one bound function plus the per-run
+`goal`). The factory takes one bound function plus the per-run
 supervisor; `cancel` folds into the returned handle, so no service method
 beyond `delegate` crosses the tool boundary:
 
@@ -1190,8 +1214,8 @@ packages/workflow/src/
 ├─ workflow-context.ts loadWorkflowContext: §9 path universe / resolver /
 │                      listing over WorkflowTree; never reads the disk mirror
 ├─ workflow/
-│  ├─ state.ts         root workflow state; goal-in-effect inference (§8)
-│  ├─ context.ts       original_goal.md / outcome.md
+│  ├─ state.ts         root workflow state; goal-chain inference (§8)
+│  ├─ context.ts       goal.md / outcome.md
 │  └─ transitions.ts   createWorkflow (heads the delegate cascade);
 │                      reconcileWorkflow: terminal close (§2.22);
 │                      cancelWorkflow (heads the cancel cascade)
@@ -1221,19 +1245,20 @@ packages/workflow/src/
 │                      reconcileWorkItem, the worker leaf (is_pass →
 │                      status); cancelWorkItem (interrupts its own run
 │                      handle; cancel cascade + §2.20 sibling cancel)
-├─ addressing/         pure §9 addressing - membership facts (attempt
+├─ archive/            pure addressing only - membership facts (attempt
 │                      consistency, goal chain) live on the entity state
 │                      modules; no archive table, mutation, or event exists
-│  ├─ paths.ts         pathOf(entity, field?): the entity's stable address
+│  ├─ paths.ts         pathOf(entity, field?): live vs archived address
+│                      over the state-computed membership (§2.8)
 │  ├─ resolve.ts       path → file / directory / error naming valid children
 │  └─ listing.ts       subtree listing rows: path, status, summary (§2.9)
 ├─ context-engine/
 │  ├─ input.ts         buildPlannerContextInput / buildWorkerContextInput (§7)
 │  └─ composer.ts      the composeLaunchContext seam (§10) + the §2.13
 │                      default composers (the in-package no-script path)
-├─ context-projection.ts  the §2.17 disk mirror: render-all over archive
+├─ context-projection.ts  the §2.17 disk mirror: render-all over the §9
 │                      paths, temp-file + atomic-rename writes, prune of
-│                      departed paths
+│                      departed paths (fields gone absent)
 ├─ launcher.ts         claimLaunchable, launch-token guard, post-commit
 │                      compose → mirror → launch, attaching each launched
 │                      entity's agent_run_id + run handle (§2.21); builds
@@ -1324,12 +1349,12 @@ context script fixture.
 | # | Case | Asserts |
 | --- | --- | --- |
 | 1 | Contracts | flattened planner payload accepts/rejects documented shapes, including required work-item `description`; `deferred_goal` never validates without `iteration_focus`; script inputs carry only `workflow_context` plus `current`; planner/worker agent profiles require `workflow_context_script`; `ContextScriptOutputSchema` rejects empty `initial_messages`, non-user messages, and string-content shortcuts that are not real `Message` content blocks |
-| 2 | Store + `loadWorkflowTree` | row load returns the full workflow / iteration / attempt / plan / work-item tree; goal chain across iterations (first = original, then each deferral); focus/deferred views track the latest declaration; `is_consistent_with_iteration_focus` flips on a later declaration; archive sets per §8 table; budget counts attempts across refocuses; UI graph DTO builders can render the whole workflow from this one tree |
-| 3 | `loadWorkflowContext` + projection | `loadWorkflowContext` builds the §9 path universe from `loadWorkflowTree` and never reads the disk mirror; field render = verbatim field text with no embedded metadata (`ContextPage` returns `status`); work-item `description.md` and `spec.md` render as distinct fields; absent field = absent path; directory paths render listings with status and summary first lines; offset paging reads the latest bytes for still-valid paths; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; live `current_goal.md` is never simultaneously archived |
+| 2 | Store + `loadWorkflowTree` | row load returns the full workflow / iteration / attempt / plan / work-item tree; goal chain across iterations (first = workflow goal, then each deferral); focus/deferred views track the latest declaration; `is_consistent_with_iteration_focus` flips on a later declaration; the drifted-attempt archive set per §8 table; budget counts attempts across refocuses; UI graph DTO builders can render the whole workflow from this one tree |
+| 3 | `loadWorkflowContext` + projection | `loadWorkflowContext` builds the §9 path universe from `loadWorkflowTree` and never reads the disk mirror; field render = verbatim field text with no embedded metadata (`ContextPage` returns `status`); work-item `description.md` and `spec.md` render as distinct fields; absent field = absent path; directory paths render listings with status and summary first lines; offset paging reads the latest bytes for still-valid paths; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; no separate active-goal markdown path exists anywhere in the universe |
 | 4 | Delegation | unchanged Phase 05 case 4, plus: the supervisor session registers before the tool result returns, a second `delegate_workflow` is rejected by the one-open guard, and the launched planner's `initialMessages` come from the default initial policy (goal present, focus-declaration directive present) |
 | 5 | Submission validation | a valid first payload records the pair and materializes described work items in-run before the planner terminates; a first payload without `iteration_focus`, with missing work-item `description`, with an unknown `agent_name`, or with dangling/cyclic `needs` returns an in-run error result and the same run corrects and resubmits successfully - no attempt burns for a correctable payload, and the accepted resubmission mutates exactly once |
 | 6 | Keep vs refocus | keep: focus view unchanged, prior attempts keep `is_consistent_with_iteration_focus = true`, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, the resolver errors on the old live path naming `archived/` among valid children, the retry directive carries only attempts with `is_consistent_with_iteration_focus` true and omits the standing `deferred_goal` |
-| 7 | Success cascade | unchanged Phase 05 case 6, plus: the next planner's `current_goal` is the promoted deferral; the closing iteration's goal appears under `archived/iteration_<id>/`; no deferral → workflow `Success` with `current_goal.md` still live |
+| 7 | Success cascade | unchanged Phase 05 case 6, plus: the next planner's iteration goal (inferred from the last iteration) is the promoted deferral; no deferral → workflow `Success` |
 | 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed`; a failing work item cancels its non-terminal siblings in the same transaction, interrupting each cancelled sibling's own run handle (`attempt_failed`, §2.20), and their late settlements no-op with no `Running` rows left |
 | 9 | Death + compose synthesis | unchanged Phase 05 case 8, plus: a composer that throws/times out/returns garbage synthesizes a failed settlement with `context_script_error` recorded; synthesis keys off the entity still being `Running` - a run whose in-run submission already landed settles as a no-op; no entity stays `Running`; synthesis enters the same §2.22 leaf cascade as a live failed submission |
 | 10 | DB guards + cancel | Phase 05 cases 9-10 re-run against the new model; competing tool submissions, settlements, guarded launch stamps, and cancel requests reload fresh state and use terminal/launch-token guards so the instrumented store sees at most one accepted mutation per entity transition and stale launches are skipped; cancellation runs the §2.22 top-down `cancel*` cascade and no-ops over already-terminal subtrees; every launched plan/work item pairs its stamped `agent_run_id` with its own held run handle, and interrupting a settled handle is a no-op |
@@ -1365,14 +1390,16 @@ Phase 05.1 is accepted when, in the combined Phase 05 + 05.1 implementation:
   first declaration (materialization-enforced), keep vs refocus with atomic
   resets, in-place supersession with `is_consistent_with_iteration_focus` flags,
   and a budget that spans refocuses,
-- `current_goal`, iteration focus/deferred views, and both archive sections
-  are derived views over append-only declarations - no mutable goal/focus
-  columns and no archive state exist anywhere in the schema,
+- the workflow goal is `goal`, the workflow's only stored content;
+  iteration goals are inferred from the last iteration and the
+  focus/deferred views are derived over append-only declarations - no
+  separate active-goal column, snapshot field, or projected file and no
+  archive state exist anywhere,
 - the context surface is the §9 per-field path universe: one fact one path,
   verbatim field files with status as DTO/listing metadata (never content),
-  latest-render overwrite reads, directory listings as the overview, derived
-  archives labeled by iteration/attempt, and no composed `spec.md`/`brief.md`
-  anywhere,
+  latest-render overwrite reads, directory listings as the overview, the
+  derived drifted-attempt archive labeled by attempt, and no composed
+  `spec.md`/`brief.md` anywhere,
 - the context tree persists as the §2.17 post-commit mirror under
   `.eos-agents/workflow/context/workflow_<id>/`, byte-identical to the
   virtual renders, pruned on relocation, with non-fatal write failures and
