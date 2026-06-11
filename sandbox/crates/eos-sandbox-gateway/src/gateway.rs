@@ -10,7 +10,7 @@ use serde_json::{json, Map, Value};
 
 use eos_sandbox_host::{ForwardError, SandboxHost, SandboxStatus};
 
-const OPS_JSON: &str = include_str!("../../../contract/ops.json");
+const OPS_JSON: &str = include_str!("../../eos-operation/ops.json");
 const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_REQUEST_BYTES: usize = eos_sandbox_host::MAX_REQUEST_BYTES;
 

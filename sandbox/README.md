@@ -26,26 +26,28 @@ eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 | `eos-sandbox-gateway` | bin | decode envelope, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
 | `eos-sandbox-host` | lib | host engine, duplicated protocol client, Docker runtime | depend on a workspace-internal crate |
 | `eosd` / `eos-daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
-| `contract/` | data | the protocol: op catalog, fixtures, prose | contain code |
+| `crates/eos-operation/ops.json` | data | reviewed static op catalog | drift from `eosd dump-ops` |
+| `contract/` | data | protocol fixtures and prose | contain code |
 | `eos-layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
 
 **Isolation law:** no compiled code is shared across the host/box boundary.
-The only shared artifact is `contract/` (data + prose); both sides prove
-conformance against it, and `cargo run -p xtask -- check-contract` is the
-drift gate.
+The shared artifacts are `crates/eos-operation/ops.json` plus `contract/`
+(fixtures + prose); both sides prove conformance against them, and
+`cargo run -p xtask -- check-contract` is the drift gate.
 
 ## The pieces
 
-- `contract/` — `ops.json` (the op catalog: canonical `sandbox.*` names,
-  visibility, routing metadata), `PROTOCOL.md`
-  (framing/auth/errors/canonicalization), and the immutable golden fixtures.
+- `crates/eos-operation/ops.json` — the op catalog: canonical `sandbox.*`
+  names, visibility, routing metadata, and protocol version.
+- `contract/` — `PROTOCOL.md` (framing/auth/errors/canonicalization) and the
+  immutable golden fixtures.
 - `crates/` — the workspace. Host side: `eos-sandbox-gateway`,
   `eos-sandbox-host`. Box
   side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol),
   `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command-session`,
   `eos-operation`, `eos-workspace`, and `eos-plugin`.
-- `docs/API.md` — the public op reference, generated from `contract/ops.json`
-  (`cargo run -p xtask -- gen-docs`).
+- `docs/API.md` — the public op reference, generated from
+  `crates/eos-operation/ops.json` (`cargo run -p xtask -- gen-docs`).
 - `docs/contract/` — the frozen historical wire/CAS/audit contracts.
 - `config/prd.yml` — the single daemon config baseline (see `config/README.md`).
 - `dist/` — packaged static `eosd` binaries uploaded into sandbox containers.
@@ -56,9 +58,9 @@ drift gate.
 # the contract drift gate (CI-required)
 cargo run -p xtask -- check-contract
 
-# regenerate the catalog artifact and its rendered doc after editing the
-# catalog (crates/eos-daemon/src/wire/ops.rs)
-cargo run -p eosd -- dump-ops > contract/ops.json
+# regenerate the catalog artifact and its rendered doc after editing
+# eos_operation::core::ops
+cargo run -p eosd -- dump-ops > crates/eos-operation/ops.json
 cargo run -p xtask -- gen-docs
 
 # package the in-container daemon binary (dist/eosd-linux-amd64)

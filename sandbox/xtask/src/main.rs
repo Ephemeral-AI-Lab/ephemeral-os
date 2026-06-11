@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     }
 }
 
-/// Regenerate `docs/API.md` from the committed `contract/ops.json`.
+/// Regenerate `docs/API.md` from the committed `crates/eos-operation/ops.json`.
 fn gen_docs() -> Result<()> {
     let root = workspace_root()?;
     let rendered = render_api_doc(&root)?;
@@ -47,13 +47,13 @@ fn gen_docs() -> Result<()> {
     Ok(())
 }
 
-/// Render the API doc deterministically from `contract/ops.json`.
+/// Render the API doc deterministically from `crates/eos-operation/ops.json`.
 fn render_api_doc(root: &Path) -> Result<String> {
-    let ops_path = root.join("contract").join("ops.json");
+    let ops_path = op_catalog_path(root);
     let document: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(&ops_path).with_context(|| format!("read {}", ops_path.display()))?,
     )
-    .context("parse contract/ops.json")?;
+    .context("parse crates/eos-operation/ops.json")?;
     let protocol_version = document
         .get("protocol_version")
         .and_then(serde_json::Value::as_i64)
@@ -98,7 +98,7 @@ fn render_api_doc(root: &Path) -> Result<String> {
     let mut body = String::new();
     body.push_str("# Sandbox API — op catalog\n\n");
     body.push_str(
-        "GENERATED from `contract/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
+        "GENERATED from `crates/eos-operation/ops.json` by `cargo run -p xtask -- gen-docs`.\n\
          Do not edit by hand: `cargo run -p xtask -- check-contract` fails when\n\
          this file drifts from the committed catalog.\n\n",
     );
@@ -145,14 +145,14 @@ fn render_api_doc(root: &Path) -> Result<String> {
     Ok(body)
 }
 
-/// The CI drift gate for `contract/` (SPEC §9):
-/// 1. `eosd dump-ops` must equal the committed `contract/ops.json`.
+/// The CI drift gate for the sandbox contract:
+/// 1. `eosd dump-ops` must equal the committed `crates/eos-operation/ops.json`.
 /// 2. Name integrity: canonical names unique.
 /// 3. Both sides' conformance test suites pass against `contract/fixtures/`.
 fn check_contract() -> Result<()> {
     let root = workspace_root()?;
 
-    let committed_path = root.join("contract").join("ops.json");
+    let committed_path = op_catalog_path(&root);
     let committed = fs::read_to_string(&committed_path)
         .with_context(|| format!("read {}", committed_path.display()))?;
     let generated = capture_stdout(
@@ -162,8 +162,8 @@ fn check_contract() -> Result<()> {
     )?;
     if committed != generated {
         bail!(
-            "contract/ops.json is stale: regenerate with \
-             `cargo run -p eosd -- dump-ops > contract/ops.json` and review the diff"
+            "crates/eos-operation/ops.json is stale: regenerate with \
+             `cargo run -p eosd -- dump-ops > crates/eos-operation/ops.json`"
         );
     }
     check_name_integrity(&committed)?;
@@ -217,11 +217,11 @@ const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
 
 fn check_name_integrity(ops_json: &str) -> Result<()> {
     let document: serde_json::Value =
-        serde_json::from_str(ops_json).context("parse contract/ops.json")?;
+        serde_json::from_str(ops_json).context("parse crates/eos-operation/ops.json")?;
     let ops = document
         .get("ops")
         .and_then(serde_json::Value::as_array)
-        .context("contract/ops.json must carry an `ops` array")?;
+        .context("crates/eos-operation/ops.json must carry an `ops` array")?;
 
     let mut names = std::collections::BTreeSet::new();
     for op in ops {
@@ -230,7 +230,7 @@ fn check_name_integrity(ops_json: &str) -> Result<()> {
             .and_then(serde_json::Value::as_str)
             .context("catalog op missing `name`")?;
         if !names.insert(name) {
-            bail!("canonical name claimed twice in contract/ops.json: {name}");
+            bail!("canonical name claimed twice in crates/eos-operation/ops.json: {name}");
         }
     }
     Ok(())
@@ -390,6 +390,10 @@ fn workspace_root() -> Result<PathBuf> {
         .context("xtask manifest directory has no parent")
 }
 
+fn op_catalog_path(root: &Path) -> PathBuf {
+    root.join("crates").join("eos-operation").join("ops.json")
+}
+
 fn absolutize(root: &Path, path: &Path) -> PathBuf {
     if path.is_absolute() {
         path.to_path_buf()
@@ -482,15 +486,15 @@ fn sha256_file(path: &Path) -> Result<String> {
 }
 
 fn read_protocol_version(root: &Path) -> Result<i64> {
-    let path = root.join("contract").join("ops.json");
+    let path = op_catalog_path(root);
     let document: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(&path).with_context(|| format!("read {}", path.display()))?,
     )
-    .context("parse contract/ops.json")?;
+    .context("parse crates/eos-operation/ops.json")?;
     document
         .get("protocol_version")
         .and_then(serde_json::Value::as_i64)
-        .context("contract/ops.json missing protocol_version")
+        .context("crates/eos-operation/ops.json missing protocol_version")
 }
 
 fn write_protocol_version(out_dir: &Path, protocol_version: i64) -> Result<()> {
@@ -584,10 +588,10 @@ fn print_help() {
 xtask commands:
   package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross] [--no-build]
           [--sign --minisign-key <path>]
-  check-contract    verify contract/ops.json matches `eosd dump-ops`, alias
+  check-contract    verify crates/eos-operation/ops.json matches `eosd dump-ops`, alias
                     integrity holds, docs/API.md is fresh, and the
                     conformance suites pass
-  gen-docs          regenerate docs/API.md from contract/ops.json
+  gen-docs          regenerate docs/API.md from crates/eos-operation/ops.json
 
 Targets:
   {AMD64_TARGET} -> eosd-linux-amd64

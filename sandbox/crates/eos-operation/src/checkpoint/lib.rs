@@ -16,6 +16,7 @@
 #![forbid(unsafe_code)]
 
 mod commit;
+pub mod ops;
 
 use std::collections::BTreeMap;
 use std::path::Path;

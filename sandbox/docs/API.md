@@ -1,6 +1,6 @@
 # Sandbox API — op catalog
 
-GENERATED from `contract/ops.json` by `cargo run -p xtask -- gen-docs`.
+GENERATED from `crates/eos-operation/ops.json` by `cargo run -p xtask -- gen-docs`.
 Do not edit by hand: `cargo run -p xtask -- check-contract` fails when
 this file drifts from the committed catalog.
 

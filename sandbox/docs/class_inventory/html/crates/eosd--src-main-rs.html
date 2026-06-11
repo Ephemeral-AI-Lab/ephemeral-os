@@ -78,10 +78,10 @@
         <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
-        <span class="rs-comment">// The committed `contract/ops.json`; `cargo xtask check-contract`</span>
-        <span class="rs-comment">// fails when this output drifts from the checked-in artifact.</span>
+        <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
+        <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
         <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
-            print!(&quot;{}&quot;, eos_daemon::wire::ops::ops_json_document());
+            print!(&quot;{}&quot;, eos_operation::core::ops::ops_json_document());
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(
@@ -228,10 +228,10 @@
         <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
-        <span class="rs-comment">// The committed `contract/ops.json`; `cargo xtask check-contract`</span>
-        <span class="rs-comment">// fails when this output drifts from the checked-in artifact.</span>
+        <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
+        <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
         <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
-            print!(&quot;{}&quot;, eos_daemon::wire::ops::ops_json_document());
+            print!(&quot;{}&quot;, eos_operation::core::ops::ops_json_document());
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(

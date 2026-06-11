@@ -353,7 +353,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
 
 #[test]
 fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> TestResult {
-    let _env_guard = crate::ops::isolation::lock_isolated_test_state();
+    let _env_guard = crate::op_adapter::isolation::lock_isolated_test_state();
     let (layer_stack_root, _workspace_root) = test_bound_workspace("plugin-iws-block")?;
     let scratch = some_value(
         layer_stack_root.parent(),

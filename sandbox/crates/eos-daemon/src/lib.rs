@@ -4,6 +4,8 @@
 //!
 #![forbid(unsafe_code)]
 
+#[path = "dispatch/builtin_handlers.rs"]
+pub(crate) mod builtin_handlers;
 #[path = "runtime/context.rs"]
 pub(crate) mod context;
 #[path = "dispatch/dispatcher.rs"]
@@ -12,7 +14,7 @@ pub(crate) mod dispatcher;
 pub(crate) mod error;
 #[path = "runtime/invocation_registry.rs"]
 pub(crate) mod invocation_registry;
-pub(crate) mod ops;
+pub(crate) mod op_adapter;
 #[path = "runtime/request_args.rs"]
 pub(crate) mod request_args;
 #[path = "runtime/response.rs"]

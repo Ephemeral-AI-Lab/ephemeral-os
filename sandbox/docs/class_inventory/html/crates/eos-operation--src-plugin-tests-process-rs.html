@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-operation · src/plugin/tests/process.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-operation File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>47</b><span>modules</span></div>
+  <div><b>346</b><span>items</span></div>
+  <div><b>296</b><span>fields</span></div>
+  <div><b>145</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-operation.html"><span>commit.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-lib-rs.html"><span>lib.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-command-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-operation--src-command-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-operation--src-command-service-rs.html"><span>service.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-command-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-tests-registry-rs.html"><span>registry.rs</span><small>0/4</small></a></li></ul></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-control-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-control-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-core-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-ops-rs.html"><span>ops.rs</span><small>5/5</small></a></li><li><a class="file-link" href="eos-operation--src-core-outcome-rs.html"><span>outcome.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-lib-rs.html"><span>lib.rs</span><small>12/7</small></a></li><li><a class="file-link" href="eos-operation--src-file-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-file-port-rs.html"><span>port.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/7</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-isolation-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-isolation-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-tests-ensure-args-rs.html"><span>ensure_args.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-package-rs.html"><span>package.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eos-operation--src-plugin-tests-process-rs.html"><span>process.rs</span><small>1/10</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li><li><span class="folder">sandbox</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-sandbox-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-sandbox-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-workspace-run-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-workspace-run-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="plugin::tests::process crates/eos-operation/src/plugin/tests/process.rs TestResult key process_spec_uses_stable_eos_plugin_socket_and_env process_spec_key_changes_socket_path process_spec_rejects_empty_command spawned_process_reports_running_then_tears_down spawn_connected_accepts_ppc_socket new_spec_for_test new_spec_with_socket_root test_socket_root wait_for_socket NoLaunch impl eos_workspace :: NsRunnerLauncher for NoLaunch">
+  <div class="module-head">
+    <div>
+      <h2>src/plugin/tests/process.rs</h2>
+      <p class="path">module <code>plugin::tests::process</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>10 fns</span>
+      <span>3 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-NoLaunch-198" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct NoLaunch private struct NoLaunch crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NoLaunch</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a></code>
+  <p class="docstring">Overlay-free spawns never reach the launcher; fail loudly if one does.</p>
+  <div class="tags"></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl eos_workspace :: NsRunnerLauncher for <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a></code></summary><table><tbody><tr id="method-run-202"><td>method</td><td>run</td><td><code>fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#method-run-202">run</a> (&amp; self , _request : &amp; eos_namespace :: protocol :: RunRequest ,) -&gt; Result &lt; eos_namespace :: protocol :: RunResult , eos_workspace :: LaunchError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-run-202">run</a>(
+        &amp;<span class="rs-self">self</span>,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;eos_namespace::protocol::<span class="rs-type">RunResult</span>, eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Err</span>(eos_workspace::<span class="rs-type">LaunchError</span>::<span class="rs-type">Failed</span>(
+            &quot;no launcher <span class="rs-kw">in</span> this test&quot;.to_owned(),
+        ))
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-detached-211"><td>method</td><td>spawn_detached</td><td><code>fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#method-spawn-detached-211">spawn_detached</a> (&amp; self , _request : &amp; eos_namespace :: protocol :: RunRequest ,) -&gt; Result &lt; std :: process :: Child , eos_workspace :: LaunchError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-spawn-detached-211">spawn_detached</a>(
+        &amp;<span class="rs-self">self</span>,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;std::process::<span class="rs-type">Child</span>, eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Err</span>(eos_workspace::<span class="rs-type">LaunchError</span>::<span class="rs-type">Failed</span>(
+            &quot;no launcher <span class="rs-kw">in</span> this test&quot;.to_owned(),
+        ))
+    }
+</code></pre>
+</details></td></tr><tr id="method-remount-in-220"><td>method</td><td>remount_in</td><td><code>fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#method-remount-in-220">remount_in</a> (&amp; self , _target_pid : u32 , _request : &amp; eos_namespace :: protocol :: RunRequest , _timeout : Duration ,) -&gt; Result &lt; () , eos_workspace :: LaunchError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-remount-in-220">remount_in</a>(
+        &amp;<span class="rs-self">self</span>,
+        _target_pid: u32,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+        _timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:198</p>
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-14" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>TestResult</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">type <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> = std :: result :: Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:14</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-key-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn key private fn key (profile : &amp; str) -&gt; std :: result :: Result &lt; PluginServiceKey , PluginError &gt; crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>key</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a> (profile : &amp; str) -&gt; std :: result :: Result &lt; PluginServiceKey , PluginError &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(profile: &amp;str) -&gt; std::result::<span class="rs-type">Result</span>&lt;<span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-type">PluginServiceKey</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(<span class="rs-type">PluginServiceKeyParts</span> {
+        layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+        workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+        plugin_id: &quot;demo&quot;.to_owned(),
+        plugin_digest: &quot;digest-a&quot;.to_owned(),
+        service_id: &quot;indexer&quot;.to_owned(),
+        service_profile_digest: profile.to_owned(),
+        service_mode: <span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+        refresh_strategy: <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:16</p>
+</article><article id="item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_uses_stable_eos_plugin_socket_and_env private fn process_spec_uses_stable_eos_plugin_socket_and_env () -&gt; TestResult crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_spec_uses_stable_eos_plugin_socket_and_env</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-29">process_spec_uses_stable_eos_plugin_socket_and_env</a> () -&gt; <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-29">process_spec_uses_stable_eos_plugin_socket_and_env</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![&quot;demo-indexer&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+        1,
+    )?;
+    <span class="rs-kw">let</span> env = spec.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>();
+
+    assert!(env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>].starts_with(&quot;/eos/plugin/ppc/&quot;));
+    assert!(std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(&amp;env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>])
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case(&quot;sock&quot;)));
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>], &quot;/eos/plugin/layer-stack&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>], &quot;/eos/plugin/workspace&quot;);
+    assert_eq!(
+        env[<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>],
+        &quot;/eos/runtime/plugins/catalog/demo/digest-a&quot;
+    );
+    assert_eq!(
+        env[<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>],
+        &quot;/eos/runtime/packages/demo/digest-a&quot;
+    );
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_ID</span>], &quot;demo&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>], &quot;indexer&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>], &quot;1&quot;);
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:29</p>
+</article><article id="item-fn-process-spec-key-changes-socket-path-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_key_changes_socket_path private fn process_spec_key_changes_socket_path () -&gt; TestResult crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_spec_key_changes_socket_path</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-key-changes-socket-path-58">process_spec_key_changes_socket_path</a> () -&gt; <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-key-changes-socket-path-58">process_spec_key_changes_socket_path</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> first = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(<a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+    <span class="rs-kw">let</span> second = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(<a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-b&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+
+    assert_ne!(
+        first.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>],
+        second.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>]
+    );
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:58</p>
+</article><article id="item-fn-process-spec-rejects-empty-command-70" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_rejects_empty_command private fn process_spec_rejects_empty_command () -&gt; TestResult crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>process_spec_rejects_empty_command</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-rejects-empty-command-70">process_spec_rejects_empty_command</a> () -&gt; <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-rejects-empty-command-70">process_spec_rejects_empty_command</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> service_key = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?;
+    assert!(matches!(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(service_key, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(), 1),
+        <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;launch command&quot;)
+    ));
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:70</p>
+</article><article id="item-fn-spawned-process-reports-running-then-tears-down-80" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawned_process_reports_running_then_tears_down private fn spawned_process_reports_running_then_tears_down () -&gt; TestResult crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawned_process_reports_running_then_tears_down</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-80">spawned_process_reports_running_then_tears_down</a> () -&gt; <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-80">spawned_process_reports_running_then_tears_down</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![
+            &quot;/bin/sh&quot;.to_owned(),
+            &quot;-c&quot;.to_owned(),
+            &quot;test \&quot;$<span class="rs-type">EOS_PLUGIN_SERVICE_ID</span>\&quot; = indexer &amp;&amp; sleep 30&quot;.to_owned(),
+        ],
+        1,
+    )?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-55">spawn</a>(&amp;spec)?;
+
+    <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-lib-rs.html#method-status-298">status</a>();
+    assert_eq!(status.service_id, &quot;indexer&quot;);
+    assert!(status.running);
+    assert!(status.pid &gt; 0);
+
+    process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#method-teardown-167">teardown</a>();
+    <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-lib-rs.html#method-status-298">status</a>();
+    assert!(!status.running);
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:80</p>
+</article><article id="item-fn-spawn-connected-accepts-ppc-socket-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_connected_accepts_ppc_socket private fn spawn_connected_accepts_ppc_socket () -&gt; TestResult crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>spawn_connected_accepts_ppc_socket</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-104">spawn_connected_accepts_ppc_socket</a> () -&gt; <a class="symbol-link" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-104">spawn_connected_accepts_ppc_socket</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-test-socket-root-171">test_socket_root</a>(&quot;spawn-connected&quot;);
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![&quot;/bin/sh&quot;.to_owned(), &quot;-c&quot;.to_owned(), &quot;sleep 30&quot;.to_owned()],
+        1,
+        &amp;root,
+    )?;
+    <span class="rs-kw">let</span> socket_root = root.clone();
+    <span class="rs-kw">let</span> connector = std::thread::<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-55">spawn</a>(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-wait-for-socket-177">wait_for_socket</a>(&amp;socket_root)?;
+        std::os::unix::net::<span class="rs-type">UnixStream</span>::connect(socket).map(|_| ())
+    });
+
+    <span class="rs-kw">let</span> launcher = <a class="symbol-link rs-type" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a>;
+    <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> process, _client) =
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-connected-with-overlay-35">spawn_connected_with_overlay</a>(&amp;launcher, &amp;spec, <span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(5)) {
+            <span class="rs-type">Ok</span>(pair) =&gt; pair,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> _ = connector.join();
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+            }
+        };
+    <span class="rs-kw">match</span> connector.join() {
+        <span class="rs-type">Ok</span>(result) =&gt; result?,
+        <span class="rs-type">Err</span>(_) =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;connector thread panicked&quot;).into());
+        }
+    }
+    process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#method-teardown-167">teardown</a>();
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:104</p>
+</article><article id="item-fn-new-spec-for-test-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_spec_for_test private fn new_spec_for_test (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; Result &lt; PluginProcessSpec , PluginError &gt; crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>new_spec_for_test</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; Result &lt; <a class="symbol-link" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a> , PluginError &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+    key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
+    command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    ppc_protocol_version: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-kw">let</span> socket_root = eos_config::configs::daemon::<span class="rs-type">PluginRuntimeConfig</span>::default().ppc_root;
+    <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(key, command, ppc_protocol_version, socket_root)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:139</p>
+</article><article id="item-fn-new-spec-with-socket-root-148" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_spec_with_socket_root private fn new_spec_with_socket_root (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; PluginProcessSpec , PluginError &gt; crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>new_spec_with_socket_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a> (key : eos_plugin :: PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a> , PluginError &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(
+    key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
+    command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    ppc_protocol_version: u32,
+    socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-kw">let</span> package_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;/eos/runtime/plugins/catalog&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest);
+    <span class="rs-kw">let</span> dependency_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;/eos/runtime/packages&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest);
+    <a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-new-with-package-paths-72">new_with_package_paths</a>(
+        key,
+        command,
+        package_root,
+        dependency_root,
+        <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;.&quot;),
+        ppc_protocol_version,
+        socket_root,
+    )
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:148</p>
+</article><article id="item-fn-test-socket-root-171" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_socket_root private fn test_socket_root (name : &amp; str) -&gt; PathBuf crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>test_socket_root</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-test-socket-root-171">test_socket_root</a> (name : &amp; str) -&gt; PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-test-socket-root-171">test_socket_root</a>(name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;target&quot;).join(format!(&quot;ppc-{name}-{}&quot;, std::process::id()));
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+    root
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:171</p>
+</article><article id="item-fn-wait-for-socket-177" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_socket private fn wait_for_socket (root : &amp; Path) -&gt; std :: io :: Result &lt; PathBuf &gt; crates/eos-operation/src/plugin/tests/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>wait_for_socket</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-wait-for-socket-177">wait_for_socket</a> (root : &amp; Path) -&gt; std :: io :: Result &lt; PathBuf &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-wait-for-socket-177">wait_for_socket</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; std::io::<span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(5);
+    loop {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) {
+            <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+                <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-operation.html#method-path-168">path</a>();
+                <span class="rs-kw">if</span> path.extension().and_then(|ext| ext.to_str()) == <span class="rs-type">Some</span>(&quot;sock&quot;) {
+                    <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(path);
+                }
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                format!(&quot;timed out waiting <span class="rs-kw">for</span> socket under {}&quot;, root.display()),
+            ));
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/plugin/tests/process.rs:177</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-operation/src/plugin/tests/process.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Unit tests for plugin service process specs (spec/env, spawn, PPC connect).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Referenced from `src/process.rs` via `#[path]` so they can</span>
+<span class="rs-comment">//! reach the `pub(super)` spec/process types and `ENV_*` constants.</span>
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::route::{
+    <span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>, <span class="rs-type">ENV_PLUGIN_ID</span>, <span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>,
+    <span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>, <span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>, <span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>,
+    <span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>, <span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginServiceKeyParts</span>, <span class="rs-type">RefreshStrategy</span>, <span class="rs-type">ServiceMode</span>};
+
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> = std::result::<span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(profile: &amp;str) -&gt; std::result::<span class="rs-type">Result</span>&lt;<span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-type">PluginServiceKey</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(<span class="rs-type">PluginServiceKeyParts</span> {
+        layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+        workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+        plugin_id: &quot;demo&quot;.to_owned(),
+        plugin_digest: &quot;digest-a&quot;.to_owned(),
+        service_id: &quot;indexer&quot;.to_owned(),
+        service_profile_digest: profile.to_owned(),
+        service_mode: <span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+        refresh_strategy: <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+    })
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-29">process_spec_uses_stable_eos_plugin_socket_and_env</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![&quot;demo-indexer&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+        1,
+    )?;
+    <span class="rs-kw">let</span> env = spec.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>();
+
+    assert!(env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>].starts_with(&quot;/eos/plugin/ppc/&quot;));
+    assert!(std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(&amp;env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>])
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case(&quot;sock&quot;)));
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>], &quot;/eos/plugin/layer-stack&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>], &quot;/eos/plugin/workspace&quot;);
+    assert_eq!(
+        env[<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>],
+        &quot;/eos/runtime/plugins/catalog/demo/digest-a&quot;
+    );
+    assert_eq!(
+        env[<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>],
+        &quot;/eos/runtime/packages/demo/digest-a&quot;
+    );
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_ID</span>], &quot;demo&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>], &quot;indexer&quot;);
+    assert_eq!(env[<span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>], &quot;1&quot;);
+    <span class="rs-type">Ok</span>(())
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-key-changes-socket-path-58">process_spec_key_changes_socket_path</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> first = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(<a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+    <span class="rs-kw">let</span> second = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(<a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-b&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+
+    assert_ne!(
+        first.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>],
+        second.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-environment-104">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>]
+    );
+    <span class="rs-type">Ok</span>(())
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-process-spec-rejects-empty-command-70">process_spec_rejects_empty_command</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> service_key = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?;
+    assert!(matches!(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(service_key, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(), 1),
+        <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;launch command&quot;)
+    ));
+    <span class="rs-type">Ok</span>(())
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-80">spawned_process_reports_running_then_tears_down</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![
+            &quot;/bin/sh&quot;.to_owned(),
+            &quot;-c&quot;.to_owned(),
+            &quot;test \&quot;$<span class="rs-type">EOS_PLUGIN_SERVICE_ID</span>\&quot; = indexer &amp;&amp; sleep 30&quot;.to_owned(),
+        ],
+        1,
+    )?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-55">spawn</a>(&amp;spec)?;
+
+    <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-lib-rs.html#method-status-298">status</a>();
+    assert_eq!(status.service_id, &quot;indexer&quot;);
+    assert!(status.running);
+    assert!(status.pid &gt; 0);
+
+    process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#method-teardown-167">teardown</a>();
+    <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-lib-rs.html#method-status-298">status</a>();
+    assert!(!status.running);
+    <span class="rs-type">Ok</span>(())
+}
+
+#[test]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-104">spawn_connected_accepts_ppc_socket</a>() -&gt; <a class="symbol-link rs-type" href="eos-operation--src-file-tests-rs.html#item-type-TestResult-64">TestResult</a> {
+    <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-test-socket-root-171">test_socket_root</a>(&quot;spawn-connected&quot;);
+    <span class="rs-kw">let</span> spec = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(
+        <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-key-16">key</a>(&quot;profile-a&quot;)?,
+        vec![&quot;/bin/sh&quot;.to_owned(), &quot;-c&quot;.to_owned(), &quot;sleep 30&quot;.to_owned()],
+        1,
+        &amp;root,
+    )?;
+    <span class="rs-kw">let</span> socket_root = root.clone();
+    <span class="rs-kw">let</span> connector = std::thread::<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-55">spawn</a>(<span class="rs-kw">move</span> || {
+        <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-wait-for-socket-177">wait_for_socket</a>(&amp;socket_root)?;
+        std::os::unix::net::<span class="rs-type">UnixStream</span>::connect(socket).map(|_| ())
+    });
+
+    <span class="rs-kw">let</span> launcher = <a class="symbol-link rs-type" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a>;
+    <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> process, _client) =
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#item-fn-spawn-connected-with-overlay-35">spawn_connected_with_overlay</a>(&amp;launcher, &amp;spec, <span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(5)) {
+            <span class="rs-type">Ok</span>(pair) =&gt; pair,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> _ = connector.join();
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+            }
+        };
+    <span class="rs-kw">match</span> connector.join() {
+        <span class="rs-type">Ok</span>(result) =&gt; result?,
+        <span class="rs-type">Err</span>(_) =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;connector thread panicked&quot;).into());
+        }
+    }
+    process.<a class="symbol-link rs-fn" href="eos-operation--src-plugin-process-rs.html#method-teardown-167">teardown</a>();
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-for-test-139">new_spec_for_test</a>(
+    key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
+    command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    ppc_protocol_version: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-kw">let</span> socket_root = eos_config::configs::daemon::<span class="rs-type">PluginRuntimeConfig</span>::default().ppc_root;
+    <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(key, command, ppc_protocol_version, socket_root)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-new-spec-with-socket-root-148">new_spec_with_socket_root</a>(
+    key: eos_plugin::<span class="rs-type">PluginServiceKey</span>,
+    command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    ppc_protocol_version: u32,
+    socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>, <span class="rs-type">PluginError</span>&gt; {
+    <span class="rs-kw">let</span> package_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;/eos/runtime/plugins/catalog&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest);
+    <span class="rs-kw">let</span> dependency_root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;/eos/runtime/packages&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest);
+    <a class="symbol-link rs-type" href="eos-operation--src-plugin-route-rs.html#item-struct-PluginProcessSpec-58">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-operation--src-plugin-route-rs.html#method-new-with-package-paths-72">new_with_package_paths</a>(
+        key,
+        command,
+        package_root,
+        dependency_root,
+        <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;.&quot;),
+        ppc_protocol_version,
+        socket_root,
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-test-socket-root-171">test_socket_root</a>(name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-25">from</a>(&quot;target&quot;).join(format!(&quot;ppc-{name}-{}&quot;, std::process::id()));
+    <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+    root
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#item-fn-wait-for-socket-177">wait_for_socket</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; std::io::<span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(5);
+    loop {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) {
+            <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+                <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-operation.html#method-path-168">path</a>();
+                <span class="rs-kw">if</span> path.extension().and_then(|ext| ext.to_str()) == <span class="rs-type">Some</span>(&quot;sock&quot;) {
+                    <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(path);
+                }
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                format!(&quot;timed out waiting <span class="rs-kw">for</span> socket under {}&quot;, root.display()),
+            ));
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+
+<span class="rs-comment">/// Overlay-free spawns never reach the launcher; fail loudly if one does.</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a>;
+
+<span class="rs-kw">impl</span> eos_workspace::<span class="rs-type">NsRunnerLauncher</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-operation--src-plugin-tests-process-rs.html#item-struct-NoLaunch-198">NoLaunch</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-run-202">run</a>(
+        &amp;<span class="rs-self">self</span>,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;eos_namespace::protocol::<span class="rs-type">RunResult</span>, eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Err</span>(eos_workspace::<span class="rs-type">LaunchError</span>::<span class="rs-type">Failed</span>(
+            &quot;no launcher <span class="rs-kw">in</span> this test&quot;.to_owned(),
+        ))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-spawn-detached-211">spawn_detached</a>(
+        &amp;<span class="rs-self">self</span>,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;std::process::<span class="rs-type">Child</span>, eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Err</span>(eos_workspace::<span class="rs-type">LaunchError</span>::<span class="rs-type">Failed</span>(
+            &quot;no launcher <span class="rs-kw">in</span> this test&quot;.to_owned(),
+        ))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-plugin-tests-process-rs.html#method-remount-in-220">remount_in</a>(
+        &amp;<span class="rs-self">self</span>,
+        _target_pid: u32,
+        _request: &amp;eos_namespace::protocol::<span class="rs-type">RunRequest</span>,
+        _timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), eos_workspace::<span class="rs-type">LaunchError</span>&gt; {
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

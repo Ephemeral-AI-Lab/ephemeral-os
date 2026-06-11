@@ -2,7 +2,7 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use anyhow::Result;
-use eos_daemon::wire::ops;
+use eos_operation::core::ops;
 use serde_json::json;
 
 use crate::helpers::{pressure_levels, request_with_identity, workload_timeout_s};

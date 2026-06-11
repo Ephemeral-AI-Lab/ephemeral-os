@@ -135,10 +135,16 @@ export interface AgentRunFailure {
 export type AgentRunStatus =
   | {
       status: "completed";
-      /** The assistant message that carried the terminal tool call. */
+      /**
+       * The assistant message that carried the terminal tool call, or the
+       * final text reply in text mode.
+       */
       final_message: Message;
       stop_reason?: StopReason;
-      /** The terminal tool result's structured content. */
+      /**
+       * The terminal tool result's structured content, or
+       * `assistantText(final_message)` on a text exit.
+       */
       submission?: JsonValue;
     }
   | { status: "cancelled"; reason: string }

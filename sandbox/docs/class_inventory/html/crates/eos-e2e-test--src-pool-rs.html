@@ -446,7 +446,7 @@
 <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Condvar</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
 
 <span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Result</span>};
-<span class="rs-kw">use</span> eos_daemon::wire::ops;
+<span class="rs-kw">use</span> eos_operation::core::ops;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{error_kind, is_success, <span class="rs-type">ProtocolClient</span>};

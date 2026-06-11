@@ -7,7 +7,7 @@
 //! linearly (superseded layers are squashed + reclaimed).
 
 use anyhow::Result;
-use eos_daemon::wire::ops;
+use eos_operation::core::ops;
 use serde_json::json;
 
 use crate::support::{as_i64, live_pool_or_skip, wait_for_active_leases};

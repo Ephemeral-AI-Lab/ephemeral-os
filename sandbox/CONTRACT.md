@@ -2,9 +2,10 @@
 
 The sandbox system pins two version surfaces that must move deliberately.
 A careless bump silently breaks the thin-client handshake or the on-disk
-manifest read path. The binding host↔box artifact is `contract/`
-(`ops.json` + `PROTOCOL.md` + `fixtures/`); no compiled code crosses that
-boundary, and `cargo run -p xtask -- check-contract` is the drift gate.
+manifest read path. The binding host<->box artifacts are
+`crates/eos-operation/ops.json` plus `contract/` (`PROTOCOL.md` +
+`fixtures/`); no compiled code crosses that boundary, and
+`cargo run -p xtask -- check-contract` is the drift gate.
 
 ## 1. Wire protocol version
 
@@ -13,8 +14,10 @@ boundary, and `cargo run -p xtask -- check-contract` is the drift gate.
   request. The daemon does **not** gate on it today (inert hook); it is present
   so a future version can branch.
 - Pinned in three places that the conformance suites hold in lockstep:
-  - `contract/ops.json` (`protocol_version`) — the reviewed artifact;
-  - `crates/eos-daemon/src/wire/version.rs` — the box side;
+  - `crates/eos-operation/ops.json` (`protocol_version`) — the reviewed
+    catalog artifact;
+  - `crates/eos-operation/src/core/ops.rs` — the catalog renderer and protocol
+    version source;
   - `crates/eos-sandbox-host/src/protocol.rs` — the host side's deliberate copy
     (no shared crate; drift is caught by the fixture conformance tests, not
     the compiler).
@@ -33,9 +36,10 @@ boundary, and `cargo run -p xtask -- check-contract` is the drift gate.
 When either version must change:
 
 1. Bump the constant in its owning location(s) above, regenerate
-   `contract/ops.json` (`cargo run -p eosd -- dump-ops > contract/ops.json`)
-   and `docs/API.md` (`cargo run -p xtask -- gen-docs`), and update this file
-   in the same change. `check-contract` enforces the lockstep.
+   `crates/eos-operation/ops.json`
+   (`cargo run -p eosd -- dump-ops > crates/eos-operation/ops.json`) and
+   `docs/API.md` (`cargo run -p xtask -- gen-docs`), and update this file in
+   the same change. `check-contract` enforces the lockstep.
 2. The golden fixtures (`contract/fixtures/`) are **immutable ground truth**
    captured from the original Python runtime, which has been removed — they
    can no longer be regenerated. Never edit a fixture to match code. One

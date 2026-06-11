@@ -1,6 +1,6 @@
 use anyhow::Result;
-use eos_daemon::wire::ops;
 use eos_e2e_test::cas::looks_like_sha256;
+use eos_operation::core::ops;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};

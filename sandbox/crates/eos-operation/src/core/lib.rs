@@ -1,3 +1,5 @@
+pub mod ops;
+
 mod outcome;
 
 pub use outcome::{

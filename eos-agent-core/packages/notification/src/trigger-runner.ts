@@ -75,7 +75,8 @@ export interface NotificationTriggerEngineDeps {
   /** Background-session list at fire time, not park time. */
   listBackgroundSessions: () => readonly BackgroundSessionSnapshot[];
   runSnapshot: () => AgentRunSnapshot;
-  terminalTool: string;
+  /** `null` when the run's profile terminates on text. */
+  terminalTool: string | null;
 }
 
 /**

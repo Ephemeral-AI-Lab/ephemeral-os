@@ -1,4 +1,4 @@
-import { toolUses, type ToolCallResult } from "@eos/contracts";
+import { assistantText, toolUses, type ToolCallResult } from "@eos/contracts";
 import { ProviderError, type UsageSnapshot } from "@eos/llm-client";
 import {
   systemNotificationMessage,
@@ -36,6 +36,8 @@ export interface AgentLoopContext {
   background?: BackgroundSessionSupervisor;
   /** Loop-lifecycle announcements (Phase 04.9); never throws or rejects. */
   observer?: LoopObserver;
+  /** How the run completes (Phase 04.10); `startAgentRun` fills the default. */
+  terminationMode: "terminal_tool" | "text";
 }
 
 /**
@@ -44,10 +46,14 @@ export interface AgentLoopContext {
  * classifies into exactly one `finish`, committed in the same synchronous
  * block as its decision so a late steer is never accepted-but-dropped.
  *
- * Run completion is exclusively a terminal tool result; bare text never
- * terminates (`maxTurns` backstops spin), and the engine appends no
- * reminder on a text turn — that nudge is a notification trigger rule
- * behind the `LoopObserver` port (Phase 04.9).
+ * Run completion depends on `terminationMode` (Phase 04.10). In
+ * `"terminal_tool"` mode it is exclusively a terminal tool result; bare
+ * text never terminates (`maxTurns` backstops spin). In `"text"` mode a
+ * bare-text turn finishes the run under the submission guard — no pending
+ * steers, no open background sessions — committed synchronously so no
+ * steer lands between the decision and the finish. Either way the engine
+ * appends no reminder on a text turn — that nudge is a notification
+ * trigger rule behind the `LoopObserver` port (Phase 04.9).
  */
 export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
   const { handle, conversation } = ctx;
@@ -84,6 +90,28 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       turns += 1;
       usage = addUsage(usage, turn.usage);
       const calls = toolUses(turn.message);
+      if (
+        calls.length === 0 &&
+        ctx.terminationMode === "text" &&
+        !handle.hasPendingSteers() &&
+        (ctx.background?.openBackgroundSessionCount() ?? 0) === 0
+      ) {
+        // The text exit (Phase 04.10): bare text completes the run under
+        // exactly the submission guard — open sessions (running plus
+        // settled-but-undelivered) and pending steers both block it; a
+        // running session parks below, an undelivered settlement drains on
+        // the next boundary. Synchronous from decision to finish, so a
+        // racing steer is never accepted-but-dropped, and the finishing
+        // turn announces no turnCompleted — a publish into a finished run
+        // informs nobody.
+        finish({
+          status: "completed",
+          final_message: turn.message,
+          stop_reason: turn.stop_reason,
+          submission: assistantText(turn.message),
+        });
+        return;
+      }
       await ctx.observer?.turnCompleted({
         turn: turns,
         maxTurns: ctx.maxTurns,

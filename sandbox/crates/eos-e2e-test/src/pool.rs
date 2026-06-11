@@ -10,7 +10,7 @@
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
-use eos_daemon::wire::ops;
+use eos_operation::core::ops;
 use serde_json::{json, Map, Value};
 
 use crate::client::{error_kind, is_success, ProtocolClient};

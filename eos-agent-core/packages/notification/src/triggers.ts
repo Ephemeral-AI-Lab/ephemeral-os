@@ -87,8 +87,11 @@ export interface TriggerPayload {
   event: "TurnCompleted" | "IdleTimeout";
   facts: TurnCompletedFacts | IdleTimeoutFacts;
   run: AgentRunSnapshot;
-  /** From the profile; scripts never hardcode submit_* names. */
-  terminal_tool: string;
+  /**
+   * From the profile; scripts never hardcode submit_* names. `null` when
+   * the profile terminates on text.
+   */
+  terminal_tool: string | null;
   /** Running plus settled-but-undelivered sessions for this run. */
   background_sessions: readonly BackgroundSessionSnapshot[];
 }

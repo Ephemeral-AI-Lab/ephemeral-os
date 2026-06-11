@@ -103,8 +103,8 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   Model `kind` as a `#[non_exhaustive]` enum (`api-non-exhaustive`) over the verified kinds
   (`invalid_envelope`,`bad_json`,`request_too_large`,`unauthorized`,`unknown_op`,`internal_error`,
   `forbidden`,`forbidden_in_isolated_workspace`,`lifecycle_in_progress`).
-- **There is NO `ping` op.** Liveness is `api.v1.heartbeat` (`{"invocation_ids":[String]}` →
-  `{"success":true,"touched":Int}`); readiness is `api.runtime.ready` (requires `layer_stack_root`).
+- **There is NO `ping` op.** Liveness is `sandbox.call.heartbeat` and
+  readiness is `sandbox.runtime.ready`.
   Do NOT invent a `ping` op.
 - Exit codes are constants: `CONNECT_FAILED = 97`, `IO_FAILED = 98`. `MAX_REQUEST_BYTES = 16 MiB`,
   `REQUEST_READ_TIMEOUT_S = 30.0`, `_CONNECT_RETRY_DELAYS_S = [0.25,0.5,1.0,2.0]`.
@@ -126,7 +126,8 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   `eos-plugin` is even narrower now:
   it is a pure contract/PPC crate, while snapshot/overlay/publish/process
   behavior stays in `eos_operation::plugin`. Verified edges (get these EXACTLY right):
-  - `contract/` → data/prose only; no compiled crate.
+  - `crates/eos-operation/ops.json` → reviewed static op catalog.
+  - `contract/` → protocol fixtures/prose only; no compiled crate.
   - `eos-layerstack` → storage, leases, CAS hashes, route/commit policy.
   - `eos-overlay` → overlayfs mechanics and captured path changes.
   - `eos-namespace` → single-threaded namespace holder/runner support.
@@ -135,8 +136,8 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
     publish workspace changes.
   - `eos-command-session` / `eos_operation::command` → command-session
     mechanics and command runtime policy.
-  - `eos_operation::core` → shared operation outcome contracts re-exported from
-    the crate root.
+  - `eos_operation::core` → static operation contracts, catalog rendering, and
+    shared operation outcome contracts.
   - `eos_operation::file` → file operation semantics over direct and isolated
     backends.
   - `eos-plugin` → plugin contracts and PPC framing; **NOT overlay/layerstack
@@ -144,8 +145,8 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   - `eos_operation::plugin` → plugin package publishing, service processes, PPC
     transport, dispatch, refresh, OCC callbacks, and oneshot overlays.
   - `eos_operation::checkpoint` → checkpoint commit pipeline.
-  - `eos-daemon` → transport, dispatch, wire, adapters, service composition,
-    daemon-owned plugin/checkpoint process glue.
+  - `eos-daemon` → transport, dispatch, wire envelope, op adapters, service
+    composition, daemon-owned plugin/checkpoint process glue.
   - `eosd` → binary subcommand dispatch over daemon/namespace/overlay support.
   - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates define only

@@ -67,6 +67,7 @@ interface Fixture {
 function fixture(
   rules: TriggerRuleEntry[],
   answers: Partial<Record<string, TriggerCommandRun | (() => Promise<TriggerCommandRun>)>> = {},
+  terminalTool: string | null = "finish_task",
 ): Fixture {
   const inbox = new NotificationInbox();
   const sessions: BackgroundSessionSnapshot[] = [];
@@ -83,7 +84,7 @@ function fixture(
     inbox,
     listBackgroundSessions: () => [...sessions],
     runSnapshot: () => SNAPSHOT,
-    terminalTool: "finish_task",
+    terminalTool,
   });
   return { engine, inbox, sessions, ran };
 }
@@ -123,6 +124,19 @@ describe("notification trigger engine", () => {
       background_sessions: [session("command", "c1")],
     });
     expect(inbox.drain()).toEqual([reminder("TurnCompleted", "wrap it up")]);
+  });
+
+  it("carries terminal_tool null for a text-mode run, surviving JSON serialization (U15)", async () => {
+    const { engine, ran } = fixture([turnRule(command("observe"))], {}, null);
+    await engine.turnCompleted(FACTS);
+    expect(ran).toHaveLength(1);
+    expect(ran[0].payload.terminal_tool).toBeNull();
+    const wire = JSON.parse(JSON.stringify(ran[0].payload)) as TriggerPayload;
+    expect(
+      wire.terminal_tool,
+      "the field crosses the process boundary as an explicit null, never absent",
+    ).toBeNull();
+    expect("terminal_tool" in wire).toBe(true);
   });
 
   it("publishes answers from multiple rules in config order", async () => {

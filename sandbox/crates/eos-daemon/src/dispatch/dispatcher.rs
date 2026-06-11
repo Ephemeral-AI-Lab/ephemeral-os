@@ -6,17 +6,18 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use eos_operation::core::ops::{ServedBy, BUILTIN_OPS};
 use serde_json::{json, Value};
 
-use crate::wire::ops::{BuiltinDaemonOp, BUILTIN_DAEMON_OP_SPECS};
 use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
 
+use crate::builtin_handlers::builtin_handler;
 use crate::error::DaemonError;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::ops::{cancel, checkpoint, command, control, files, isolation, plugin};
+use crate::op_adapter::plugin;
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;
@@ -37,8 +38,13 @@ impl OpTable {
     /// Build the table pre-populated with daemon-owned builtin ops.
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
-        for spec in BUILTIN_DAEMON_OP_SPECS {
-            table.register_builtin(spec.name, builtin_handler(spec.op));
+        for contract in BUILTIN_OPS {
+            if contract.served_by != ServedBy::Daemon {
+                continue;
+            }
+            let handler = builtin_handler(contract.op)
+                .expect("every daemon-served built-in op must have a handler");
+            table.register_builtin(contract.name, handler);
         }
         table
     }
@@ -115,41 +121,6 @@ impl OpTable {
             Ok(response) => response,
             Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
         })
-    }
-}
-
-const fn builtin_handler(op: BuiltinDaemonOp) -> Handler {
-    match op {
-        BuiltinDaemonOp::RuntimeReady => control::op_runtime_ready,
-        BuiltinDaemonOp::InvocationHeartbeat => control::op_heartbeat,
-        BuiltinDaemonOp::InvocationCancel => control::op_cancel,
-        BuiltinDaemonOp::InflightCount => control::op_inflight_count,
-        BuiltinDaemonOp::LayerMetrics => checkpoint::layer_metrics,
-        BuiltinDaemonOp::EnsureWorkspaceBase => checkpoint::ensure_workspace_base,
-        BuiltinDaemonOp::BuildWorkspaceBase => checkpoint::build_workspace_base,
-        BuiltinDaemonOp::CommitToWorkspace => checkpoint::commit_to_workspace,
-        BuiltinDaemonOp::CommitToGit => checkpoint::commit_to_git,
-        BuiltinDaemonOp::WorkspaceBinding => checkpoint::workspace_binding,
-        BuiltinDaemonOp::ReadFile => files::op_read_file,
-        BuiltinDaemonOp::WriteFile => files::op_write_file,
-        BuiltinDaemonOp::EditFile => files::op_edit_file,
-        BuiltinDaemonOp::PluginEnsure => plugin::op_ensure,
-        BuiltinDaemonOp::PluginStatus => plugin::op_status,
-        BuiltinDaemonOp::IsolatedWorkspaceEnter => isolation::op_enter,
-        BuiltinDaemonOp::IsolatedWorkspaceExit => isolation::op_exit,
-        BuiltinDaemonOp::IsolatedWorkspaceStatus => isolation::op_status,
-        BuiltinDaemonOp::IsolatedWorkspaceListOpen => isolation::op_list_open,
-        BuiltinDaemonOp::IsolatedWorkspaceTestReset => isolation::op_test_reset,
-        BuiltinDaemonOp::ExecCommand => command::op_exec_command,
-        BuiltinDaemonOp::WriteStdin => command::command_session_write_stdin,
-        BuiltinDaemonOp::CommandReadProgress => command::command_session_read_progress,
-        BuiltinDaemonOp::CommandCancel => command::command_session_cancel,
-        BuiltinDaemonOp::CommandCollectCompleted => command::op_command_collect_completed,
-        BuiltinDaemonOp::CommandSessionCount => command::op_command_session_count,
-        BuiltinDaemonOp::CancelWorkspaceRunsByCaller => {
-            cancel::op_cancel_workspace_runs_by_caller_id
-        }
-        BuiltinDaemonOp::CancelWorkspaceRuns => cancel::op_cancel_workspace_runs,
     }
 }
 

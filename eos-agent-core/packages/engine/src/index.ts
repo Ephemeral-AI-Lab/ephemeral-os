@@ -54,10 +54,18 @@ export interface StartAgentRunInput {
   background?: BackgroundSessionSupervisor;
   /**
    * Loop-lifecycle announcement port (Phase 04.9): awaited after every
-   * committed assistant turn; `idleStarted`/`idleEnded` bracket each
-   * auto-wait park. Absent means today's behavior exactly.
+   * committed turn that can still steer the run; `idleStarted`/`idleEnded`
+   * bracket each auto-wait park. Absent means today's behavior exactly.
    */
   observer?: LoopObserver;
+  /**
+   * How the run completes (Phase 04.10). `"terminal_tool"` (the default):
+   * only an `is_terminal` tool result finishes the run. `"text"`: a
+   * bare-text assistant turn finishes it under the submission guard — no
+   * pending steers and no open background sessions — with
+   * `submission = assistantText(final_message)`.
+   */
+  terminationMode?: "terminal_tool" | "text";
 }
 
 /**
@@ -78,6 +86,7 @@ export function startAgentRun(input: StartAgentRunInput): AgentRunHandle {
     notifications: input.notifications,
     background: input.background,
     observer: input.observer,
+    terminationMode: input.terminationMode ?? "terminal_tool",
     turnConfig: {
       client: input.llmClient,
       model: input.model,

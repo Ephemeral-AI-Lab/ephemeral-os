@@ -1,19 +1,18 @@
-//! The daemon wire protocol: envelope framing, the op catalog (canonical
-//! names), frozen protocol constants, and response canonicalization.
+//! The daemon wire protocol: envelope framing, frozen protocol constants, and
+//! response canonicalization.
 //!
 //! This is in-box code. The host side carries its own copy of the vocabulary
 //! (`eos-sandbox-host::protocol`); the shared artifact between them is
-//! `contract/` (data + prose), and drift is caught by the conformance suites
-//! run by `cargo xtask check-contract`.
+//! `crates/eos-operation/ops.json` plus `contract/` fixtures/prose, and drift
+//! is caught by the conformance suites run by `cargo xtask check-contract`.
 
 pub mod envelope;
-pub mod ops;
 
 pub use envelope::{
     decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
 };
 
-pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
+pub const DAEMON_PROTOCOL_VERSION: i64 = eos_operation::core::ops::PROTOCOL_VERSION;
 pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const CONNECT_FAILED: i32 = 97;

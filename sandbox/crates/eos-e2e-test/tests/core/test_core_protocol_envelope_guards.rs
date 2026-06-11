@@ -5,8 +5,8 @@
 //! observed as structured error envelopes (`success:false` + `error.kind`).
 
 use anyhow::{Context, Result};
-use eos_daemon::wire::ops;
 use eos_e2e_test::client::error_kind;
+use eos_operation::core::ops;
 use eos_sandbox_host::MAX_REQUEST_BYTES;
 use serde_json::json;
 

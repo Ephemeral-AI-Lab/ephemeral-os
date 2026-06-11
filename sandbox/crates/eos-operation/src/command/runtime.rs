@@ -4,7 +4,7 @@ use std::time::Instant;
 use eos_command_session::{CommandResponse, CommandSessionCompletion, CommandSessionConfig};
 use serde_json::Value;
 
-use super::ops::CommandOps;
+use super::service::CommandOps;
 
 pub fn command_ops() -> &'static CommandOps {
     static OPS: OnceLock<CommandOps> = OnceLock::new();

@@ -15,8 +15,8 @@ mod support;
 use std::thread::{self, JoinHandle};
 
 use anyhow::Result;
-use eos_daemon::wire::ops;
 use eos_e2e_test::NodeLease;
+use eos_operation::core::ops;
 use serde_json::{json, Value};
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/daemon/config/default.test.yml";

@@ -49,10 +49,10 @@ fn main() -> Result<()> {
         Some("daemon") => daemon::run(args),
         Some("ns-runner") => runner::run(args),
         Some("ns-holder") => run_ns_holder(args),
-        // The committed `contract/ops.json`; `cargo xtask check-contract`
-        // fails when this output drifts from the checked-in artifact.
+        // The committed `crates/eos-operation/ops.json`; `cargo xtask
+        // check-contract` fails when this output drifts from the artifact.
         Some("dump-ops") => {
-            print!("{}", eos_daemon::wire::ops::ops_json_document());
+            print!("{}", eos_operation::core::ops::ops_json_document());
             Ok(())
         }
         Some(other) => Err(anyhow!(

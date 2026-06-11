@@ -12,6 +12,8 @@ use thiserror::Error;
 
 mod direct;
 mod isolated;
+pub mod ops;
+pub mod port;
 
 pub use direct::DirectBackend;
 pub use isolated::IsolatedBackend;

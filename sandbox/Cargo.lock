@@ -200,7 +200,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "eos-config",
- "eos-daemon",
+ "eos-operation",
  "eos-sandbox-host",
  "serde_json",
  "sha2",
@@ -315,6 +315,7 @@ dependencies = [
  "eos-config",
  "eos-daemon",
  "eos-namespace",
+ "eos-operation",
  "eos-overlay",
  "serde_json",
  "tokio",

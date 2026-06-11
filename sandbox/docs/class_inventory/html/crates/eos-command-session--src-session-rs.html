@@ -70,7 +70,7 @@
   <pre><code>    <span class="rs-comment">/// Process-free scaffold for registry and identity tests.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-33">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-with-runtime-124">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>())
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-with-runtime-124">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>())
     }
 </code></pre>
 </details></td></tr><tr id="method-with-runtime-124"><td>constructor</td><td>with_runtime</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-with-runtime-124">with_runtime</a> (spec : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-33">CommandSessionSpec</a> , runtime : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a>) -&gt; Self</code><details class="function-source">
@@ -118,7 +118,7 @@
 </details></td></tr><tr id="method-write-process-stdin-156"><td>method</td><td>write_process_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-write-process-stdin-156">write_process_stdin</a> (&amp; self , chars : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command-session.html#item-enum-CommandSessionError-7">CommandSessionError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-156">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-7">CommandSessionError</a>&gt; {
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-write-stdin-184">write_stdin</a>(chars.as_bytes())?;
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-write-stdin-188">write_stdin</a>(chars.as_bytes())?;
         <span class="rs-type">Ok</span>(())
     }
 </code></pre>
@@ -128,8 +128,8 @@
     <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
     <span class="rs-comment">/// wins over a later timeout mark.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-161">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
-        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>::<span class="rs-type">Cancelled</span>);
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
     }
 </code></pre>
 </details></td></tr><tr id="method-time-out-process-169"><td>method</td><td>time_out_process</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-time-out-process-169">time_out_process</a> (&amp; self)</code><p class="docstring">Kill a session that exceeded its deadline (the reaper backstop). Records<br>`TimedOut` only if no kill reason is set yet, so a prior user cancel keeps<br>its `Cancelled` label; either way the process group is killed.</p><details class="function-source">
@@ -139,12 +139,12 @@
     <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-time-out-process-169">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
         {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
             <span class="rs-kw">if</span> kill.is_none() {
-                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>::<span class="rs-type">TimedOut</span>);
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">TimedOut</span>);
             }
         }
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
     }
 </code></pre>
 </details></td></tr><tr id="method-read-recent-output-182"><td>method</td><td>read_recent_output</td><td><code>pub fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-read-recent-output-182">read_recent_output</a> (&amp; self , last_n_lines : usize) -&gt; String</code><details class="function-source">
@@ -185,28 +185,28 @@
     <span class="rs-comment">/// only reaps the substrate — it does not publish or discard; the owning run</span>
     <span class="rs-comment">/// decides that from `ReapedCommand::kill`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-205">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-40">ReapedCommand</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.reaped);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.reaped);
         <span class="rs-kw">if</span> *reaped {
             <span class="rs-kw">return</span> <span class="rs-type">None</span>;
         }
-        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-try-reap-228">try_reap</a>() {
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-57">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-57">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-try-reap-232">try_reap</a>() {
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-61">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-61">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
         };
         *reaped = <span class="rs-kw">true</span>;
         drop(reaped);
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
         <span class="rs-self">self</span>.runtime
             .process
-            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-wait-for-reader-done-247">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
-        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-121">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-read-from-path-129">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
-        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-wait-for-reader-done-251">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-read-from-path-133">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
         <span class="rs-kw">let</span> completion =
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-75">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-from-process-and-runner-82">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-from-process-and-runner-86">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
         <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-40">ReapedCommand</a> {
-            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-status-110">status</a>().to_owned(),
-            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-exit-code-51">exit_code</a>(),
-            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-value-166">value</a>().clone()),
+            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-status-114">status</a>().to_owned(),
+            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-exit-code-55">exit_code</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-value-170">value</a>().clone()),
             stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-254">final_stdout</a>(),
             elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
             kill,
@@ -287,7 +287,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-40">ReapedCommand</a></code>
   <p class="docstring">The raw, policy-free result of reaping a finished command process. The<br>substrate produces this; the owning workspace run turns it into a<br>`CommandResponse` by publishing (complete) or discarding (cancel). Keeping the<br>publish/discard decision out of the session is the structural guarantee that a<br>cancelled command never reaches the OCC merge.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>kill</td><td><code>Option &lt; <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a> &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>kill</td><td><code>Option &lt; <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a> &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-command-session/src/session.rs:40</p>
 </article><article id="item-struct-RunningCommandSessionParts-58" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunningCommandSessionParts pub pub struct RunningCommandSessionParts crates/eos-command-session/src/session.rs process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf output_drain_grace_ms u64 ">
@@ -298,7 +298,7 @@
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a></code></td></tr><tr><td>pub</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a></code></td></tr><tr><td>pub</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-command-session/src/session.rs:58</p>
 </article><article id="item-struct-ProcessRuntime-66" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ProcessRuntime private struct ProcessRuntime crates/eos-command-session/src/session.rs process CommandSessionProcess output_path PathBuf final_path PathBuf transcript_path PathBuf kill Mutex &lt; Option &lt; KillReason &gt; &gt; output_drain_grace_ms u64 reaped Mutex &lt; bool &gt; ">
@@ -310,7 +310,7 @@
   <code class="signature">struct <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a></code>
   <p class="docstring">Per-session process state: the child, its paths, and the kill/reap flags.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a></code></td></tr><tr><td>private</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kill</td><td><code>Mutex &lt; Option &lt; <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>private</td><td>reaped</td><td><code>Mutex &lt; bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-82"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-82">new</a> (parts : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>process</td><td><code><a class="symbol-link" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a></code></td></tr><tr><td>private</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kill</td><td><code>Mutex &lt; Option &lt; <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>private</td><td>reaped</td><td><code>Mutex &lt; bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-82"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-session-rs.html#method-new-82">new</a> (parts : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(parts: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
@@ -324,18 +324,18 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-inactive-94"><td>associated-fn</td><td>inactive</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a> () -&gt; Self</code><p class="docstring">`/dev/null`-backed runtime so scaffold sessions can exist in tests<br>without a live child.</p><details class="function-source">
+</details></td></tr><tr id="method-inactive-94"><td>associated-fn</td><td>inactive</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a> () -&gt; Self</code><p class="docstring">`/dev/null`-backed runtime so scaffold sessions can exist in tests<br>without a live child.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// `/dev/null`-backed runtime so scaffold sessions can exist in tests</span>
     <span class="rs-comment">/// without a live child.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
             .read(<span class="rs-kw">true</span>)
             .write(<span class="rs-kw">true</span>)
             .open(&quot;/dev/null&quot;)
             .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command session process&quot;);
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a> {
-            process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>(writer),
+            process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>(writer),
             output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
             final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
             transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
@@ -420,12 +420,12 @@
     <h3>lock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
-    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
 }
 </code></pre>
 </details>
@@ -449,7 +449,7 @@
 <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::process::{
-    <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-75">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-121">CommandRunnerResult</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-57">ProcessReap</a>,
+    <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>, <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-61">ProcessReap</a>,
 };
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::yield_wait_loop::<a class="symbol-link rs-type" href="eos-command-session--src-yield-wait-loop-rs.html#item-trait-CommandSessionWaitTarget-6">CommandSessionWaitTarget</a>;
@@ -493,11 +493,11 @@
     <span class="rs-comment">/// Why the substrate killed this session, if it did. `None` is a natural</span>
     <span class="rs-comment">/// exit; `Some(_)` means a kill (cancel or timeout) and the owning run</span>
     <span class="rs-comment">/// DISCARDS rather than publishes.</span>
-    <span class="rs-kw">pub</span> kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>&gt;,
+    <span class="rs-kw">pub</span> kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>&gt;,
 }
 
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a> {
-    <span class="rs-kw">pub</span> process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a>,
+    <span class="rs-kw">pub</span> process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a>,
     <span class="rs-kw">pub</span> output_path: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> final_path: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> transcript_path: <span class="rs-type">PathBuf</span>,
@@ -506,14 +506,14 @@
 
 <span class="rs-comment">/// Per-session process state: the child, its paths, and the kill/reap flags.</span>
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a> {
-    process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a>,
+    process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a>,
     output_path: <span class="rs-type">PathBuf</span>,
     final_path: <span class="rs-type">PathBuf</span>,
     transcript_path: <span class="rs-type">PathBuf</span>,
     <span class="rs-comment">/// Why this session was killed, if it has been. Set once by `cancel_process`</span>
     <span class="rs-comment">/// (user cancel) or `time_out_process` (deadline backstop); a user cancel</span>
     <span class="rs-comment">/// wins, so a cancelled session is never relabeled as timed-out.</span>
-    kill: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>&gt;&gt;,
+    kill: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>&gt;&gt;,
     output_drain_grace_ms: u64,
     <span class="rs-comment">/// Reaped-once guard so two pollers can't both finalize the same child.</span>
     reaped: <span class="rs-type">Mutex</span>&lt;bool&gt;,
@@ -534,14 +534,14 @@
 
     <span class="rs-comment">/// `/dev/null`-backed runtime so scaffold sessions can exist in tests</span>
     <span class="rs-comment">/// without a live child.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>() -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>() -&gt; <span class="rs-self">Self</span> {
         <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>()
             .read(<span class="rs-kw">true</span>)
             .write(<span class="rs-kw">true</span>)
             .open(&quot;/dev/null&quot;)
             .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command session process&quot;);
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-RunningCommandSessionParts-58">RunningCommandSessionParts</a> {
-            process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-24">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>(writer),
+            process: <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandSessionProcess-28">CommandSessionProcess</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>(writer),
             output_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
             final_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
             transcript_path: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(),
@@ -554,7 +554,7 @@
     <span class="rs-comment">/// Process-free scaffold for registry and identity tests.</span>
     #[must_use]
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-new-82">new</a>(spec: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSessionSpec-33">CommandSessionSpec</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-with-runtime-124">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-173">inactive</a>())
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-with-runtime-124">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ProcessRuntime-66">ProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-inactive-177">inactive</a>())
     }
 
     #[must_use]
@@ -595,7 +595,7 @@
     }
 
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-write-process-stdin-156">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command-session.html#item-enum-CommandSessionError-7">CommandSessionError</a>&gt; {
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-write-stdin-184">write_stdin</a>(chars.as_bytes())?;
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-write-stdin-188">write_stdin</a>(chars.as_bytes())?;
         <span class="rs-type">Ok</span>(())
     }
 
@@ -603,8 +603,8 @@
     <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
     <span class="rs-comment">/// wins over a later timeout mark.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-cancel-process-161">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
-        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>::<span class="rs-type">Cancelled</span>);
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
     }
 
     <span class="rs-comment">/// Kill a session that exceeded its deadline (the reaper backstop). Records</span>
@@ -612,12 +612,12 @@
     <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-time-out-process-169">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
         {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
             <span class="rs-kw">if</span> kill.is_none() {
-                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-63">KillReason</a>::<span class="rs-type">TimedOut</span>);
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">TimedOut</span>);
             }
         }
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
     }
 
     #[must_use]
@@ -648,28 +648,28 @@
     <span class="rs-comment">/// only reaps the substrate — it does not publish or discard; the owning run</span>
     <span class="rs-comment">/// decides that from `ReapedCommand::kill`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-reap-205">reap</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-40">ReapedCommand</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.reaped);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = <a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.reaped);
         <span class="rs-kw">if</span> *reaped {
             <span class="rs-kw">return</span> <span class="rs-type">None</span>;
         }
-        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-try-reap-228">try_reap</a>() {
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-57">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-57">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-try-reap-232">try_reap</a>() {
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-61">ProcessReap</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-enum-ProcessReap-61">ProcessReap</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
         };
         *reaped = <span class="rs-kw">true</span>;
         drop(reaped);
-        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-222">terminate</a>();
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-terminate-226">terminate</a>();
         <span class="rs-self">self</span>.runtime
             .process
-            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-wait-for-reader-done-247">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
-        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-121">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-read-from-path-129">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
-        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-wait-for-reader-done-251">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-read-from-path-133">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
         <span class="rs-kw">let</span> completion =
-            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-75">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-from-process-and-runner-82">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
+            <a class="symbol-link rs-type" href="eos-command-session--src-process-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-from-process-and-runner-86">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
         <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-ReapedCommand-40">ReapedCommand</a> {
-            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-status-110">status</a>().to_owned(),
-            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-exit-code-51">exit_code</a>(),
-            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-value-166">value</a>().clone()),
+            status: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-status-114">status</a>().to_owned(),
+            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-exit-code-55">exit_code</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#method-value-170">value</a>().clone()),
             stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-final-stdout-254">final_stdout</a>(),
             elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
             kill,
@@ -741,7 +741,7 @@
 }
 
 <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
-    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-358">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    mutex.<a class="symbol-link rs-fn" href="eos-command-session--src-process-rs.html#item-fn-lock-362">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
 }
 </code></pre>
 </section>

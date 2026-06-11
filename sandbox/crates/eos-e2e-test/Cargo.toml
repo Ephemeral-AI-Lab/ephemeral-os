@@ -8,10 +8,10 @@ description = "Protocol-only sandbox correctness/pressure suite: drives a live e
 
 [dependencies]
 # The ONLY operation interface: the eos-sandbox-host wire client against a
-# live eosd; eos-daemon supplies the op-name catalog and eos-config the shared
-# file-limit constants for tests.
+# live eosd; eos-operation supplies the op-name catalog and eos-config the
+# shared file-limit constants for tests.
 eos-config = { workspace = true }
-eos-daemon = { workspace = true }
+eos-operation = { workspace = true }
 eos-sandbox-host = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

@@ -7,8 +7,8 @@
 //! an unregistered string returns `unknown_op`.
 
 use anyhow::Result;
-use eos_daemon::wire::ops::{BuiltinDaemonOp, BUILTIN_DAEMON_OP_SPECS};
 use eos_e2e_test::client::error_kind;
+use eos_operation::core::ops::{BuiltinOp, ServedBy, BUILTIN_OPS};
 use serde_json::json;
 
 use crate::support::live_pool_or_skip;
@@ -16,12 +16,12 @@ use crate::support::live_pool_or_skip;
 /// State-toggling ops are skipped: called with injected args they would mutate
 /// the lease (enter isolated mode) and perturb the loop. Their dispatch is
 /// proven by the dedicated tier tests instead.
-const SKIP: &[BuiltinDaemonOp] = &[
-    BuiltinDaemonOp::IsolatedWorkspaceEnter,
-    BuiltinDaemonOp::IsolatedWorkspaceExit,
-    BuiltinDaemonOp::IsolatedWorkspaceTestReset,
+const SKIP: &[BuiltinOp] = &[
+    BuiltinOp::IsolatedWorkspaceEnter,
+    BuiltinOp::IsolatedWorkspaceExit,
+    BuiltinOp::IsolatedWorkspaceTestReset,
     // Would cancel + discard every workspace run in the shared lease.
-    BuiltinDaemonOp::CancelWorkspaceRuns,
+    BuiltinOp::CancelWorkspaceRuns,
 ];
 
 #[test]
@@ -30,16 +30,16 @@ fn every_builtin_op_is_wire_routed_under_its_canonical_name() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    for spec in BUILTIN_DAEMON_OP_SPECS {
-        if SKIP.contains(&spec.op) {
+    for contract in BUILTIN_OPS {
+        if contract.served_by != ServedBy::Daemon || SKIP.contains(&contract.op) {
             continue;
         }
-        let resp = lease.call(spec.name, json!({}))?;
+        let resp = lease.call(contract.name, json!({}))?;
         assert_ne!(
             error_kind(&resp),
             Some("unknown_op"),
             "catalog spelling {} must be registered over the wire: {resp}",
-            spec.name
+            contract.name
         );
     }
     // Negative control: an unregistered op must surface unknown_op.

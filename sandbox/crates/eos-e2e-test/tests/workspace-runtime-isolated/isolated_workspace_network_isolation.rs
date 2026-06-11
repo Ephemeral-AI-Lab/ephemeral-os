@@ -14,7 +14,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Context, Result};
-use eos_daemon::wire::ops;
+use eos_operation::core::ops;
 use serde_json::{json, Value};
 
 use crate::support::{as_str, live_pool_or_skip, reset_isolated_workspaces, stdout};
