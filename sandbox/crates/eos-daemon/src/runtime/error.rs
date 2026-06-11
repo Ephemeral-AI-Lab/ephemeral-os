@@ -93,13 +93,13 @@ impl DaemonError {
     }
 }
 
-impl From<eos_plugin::host::PpcError> for DaemonError {
+impl From<eos_plugin_runtime::PpcError> for DaemonError {
     /// Fold a plugin-host PPC / package failure onto the matching daemon
     /// variant. `Plugin` keeps the inner [`eos_plugin::PluginError`] so
     /// `wire_kind` still classifies `ForbiddenInIsolatedWorkspace`; `Callback`
     /// carries an already-formatted message that re-wraps as a PPC error.
-    fn from(err: eos_plugin::host::PpcError) -> Self {
-        use eos_plugin::host::PpcError;
+    fn from(err: eos_plugin_runtime::PpcError) -> Self {
+        use eos_plugin_runtime::PpcError;
         match err {
             PpcError::Plugin(source) => Self::Plugin(source),
             // The plugin channel frames with its own copy of the wire framing
@@ -115,12 +115,12 @@ impl From<eos_plugin::host::PpcError> for DaemonError {
     }
 }
 
-impl From<crate::services::checkpoint::CheckpointError> for DaemonError {
-    /// Fold a host checkpoint failure onto the matching daemon variant,
-    /// preserving variant identity (so `wire_kind` classifies `Forbidden`
-    /// correctly) and the original message text.
-    fn from(err: crate::services::checkpoint::CheckpointError) -> Self {
-        use crate::services::checkpoint::CheckpointError;
+impl From<eos_checkpoint::CheckpointError> for DaemonError {
+    /// Fold a checkpoint failure onto the matching daemon variant, preserving
+    /// variant identity (so `wire_kind` classifies `Forbidden` correctly) and
+    /// the original message text.
+    fn from(err: eos_checkpoint::CheckpointError) -> Self {
+        use eos_checkpoint::CheckpointError;
         match err {
             CheckpointError::InvalidEnvelope(message) => Self::InvalidEnvelope(message),
             CheckpointError::Forbidden(message) => Self::Forbidden(message),

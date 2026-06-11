@@ -160,6 +160,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eos-checkpoint"
+version = "0.1.0"
+dependencies = [
+ "eos-layerstack",
+ "eos-overlay",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
 name = "eos-command-ops"
 version = "0.1.0"
 dependencies = [
@@ -199,6 +210,7 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
+ "eos-checkpoint",
  "eos-command-ops",
  "eos-command-session",
  "eos-config",
@@ -209,6 +221,7 @@ dependencies = [
  "eos-namespace",
  "eos-overlay",
  "eos-plugin",
+ "eos-plugin-runtime",
  "eos-workspace-runtime",
  "nix 0.29.0",
  "proptest",
@@ -312,6 +325,16 @@ version = "0.1.0"
 dependencies = [
  "eos-namespace",
  "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "eos-plugin-runtime"
+version = "0.1.0"
+dependencies = [
+ "eos-namespace",
+ "eos-plugin",
  "serde_json",
  "sha2",
  "thiserror 2.0.18",

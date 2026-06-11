@@ -8,10 +8,10 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::host::package::{package_roots, PackageRoots};
-use crate::host::route::{PluginOperationRoute, PluginProcessSpec};
-use crate::host::PpcError;
-use crate::{
+use crate::package::{package_roots, PackageRoots};
+use crate::route::{PluginOperationRoute, PluginProcessSpec};
+use crate::PpcError;
+use eos_plugin::{
     PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts, PluginServiceManifest,
     PluginServiceState, PluginServiceStatus, ServiceMode,
 };
@@ -237,10 +237,10 @@ fn services_for_manifest(
 
 fn service_initial_status_message(service_mode: ServiceMode) -> String {
     match service_mode {
-        ServiceMode::WorkspaceSnapshotRefresh => {
-            "process-backed PPC execution is not started".to_owned()
-        }
         ServiceMode::OneshotOverlay => "oneshot overlay worker starts per operation".to_owned(),
+        // `ServiceMode` is non-exhaustive contract-side; every process-backed
+        // mode starts in the not-yet-started state.
+        _ => "process-backed PPC execution is not started".to_owned(),
     }
 }
 
@@ -372,5 +372,5 @@ fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginErro
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/host/ensure_args.rs"]
+#[path = "../tests/unit/ensure_args.rs"]
 mod tests;

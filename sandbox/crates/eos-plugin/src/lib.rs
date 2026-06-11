@@ -36,7 +36,6 @@
 
 pub mod error;
 pub mod framing;
-pub mod host;
 pub mod manifest;
 pub mod ppc;
 pub mod refresh;

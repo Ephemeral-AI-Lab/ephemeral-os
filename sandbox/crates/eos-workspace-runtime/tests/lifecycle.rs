@@ -129,6 +129,10 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
 }
 
 fn isolated_runtime(scratch_root: &Path, workspace_root: &Path) -> WorkspaceRuntime {
+    // The namespace/network layer stubs itself under the isolated-workspace
+    // test harness env; every test in this binary drives the stubbed setup, so
+    // the variable is set once and never removed (no cross-test race).
+    std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     WorkspaceRuntime::new(IsolatedWorkspaceConfig {
         enabled: true,
         scratch_root: scratch_root.to_path_buf(),

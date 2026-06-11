@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/eos-checkpoint",
     "crates/eos-command-ops",
     "crates/eos-command-session",
     "crates/eos-config",
@@ -13,6 +14,7 @@ members = [
     "crates/eos-layerstack",
     "crates/eos-overlay",
     "crates/eos-plugin",
+    "crates/eos-plugin-runtime",
     "crates/eos-sandbox-host",
     "crates/eos-workspace-runtime",
     "crates/eos-api",
@@ -53,6 +55,7 @@ netlink-sys = "0.8"
 toml = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
+eos-checkpoint = { path = "crates/eos-checkpoint" }
 eos-command-ops = { path = "crates/eos-command-ops" }
 eos-command-session = { path = "crates/eos-command-session" }
 eos-config = { path = "crates/eos-config" }
@@ -62,6 +65,7 @@ eos-isolated-workspace = { path = "crates/eos-isolated-workspace" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-plugin = { path = "crates/eos-plugin" }
+eos-plugin-runtime = { path = "crates/eos-plugin-runtime" }
 eos-namespace = { path = "crates/eos-namespace" }
 eos-workspace-runtime = { path = "crates/eos-workspace-runtime" }
 eos-daemon = { path = "crates/eos-daemon" }

@@ -20,7 +20,7 @@ use super::{
 };
 use crate::error::DaemonError;
 
-use eos_plugin::host::route::PluginOperationRoute;
+use eos_plugin_runtime::route::PluginOperationRoute;
 
 pub(super) const WORKSPACE_SNAPSHOT_REFRESH_OP: &str = "daemon.workspace_snapshot_refresh";
 
@@ -215,7 +215,7 @@ impl PluginRuntime {
 
     fn send_refresh_sequence(
         &self,
-        client: &eos_plugin::host::PpcClient,
+        client: &eos_plugin_runtime::PpcClient,
         service_key: &PluginServiceKey,
         service_instance_id: &str,
         invocation_id: &str,
@@ -437,7 +437,7 @@ fn probe_connected_service_health(
 }
 
 fn send_refresh_request(
-    client: &eos_plugin::host::PpcClient,
+    client: &eos_plugin_runtime::PpcClient,
     invocation_id: &str,
     index: usize,
     request: &RefreshRequest,

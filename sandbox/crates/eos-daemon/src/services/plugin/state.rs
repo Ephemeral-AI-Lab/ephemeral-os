@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
-use eos_plugin::host::ensure_args::ParsedEnsure;
-use eos_plugin::host::route::{PluginOperationRoute, PluginProcessSpec};
+use eos_plugin_runtime::ensure::ParsedEnsure;
+use eos_plugin_runtime::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_plugin::PluginServiceStatus;
 use serde_json::{json, Value};
 
@@ -13,7 +13,7 @@ use super::{
 };
 use crate::error::DaemonError;
 
-pub(super) type SharedPpcClient = Arc<eos_plugin::host::PpcClient>;
+pub(super) type SharedPpcClient = Arc<eos_plugin_runtime::PpcClient>;
 
 #[derive(Debug, Clone)]
 pub(super) struct LoadedPluginRuntime {

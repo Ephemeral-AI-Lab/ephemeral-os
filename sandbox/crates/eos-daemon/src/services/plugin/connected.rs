@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 
 use super::{callbacks as occ_callbacks, state::PluginRuntime};
 use crate::error::DaemonError;
-use eos_plugin::host::route::PluginOperationRoute;
+use eos_plugin_runtime::route::PluginOperationRoute;
 
 impl PluginRuntime {
     pub(super) fn dispatch_connected_read_only_route(
@@ -65,7 +65,7 @@ impl PluginRuntime {
                     // verbatim through the host's `PpcError::Callback` (the daemon's
                     // `From<PpcError>` re-wraps it on the way out).
                     occ_callbacks::handle_callback_for_root(&expected_root, callback)
-                        .map_err(|err| eos_plugin::host::PpcError::Callback(err.to_string()))
+                        .map_err(|err| eos_plugin_runtime::PpcError::Callback(err.to_string()))
                 })
             }
             None => client.round_trip(&request, timeout),

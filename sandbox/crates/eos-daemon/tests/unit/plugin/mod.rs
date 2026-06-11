@@ -11,7 +11,7 @@ use super::refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use crate::wire::Request;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_layerstack::LayerStack;
-use eos_plugin::host::ensure_args::{validate_plugin_caller_fields, MAX_PLUGIN_CALLER_FIELD_CHARS};
+use eos_plugin_runtime::ensure::{validate_plugin_caller_fields, MAX_PLUGIN_CALLER_FIELD_CHARS};
 use eos_plugin::{PpcDirection, PpcEnvelope};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;

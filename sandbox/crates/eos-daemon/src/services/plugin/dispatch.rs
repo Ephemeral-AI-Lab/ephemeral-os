@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use super::{overlay::dispatch_oneshot_overlay_route, state::PluginRuntime};
 use crate::error::DaemonError;
-use eos_plugin::host::route::PluginOperationRoute;
+use eos_plugin_runtime::route::PluginOperationRoute;
 
 impl PluginRuntime {
     /// Dispatch a dynamically registered `plugin.*` op, or `None` when no

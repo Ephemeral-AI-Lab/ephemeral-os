@@ -1,3 +1,7 @@
+//! Adapter-side `commit_to_git` tests: stable wire response keys over the
+//! typed [`eos_checkpoint::CommitOutcome`] and the checkpoint-to-daemon error
+//! mapping. Pipeline behavior lives in `eos-checkpoint/tests/`.
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -8,41 +12,6 @@ use serde_json::json;
 use super::*;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
-#[test]
-fn commit_to_git_commits_selected_snapshot_paths() -> TestResult {
-    let fixture = Fixture::new("selected")?;
-    LayerStack::open(fixture.root.clone())?.publish_layer(&[
-        LayerChange::Write {
-            path: eos_layerstack::LayerPath::parse("checkpoint/included.txt")?,
-            content: b"included\n".to_vec(),
-        },
-        LayerChange::Write {
-            path: eos_layerstack::LayerPath::parse("checkpoint/excluded.txt")?,
-            content: b"excluded\n".to_vec(),
-        },
-    ])?;
-
-    let response = commit_to_git(&json!({
-        "layer_stack_root": fixture.root,
-        "workspace_root": fixture.workspace,
-        "paths": ["checkpoint/included.txt"],
-        "message": "checkpoint selected path",
-    }))?;
-
-    assert_eq!(response["success"], json!(true));
-    assert_eq!(response["committed"], json!(true));
-    let commit_sha = response["commit_sha"].as_str().ok_or("commit sha")?;
-    assert_eq!(
-        git_show(&fixture.workspace, commit_sha, "checkpoint/included.txt")?,
-        "included"
-    );
-    assert!(
-        git_show(&fixture.workspace, commit_sha, "checkpoint/excluded.txt").is_err(),
-        "excluded path should not be staged into the checkpoint commit"
-    );
-    Ok(())
-}
 
 #[test]
 fn commit_to_git_response_shape_for_committed_and_noop() -> TestResult {
@@ -80,14 +49,6 @@ fn commit_to_git_response_shape_for_committed_and_noop() -> TestResult {
     assert_eq!(noop["success"], json!(true));
     assert_eq!(noop["committed"], json!(false));
     assert_eq!(noop["commit_sha"], committed["commit_sha"]);
-    assert_eq!(noop["manifest_version"], json!(2));
-    assert_eq!(noop["manifest_root_hash"], committed["manifest_root_hash"]);
-    assert_eq!(noop["paths"], json!(["checkpoint/included.txt"]));
-    assert!(matches!(
-        noop["worktree_mode"].as_str(),
-        Some("overlay" | "projection")
-    ));
-    assert!(noop["timings"].is_object());
     Ok(())
 }
 
@@ -192,33 +153,10 @@ fn run_git_init(workspace: &Path) -> TestResult {
     if output.status.success() {
         Ok(())
     } else {
-        Err(format!("git init failed: {}", command_stderr(&output)).into())
-    }
-}
-
-fn git_show(workspace: &Path, commit_sha: &str, path: &str) -> TestResult<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(workspace)
-        .arg("show")
-        .arg(format!("{commit_sha}:{path}"))
-        .output()?;
-    if output.status.success() {
-        Ok(command_stdout(&output))
-    } else {
-        Err(format!("git show failed: {}", command_stderr(&output)).into())
-    }
-}
-
-fn command_stdout(output: &std::process::Output) -> String {
-    String::from_utf8_lossy(&output.stdout).trim().to_owned()
-}
-
-fn command_stderr(output: &std::process::Output) -> String {
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_owned();
-    if stderr.is_empty() {
-        command_stdout(output)
-    } else {
-        stderr
+        Err(format!(
+            "git init failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )
+        .into())
     }
 }

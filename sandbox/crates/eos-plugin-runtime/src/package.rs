@@ -6,14 +6,14 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
+use eos_plugin::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::host::route::{
+use crate::route::{
     ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_DIGEST, ENV_PLUGIN_ID, ENV_PLUGIN_PACKAGE_ROOT,
 };
-use crate::host::PpcError;
+use crate::PpcError;
 
 /// Outcome of a package ensure: whether the package contract is active, whether
 /// the caller must upload, and the resolved roots / publish + setup status.
@@ -513,5 +513,5 @@ fn collect_files(
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/host/package.rs"]
+#[path = "../tests/unit/package.rs"]
 mod tests;

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use eos_namespace::protocol::Intent;
 use sha2::{Digest, Sha256};
 
-use crate::{PluginError, PluginServiceKey, ServiceMode};
+use eos_plugin::{PluginError, PluginServiceKey, ServiceMode};
 
 pub const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
 pub const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";

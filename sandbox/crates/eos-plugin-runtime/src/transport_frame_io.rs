@@ -5,11 +5,11 @@ use std::os::unix::net::UnixStream;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::{PluginError, PpcEnvelope};
+use eos_plugin::{PluginError, PpcEnvelope};
 
-use crate::host::PpcError;
+use crate::PpcError;
 
-const MAX_PPC_FRAME_BYTES: usize = crate::framing::MAX_PPC_FRAME_BYTES;
+const MAX_PPC_FRAME_BYTES: usize = eos_plugin::framing::MAX_PPC_FRAME_BYTES;
 
 #[derive(Clone)]
 pub(super) struct FrameWriter {

@@ -1,7 +1,7 @@
 //! Plugin op adapters: caller-family gating plus dispatch into the owned
 //! [`crate::services::plugin::PluginRuntime`].
 
-use eos_plugin::host::ensure_args::validate_plugin_caller_fields;
+use eos_plugin_runtime::ensure::validate_plugin_caller_fields;
 use eos_plugin::PluginError;
 use serde_json::Value;
 

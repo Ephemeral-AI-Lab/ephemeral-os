@@ -1,6 +1,6 @@
 //! Plugin setup/config helpers for the daemon facade.
 
-use eos_plugin::host::PackageEnsureReport;
+use eos_plugin_runtime::PackageEnsureReport;
 use eos_plugin::PluginManifest;
 use serde_json::{json, Value};
 

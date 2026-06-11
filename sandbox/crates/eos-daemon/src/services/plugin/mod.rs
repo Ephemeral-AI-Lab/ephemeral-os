@@ -23,8 +23,8 @@ use eos_plugin::PluginError;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-use eos_plugin::host::ensure_args::ParsedEnsure;
-use eos_plugin::host::{ensure_package, needs_upload_response};
+use eos_plugin_runtime::ensure::ParsedEnsure;
+use eos_plugin_runtime::{ensure_package, needs_upload_response};
 use refresh::service_health_probe_targets;
 use service::{
     insert_started_service_processes, reap_exited_processes, running_process_values,
@@ -225,7 +225,7 @@ impl PluginRuntime {
         }
         state.service_ppc_clients.insert(
             service_instance_id,
-            Arc::new(eos_plugin::host::PpcClient::new(stream)?),
+            Arc::new(eos_plugin_runtime::PpcClient::new(stream)?),
         );
         drop(state);
         Ok(())

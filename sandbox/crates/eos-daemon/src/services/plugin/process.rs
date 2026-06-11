@@ -1,5 +1,5 @@
 //! Plugin service process *lifecycle* — the daemon's impure half over the
-//! host-neutral [`PluginProcessSpec`] launch contract (`eos_plugin::host::route`).
+//! host-neutral [`PluginProcessSpec`] launch contract (`eos_plugin_runtime::route`).
 //!
 //! The daemon owns spawning the live child (overlay/namespace runner included),
 //! the PPC accept handshake, and teardown (`Drop` = `killpg`). The spec data,
@@ -17,10 +17,10 @@ use std::time::{Duration, Instant};
 use eos_namespace::protocol::Intent;
 #[cfg(not(test))]
 use eos_namespace::protocol::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
-use eos_plugin::host::route::PluginProcessSpec;
+use eos_plugin_runtime::route::PluginProcessSpec;
 #[cfg(not(test))]
-use eos_plugin::host::route::ENV_PLUGIN_WORKSPACE_MOUNTED;
-use eos_plugin::host::PpcClient;
+use eos_plugin_runtime::route::ENV_PLUGIN_WORKSPACE_MOUNTED;
+use eos_plugin_runtime::PpcClient;
 use eos_plugin::PluginError;
 use serde_json::{json, Value};
 

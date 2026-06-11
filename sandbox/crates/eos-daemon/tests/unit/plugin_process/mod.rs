@@ -4,7 +4,7 @@
 //! reach the `pub(super)` spec/process types and `ENV_*` constants.
 
 use super::*;
-use eos_plugin::host::route::{
+use eos_plugin_runtime::route::{
     ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_ID, ENV_PLUGIN_LAYER_STACK_ROOT,
     ENV_PLUGIN_PACKAGE_ROOT, ENV_PLUGIN_PPC_PROTOCOL_VERSION, ENV_PLUGIN_PPC_SOCKET,
     ENV_PLUGIN_SERVICE_ID, ENV_PLUGIN_WORKSPACE_ROOT,

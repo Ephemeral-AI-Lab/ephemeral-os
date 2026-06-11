@@ -24,7 +24,7 @@ use crate::response::{
 };
 use crate::runtime::ns_runner::run_ns_runner_child;
 
-use eos_plugin::host::route::PluginOperationRoute;
+use eos_plugin_runtime::route::PluginOperationRoute;
 
 struct PluginOverlayCommand {
     layer_stack_root: PathBuf,

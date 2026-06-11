@@ -12,7 +12,7 @@ use eos_ephemeral_workspace::overlay_run_dirs;
 
 use super::process::PluginServiceOverlay;
 use super::state::{DaemonPluginState, PluginRuntime, SharedPpcClient};
-use eos_plugin::host::route::PluginProcessSpec;
+use eos_plugin_runtime::route::PluginProcessSpec;
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginServiceSnapshot {

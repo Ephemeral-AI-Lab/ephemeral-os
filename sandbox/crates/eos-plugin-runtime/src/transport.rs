@@ -9,7 +9,9 @@
 //! operation reply arrives. Concurrent callback-capable operations are routed by
 //! `parent_message_id` in the callback body.
 
+#[path = "transport_frame_io.rs"]
 mod frame_io;
+#[path = "transport_pending.rs"]
 mod pending;
 
 use std::os::unix::net::UnixStream;
@@ -17,12 +19,12 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use crate::{PluginError, PpcDirection, PpcEnvelope};
+use eos_plugin::{PluginError, PpcDirection, PpcEnvelope};
 use serde_json::json;
 
 use self::frame_io::FrameWriter;
 use self::pending::{CallbackHandler, PendingCalls};
-use crate::host::PpcError;
+use crate::PpcError;
 
 pub use self::frame_io::read_frame;
 
