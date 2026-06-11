@@ -1,5 +1,6 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use eos_daemon::wire::ops;
@@ -7,7 +8,8 @@ use eos_e2e_test::{next_invocation_id, unique_suffix};
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, wait_for_active_leases,
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, settle_foreground_command,
+    wait_for_active_leases,
 };
 
 /// `docs/architecture/sandbox/occ.html` §4.4 (Throughput Model): the single
@@ -45,6 +47,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
             "yield_time_ms": 1000,
             "timeout_seconds": 30,}),
     )?;
+    let exec = settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     assert_eq!(as_i64(&exec, "exit_code")?, 0, "{exec}");
 

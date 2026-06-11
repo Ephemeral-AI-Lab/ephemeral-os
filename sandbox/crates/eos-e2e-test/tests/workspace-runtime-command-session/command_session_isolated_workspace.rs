@@ -83,6 +83,7 @@ fn iws_prompt_stdin_poll_cancel_private_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     let path = format!(
         "iws-command-session/prompt-{}.txt",
         eos_e2e_test::unique_suffix().replace('-', "_")
@@ -113,9 +114,9 @@ time.sleep(60)'"
     );
     let session_id = as_str(&started, "command_session_id")?.to_owned();
     let transcript_path = isolated_command_session_transcript_path(&handle_id, &session_id);
-    wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
-
     let body = (|| -> Result<()> {
+        wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
+
         let answered = lease.call_ok(
             ops::API_V1_WRITE_STDIN,
             json!({

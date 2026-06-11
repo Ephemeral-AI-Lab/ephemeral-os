@@ -1,5 +1,6 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
@@ -10,7 +11,8 @@ use eos_e2e_test::next_invocation_id;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip, wait_for_active_leases,
+    array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip, settle_foreground_command,
+    wait_for_active_leases,
 };
 
 /// Read a nested `timings.<key>` number from a response.
@@ -181,6 +183,7 @@ fn read_max_bytes_guard() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 20,}),
     )?;
+    let exec = settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(
         as_str(&exec, "status")?,
         "ok",
