@@ -5,7 +5,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 // when the test only drives public daemon APIs. These imports keep
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::wire::Request;
-use eos_daemon::OpTable;
 use eos_layerstack as _;
 use eos_overlay as _;
 use eos_plugin as _;
@@ -29,9 +28,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
             "content": "hello\n",
         }),
     };
-    let table = OpTable::with_builtins();
-
-    let response = table.dispatch(&write);
+    let response = eos_daemon::dispatch(&write);
 
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["workspace"], Value::String("ephemeral".to_owned()));
@@ -54,7 +51,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
             "path": fixture.workspace.join("new.txt"),
         }),
     };
-    let response = table.dispatch(&read);
+    let response = eos_daemon::dispatch(&read);
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["content"], Value::String("hello\n".to_owned()));
     assert_eq!(response["exists"], Value::Bool(true));
@@ -62,7 +59,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
 }
 
 #[test]
-fn write_file_missing_content_is_invalid_envelope() -> TestResult {
+fn write_file_missing_content_is_invalid_request() -> TestResult {
     let fixture = seed_layer_stack("write_missing_content")?;
     let request = Request {
         op: "sandbox.file.write".to_owned(),
@@ -73,12 +70,12 @@ fn write_file_missing_content_is_invalid_envelope() -> TestResult {
         }),
     };
 
-    let response = OpTable::with_builtins().dispatch(&request);
+    let response = eos_daemon::dispatch(&request);
 
     assert_eq!(response["success"], Value::Bool(false));
     assert_eq!(
         response["error"]["kind"],
-        Value::String("invalid_envelope".to_owned())
+        Value::String("invalid_request".to_owned())
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -100,7 +97,7 @@ fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
         }),
     };
 
-    let response = OpTable::with_builtins().dispatch(&request);
+    let response = eos_daemon::dispatch(&request);
 
     assert_eq!(response["success"], Value::Bool(false));
     assert_eq!(response["changed_paths"], json!([]));
@@ -119,7 +116,6 @@ fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
 #[test]
 fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
     let fixture = seed_layer_stack("write_git_drop")?;
-    let table = OpTable::with_builtins();
     let write = Request {
         op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
@@ -130,7 +126,7 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
         }),
     };
 
-    let response = table.dispatch(&write);
+    let response = eos_daemon::dispatch(&write);
 
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["status"], Value::String("committed".to_owned()));
@@ -148,7 +144,7 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
             "path": fixture.workspace.join(".git/config"),
         }),
     };
-    let response = table.dispatch(&read);
+    let response = eos_daemon::dispatch(&read);
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["exists"], Value::Bool(false));
     Ok(())
@@ -166,9 +162,7 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
             "edits": [{"old_text": "README", "new_text": "NOTES", "replace_all": false}],
         }),
     };
-    let table = OpTable::with_builtins();
-
-    let response = table.dispatch(&edit);
+    let response = eos_daemon::dispatch(&edit);
 
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["changed_paths"], json!(["README.md"]));
@@ -186,7 +180,7 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
             "path": fixture.workspace.join("README.md"),
         }),
     };
-    let response = table.dispatch(&read);
+    let response = eos_daemon::dispatch(&read);
     assert_eq!(response["content"], Value::String("# NOTES\n".to_owned()));
     Ok(())
 }
@@ -194,7 +188,6 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
 #[test]
 fn identical_head_write_is_idempotent() -> TestResult {
     let fixture = seed_layer_stack("write_idempotent")?;
-    let table = OpTable::with_builtins();
     let request = Request {
         op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
@@ -205,15 +198,15 @@ fn identical_head_write_is_idempotent() -> TestResult {
         }),
     };
 
-    assert_eq!(table.dispatch(&request)["success"], Value::Bool(true));
-    assert_eq!(table.dispatch(&request)["success"], Value::Bool(true));
+    assert_eq!(eos_daemon::dispatch(&request)["success"], Value::Bool(true));
+    assert_eq!(eos_daemon::dispatch(&request)["success"], Value::Bool(true));
 
     let metrics = Request {
         op: "sandbox.checkpoint.layer_metrics".to_owned(),
         invocation_id: "inv-metrics".to_owned(),
         args: request.args,
     };
-    let response = table.dispatch(&metrics);
+    let response = eos_daemon::dispatch(&metrics);
     assert_eq!(response["manifest_depth"], json!(2));
     Ok(())
 }

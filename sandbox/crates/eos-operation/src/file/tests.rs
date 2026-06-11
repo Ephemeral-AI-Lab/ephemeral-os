@@ -18,14 +18,14 @@ impl FakeBackend {
 }
 
 impl FileBackend for FakeBackend {
-    fn workspace_kind(&self) -> &'static str {
-        "ephemeral"
+    fn workspace_kind(&self) -> WorkspaceKind {
+        WorkspaceKind::Ephemeral
     }
 
-    fn mutation_source(&self, kind: MutationKind) -> &'static str {
+    fn mutation_source(&self, kind: MutationKind) -> MutationSource {
         match kind {
-            MutationKind::Write => "api_write",
-            MutationKind::Edit => "api_edit",
+            MutationKind::Write => MutationSource::ApiWrite,
+            MutationKind::Edit => MutationSource::ApiEdit,
         }
     }
 
@@ -46,16 +46,18 @@ impl FileBackend for FakeBackend {
         let path = mutation.path.path.clone();
         self.recorded.replace(Some(mutation));
         Ok(MutationOutcome {
-            workspace_kind: "ephemeral".to_owned(),
-            success: true,
+            core: MutationCore {
+                success: true,
+                conflict: None,
+                conflict_reason: None,
+                changed_paths: vec![path.clone()],
+                changed_path_kinds: BTreeMap::from([(path, ChangedPathKind::Write)]),
+                mutation_source: Some(MutationSource::ApiWrite),
+                timings: BTreeMap::new(),
+            },
+            workspace_kind: WorkspaceKind::Ephemeral,
             published: true,
-            status: "committed".to_owned(),
-            conflict: None,
-            conflict_reason: None,
-            changed_paths: vec![path.clone()],
-            changed_path_kinds: BTreeMap::from([(path, "write".to_owned())]),
-            mutation_source: "api_write".to_owned(),
-            timings: BTreeMap::new(),
+            status: MutationStatus::Committed,
             ..MutationOutcome::default()
         })
     }
@@ -114,10 +116,10 @@ fn write_create_only_existing_is_rejected_conflict() -> TestResult {
             max_file_bytes: 64,
         },
     )?;
-    assert!(!outcome.success);
-    assert_eq!(outcome.status, "rejected");
+    assert!(!outcome.core.success);
+    assert_eq!(outcome.status, MutationStatus::Rejected);
     assert_eq!(
-        outcome.conflict_reason.as_deref(),
+        outcome.core.conflict_reason.as_deref(),
         Some("create_only_existing")
     );
     assert!(
@@ -139,7 +141,7 @@ fn write_pins_base_bytes_into_the_apply() -> TestResult {
             max_file_bytes: 64,
         },
     )?;
-    assert!(outcome.success, "write commits: {outcome:?}");
+    assert!(outcome.core.success, "write commits: {outcome:?}");
     let recorded = backend.recorded.borrow().clone().expect("apply called");
     assert_eq!(recorded.base.bytes.as_deref(), Some(b"old".as_slice()));
     assert_eq!(recorded.content, b"new");
@@ -161,8 +163,8 @@ fn edit_applies_search_replace_against_base() -> TestResult {
             }],
         },
     )?;
-    assert!(outcome.success);
-    assert_eq!(outcome.applied_edits, 1);
+    assert!(outcome.core.success);
+    assert_eq!(outcome.applied_edits, Some(1));
     let recorded = backend.recorded.borrow().clone().expect("apply called");
     assert_eq!(recorded.content, b"fn main() { new(); }");
     Ok(())
@@ -182,10 +184,10 @@ fn edit_anchor_count_mismatch_is_aborted_overlap() -> TestResult {
             }],
         },
     )?;
-    assert!(!outcome.success);
-    assert_eq!(outcome.status, "aborted_overlap");
+    assert!(!outcome.core.success);
+    assert_eq!(outcome.status, MutationStatus::AbortedOverlap);
     assert_eq!(
-        outcome.conflict.as_ref().map(|c| c.message.as_str()),
+        outcome.core.conflict.as_ref().map(|c| c.message.as_str()),
         Some("anchor occurrence count mismatch")
     );
     Ok(())
@@ -205,7 +207,7 @@ fn edit_missing_file_is_aborted_version() -> TestResult {
             }],
         },
     )?;
-    assert!(!outcome.success);
-    assert_eq!(outcome.status, "aborted_version");
+    assert!(!outcome.core.success);
+    assert_eq!(outcome.status, MutationStatus::AbortedVersion);
     Ok(())
 }

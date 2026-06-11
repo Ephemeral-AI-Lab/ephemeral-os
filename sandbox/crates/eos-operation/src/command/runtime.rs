@@ -1,10 +1,12 @@
 use std::sync::{OnceLock, RwLock};
 use std::time::Instant;
 
-use eos_command_session::{CommandResponse, CommandSessionCompletion, CommandSessionConfig};
+use eos_command_session::CommandSessionConfig;
 use serde_json::Value;
 
+use super::contract::{CommandResponse, CommandSessionCompletion, CommandStatus};
 use super::service::CommandOps;
+use crate::CommandSessionId;
 
 pub fn command_ops() -> &'static CommandOps {
     static OPS: OnceLock<CommandOps> = OnceLock::new();
@@ -81,13 +83,12 @@ pub fn recover_orphaned_command_sessions() {
                         .and_then(Value::as_str)
                         .unwrap_or_default();
                     let result = CommandResponse {
-                        status: "error".to_owned(),
+                        status: CommandStatus::Error,
                         exit_code: Some(1),
                         stdout: String::new(),
                         stderr: "orphan_reaped: daemon restarted".to_owned(),
-                        command_session_id: Some(id.to_owned()),
-                        workspace: None,
-                        metadata: Value::Null,
+                        command_session_id: Some(CommandSessionId::new(id.to_owned())),
+                        settled: None,
                     };
                     command_ops().push_completed(CommandSessionCompletion {
                         command_session_id: id.to_owned(),

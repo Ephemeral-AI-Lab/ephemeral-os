@@ -1,0 +1,27 @@
+{
+  "status": "ok",
+  "exit_code": 0,
+  "output": {
+    "stdout": "",
+    "stderr": ""
+  },
+  "command_session_id": "cmd_conflict",
+  "success": false,
+  "changed_paths": [
+    "src/main.rs"
+  ],
+  "changed_path_kinds": {
+    "src/main.rs": "write"
+  },
+  "mutation_source": "overlay_capture",
+  "conflict": {
+    "reason": "aborted_overlap",
+    "conflict_file": "src/main.rs",
+    "message": "conflict on src/main.rs"
+  },
+  "conflict_reason": "conflict on src/main.rs",
+  "timings": {
+    "command_exec.total_s": 1.25
+  },
+  "workspace": "ephemeral"
+}

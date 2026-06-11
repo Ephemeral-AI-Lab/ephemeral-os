@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use eos_e2e_test::next_invocation_id;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, request_with_identity};
@@ -20,7 +20,7 @@ fn n_concurrent_mixed_ops() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "pressure/mixed-seed.txt", "content": "needle\n", "overwrite": true}),
     )?;
     let barrier = Arc::new(Barrier::new(10));
@@ -54,9 +54,9 @@ fn n_concurrent_mixed_ops() -> Result<()> {
                     }),
                 };
                 let op = match index % 3 {
-                    0 => ops::SANDBOX_FILE_WRITE,
-                    1 => ops::SANDBOX_FILE_READ,
-                    _ => ops::SANDBOX_COMMAND_EXEC,
+                    0 => catalog::SANDBOX_FILE_WRITE,
+                    1 => catalog::SANDBOX_FILE_READ,
+                    _ => catalog::SANDBOX_COMMAND_EXEC,
                 };
                 client.request(op, &next_invocation_id(), &args)
             })
@@ -104,7 +104,7 @@ fn file_ops_ladder_1_3_6_12() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::SANDBOX_FILE_WRITE,
+                        catalog::SANDBOX_FILE_WRITE,
                         &root,
                         &caller_id,
                         json!({
@@ -136,7 +136,7 @@ fn file_ops_ladder_1_3_6_12() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::SANDBOX_FILE_READ,
+                        catalog::SANDBOX_FILE_READ,
                         &root,
                         &caller_id,
                         json!({
@@ -173,7 +173,7 @@ fn write_storm_squash_under_load() -> Result<()> {
     let lease = pool.acquire()?;
     for version in 0..115 {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({
                 "path": "pressure/storm.txt",
                 "content": format!("storm-{version}\n"),
@@ -182,18 +182,18 @@ fn write_storm_squash_under_load() -> Result<()> {
         )?;
         if version % 20 == 0 {
             let read = lease.call_ok(
-                ops::SANDBOX_FILE_READ,
+                catalog::SANDBOX_FILE_READ,
                 json!({"path": "pressure/storm.txt"}),
             )?;
             assert!(as_str(&read, "content")?.contains("storm"));
         }
     }
     let read = lease.call_ok(
-        ops::SANDBOX_FILE_READ,
+        catalog::SANDBOX_FILE_READ,
         json!({"path": "pressure/storm.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "storm-114\n");
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&metrics, "manifest_depth")? <= 100,
         "write storm should remain within auto-squash depth target: {metrics}"
@@ -234,7 +234,7 @@ fn concurrent_overlay_execs_share_lowerdir_storage_is_o1() -> Result<()> {
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::SANDBOX_COMMAND_EXEC,
+                    catalog::SANDBOX_COMMAND_EXEC,
                     &root,
                     &caller_id,
                     json!({
@@ -307,7 +307,7 @@ fn concurrent_writes_during_squash_keep_manifest_bounded_and_coherent() -> Resul
             for version in 0..driver_writes {
                 let response = request_with_identity(
                     &client,
-                    ops::SANDBOX_FILE_WRITE,
+                    catalog::SANDBOX_FILE_WRITE,
                     &root,
                     &caller_id,
                     json!({
@@ -339,7 +339,7 @@ fn concurrent_writes_during_squash_keep_manifest_bounded_and_coherent() -> Resul
                 for round in 0..rounds_each {
                     let response = request_with_identity(
                         &client,
-                        ops::SANDBOX_FILE_WRITE,
+                        catalog::SANDBOX_FILE_WRITE,
                         &root,
                         &caller_id,
                         json!({
@@ -365,11 +365,11 @@ fn concurrent_writes_during_squash_keep_manifest_bounded_and_coherent() -> Resul
 
     // The stack stays writable and coherent after the concurrent squash storm.
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "pressure/squash-race/driver.txt", "content": "final\n", "overwrite": true}),
     )?;
     let driver_read = lease.call_ok(
-        ops::SANDBOX_FILE_READ,
+        catalog::SANDBOX_FILE_READ,
         json!({"path": "pressure/squash-race/driver.txt"}),
     )?;
     assert_eq!(as_str(&driver_read, "content")?, "final\n", "{driver_read}");
@@ -377,7 +377,7 @@ fn concurrent_writes_during_squash_keep_manifest_bounded_and_coherent() -> Resul
     // No fanout data was lost to the squash race.
     for writer in 0..fanout {
         let read = lease.call_ok(
-            ops::SANDBOX_FILE_READ,
+            catalog::SANDBOX_FILE_READ,
             json!({"path": format!("pressure/squash-race/w-{writer}/r-{}.txt", rounds_each - 1)}),
         )?;
         assert_eq!(

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
@@ -18,7 +18,7 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         .context("git init workspace")?;
     for version in 0..POST_SQUASH_WRITES {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({
                 "path": "git/checkpoint.txt",
                 "content": format!("from layerstack after squash {version}\n"),
@@ -26,7 +26,7 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
             }),
         )?;
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({
                 "path": format!("git/noise-{version}.txt"),
                 "content": format!("noise {version}\n"),
@@ -36,14 +36,14 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
     }
     // 56 publishes against `auto_squash_max_depth: 8` only stays this shallow
     // if auto-squash folded the stack repeatedly along the way.
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&metrics, "manifest_depth")? <= 8,
         "commit_to_git e2e should run after repeated auto-squash bounded the depth: {metrics}"
     );
 
     let commit = lease.call_ok(
-        ops::SANDBOX_CHECKPOINT_COMMIT_TO_GIT,
+        catalog::SANDBOX_CHECKPOINT_COMMIT_TO_GIT,
         json!({
             "workspace_root": lease.workspace_root(),
             "paths": ["git/checkpoint.txt"],
@@ -71,7 +71,7 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         "overlay mount timing should be reported: {commit}"
     );
     let committed_depth = timing_s(&commit, "resource.layer_stack.manifest_depth")?;
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         committed_depth as i64,
         as_i64(&metrics, "manifest_depth")?,

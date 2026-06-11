@@ -7,7 +7,7 @@
 //! linearly (superseded layers are squashed + reclaimed).
 
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::{as_i64, live_pool_or_skip, wait_for_active_leases};
@@ -20,7 +20,7 @@ fn auto_squash_bounds_depth_to_configured_max() -> Result<()> {
     let lease = pool.acquire()?;
     for version in 0..30 {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({"path": "squash-bounds/depth.txt", "content": format!("v{version}\n"), "overwrite": true}),
         )?;
     }
@@ -40,12 +40,12 @@ fn repeated_overwrite_keeps_storage_bounded() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let baseline = as_i64(
-        &lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?,
+        &lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?,
         "storage_bytes",
     )?;
     for version in 0..60 {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({"path": "squash-bounds/churn.txt", "content": format!("{version:0512}"), "overwrite": true}),
         )?;
     }
@@ -72,7 +72,7 @@ fn squash_reclaims_superseded_layer_dirs() -> Result<()> {
     let lease = pool.acquire()?;
     for version in 0..40 {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({"path": "squash-bounds/gc.txt", "content": format!("v{version}\n"), "overwrite": true}),
         )?;
     }

@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::CommandResponse;
+use serde_json::json;
 
 #[test]
 fn session_exposes_identity_and_expiry() {
@@ -56,15 +56,16 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
     assert!(reaped.kill.is_none());
     assert!(session.reap().is_none());
 
-    let response = CommandResponse {
-        status: "ok".to_owned(),
-        exit_code: Some(0),
-        stdout: reaped.stdout.clone(),
-        stderr: String::new(),
-        command_session_id: Some("cmd_1".to_owned()),
-        workspace: Some("ephemeral".to_owned()),
-        metadata: serde_json::Value::Null,
-    };
+    let response = json!({
+        "status": "ok",
+        "exit_code": 0,
+        "output": {
+            "stdout": reaped.stdout,
+            "stderr": "",
+        },
+        "command_session_id": "cmd_1",
+        "workspace": "ephemeral",
+    });
     session.persist_final(&response);
 
     assert!(final_path.exists());

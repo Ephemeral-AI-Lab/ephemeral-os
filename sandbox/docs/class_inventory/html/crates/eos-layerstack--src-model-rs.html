@@ -82,7 +82,7 @@
         <span class="rs-kw">if</span> raw.starts_with(&#x27;/&#x27;) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
         }
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
         <span class="rs-kw">for</span> part <span class="rs-kw">in</span> raw.split(&#x27;/&#x27;) {
             <span class="rs-kw">if</span> part.is_empty() || part == &quot;.&quot; {
                 <span class="rs-kw">continue</span>;
@@ -126,9 +126,9 @@
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>layers</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt;</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-76"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack.html#method-new-161">new</a> (version : i64 , layers : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt; , schema_version : i64) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a> &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>layers</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt;</code></td></tr><tr><td>pub</td><td>schema_version</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-76"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack.html#method-new-160">new</a> (version : i64 , layers : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a> &gt; , schema_version : i64) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
         <span class="rs-kw">if</span> schema_version != <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">UnsupportedSchemaVersion</span>(schema_version));
         }
@@ -208,7 +208,7 @@
   <pre><code>#[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-manifest-root-hash-147">manifest_root_hash</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> encoded = <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(&amp;manifest.layers);
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     hasher.update(encoded.as_bytes());
     <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
 }
@@ -228,7 +228,7 @@
   <summary>code</summary>
   <pre><code>#[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes.iter().cloned() {
         by_path.insert(change.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>().clone(), change);
     }
@@ -250,7 +250,7 @@
   <summary>code</summary>
   <pre><code>#[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-layer-digest-217">layer_digest</a>(changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes) {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(&amp;<span class="rs-kw">mut</span> hasher, &amp;change);
     }
@@ -461,7 +461,7 @@
         <span class="rs-kw">if</span> raw.starts_with(&#x27;/&#x27;) {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">InvalidPath</span>(path.to_owned()));
         }
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
         <span class="rs-kw">for</span> part <span class="rs-kw">in</span> raw.split(&#x27;/&#x27;) {
             <span class="rs-kw">if</span> part.is_empty() || part == &quot;.&quot; {
                 <span class="rs-kw">continue</span>;
@@ -503,7 +503,7 @@
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a> {
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version: i64, layers: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>&gt;, schema_version: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>&gt; {
         <span class="rs-kw">if</span> schema_version != <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-CasError-12">CasError</a>::<span class="rs-type">UnsupportedSchemaVersion</span>(schema_version));
         }
@@ -577,7 +577,7 @@
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-manifest-root-hash-147">manifest_root_hash</a>(manifest: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>) -&gt; <span class="rs-type">String</span> {
     <span class="rs-kw">let</span> encoded = <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-manifest-layers-json-131">manifest_layers_json</a>(&amp;manifest.layers);
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     hasher.update(encoded.as_bytes());
     <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-hex-lower-226">hex_lower</a>(hasher.finalize())
 }
@@ -624,7 +624,7 @@
 
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_path: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>&gt; = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes.iter().cloned() {
         by_path.insert(change.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>().clone(), change);
     }
@@ -646,7 +646,7 @@
 
 #[must_use]
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-layer-digest-217">layer_digest</a>(changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>]) -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> change <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-aggregate-layer-changes-195">aggregate_layer_changes</a>(changes) {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#item-fn-update-digest-204">update_digest</a>(&amp;<span class="rs-kw">mut</span> hasher, &amp;change);
     }

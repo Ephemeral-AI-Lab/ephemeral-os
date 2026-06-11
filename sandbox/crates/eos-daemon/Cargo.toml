@@ -15,7 +15,7 @@ eos-overlay.workspace = true
 eos-plugin.workspace = true
 eos-workspace.workspace = true
 # preserve_order is contract-load-bearing: request `args` keys must cross
-# the wire in insertion order for byte-stable envelope round-trips.
+# the wire in insertion order for byte-stable wire-message round-trips.
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde.workspace = true
 tokio.workspace = true
@@ -28,7 +28,7 @@ uuid.workspace = true
 # production `[dependencies]` entry above leaves it off (resolver 2 keeps the
 # dev-dependency feature out of the non-test build).
 eos-operation = { workspace = true, features = ["test-root-override"] }
-# Property tests for the absorbed wire envelope round-trip.
+# Property tests for the absorbed wire response round-trip.
 proptest.workspace = true
 
 [lints]

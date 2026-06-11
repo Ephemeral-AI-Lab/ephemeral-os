@@ -1,4 +1,4 @@
-//! The daemon wire protocol: envelope framing, frozen protocol constants, and
+//! The daemon wire protocol: message framing, frozen protocol constants, and
 //! response canonicalization.
 //!
 //! This is in-box code. The host side carries its own copy of the vocabulary
@@ -6,10 +6,10 @@
 //! `crates/eos-operation/ops.json` plus `contract/` fixtures/prose, and drift
 //! is caught by the conformance suites run by `cargo xtask check-contract`.
 
-pub mod envelope;
+pub mod message;
 
-pub use envelope::{
-    decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
+pub use message::{
+    decode, decode_value, encode, ErrorKind, ErrorResponse, ProtocolError, Request, WireMessage,
 };
 
 pub const DAEMON_PROTOCOL_VERSION: i64 = eos_operation::core::catalog::PROTOCOL_VERSION;

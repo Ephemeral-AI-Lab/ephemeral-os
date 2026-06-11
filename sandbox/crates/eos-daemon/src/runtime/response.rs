@@ -6,6 +6,11 @@ use std::time::Instant;
 use eos_layerstack::ChangesetResult;
 use eos_layerstack::Manifest;
 use eos_namespace::protocol::RunResult;
+use eos_operation::{
+    ChangedPathKind, ChangedPathKinds, MutationCore, MutationSource, MutationStatus,
+    WorkspaceConflict, WorkspaceKind,
+};
+use serde::Serialize;
 
 pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
     const U32_FACTOR: f64 = 4_294_967_296.0;
@@ -88,46 +93,15 @@ pub(crate) fn merge_runner_timings(
     }
 }
 
-/// The one guarded-write wire shape shared by the direct file ops and the
-/// changeset (command/plugin overlay) paths. Field presence differences are
-/// parameterized; key insertion order is contract-stable.
-pub(crate) struct GuardedResponse {
-    pub(crate) success: bool,
-    /// Direct file ops carry an explicit `published` flag; changeset paths
-    /// omit the key entirely.
-    pub(crate) published: Option<bool>,
-    pub(crate) workspace: String,
-    pub(crate) changed_paths: Value,
-    pub(crate) changed_path_kinds: Value,
-    pub(crate) mutation_source: String,
-    pub(crate) status: String,
-    pub(crate) conflict: Option<Value>,
-    pub(crate) conflict_reason: Option<String>,
-    pub(crate) timings: Value,
-    pub(crate) applied_edits: Option<i64>,
-}
-
-impl GuardedResponse {
-    pub(crate) fn into_json(self) -> Value {
-        let mut response = serde_json::Map::new();
-        response.insert("success".to_owned(), json!(self.success));
-        if let Some(published) = self.published {
-            response.insert("published".to_owned(), json!(published));
-        }
-        response.insert("workspace".to_owned(), json!(self.workspace));
-        response.insert("changed_paths".to_owned(), self.changed_paths);
-        response.insert("changed_path_kinds".to_owned(), self.changed_path_kinds);
-        response.insert("mutation_source".to_owned(), json!(self.mutation_source));
-        response.insert("status".to_owned(), json!(self.status));
-        response.insert("conflict".to_owned(), self.conflict.unwrap_or(Value::Null));
-        response.insert("conflict_reason".to_owned(), json!(self.conflict_reason));
-        response.insert("error".to_owned(), Value::Null);
-        response.insert("timings".to_owned(), self.timings);
-        if let Some(applied_edits) = self.applied_edits {
-            response.insert("applied_edits".to_owned(), json!(applied_edits));
-        }
-        Value::Object(response)
-    }
+#[derive(Serialize)]
+struct ChangesetMutationResponse {
+    #[serde(flatten)]
+    core: MutationCore,
+    workspace: WorkspaceKind,
+    status: MutationStatus,
+    error: Option<()>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    applied_edits: Option<i64>,
 }
 
 pub(crate) fn guarded_changeset_response(
@@ -145,36 +119,38 @@ pub(crate) fn guarded_changeset_response(
         json!(total_start.elapsed().as_secs_f64()),
     );
     let changed_paths = result.published_paths();
-    let mut changed_path_kinds = serde_json::Map::new();
+    let mut changed_path_kinds = ChangedPathKinds::new();
     for path in &changed_paths {
-        changed_path_kinds.insert(path.to_owned(), json!("write"));
+        changed_path_kinds.insert(path.to_owned(), ChangedPathKind::Write);
     }
     let conflict = result.first_conflict();
-    GuardedResponse {
-        success: result.success(),
-        published: None,
-        workspace: "ephemeral".to_owned(),
-        changed_paths: json!(changed_paths),
-        changed_path_kinds: Value::Object(changed_path_kinds),
-        mutation_source: mutation_source(verb).to_owned(),
+    let mut response = serde_json::to_value(ChangesetMutationResponse {
+        core: MutationCore {
+            success: result.success(),
+            changed_paths,
+            changed_path_kinds,
+            mutation_source: mutation_source(verb),
+            conflict: conflict.as_ref().map(|file| {
+                let reason = file.status.wire_str();
+                WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
+            }),
+            conflict_reason: conflict
+                .as_ref()
+                .map(|file| file.conflict_message(file.status.wire_str()).to_owned()),
+            timings: timings.into_iter().collect(),
+        },
+        workspace: WorkspaceKind::Ephemeral,
         status: conflict
             .as_ref()
-            .map_or("committed", |file| file.status.wire_str())
-            .to_owned(),
-        conflict: conflict.as_ref().map(|file| {
-            json!({
-                "reason": file.status.wire_str(),
-                "conflict_file": file.path.as_str(),
-                "message": file.conflict_message(file.status.wire_str()),
-            })
-        }),
-        conflict_reason: conflict
-            .as_ref()
-            .map(|file| file.conflict_message(file.status.wire_str()).to_owned()),
-        timings: Value::Object(timings),
+            .map_or(MutationStatus::Committed, |file| file.status.into()),
+        error: None,
         applied_edits,
+    })
+    .expect("changeset mutation response serializes");
+    if verb == "plugin_overlay" {
+        response["mutation_source"] = json!("plugin_overlay");
     }
-    .into_json()
+    response
 }
 
 pub(crate) fn resource_timings(
@@ -307,13 +283,12 @@ fn insert_process_resource_timings(timings: &mut serde_json::Map<String, Value>)
     }
 }
 
-fn mutation_source(verb: &str) -> &'static str {
+fn mutation_source(verb: &str) -> Option<MutationSource> {
     match verb {
-        "write" => "api_write",
-        "edit" => "api_edit",
-        "exec_command" => "overlay_capture",
-        "plugin_overlay" => "plugin_overlay",
-        _ => "",
+        "write" => Some(MutationSource::ApiWrite),
+        "edit" => Some(MutationSource::ApiEdit),
+        "exec_command" => Some(MutationSource::OverlayCapture),
+        _ => None,
     }
 }
 

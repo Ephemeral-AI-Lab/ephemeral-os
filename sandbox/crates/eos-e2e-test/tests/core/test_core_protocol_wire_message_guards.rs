@@ -1,12 +1,12 @@
-//! Envelope and error-surface contract tests.
+//! WireMessage and error-surface contract tests.
 //!
 //! Asserts the daemon's wire-error catalog directly over the checked wire contract:
 //! unknown op, malformed frame, oversized request, and TCP auth. All four are
-//! observed as structured error envelopes (`success:false` + `error.kind`).
+//! observed as structured error responses (`success:false` + `error.kind`).
 
 use anyhow::{Context, Result};
 use eos_e2e_test::client::error_kind;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use eos_sandbox_host::MAX_REQUEST_BYTES;
 use serde_json::json;
 
@@ -55,7 +55,7 @@ fn oversized_request_rejected() -> Result<()> {
     // A request line strictly larger than MAX_REQUEST_BYTES (16 MiB).
     let huge = "x".repeat(MAX_REQUEST_BYTES + 1024);
     let resp = lease.call(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "big.txt", "content": huge, "overwrite": true}),
     )?;
     assert_eq!(
@@ -78,7 +78,11 @@ fn unauthorized_tcp_rejected() -> Result<()> {
         .client()
         .with_token(Some("definitely-wrong-token".to_owned()));
     let resp = wrong
-        .request(ops::SANDBOX_CALL_HEARTBEAT, "contract-bad-auth", &json!({}))
+        .request(
+            catalog::SANDBOX_CALL_HEARTBEAT,
+            "contract-bad-auth",
+            &json!({}),
+        )
         .context("heartbeat with wrong token")?;
     assert_eq!(
         error_kind(&resp),
@@ -88,7 +92,11 @@ fn unauthorized_tcp_rejected() -> Result<()> {
 
     let none = lease.client().with_token(None);
     let resp = none
-        .request(ops::SANDBOX_CALL_HEARTBEAT, "contract-no-auth", &json!({}))
+        .request(
+            catalog::SANDBOX_CALL_HEARTBEAT,
+            "contract-no-auth",
+            &json!({}),
+        )
         .context("heartbeat with no token")?;
     assert_eq!(
         error_kind(&resp),
@@ -105,14 +113,14 @@ fn forbidden_in_isolated_workspace_rejected() -> Result<()> {
     };
     let lease = pool.acquire()?;
 
-    let entered = lease.call(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let entered = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     assert!(
         eos_e2e_test::client::is_success(&entered),
         "isolated enter must succeed before checking plugin isolation gate: {entered}"
     );
 
     let blocked = lease.call("plugin.lsp.not_loaded_yet", json!({}))?;
-    let _ = lease.call(ops::SANDBOX_ISOLATION_EXIT, json!({}));
+    let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({}));
     assert_eq!(
         error_kind(&blocked),
         Some("forbidden_in_isolated_workspace"),

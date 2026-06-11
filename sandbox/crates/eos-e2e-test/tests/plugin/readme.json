@@ -46,7 +46,7 @@
     {
       "id": "plugin-dispatch-roundtrip",
       "title": "Dispatch Roundtrip",
-      "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success envelope, package root, and dependency root.",
+      "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success response, package root, and dependency root.",
       "tags": [
         "plugin"
       ]
@@ -155,7 +155,7 @@
     {
       "id": "plugin_failure_contracts",
       "name": "plugin_failure_contracts",
-      "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error envelopes with stable kind/message payloads.",
+      "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error responses with stable kind/message payloads.",
       "command": "cargo test -p eos-e2e-test --features e2e --test plugin plugin_setup_and_manifest_failures_are_structured -- --nocapture",
       "checklist": [
         "plugin-lsp-apply-and-failures",
@@ -165,7 +165,7 @@
     {
       "id": "plugin_service_dispatch_and_health",
       "name": "plugin_service_dispatch_and_health",
-      "description": "Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/response envelopes, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
+      "description": "Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/responses, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
       "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
       "checklist": [
         "plugin-dispatch-roundtrip",

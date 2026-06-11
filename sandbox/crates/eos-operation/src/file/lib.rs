@@ -3,31 +3,23 @@
 use std::time::Instant;
 
 pub use crate::{
-    ChangedPathKinds, WorkspaceConflict, WorkspaceMutationOutcome as MutationOutcome,
-    WorkspaceTimings,
+    ChangedPathKind, ChangedPathKinds, MutationCore, MutationSource, MutationStatus,
+    OpError as FileOpsError, WorkspaceConflict, WorkspaceKind,
+    WorkspaceMutationOutcome as MutationOutcome, WorkspaceTimings,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
+pub mod contract;
+
 mod direct;
 mod isolated;
-pub mod catalog;
-pub mod port;
 
 pub use direct::DirectBackend;
 pub use isolated::IsolatedBackend;
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("{0}")]
-pub struct FileOpsError(String);
-
 impl FileOpsError {
-    #[must_use]
-    pub fn new(_kind: &str, message: String) -> Self {
-        Self(message)
-    }
-
     #[must_use]
     pub fn invalid_request(message: impl Into<String>) -> Self {
         Self::new("invalid_request", message.into())
@@ -83,9 +75,9 @@ pub struct Mutation {
 }
 
 pub trait FileBackend {
-    fn workspace_kind(&self) -> &'static str;
+    fn workspace_kind(&self) -> WorkspaceKind;
 
-    fn mutation_source(&self, kind: MutationKind) -> &'static str;
+    fn mutation_source(&self, kind: MutationKind) -> MutationSource;
 
     fn resolve_path(&self, request_path: &str) -> Result<ResolvedWorkspacePath, FileOpsError>;
 
@@ -124,7 +116,7 @@ pub struct EditFileRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReadFileOutcome {
-    pub workspace_kind: String,
+    pub workspace_kind: WorkspaceKind,
     pub success: bool,
     pub content: String,
     pub exists: bool,
@@ -189,7 +181,7 @@ pub fn write_file<B: FileBackend>(
             backend,
             MutationKind::Write,
             &path.path,
-            "rejected",
+            MutationStatus::Rejected,
             "create_only_existing",
             "file already exists",
             timings,
@@ -201,7 +193,7 @@ pub fn write_file<B: FileBackend>(
         content: request.content,
         base,
     })?;
-    insert_total(&mut outcome.timings, "write", total_start);
+    insert_total(&mut outcome.core.timings, "write", total_start);
     Ok(outcome)
 }
 
@@ -219,7 +211,7 @@ pub fn edit_file<B: FileBackend>(
             backend,
             MutationKind::Edit,
             &path.path,
-            "aborted_version",
+            MutationStatus::AbortedVersion,
             "aborted_version",
             "file does not exist",
             timings,
@@ -243,7 +235,7 @@ pub fn edit_file<B: FileBackend>(
                     backend,
                     MutationKind::Edit,
                     &path.path,
-                    "aborted_overlap",
+                    MutationStatus::AbortedOverlap,
                     "aborted_overlap",
                     search_replace_message(&err),
                     timings,
@@ -257,8 +249,8 @@ pub fn edit_file<B: FileBackend>(
         content: content.into_bytes(),
         base,
     })?;
-    insert_total(&mut outcome.timings, "edit", total_start);
-    outcome.applied_edits = i64::try_from(request.edits.len()).unwrap_or(i64::MAX);
+    insert_total(&mut outcome.core.timings, "edit", total_start);
+    outcome.applied_edits = Some(i64::try_from(request.edits.len()).unwrap_or(i64::MAX));
     Ok(outcome)
 }
 
@@ -266,22 +258,24 @@ fn conflict_outcome<B: FileBackend>(
     backend: &B,
     kind: MutationKind,
     path: &str,
-    status: &str,
+    status: MutationStatus,
     reason: &str,
     message: &str,
     timings: WorkspaceTimings,
 ) -> MutationOutcome {
     MutationOutcome {
-        workspace_kind: backend.workspace_kind().to_owned(),
-        success: false,
+        core: MutationCore {
+            success: false,
+            conflict: Some(WorkspaceConflict::path(reason, path, message)),
+            conflict_reason: Some(reason.to_owned()),
+            changed_paths: Vec::new(),
+            changed_path_kinds: ChangedPathKinds::new(),
+            mutation_source: Some(backend.mutation_source(kind)),
+            timings,
+        },
+        workspace_kind: backend.workspace_kind(),
         published: false,
-        status: status.to_owned(),
-        conflict: Some(WorkspaceConflict::path(reason, path, message)),
-        conflict_reason: Some(reason.to_owned()),
-        changed_paths: Vec::new(),
-        changed_path_kinds: ChangedPathKinds::new(),
-        mutation_source: backend.mutation_source(kind).to_owned(),
-        timings,
+        status,
         ..MutationOutcome::default()
     }
 }

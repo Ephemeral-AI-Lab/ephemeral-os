@@ -15,9 +15,12 @@ pub mod file;
 pub mod isolation;
 #[path = "plugin/lib.rs"]
 pub mod plugin;
-#[path = "sandbox/lib.rs"]
-pub mod sandbox;
 #[path = "workspace_run/lib.rs"]
 pub mod workspace_run;
 
-pub use core::{ChangedPathKinds, WorkspaceConflict, WorkspaceMutationOutcome, WorkspaceTimings};
+pub use core::{
+    ArgProblem, ArgsError, CallerId, ChangedPathKind, ChangedPathKinds, CommandSessionId,
+    InvocationId, MutationCore, MutationSource, MutationStatus, OpError, OpRequest, OpResponse,
+    OpResponseError, OpResponseErrorKind, RequestError, WorkspaceConflict, WorkspaceKind,
+    WorkspaceMutationOutcome, WorkspaceTimings,
+};

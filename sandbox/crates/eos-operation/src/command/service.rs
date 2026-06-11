@@ -8,14 +8,18 @@ use eos_command_session::session::{
 };
 use eos_command_session::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use eos_command_session::{
-    CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,
-    StartCommandSession, WriteStdin,
+    CancelCommandSession, CollectCompleted, CommandSessionConfig, CommandSessionError,
+    ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 use eos_layerstack::service;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
 
+use crate::WorkspaceKind;
+
+use super::contract::{
+    CollectCompletedResponse, CommandResponse, CommandSessionCompletion, CommandStatus,
+};
 use super::outcome::FinalizeCommandRequest;
 use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
 use super::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
@@ -400,7 +404,7 @@ impl CommandOps {
         let request = FinalizeCommandRequest {
             runner_result: reaped.runner_result,
             command_elapsed_s: reaped.elapsed_s,
-            status: reaped.status,
+            status: CommandStatus::from_wire_str(&reaped.status).unwrap_or(CommandStatus::Error),
             exit_code: Some(reaped.exit_code),
             stdout: reaped.stdout,
             stderr: String::new(),
@@ -410,7 +414,7 @@ impl CommandOps {
         let outcome = match &*run {
             ActiveCommand::Ephemeral(ephemeral) => {
                 let outcome = if cancelled {
-                    Ok(discarded_response("ephemeral", request))
+                    Ok(discarded_response(WorkspaceKind::Ephemeral, request))
                 } else {
                     settle_ephemeral(
                         &ephemeral.root,
@@ -424,7 +428,7 @@ impl CommandOps {
             }
             ActiveCommand::Isolated(isolated) => {
                 if cancelled {
-                    Ok(discarded_response("isolated", request))
+                    Ok(discarded_response(WorkspaceKind::Isolated, request))
                 } else {
                     settle_isolated(&isolated.binding, request)
                 }
@@ -434,7 +438,7 @@ impl CommandOps {
             Ok(response) => response,
             Err(error) => CommandResponse::error(error.to_string()),
         };
-        run.session().persist_final(&response);
+        run.session().persist_final(&response.to_wire_value());
         let command_session_id = run.session().id().to_owned();
         let caller_id = run.session().caller_id().to_owned();
         let command = run.session().command().to_owned();

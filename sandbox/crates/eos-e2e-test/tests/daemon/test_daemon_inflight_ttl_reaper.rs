@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, live_pool_or_skip};
@@ -23,7 +23,7 @@ fn inflight_ttl_reaper_cleanup() -> Result<()> {
     let wait_result = wait_for_inflight_count(&lease, 0, Duration::from_secs(12));
     if let Err(err) = wait_result {
         let _ = lease.call_ok(
-            ops::SANDBOX_CALL_CANCEL,
+            catalog::SANDBOX_CALL_CANCEL,
             json!({"invocation_id": invocation_id.clone()}),
         );
         let _ = handle.join();
@@ -34,7 +34,7 @@ fn inflight_ttl_reaper_cleanup() -> Result<()> {
         .join()
         .map_err(|_| anyhow::anyhow!("ttl background thread panicked"))?;
     let heartbeat = lease.call_ok(
-        ops::SANDBOX_CALL_HEARTBEAT,
+        catalog::SANDBOX_CALL_HEARTBEAT,
         json!({"invocation_ids": [invocation_id.clone()]}),
     )?;
     assert_eq!(
@@ -43,7 +43,7 @@ fn inflight_ttl_reaper_cleanup() -> Result<()> {
         "reaped invocation should be deregistered after request cleanup: {heartbeat}"
     );
     let cancel = lease.call_ok(
-        ops::SANDBOX_CALL_CANCEL,
+        catalog::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": invocation_id}),
     )?;
     assert!(
@@ -63,7 +63,7 @@ fn spawn_long_background_exec(
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
         Ok(client.request(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             &invocation_id,
             &json!({
                 "layer_stack_root": root,
@@ -83,7 +83,7 @@ fn wait_for_inflight_count(
 ) -> Result<Value> {
     let deadline = Instant::now() + timeout;
     loop {
-        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
+        let count = lease.call_ok(catalog::SANDBOX_CALL_COUNT, json!({}))?;
         if as_i64(&count, "count")? == expected {
             return Ok(count);
         }

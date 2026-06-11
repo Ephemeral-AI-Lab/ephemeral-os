@@ -4,6 +4,7 @@
 //! ns-runner launcher (services spawn directly, remounts are no-ops). The
 //! daemon's wire shaping over these outcomes is covered by daemon tests.
 
+use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -12,11 +13,15 @@ use std::time::{Duration, Instant};
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_layerstack::{LayerChange, LayerPath, LayerStack};
-use eos_operation::plugin::ensure::{validate_plugin_caller_fields, MAX_PLUGIN_CALLER_FIELD_CHARS};
+use eos_operation::plugin::contract::{
+    PluginAuditFields, PluginEnsureInput, PluginPackageInput, MAX_PLUGIN_CALLER_FIELD_CHARS,
+};
+use eos_operation::plugin::ensure::validate_plugin_caller_fields;
 use eos_operation::plugin::{
     read_message_bytes, EnsureOutcome, EnsureReady, LaunchError, NsRunnerLauncher,
     PluginDispatchOutcome, PluginRuntime, PluginRuntimeError,
 };
+use eos_operation::CallerId;
 use eos_plugin::{PluginError, PpcDirection, PpcMessage};
 use serde_json::{json, Value};
 
@@ -587,10 +592,58 @@ fn ensure_started(
 }
 
 fn ensure_ready(runtime: &PluginRuntime, args: &Value) -> Result<Box<EnsureReady>, TestError> {
-    match runtime.ensure(args, args["start_services"].as_bool().unwrap_or(false))? {
+    let input = plugin_ensure_input(args);
+    match runtime.ensure(&input)? {
         EnsureOutcome::Ready(ready) => Ok(ready),
         EnsureOutcome::NeedsUpload { .. } => Err("unexpected needs-upload ensure".into()),
     }
+}
+
+fn plugin_ensure_input(args: &Value) -> PluginEnsureInput {
+    PluginEnsureInput {
+        plugin: args
+            .get("plugin")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        digest: args
+            .get("digest")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+        manifest: args.get("manifest").cloned(),
+        layer_stack_root: optional_trimmed_string(args, "layer_stack_root"),
+        workspace_root: optional_trimmed_string(args, "workspace_root"),
+        package: PluginPackageInput {
+            package_runtime_root: None,
+            package_dependency_root: None,
+            package_upload_root: None,
+            package_setup_root: None,
+            staged_package_root: args
+                .get("staged_package_root")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            staged_package_root_present: args.get("staged_package_root").is_some(),
+        },
+        start_services: args
+            .get("start_services")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        caller: CallerId::from_wire(args),
+        audit: PluginAuditFields {
+            invocation_id: args
+                .get("invocation_id")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+            caller: BTreeMap::new(),
+        },
+    }
+}
+
+fn optional_trimmed_string(args: &Value, key: &str) -> Option<String> {
+    args.get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
 }
 
 fn dispatch_response(

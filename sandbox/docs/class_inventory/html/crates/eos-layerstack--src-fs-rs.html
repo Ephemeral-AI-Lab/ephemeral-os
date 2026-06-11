@@ -226,7 +226,7 @@
             &quot;layer path must not contain <span class="rs-type">NUL</span> bytes: {path:?}&quot;
         )));
     }
-    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(path);
+    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(path);
     <span class="rs-kw">if</span> path_ref.is_absolute() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>(format!(
             &quot;layer path must be relative: {path}&quot;
@@ -254,7 +254,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-resolve-layer-path-111">resolve_layer_path</a>(storage_root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
-    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(path);
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(path);
     <span class="rs-kw">if</span> path.is_absolute() {
         path.to_path_buf()
     } <span class="rs-kw">else</span> {
@@ -419,7 +419,7 @@
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-read-manifest-241">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
     <span class="rs-kw">let</span> path = path.as_ref();
     <span class="rs-kw">if</span> !path.exists() {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from);
+        <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from);
     }
     <span class="rs-kw">let</span> payload: <a class="symbol-link rs-type" href="eos-layerstack--src-fs-rs.html#item-struct-ManifestPayload-14">ManifestPayload</a> = serde_json::from_str(&amp;std::fs::read_to_string(path)?)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>(err.to_string()))?;
@@ -436,7 +436,7 @@
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;layers {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-validate-layer-ref-296">validate_layer_ref</a>(layer)?;
     }
-    <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)
+    <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)
 }
 </code></pre>
 </details>
@@ -740,7 +740,7 @@
             &quot;layer path must not contain <span class="rs-type">NUL</span> bytes: {path:?}&quot;
         )));
     }
-    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(path);
+    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(path);
     <span class="rs-kw">if</span> path_ref.is_absolute() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>(format!(
             &quot;layer path must be relative: {path}&quot;
@@ -755,7 +755,7 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-resolve-layer-path-111">resolve_layer_path</a>(storage_root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
-    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(path);
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(path);
     <span class="rs-kw">if</span> path.is_absolute() {
         path.to_path_buf()
     } <span class="rs-kw">else</span> {
@@ -887,7 +887,7 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-read-manifest-241">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
     <span class="rs-kw">let</span> path = path.as_ref();
     <span class="rs-kw">if</span> !path.exists() {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from);
+        <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from);
     }
     <span class="rs-kw">let</span> payload: <a class="symbol-link rs-type" href="eos-layerstack--src-fs-rs.html#item-struct-ManifestPayload-14">ManifestPayload</a> = serde_json::from_str(&amp;std::fs::read_to_string(path)?)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>(err.to_string()))?;
@@ -904,7 +904,7 @@
     <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;layers {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-validate-layer-ref-296">validate_layer_ref</a>(layer)?;
     }
-    <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)
+    <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-write-manifest-264">write_manifest</a>(
@@ -948,7 +948,7 @@
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-check-layer-path-86">check_layer_path</a>(&amp;layer.path)
 }
 
-<span class="rs-kw">static</span> <span class="rs-type">NEXT_UNIQUE</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(0);
+<span class="rs-kw">static</span> <span class="rs-type">NEXT_UNIQUE</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(0);
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

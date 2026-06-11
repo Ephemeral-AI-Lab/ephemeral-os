@@ -8,15 +8,16 @@
 //! subprocess pipeline — none of which belong in the OCC single writer or the
 //! wire adapters.
 //!
-//! The boundary is DTO-in / DTO-out: the adapter parses the request envelope
+//! The boundary is DTO-in / DTO-out: the adapter parses the request message
 //! and hands over a typed [`CommitRequest`]; this crate returns a typed
 //! [`CommitOutcome`] (or a [`CheckpointError`]) and never touches the wire
 //! `Value` shape. The adapter re-maps the outcome to the protocol response.
 
 #![forbid(unsafe_code)]
 
+pub mod contract;
+
 mod commit;
-pub mod catalog;
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -25,7 +26,7 @@ pub use commit::commit_to_git;
 
 /// Typed input for [`commit_to_git`].
 ///
-/// `raw_paths` are the un-normalized pathspecs lifted from the request envelope
+/// `raw_paths` are the un-normalized pathspecs lifted from the request message
 /// by the adapter; this crate trims, resolves them against the workspace
 /// binding, and rejects `.git` paths. Empty / `"."` entries normalize away.
 pub struct CommitRequest<'a> {
@@ -35,7 +36,7 @@ pub struct CommitRequest<'a> {
     pub workspace_root: &'a Path,
     /// Commit message passed to `git commit -m`.
     pub message: &'a str,
-    /// Raw, un-normalized pathspecs (envelope order preserved).
+    /// Raw, un-normalized pathspecs (request order preserved).
     pub raw_paths: Vec<String>,
 }
 
@@ -65,13 +66,13 @@ pub struct CommitOutcome {
 ///
 /// The daemon translates each variant onto its own `DaemonError` (preserving
 /// variant identity and message text), which the dispatcher then maps to the
-/// wire error envelope.
+/// wire error response.
 #[derive(Debug, thiserror::Error)]
 pub enum CheckpointError {
     /// The request was structurally invalid (binding mismatch, non-git
     /// workspace root, malformed pathspec resolution).
-    #[error("invalid envelope: {0}")]
-    InvalidEnvelope(String),
+    #[error("invalid request: {0}")]
+    InvalidRequest(String),
 
     /// A pathspec policy refusal (e.g. attempting to stage a `.git` path).
     #[error("forbidden: {0}")]

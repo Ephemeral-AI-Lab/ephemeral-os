@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use super::contract::{PluginAuditFields, PluginEnsureInput};
 use super::route::{PluginOperationRoute, PluginProcessSpec};
 use super::PpcError;
 use eos_plugin::{
@@ -17,42 +18,10 @@ use eos_plugin::{
 
 use super::package::{package_roots, PackageRoots};
 
-pub const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
-
 pub fn validate_plugin_caller_fields(args: &Value) -> Result<(), PluginError> {
-    const TOP_LEVEL_FIELDS: &[&str] = &["caller_id", "invocation_id"];
-
-    for field in TOP_LEVEL_FIELDS {
-        validate_plugin_audit_field(field, args.get(*field))?;
-    }
-    if let Some(caller) = args.get("caller").and_then(Value::as_object) {
-        for (field, value) in caller {
-            validate_plugin_audit_field(field, Some(value))?;
-        }
-    }
-    Ok(())
-}
-
-fn validate_plugin_audit_field(field: &str, value: Option<&Value>) -> Result<(), PluginError> {
-    let Some(value) = value else {
-        return Ok(());
-    };
-    let Some(text) = value.as_str() else {
-        return Err(PluginError::Ppc(format!(
-            "plugin caller field {field} must be a string"
-        )));
-    };
-    if text.contains('\0') {
-        return Err(PluginError::Ppc(format!(
-            "plugin caller field {field} contains NUL"
-        )));
-    }
-    if text.chars().count() > MAX_PLUGIN_CALLER_FIELD_CHARS {
-        return Err(PluginError::Ppc(format!(
-            "plugin caller field {field} exceeds {MAX_PLUGIN_CALLER_FIELD_CHARS} characters"
-        )));
-    }
-    Ok(())
+    PluginAuditFields::parse(args)
+        .map(|_| ())
+        .map_err(|err| PluginError::Ppc(err.message()))
 }
 
 /// Result of parsing one `api.plugin.ensure` call: routes + service specs the
@@ -69,24 +38,24 @@ pub struct ParsedEnsure {
 }
 
 impl ParsedEnsure {
-    pub fn from_args(args: &Value, ppc_socket_root: &str) -> Result<Self, PpcError> {
-        if let Some(manifest_value) = args.get("manifest") {
+    pub fn from_input(input: &PluginEnsureInput, ppc_socket_root: &str) -> Result<Self, PpcError> {
+        if let Some(manifest_value) = &input.manifest {
             let manifest: PluginManifest = serde_json::from_value(manifest_value.clone())
                 .map_err(|err| PluginError::Manifest(err.to_string()))?;
             manifest.validate()?;
-            return Self::from_manifest(args, manifest, ppc_socket_root);
+            return Self::from_manifest(input, manifest, ppc_socket_root);
         }
 
-        let plugin_id = args
-            .get("plugin")
-            .and_then(Value::as_str)
+        let plugin_id = input
+            .plugin
+            .as_deref()
             .unwrap_or_default()
             .trim()
             .to_owned();
         validate_public_identifier("plugin", &plugin_id)?;
-        let plugin_digest = args
-            .get("digest")
-            .and_then(Value::as_str)
+        let plugin_digest = input
+            .digest
+            .as_deref()
             .unwrap_or_default()
             .trim()
             .to_owned();
@@ -103,19 +72,14 @@ impl ParsedEnsure {
     }
 
     fn from_manifest(
-        args: &Value,
+        input: &PluginEnsureInput,
         manifest: PluginManifest,
         ppc_socket_root: &str,
     ) -> Result<Self, PpcError> {
         let manifest_for_package = manifest.clone();
-        let package_roots = package_roots(args, &manifest)?;
-        let layer_stack_root = args
-            .get("layer_stack_root")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|root| !root.is_empty())
-            .map(str::to_owned);
-        let service_keys = service_keys_for_manifest(args, &manifest)?;
+        let package_roots = package_roots(&input.package, &manifest)?;
+        let layer_stack_root = input.layer_stack_root.clone();
+        let service_keys = service_keys_for_manifest(input, &manifest)?;
         let operation_routes = operation_routes_for_manifest(
             &manifest,
             &service_keys,
@@ -306,14 +270,15 @@ fn resolve_package_relative_executable(program: &str, working_dir: &Path) -> Opt
 }
 
 fn service_keys_for_manifest(
-    args: &Value,
+    input: &PluginEnsureInput,
     manifest: &PluginManifest,
 ) -> Result<BTreeMap<String, PluginServiceKey>, PluginError> {
     if manifest.services.is_empty() {
         return Ok(BTreeMap::new());
     }
-    let layer_stack_root = require_string(args, "layer_stack_root")?;
-    let workspace_root = require_string(args, "workspace_root")?;
+    let layer_stack_root =
+        require_input_string(input.layer_stack_root.as_deref(), "layer_stack_root")?;
+    let workspace_root = require_input_string(input.workspace_root.as_deref(), "workspace_root")?;
     manifest
         .services
         .iter()
@@ -333,19 +298,13 @@ fn service_keys_for_manifest(
         .collect::<Result<BTreeMap<_, _>, PluginError>>()
 }
 
-fn require_string(args: &Value, key: &str) -> Result<String, PluginError> {
-    let value = args
-        .get(key)
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
-    if value.is_empty() {
+fn require_input_string(value: Option<&str>, key: &str) -> Result<String, PluginError> {
+    let Some(value) = value else {
         return Err(PluginError::Ensure(format!(
             "sandbox.plugin.ensure requires {key}"
         )));
-    }
-    Ok(value)
+    };
+    Ok(value.to_owned())
 }
 
 fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginError> {

@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::unique_suffix;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::live_pool_or_skip;
@@ -25,7 +25,7 @@ fn generic_package_installs_and_sets_up() -> Result<()> {
     let staged = stage_generic_package(&lease, &digest)?;
 
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),
@@ -37,7 +37,7 @@ fn generic_package_installs_and_sets_up() -> Result<()> {
     );
 
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),
@@ -78,7 +78,7 @@ fn generic_package_reensure_is_idempotent() -> Result<()> {
     let staged = stage_generic_package(&lease, &digest)?;
 
     let _ = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),
@@ -86,7 +86,7 @@ fn generic_package_reensure_is_idempotent() -> Result<()> {
         }),
     )?;
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),
@@ -117,7 +117,7 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
         .context("operation manifest object")?
         .remove("intent");
     let manifest_error = lease.call(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": malformed,
@@ -127,7 +127,7 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
     assert_eq!(
         manifest_error.get("success").and_then(Value::as_bool),
         Some(false),
-        "invalid manifest must return a structured error envelope: {manifest_error}"
+        "invalid manifest must return a structured error response: {manifest_error}"
     );
     assert!(
         manifest_error
@@ -153,7 +153,7 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
     let mut setup_manifest = manifest(&digest, &setup_digest);
     setup_manifest["setup"]["command"] = json!(["./missing-setup.sh"]);
     let setup_error = lease.call(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": setup_manifest,
@@ -163,7 +163,7 @@ fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
     assert_eq!(
         setup_error.get("success").and_then(Value::as_bool),
         Some(false),
-        "setup failure must return a structured error envelope: {setup_error}"
+        "setup failure must return a structured error response: {setup_error}"
     );
     assert!(
         setup_error
@@ -224,7 +224,7 @@ fn generic_plugin_refreshes_after_workspace_edit() -> Result<()> {
     ensure_generic_service_package(&lease, &digest, &setup_digest)?;
 
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "phase5/refresh.txt", "content": "after-refresh\n", "overwrite": true}),
     )?;
     let response = lease.call_ok(
@@ -238,7 +238,7 @@ fn generic_plugin_refreshes_after_workspace_edit() -> Result<()> {
         "dispatch after write should refresh service workspace: {response}"
     );
 
-    let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
     assert!(
         status["loaded_plugins"][0]["services"][0]["refresh_count"]
             .as_u64()
@@ -267,7 +267,7 @@ fn concurrent_plugin_refresh_singleflight() -> Result<()> {
     ensure_generic_service_package(&lease, &digest, &setup_digest)?;
 
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({
             "path": "phase5/singleflight.txt",
             "content": "after-singleflight\n",
@@ -303,7 +303,7 @@ fn concurrent_plugin_refresh_singleflight() -> Result<()> {
         assert_eq!(response["content"], "after-singleflight\n", "{response}");
     }
 
-    let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
     assert_eq!(
         service_refresh_count(&status),
         1,
@@ -325,7 +325,7 @@ fn service_health_probe_reports_connected_service() -> Result<()> {
     // probe_services drives a live PPC health round-trip to the worker, which the
     // generic server already answers; the success path is otherwise untested.
     let status = lease.call_ok(
-        ops::SANDBOX_PLUGIN_STATUS,
+        catalog::SANDBOX_PLUGIN_STATUS,
         json!({"probe_services": true, "probe_timeout_ms": 5000}),
     )?;
     let health = status
@@ -358,7 +358,7 @@ fn package_reload_reaps_old_service_and_routes() -> Result<()> {
     let first_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
     let first_setup_digest = format!("setup-{first_digest}");
     ensure_generic_service_package(&lease, &first_digest, &first_setup_digest)?;
-    let first_status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let first_status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
     let first_pid = running_service_pid(&first_status)?;
 
     let second_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
@@ -369,7 +369,7 @@ fn package_reload_reaps_old_service_and_routes() -> Result<()> {
         .context("staged package path must end with /package")?
         .to_owned();
     let reloaded = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest(&second_digest, &second_setup_digest),
@@ -388,7 +388,7 @@ fn package_reload_reaps_old_service_and_routes() -> Result<()> {
     wait_for_container_path_absent(&lease, &format!("/proc/{first_pid}"))?;
     assert_container_absent(&lease, &upload_root)?;
 
-    let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
     assert_eq!(status["loaded_plugins"][0]["digest"], second_digest);
     assert_eq!(
         status["loaded_plugins"][0]["services"][0]["key"]["plugin_digest"],
@@ -425,7 +425,7 @@ fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
     // A different update policy than the covered remount_workspace_and_notify:
     // a workspace edit restarts (kills + respawns) the service process.
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest_with_strategy(&digest, &setup_digest, "restart_service"),
@@ -435,7 +435,7 @@ fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
     assert_eq!(warm["needs_upload"], json!(true), "{warm}");
     let staged = stage_generic_service_package(&lease, &digest)?;
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest_with_strategy(&digest, &setup_digest, "restart_service"),
@@ -445,21 +445,21 @@ fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
     )?;
     assert_eq!(cold["service_processes_started"], json!(true), "{cold}");
     assert_eq!(
-        restart_count(&lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?),
+        restart_count(&lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?),
         0
     );
 
     // Advance the workspace manifest, then a dispatch forces the refresh, which
     // for restart_service is a process restart (used only to trigger; may defer).
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "restart/edit.txt", "content": "after-restart\n", "overwrite": true}),
     )?;
     let _ = lease.call("plugin.generic.query", json!({"path": "restart/edit.txt"}));
 
     let deadline = Instant::now() + Duration::from_secs(8);
     loop {
-        let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+        let status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
         if restart_count(&status) >= 1 {
             // A restart bumps restart_count, NOT refresh_count (that is the remount
             // policy's signal) — the discriminating observable between policies.
@@ -488,7 +488,7 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
     let lease = pool.acquire()?;
     let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
     ensure_generic_oneshot_package(&lease, &digest)?;
-    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
         ["manifest_version"]
         .as_i64()
         .context("manifest_version before plugin write")?;
@@ -510,11 +510,11 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
     );
 
     let read = lease.call_ok(
-        ops::SANDBOX_FILE_READ,
+        catalog::SANDBOX_FILE_READ,
         json!({"path": "plugin/oneshot-write.txt"}),
     )?;
     assert_eq!(read["content"], "written by oneshot plugin\n", "{read}");
-    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
         ["manifest_version"]
         .as_i64()
         .context("manifest_version after plugin write")?;
@@ -544,7 +544,7 @@ fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
     let first_setup_digest = format!("setup-{first_digest}");
     ensure_generic_service_package(&lease, &first_digest, &first_setup_digest)?;
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "reload-race/probe.txt", "content": "probe\n", "overwrite": true}),
     )?;
 
@@ -567,7 +567,7 @@ fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
         thread::spawn(move || {
             barrier.wait();
             client.request(
-                ops::SANDBOX_PLUGIN_ENSURE,
+                catalog::SANDBOX_PLUGIN_ENSURE,
                 &format!("reload-race-ensure-{}", unique_suffix()),
                 &json!({
                     "layer_stack_root": root,
@@ -643,7 +643,7 @@ fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
     )?;
     assert_eq!(routed["success"], true, "{routed}");
     assert_eq!(routed["content"], "probe\n", "{routed}");
-    let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
     assert_eq!(
         status["loaded_plugins"][0]["digest"], second_digest,
         "steady state must run the reloaded digest: {status}"
@@ -794,7 +794,7 @@ fn ensure_generic_service_package(
 ) -> Result<Value> {
     let manifest = service_manifest(digest, setup_digest);
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest,
@@ -804,7 +804,7 @@ fn ensure_generic_service_package(
     assert_eq!(warm["needs_upload"], true);
     let staged = stage_generic_service_package(lease, digest)?;
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest(digest, setup_digest),
@@ -827,7 +827,7 @@ fn ensure_generic_oneshot_package(
 ) -> Result<Value> {
     let manifest = oneshot_manifest(digest);
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest,
@@ -836,7 +836,7 @@ fn ensure_generic_oneshot_package(
     assert_eq!(warm["needs_upload"], true, "{warm}");
     let staged = stage_generic_oneshot_package(lease, digest)?;
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": oneshot_manifest(digest),

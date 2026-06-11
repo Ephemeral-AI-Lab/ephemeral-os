@@ -16,7 +16,7 @@ manifest read path. The binding host<->box artifacts are
 - Pinned in three places that the conformance suites hold in lockstep:
   - `crates/eos-operation/ops.json` (`protocol_version`) — the reviewed
     catalog artifact;
-  - `crates/eos-operation/src/core/ops.rs` — the catalog renderer and protocol
+  - `crates/eos-operation/src/core/catalog.rs` — the catalog renderer and protocol
     version source;
   - `crates/eos-sandbox-host/src/protocol.rs` — the host side's deliberate copy
     (no shared crate; drift is caught by the fixture conformance tests, not
@@ -46,6 +46,6 @@ When either version must change:
    deliberate exception: when the legacy `api.*` aliases were retired
    (2026-06), the `op` field of the three request fixtures was rewritten to
    the canonical `sandbox.*` spellings. Every other byte — args, response
-   envelopes, timing keys — remains the original capture.
+   responses, timing keys — remains the original capture.
 
 Until such a change, both versions are pinned at `1`.

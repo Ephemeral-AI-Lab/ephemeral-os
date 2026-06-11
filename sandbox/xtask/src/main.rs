@@ -195,7 +195,7 @@ struct ConformanceSuite {
 }
 
 const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
-    // Box side: daemon envelope conformance + the 18 golden CAS cases.
+    // Box side: daemon wire-message conformance + the 18 golden CAS cases.
     ConformanceSuite {
         package: "eos-daemon",
         tests: &["contract"],

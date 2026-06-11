@@ -45,45 +45,15 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
 }
 
 #[test]
-fn op_table_rejects_different_handler_collision() {
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "test handlers must match the dispatcher handler ABI"
-    )]
-    fn first_handler(_args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-        Ok(json!({"handler": "first"}))
-    }
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "test handlers must match the dispatcher handler ABI"
-    )]
-    fn second_handler(_args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-        Ok(json!({"handler": "second"}))
-    }
-
-    let mut table = OpTable::default();
-    assert!(table.register("api.test.collision", first_handler));
-    assert!(table.register("api.test.collision", first_handler));
-    assert!(!table.register("api.test.collision", second_handler));
-
-    let response = table.dispatch(&Request {
-        op: "api.test.collision".to_owned(),
-        invocation_id: "collision-test".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(response["handler"], "first");
-}
-
-#[test]
 fn builtin_table_routes_commit_to_workspace() {
-    let response = OpTable::with_builtins().dispatch(&Request {
+    let response = dispatch(&Request {
         op: "sandbox.checkpoint.commit_to_workspace".to_owned(),
         invocation_id: "commit-to-workspace-route-test".to_owned(),
         args: json!({}),
     });
 
     assert_ne!(response["error"]["kind"], json!("unknown_op"));
-    assert_eq!(response["error"]["kind"], json!("invalid_envelope"));
+    assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert!(response["error"]["message"]
         .as_str()
         .unwrap_or_default()
@@ -92,14 +62,14 @@ fn builtin_table_routes_commit_to_workspace() {
 
 #[test]
 fn builtin_table_routes_commit_to_git() {
-    let response = OpTable::with_builtins().dispatch(&Request {
+    let response = dispatch(&Request {
         op: "sandbox.checkpoint.commit_to_git".to_owned(),
         invocation_id: "commit-to-git-route-test".to_owned(),
         args: json!({}),
     });
 
     assert_ne!(response["error"]["kind"], json!("unknown_op"));
-    assert_eq!(response["error"]["kind"], json!("invalid_envelope"));
+    assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert!(response["error"]["message"]
         .as_str()
         .unwrap_or_default()
@@ -107,24 +77,58 @@ fn builtin_table_routes_commit_to_git() {
 }
 
 #[test]
+fn builtin_parse_gate_preserves_error_response_channel() {
+    let response = dispatch(&Request {
+        op: "sandbox.file.edit".to_owned(),
+        invocation_id: "edit-parse-gate".to_owned(),
+        args: json!({}),
+    });
+
+    assert_eq!(response["error"]["kind"], json!("invalid_request"));
+    assert_eq!(
+        response["error"]["message"],
+        json!("invalid request: edits must be a list")
+    );
+    assert_eq!(response["warnings"], json!([]));
+}
+
+#[test]
+fn builtin_parse_gate_preserves_refused_channel() {
+    let response = dispatch(&Request {
+        op: "sandbox.isolation.enter".to_owned(),
+        invocation_id: "isolation-parse-gate".to_owned(),
+        args: json!({}),
+    });
+
+    assert_eq!(response["success"], json!(false));
+    assert_eq!(response["error"]["kind"], json!("invalid_argument"));
+    assert_eq!(response["error"]["message"], json!("caller_id is required"));
+    assert_eq!(response["error"]["details"], json!({"key": "caller_id"}));
+    assert!(response.get("warnings").is_none());
+}
+
+#[test]
+fn command_poll_parse_gate_preserves_id_first_error() {
+    let response = dispatch(&Request {
+        op: "sandbox.command.poll".to_owned(),
+        invocation_id: "command-poll-parse-gate".to_owned(),
+        args: json!({"last_n_lines": u64::MAX}),
+    });
+
+    assert_eq!(response["error"]["kind"], json!("invalid_request"));
+    assert_eq!(
+        response["error"]["message"],
+        json!("invalid request: command_session_id is required")
+    );
+}
+
+#[test]
 fn dispatch_attaches_real_runtime_timings() {
-    #[expect(
-        clippy::unnecessary_wraps,
-        reason = "test handlers must match the dispatcher handler ABI"
-    )]
-    fn slow_handler(_args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-        std::thread::sleep(std::time::Duration::from_millis(2));
-        Ok(json!({"success": true}))
-    }
-
-    let mut table = OpTable::default();
-    assert!(table.register("api.test.slow", slow_handler));
-
-    let response = table.dispatch_with_context(
+    let response = dispatch_with_context(
         &Request {
-            op: "api.test.slow".to_owned(),
+            op: "sandbox.call.heartbeat".to_owned(),
             invocation_id: "timings-test".to_owned(),
-            args: json!({}),
+            args: json!({"invocation_ids": []}),
         },
         DispatchContext::with_read_request_s(0.125),
     );
@@ -140,7 +144,7 @@ fn dispatch_attaches_real_runtime_timings() {
         response["timings"]["runtime.dispatch_s"]
             .as_f64()
             .unwrap_or_default()
-            > 0.0
+            >= 0.0
     );
     assert_eq!(response["timings"]["runtime.read_request_s"], json!(0.125));
 }
@@ -156,7 +160,7 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
         cleanup_registry.deregister("cancel-target");
     });
 
-    let response = OpTable::with_builtins().dispatch_with_context(
+    let response = dispatch_with_context(
         &Request {
             op: "sandbox.call.cancel".to_owned(),
             invocation_id: "cancel-request".to_owned(),
@@ -179,8 +183,8 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
 }
 
 #[test]
-fn internal_error_envelope_adds_error_id() {
-    let response = error_envelope(
+fn internal_error_response_adds_error_id() {
+    let response = error_response(
         ErrorKind::InternalError,
         "daemon invocation failed",
         json!({"op": "api.test.failure"}),

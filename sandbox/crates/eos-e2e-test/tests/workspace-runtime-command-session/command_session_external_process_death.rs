@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Context, Result};
 use eos_e2e_test::NodeLease;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -92,14 +92,14 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
 
     let body = (|| -> Result<()> {
         wait_for_marker_at_least(&lease, &session.marker, 1)?;
-        let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+        let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
         ensure!(
             as_i64(&count, "count")? == 1,
             "silent same-pgid subprocess should keep the session live: {count}"
         );
 
         let not_done = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session.id.clone()]}),
         )?;
         ensure!(
@@ -108,7 +108,7 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
         );
 
         let progress = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": &session.id,
                 "last_n_lines": 4,
@@ -175,7 +175,7 @@ fn start_marker_session(
     readiness: &str,
 ) -> Result<MarkerSession> {
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": cmd.into(),
             "yield_time_ms": 700,
@@ -243,7 +243,7 @@ fn poll_session_output(
     last_n_lines: u64,
 ) -> Result<Value> {
     lease.call_ok(
-        ops::SANDBOX_COMMAND_POLL,
+        catalog::SANDBOX_COMMAND_POLL,
         json!({
             "command_session_id": session_id,
             "last_n_lines": last_n_lines,
@@ -341,7 +341,7 @@ fn wait_for_completion(
     let deadline = Instant::now() + timeout;
     loop {
         let collected = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
@@ -363,7 +363,7 @@ fn wait_for_read_progress_terminal(
     let mut last = None;
     loop {
         let response = lease.call(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": session_id,
                 "last_n_lines": 8,
@@ -440,7 +440,7 @@ fn wait_for_marker_count(
 
 fn cancel_session(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(
-        ops::SANDBOX_COMMAND_CANCEL,
+        catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": id}),
     )?;
     wait_for_command_session_transcript_recycled(lease, id)?;

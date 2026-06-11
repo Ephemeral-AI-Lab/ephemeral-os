@@ -12,9 +12,9 @@
 //! error algebra.
 
 mod callbacks;
+pub mod contract;
 mod dispatch;
 pub mod ensure;
-pub mod catalog;
 mod overlay;
 pub(crate) mod package;
 mod process;
@@ -27,8 +27,8 @@ pub(crate) mod transport;
 use std::time::Duration;
 
 use eos_plugin::{PluginError, PluginManifest, PluginServiceStatus};
-use serde_json::Value;
 
+use self::contract::PluginEnsureInput;
 use self::ensure::ParsedEnsure;
 use self::refresh::service_health_probe_targets;
 use self::route::{PluginOperationRoute, PluginProcessSpec};
@@ -214,13 +214,9 @@ impl PluginRuntime {
     ///
     /// Returns a [`PluginRuntimeError`] when ensure parsing, the package
     /// pipeline, or service process startup fails.
-    pub fn ensure(
-        &self,
-        args: &Value,
-        start_services: bool,
-    ) -> Result<EnsureOutcome, PluginRuntimeError> {
-        let parsed = ParsedEnsure::from_args(args, &self.ppc_socket_root())?;
-        let package_report = match package::ensure_package(args, parsed.manifest.as_ref()) {
+    pub fn ensure(&self, input: &PluginEnsureInput) -> Result<EnsureOutcome, PluginRuntimeError> {
+        let parsed = ParsedEnsure::from_input(input, &self.ppc_socket_root())?;
+        let package_report = match package::ensure_package(input, parsed.manifest.as_ref()) {
             Ok(report) => report,
             Err(err) => {
                 let err = PluginRuntimeError::from(err);
@@ -261,7 +257,7 @@ impl PluginRuntime {
                 .ok_or_else(|| ensure_not_recorded(&plugin_id))?
                 .service_processes
                 .clone();
-            let specs_to_start = if start_services {
+            let specs_to_start = if input.start_services {
                 service_specs_to_start(&state, &process_specs)
             } else {
                 Vec::new()

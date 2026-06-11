@@ -16,6 +16,42 @@ fixtures are blast radius, never redesigned.
 
 ---
 
+## Quest 0 — wire message vocabulary cleanup comes first
+
+Reference task: `/Users/yifanxu/machine_learning/LoVC/EphemeralOS/docs/plans/sandbox-wire-message-renaming_GUIDE.md`.
+
+This quest is the first work item of the spec and must land before any
+operation-contract migration. It replaces the legacy wrapper vocabulary with
+protocol semantics and deliberately migrates the Rust-facing validation error
+kind to `invalid_request`. This is the only phase allowed to update fixtures
+for that naming contract.
+
+| Target vocabulary | Meaning |
+|---|---|
+| `WireMessage` | Umbrella transport enum for inbound requests, structured error responses, and arbitrary success response JSON |
+| `Request` | Host-to-sandbox operation object |
+| `Response` | Any sandbox-to-host reply |
+| `ErrorResponse` | Structured `success:false` response with `{warnings,timings,error}` |
+| `InvalidRequest` | Rust-facing validation failure for malformed request shape or invalid operation arguments |
+| `encode_request` | Encodes the request exactly as provided |
+| `encode_request_with_metadata` | Adds protocol and invocation metadata before encoding |
+
+The semantic split after Quest 0 is:
+
+- `WireMessage`: transport-level enum for `Request`, `ErrorResponse`, and
+  arbitrary success `Response` JSON.
+- `Request`: host-to-sandbox operation object
+  `{op, invocation_id, args}`.
+- `Response`: any sandbox-to-host reply.
+- `ErrorResponse`: structured `success:false` response with
+  `{warnings,timings,error}`.
+- `InvalidRequest`: Rust-facing validation failure for malformed request shape
+  or invalid operation arguments; serialized wire kind is `invalid_request`.
+
+This vocabulary is binding on the rest of v3: no new type, helper, serialized
+kind, comment, test name, fixture name, or docs section may reintroduce the
+legacy wrapper vocabulary.
+
 ## 0. The one-sentence architecture
 
 > **eos-operation owns the complete typed contract of every daemon-served
@@ -84,7 +120,7 @@ fixtures are blast radius, never redesigned.
 | Serde-derived inputs (`type Input: DeserializeOwned`) | v2 | Breaks the five pinned parse-error spellings and key-check order (§4); inputs are hand-parsed, **outputs** are serde-rendered — the asymmetry is the design |
 | `MutationWire` explicit-key renderer with `Value`-typed fields | op-io | Superseded by `MutationCore` + typed enums under the corrected acceptance bar (§1.4). Keeping a hand-rolled renderer forever forfeits "core types are the contract" |
 | Runtime-state families exempt from typed outputs | op-io | The D12 inversion closes the hole; accepted churn |
-| Untyped `raw: Value` plugin input envelopes | op-io | v2's D10 typed `PluginEnsureInput`/`PluginStatusInput` end F9 (`&Value` penetrating two layers into eos-operation); only the dynamic `plugin.<id>.*` payload stays `Value` by nature |
+| Untyped `raw: Value` plugin input objects | op-io | v2's D10 typed `PluginEnsureInput`/`PluginStatusInput` end F9 (`&Value` penetrating two layers into eos-operation); only the dynamic `plugin.<id>.*` payload stays `Value` by nature |
 
 ### 1.4 The one bar change, stated honestly
 
@@ -93,7 +129,7 @@ unified-op-io self-imposed **byte-order identity** on mutation responses and
 therefore had to relocate serializer bodies verbatim. v3 adopts v2's bar —
 the one the conformance suites actually enforce:
 
-- Requests and **error envelopes: byte-identical.**
+- After Quest 0, requests and **error responses: byte-identical.**
 - Success responses: **canonical-equal** (`cargo xtask check-contract`, all
   suites). Key **set**, values, null-vs-absent, and array order are the
   contract; object key order is not.
@@ -121,8 +157,8 @@ crates/eos-operation/src/
 │   ├── request.rs              + NEW  OpRequest (28 variants), RequestError, ArgsError,
 │   │                             the five parse helpers — delegates payload parsing
 │   │                             to the family contract.rs files (~150 LOC, size watch resolved)
-│   ├── response.rs             + NEW  OpResponse, OpEnvelopeError,
-│   │                             OpEnvelopeErrorKind
+│   ├── response.rs             + NEW  OpResponse, OpResponseError,
+│   │                             OpResponseErrorKind
 │   ├── workspace_outcome.rs    ~ RENAMED/RESTRUCTURED  MutationCore,
 │   │                             WorkspaceMutationOutcome, WorkspaceConflict,
 │   │                             WorkspaceKind, MutationStatus,
@@ -165,7 +201,7 @@ mod workspace_outcome;
 pub use audit::MutationSource;
 pub use error::OpError;
 pub use id::{CallerId, CommandSessionId, InvocationId};
-pub use response::{OpEnvelopeError, OpEnvelopeErrorKind, OpResponse};
+pub use response::{OpResponse, OpResponseError, OpResponseErrorKind};
 pub use workspace_outcome::{
     ChangedPathKind, ChangedPathKinds, MutationCore, MutationStatus, WorkspaceConflict,
     WorkspaceKind, WorkspaceMutationOutcome, WorkspaceTimings,
@@ -180,12 +216,12 @@ the shared helpers, and the `parse` entry point are the only core-owned parts.
 
 ```
 {op, invocation_id, args}
-   │ dispatcher: envelope shell checks (unchanged, OUTSIDE the funnel — raw messages)
+   │ dispatcher: request shell checks (unchanged, OUTSIDE the funnel — raw messages)
    ▼
 BuiltinOp::from_op_name(op)                      ── catalog, macro-generated
    │  None ──────────────────────────────► "plugin." registry fallback (raw Value,
    │  Err(NotDaemonServed) ──────────────►  gate-before-route unchanged), else
-   ▼                                        unknown_op envelope (details {"op": name})
+   ▼                                        unknown_op error response (details {"op": name})
 OpRequest::parse(op, &args)                      ── ONE parse site (core/request.rs →
    │  Err(Args) ── family→channel map ──►   family contract.rs), wire-pure inputs
    ▼
@@ -195,9 +231,9 @@ builtin::dispatch(request, ctx) ── exhaustive match, sync, same spawn_blocki
    │   behavior fn (eos-operation) or runtime service (daemon — D12 families)
    ▼
 Result<TypedOutput, FamilyError> ── From → OpError (refusal families)
-   │                                or OpEnvelopeError (envelope families)
+   │                                or OpResponseError (error-response families)
    ▼
-OpResponse { Success(serde::to_value(output)) | Refused(OpError) | Envelope(OpEnvelopeError) }
+OpResponse { Success(serde::to_value(output)) | Refused(OpError) | Error(OpResponseError) }
    ▼
 into_wire() ── the sole renderer pair for both error shapes
    ▼
@@ -336,7 +372,7 @@ pub struct PluginStatusInput {
   checkpoint `{}`-args ⇒ "layer_stack_root is required".
 - The five string semantics keep one owner (`ArgsError` + helpers): trimmed
   required / raw bytes / command non-blank / non-empty / untrimmed-with-default
-  (exec `invocation_id`, historical default `"exec_command"` — the envelope id
+  (exec `invocation_id`, historical default `"exec_command"` — the request id
   is dropped by the transport, documented quirk).
 - Command timeout alias (`timeout` | `timeout_seconds`) resolves at parse;
   the default value injects in the dispatch arm from the process-global
@@ -352,7 +388,7 @@ pub struct PluginStatusInput {
 | Family | Channel | Bytes |
 |---|---|---|
 | IsolatedWorkspace, WorkspaceRun | `OpResponse::Refused` — in-band `{"success":false,"error":{"kind":"invalid_argument","message":"{key} is required","details":{"key":…}}}` | identical to `op_adapter::require_arg` |
-| Control, Checkpoint, Files, CommandSession, Plugins | `OpResponse::Envelope` via `OpEnvelopeError::invalid_envelope(helper string)` — preserves the `invalid envelope: ` Display prefix | identical to today's handler-path parse errors |
+| Control, Checkpoint, Files, CommandSession, Plugins | `OpResponse::Error` via `OpResponseError::invalid_request(helper string)` | updated by Quest 0 to the `invalid_request` naming contract |
 
 ## 5. Unified output — typed DTOs, serde serialization is the wire
 
@@ -494,22 +530,22 @@ pub enum OpResponse {
     /// {kind,message,details}} WITHOUT warnings/timings; byte-identical to
     /// today's error_json convention.
     Refused(OpError),
-    /// Envelope failure — {"success":false,"warnings":[],"timings":{},
+    /// Structured error response — {"success":false,"warnings":[],"timings":{},
     /// "error":{…}} rendered by the same contract-owned kind vocabulary as
     /// today's daemon ErrorKind.
-    Envelope(OpEnvelopeError),
+    Error(OpResponseError),
 }
 
-pub struct OpEnvelopeError {
-    pub kind: OpEnvelopeErrorKind,
+pub struct OpResponseError {
+    pub kind: OpResponseErrorKind,
     pub message: String,
     pub details: serde_json::Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum OpEnvelopeErrorKind {
-    InvalidEnvelope,
+pub enum OpResponseErrorKind {
+    InvalidRequest,
     BadJson,
     RequestTooLarge,
     Unauthorized,
@@ -521,8 +557,8 @@ pub enum OpEnvelopeErrorKind {
 }
 ```
 
-Deliberately OUTSIDE the funnel (verified expressiveness gaps): envelope
-shell-check errors (raw messages, no Display prefix), the unknown_op envelope
+Deliberately OUTSIDE the funnel (verified expressiveness gaps): request
+shell-check errors (raw messages, no Display prefix), the unknown_op error response
 (`details {"op": name}`, byte-pinned by fixture), and the `plugin.*` registry
 fallback — all early-return finished `Value`s through `finalize`, exactly as
 today. The **five** `#[expect(clippy::unnecessary_wraps)]` handlers
@@ -530,7 +566,7 @@ today. The **five** `#[expect(clippy::unnecessary_wraps)]` handlers
 returns.
 
 `DaemonError` stays daemon-internal. Builtin dispatch arms convert it into
-`OpEnvelopeError` before returning an `OpResponse`, so `eos-operation` owns the
+`OpResponseError` before returning an `OpResponse`, so `eos-operation` owns the
 response contract without depending on `eos-daemon`. The daemon still owns final
 transport duties: shell-check early returns, plugin fallback/unknown-op
 short-circuiting, runtime timing splices, and newline framing.
@@ -688,8 +724,9 @@ and `Output` structs live in the named `contract.rs`.
 
 ## 10. Wire-invariance rules (binding for every phase)
 
-1. **Acceptance bar**: §1.4. Requests + error envelopes byte-identical;
-   success responses canonical-equal under all conformance suites; array
+1. **Acceptance bar**: §1.4. Quest 0 is the only fixture-changing naming
+   migration; after it lands, requests + error responses are byte-identical;
+   success responses are canonical-equal under all conformance suites; array
    order is contract; `ops.json` byte-identical.
 2. **Pinned serde details**: `workspace` rename; explicit `"conflict": null`;
    mutation-source `None` renders `""`; the mutation response's literal
@@ -730,7 +767,7 @@ and `Output` structs live in the named `contract.rs`.
 | D12 contract-ownership inversion | **Adopted** | eos-operation owns every daemon-served contract; daemon owns behavior — the clean boundary this spec exists to draw |
 | `OpFamily::contracts()` | **Rejected** | Zero consumers |
 | Unified outcome mega-struct | **Upheld rejection** | Composition only; `ReadFileOutput`/`CommitOutput`/plugin enums stay distinct; no dead optional fields |
-| Shared envelope across the trust boundary | **Upheld rejection** | §10.5 |
+| Shared wire-message wrapper across the trust boundary | **Upheld rejection** | §10.5 |
 | `AuditRecord`/journal revival | **Upheld rejection** | Removed 2026-06-11; live remainder is `MutationSource` |
 | Checkpoint `f64` timings split | **Upheld** | Wire-mirror one-to-one |
 | Dynamic `plugin.*` typed payloads | **Upheld rejection** | Open namespace is contract |
@@ -742,6 +779,7 @@ next. P4 is split to keep the tree green while the dispatcher swaps.
 
 | Phase | Change | Verification |
 |---|---|---|
+| P0 / Quest 0 | Execute `docs/plans/sandbox-wire-message-renaming_GUIDE.md` first, then take the stricter v3 step: all legacy wrapper vocabulary is removed from Rust symbols, comments, docs, tests, fixture names, and serialized validation error kinds; the validation kind becomes `invalid_request`; request byte helpers are renamed to `encode_request*` | The guide's forbidden-vocabulary scan returns no hits outside the historical guide; `cargo test -p eos-daemon --test contract`; `cargo test -p eos-daemon --test phase2_read_paths`; `cargo test -p eos-daemon --test phase3_write_paths`; `cargo test -p eos-sandbox-host --test contract`; `cargo test -p eos-sandbox-gateway` |
 | P1 | Delete 8 `ops.rs`, the 4 scaffold modules (reborn with `contract.rs` in P4/P6), `file/port.rs`; prune `src/lib.rs` AND family lib.rs decls (`file/lib.rs:15-16`, `command/lib.rs:3`, `checkpoint/lib.rs:19`, `plugin/lib.rs:3`) | `cargo check/test -p eos-operation`; rg gates incl. family-decl coverage; `cargo xtask check-contract` |
 | P2 | `core/ops.rs` → `core/catalog.rs`; macro-generated `contract()`; `from_op_name`; drop `#[non_exhaustive]` on `BuiltinOp` AND `eos-layerstack::CommitStatus`; ~55-file import rename | `cargo check --workspace`; identity test (`ops.rs:313-318`); `cargo xtask check-contract` (ops.json byte-identical) |
 | P3 | Vocabulary grounding: `core/audit.rs`, `core/error.rs` (with `details`), `core/id.rs`; outcome enums (`WorkspaceKind`, `MutationStatus`, `ChangedPathKind`) retype the existing structs (daemon copies call `.as_str()` interim); `FileBackend` retype; settle literals; `OpError` re-exports + `From`s | `cargo test -p eos-operation -p eos-daemon` (contract tests pin wire strings; kind-comparison test churn named); e2e isolated routing |

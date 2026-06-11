@@ -91,27 +91,27 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 ## 3. Wire protocol (`contract/` / `eos-daemon`) — read `docs/contract/01-wire-protocol.md`
 
 - **Framing**: one newline-delimited compact JSON object per message: `json.dumps(obj,
-  separators=(",",":")) + "\n"`. For *envelopes* (not the CAS hash) `serde_json` with compact
+  separators=(",",":")) + "\n"`. For wire messages (not the CAS hash) `serde_json` with compact
   formatting matches (these payloads are ASCII op names + structured values). Provide
-  `encode(&Envelope) -> Vec<u8>` and `decode(&[u8]) -> Result<Envelope, _>`.
+  `encode(&WireMessage) -> Vec<u8>` and `decode(&[u8]) -> Result<WireMessage, _>`.
 - Request = `{"op": String, "invocation_id": String, "args": Object}`. `invocation_id` also appears
   inside `args`. The protocol-version field `_eos_daemon_protocol_version` lives **inside `args`**,
   is `1`, and the daemon **never reads it** (inert hook) — reproduce its presence, don't gate on it.
 - Auth field `_eos_daemon_auth_token` is **top-level, TCP-only, conditional**; the server pops it
   before dispatch; AF_UNIX never carries it.
-- Error envelope = `{"success":false,"warnings":[],"timings":{},"error":{"kind","message","details"}}`.
+- Error response = `{"success":false,"warnings":[],"timings":{},"error":{"kind","message","details"}}`.
   Model `kind` as a `#[non_exhaustive]` enum (`api-non-exhaustive`) over the verified kinds
-  (`invalid_envelope`,`bad_json`,`request_too_large`,`unauthorized`,`unknown_op`,`internal_error`,
+  (`invalid_request`,`bad_json`,`request_too_large`,`unauthorized`,`unknown_op`,`internal_error`,
   `forbidden`,`forbidden_in_isolated_workspace`,`lifecycle_in_progress`).
 - **There is NO `ping` op.** Liveness is `sandbox.call.heartbeat` and
   readiness is `sandbox.runtime.ready`.
   Do NOT invent a `ping` op.
 - Exit codes are constants: `CONNECT_FAILED = 97`, `IO_FAILED = 98`. `MAX_REQUEST_BYTES = 16 MiB`,
   `REQUEST_READ_TIMEOUT_S = 30.0`, `_CONNECT_RETRY_DELAYS_S = [0.25,0.5,1.0,2.0]`.
-- **Canonical comparison (AV-1)**: response envelopes carry non-deterministic `timings.*`,
+- **Canonical comparison (AV-1)**: success responses carry non-deterministic `timings.*`,
   `daemon_pid`, `uptime_s`. Provide a `canonicalize()` that drops a `timings` subtree + a pid/uptime
   allowlist and compares keys sorted, floats within 1e-9 — used by fixture tests for *responses*.
-  *Requests*, error envelopes, and the CAS hashes are byte/structurally exact.
+  *Requests*, error responses, and the CAS hashes are byte/structurally exact.
 
 ---
 
@@ -145,7 +145,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   - `eos_operation::plugin` → plugin package publishing, service processes, PPC
     transport, dispatch, refresh, OCC callbacks, and oneshot overlays.
   - `eos_operation::checkpoint` → checkpoint commit pipeline.
-  - `eos-daemon` → transport, dispatch, wire envelope, op adapters, service
+  - `eos-daemon` → transport, dispatch, wire-message codec, op adapters, service
     composition, daemon-owned plugin/checkpoint process glue.
   - `eosd` → binary subcommand dispatch over daemon/namespace/overlay support.
   - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
@@ -199,7 +199,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 - Unit tests in-module under `#[cfg(test)] mod tests { use super::*; … }` (`test-cfg-test-module`).
 - **contract fixture tests are mandatory and gate the build**: `eos-layerstack`
   loads `contract/fixtures/cas/cases.json` and asserts every `expected` hash;
-  `eos-daemon` loads `contract/fixtures/envelopes/*.json` and asserts
+  `eos-daemon` loads `contract/fixtures/wire_messages/*.json` and asserts
   encode/decode round-trips + canonical equality.
 - Property tests (`test-proptest-properties`) for invariants: `decode(encode(x)) == x`;
   `aggregate` is idempotent and order-insensitive; the escaper never emits a non-ASCII byte.

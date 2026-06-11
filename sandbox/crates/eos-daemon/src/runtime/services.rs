@@ -5,6 +5,7 @@ use std::sync::Arc;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_operation::plugin::{PluginRuntime, PluginRuntimeError};
+use eos_operation::CallerId;
 use eos_plugin::PluginError;
 use serde_json::Value;
 
@@ -48,12 +49,14 @@ impl RuntimeServices {
 
     pub fn ensure_plugin_family_allowed(&self, args: &Value) -> Result<(), PluginRuntimeError> {
         eos_operation::plugin::ensure::validate_plugin_caller_fields(args)?;
-        let caller_id = args
-            .get("caller_id")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .trim();
-        if !caller_id.is_empty() && self.workspace.caller_has_active_handle(caller_id) {
+        self.ensure_plugin_caller_allowed(&CallerId::from_wire(args))
+    }
+
+    pub fn ensure_plugin_caller_allowed(
+        &self,
+        caller: &CallerId,
+    ) -> Result<(), PluginRuntimeError> {
+        if !caller.as_str().is_empty() && self.workspace.caller_has_active_handle(caller.as_str()) {
             return Err(PluginRuntimeError::Plugin(
                 PluginError::ForbiddenInIsolatedWorkspace,
             ));

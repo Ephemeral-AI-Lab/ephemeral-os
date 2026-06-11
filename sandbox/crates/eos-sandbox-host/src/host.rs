@@ -9,7 +9,7 @@ use anyhow::{bail, Context, Result};
 use serde_json::{json, Value};
 
 use crate::protocol::{
-    is_success, stamped_envelope_bytes, ClientError, ProtocolClient, CONNECT_RETRY_DELAYS_S,
+    encode_request_with_metadata, is_success, ClientError, ProtocolClient, CONNECT_RETRY_DELAYS_S,
     DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
 };
 use crate::runtime::{
@@ -383,7 +383,7 @@ fn forward_request(
     invocation_id: &str,
     args: &Value,
 ) -> Result<Value, ForwardError> {
-    let mut tcp_line = stamped_envelope_bytes(op, invocation_id, args, Some(&record.token));
+    let mut tcp_line = encode_request_with_metadata(op, invocation_id, args, Some(&record.token));
     tcp_line.push(b'\n');
     let attempt = ForwardAttempt {
         record,
@@ -452,7 +452,7 @@ fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, ForwardError> {
 fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
     let probe = resolve_endpoint(attempt.record).ok().and_then(|endpoint| {
         let client = ProtocolClient::new(endpoint, None, Duration::from_secs(2));
-        let mut line = stamped_envelope_bytes(
+        let mut line = encode_request_with_metadata(
             HEARTBEAT_OP,
             "recovery-probe",
             &Value::Object(serde_json::Map::new()),
@@ -531,7 +531,7 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         .remote_eosd_path
         .to_string_lossy()
         .into_owned();
-    let payload = String::from_utf8(stamped_envelope_bytes(
+    let payload = String::from_utf8(encode_request_with_metadata(
         attempt.op,
         attempt.invocation_id,
         attempt.args,

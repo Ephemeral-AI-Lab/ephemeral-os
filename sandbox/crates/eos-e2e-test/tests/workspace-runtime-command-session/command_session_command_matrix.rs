@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use eos_e2e_test::{next_invocation_id, unique_suffix, NodePool};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -90,7 +90,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
     for variant in &family.variants {
         let call_started = Instant::now();
         let response = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": variant.cmd,
                 "yield_time_ms": 1000,
@@ -156,7 +156,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         "time.sleep(60)'"
     );
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": prompt_cmd,
             "yield_time_ms": 500,
@@ -170,7 +170,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
 
     let body = (|| -> Result<()> {
         let first = lease.call_ok(
-            ops::SANDBOX_COMMAND_WRITE_STDIN,
+            catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
                 "command_session_id": &session_id,
                 "chars": "alpha payload\n",
@@ -187,7 +187,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         );
 
         let progress = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": &session_id,
                 "last_n_lines": 4,
@@ -199,7 +199,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         );
 
         let second = lease.call_ok(
-            ops::SANDBOX_COMMAND_WRITE_STDIN,
+            catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
                 "command_session_id": &session_id,
                 "chars": "beta payload\n",
@@ -215,7 +215,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         );
 
         let not_done = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id.clone()]}),
         )?;
         ensure!(
@@ -224,7 +224,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         );
 
         let cancel = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         )?;
         ensure_terminalish_status(&cancel)?;
@@ -236,7 +236,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
 
     if body.is_err() {
         let _ = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
@@ -276,7 +276,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
                     let started = Instant::now();
                     let response = request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_EXEC,
+                        catalog::SANDBOX_COMMAND_EXEC,
                         &root,
                         &caller_id,
                         json!({
@@ -312,7 +312,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
 
         for index in 0..level {
             let read = lease.call_ok(
-                ops::SANDBOX_FILE_READ,
+                catalog::SANDBOX_FILE_READ,
                 json!({"path": format!("{dir}/worker-{index}/result.txt")}),
             )?;
             ensure!(
@@ -370,7 +370,7 @@ time.sleep(60)'"
                     );
                     let started = request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_EXEC,
+                        catalog::SANDBOX_COMMAND_EXEC,
                         &root,
                         &caller_id,
                         json!({
@@ -407,7 +407,7 @@ time.sleep(60)'"
 
                     let answered = request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_WRITE_STDIN,
+                        catalog::SANDBOX_COMMAND_WRITE_STDIN,
                         &root,
                         &caller_id,
                         json!({
@@ -438,7 +438,7 @@ time.sleep(60)'"
 
                     let progress = request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_POLL,
+                        catalog::SANDBOX_COMMAND_POLL,
                         &root,
                         &caller_id,
                         json!({
@@ -453,7 +453,7 @@ time.sleep(60)'"
 
                     let cancel = request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_CANCEL,
+                        catalog::SANDBOX_COMMAND_CANCEL,
                         &root,
                         &caller_id,
                         json!({"command_session_id": &session_id}),
@@ -496,7 +496,7 @@ fn poll_read_progress_until_contains(
     while Instant::now() < deadline {
         let poll = request_with_identity(
             client,
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             root,
             caller_id,
             json!({

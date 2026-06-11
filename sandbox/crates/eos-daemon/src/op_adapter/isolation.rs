@@ -1,10 +1,14 @@
 //! Isolated-workspace op adapters behind `api.isolated_workspace.*`: wire arg
 //! parsing and response/error shaping over [`crate::WorkspaceRuntime`].
 
-use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
+use eos_operation::isolation::contract::{
+    IsolationEnterInput, IsolationEnterOutput, IsolationExitInput, IsolationExitOutput,
+    IsolationStatusInput, IsolationStatusOutput, ListOpenOutput, TestResetOutput,
+};
+use eos_operation::{OpError, OpResponse};
 use eos_workspace::{IsolatedError, WorkspaceHandle};
 use serde_json::{json, Value};
 
@@ -12,31 +16,28 @@ use crate::error::DaemonError;
 use crate::DispatchContext;
 use crate::{ExitOutcome, WorkspaceEnterError};
 
-use super::{error_json, require_arg};
+use super::to_wire_value;
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
-pub(crate) fn op_enter(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let caller_id = match require_arg(args, "caller_id") {
-        Ok(caller_id) => caller_id,
-        Err(error) => return Ok(error),
-    };
-    let root = match require_arg(args, "layer_stack_root") {
-        Ok(root) => PathBuf::from(root),
-        Err(error) => return Ok(error),
-    };
+pub(crate) fn op_enter(
+    input: IsolationEnterInput,
+    context: DispatchContext<'_>,
+) -> Result<OpResponse, DaemonError> {
+    let caller_id = input.caller.to_string();
+    let root = input.layer_stack_root;
     let workspace = &context.require_services()?.workspace;
     match workspace.enter(&caller_id, &root) {
-        Ok(handle) => Ok(json!({
-            "success": true,
-            "manifest_version": handle.manifest_version,
-            "manifest_root_hash": handle.manifest_root_hash,
-            "workspace_handle_id": handle.workspace_id.0,
-            "workspace_root": handle.workspace_root,
-        })),
+        Ok(handle) => Ok(success_response(to_wire_value(IsolationEnterOutput {
+            success: true,
+            manifest_version: handle.manifest_version,
+            manifest_root_hash: handle.manifest_root_hash,
+            workspace_handle_id: handle.workspace_id.0,
+            workspace_root: handle.workspace_root,
+        }))),
         Err(WorkspaceEnterError::ActiveCommandSessions {
             active_command_sessions,
-        }) => Ok(error_json(
+        }) => Ok(refused_response(
             "active_background_work",
             "cannot enter isolated workspace while command sessions are active",
             json!({"active_command_sessions": active_command_sessions}),
@@ -45,34 +46,38 @@ pub(crate) fn op_enter(args: &Value, context: DispatchContext<'_>) -> Result<Val
     }
 }
 
-pub(crate) fn op_exit(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let caller_id = match require_arg(args, "caller_id") {
-        Ok(caller_id) => caller_id,
-        Err(error) => return Ok(error),
-    };
-    let grace_s = args.get("grace_s").and_then(Value::as_f64);
+pub(crate) fn op_exit(
+    input: IsolationExitInput,
+    context: DispatchContext<'_>,
+) -> Result<OpResponse, DaemonError> {
+    let caller_id = input.caller.to_string();
     let workspace = &context.require_services()?.workspace;
     // Exit is the per-caller workspace-run teardown: discard the caller's
     // isolated command sessions, then tear down its namespace + lease. The
     // isolated exit result carries this op's response shape.
     workspace
-        .cancel_runs_for_caller(&caller_id, grace_s)
+        .cancel_runs_for_caller(&caller_id, input.grace_s)
         .isolated
         .map_or_else(
             |error| Ok(error_payload(&error)),
-            |exit| Ok(exit_response(exit)),
+            |exit| Ok(success_response(exit_response(exit))),
         )
 }
 
-pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let caller_id = match require_arg(args, "caller_id") {
-        Ok(caller_id) => caller_id,
-        Err(error) => return Ok(error),
-    };
+pub(crate) fn op_status(
+    input: IsolationStatusInput,
+    context: DispatchContext<'_>,
+) -> Result<OpResponse, DaemonError> {
+    let caller_id = input.caller.to_string();
     let workspace = &context.require_services()?.workspace;
     match workspace.status(&caller_id) {
-        Ok(Some(handle)) => Ok(status_response(&handle)),
-        Ok(None) => Ok(json!({"success": true, "open": false})),
+        Ok(Some(handle)) => Ok(success_response(status_response(&handle))),
+        Ok(None) => Ok(success_response(to_wire_value(
+            IsolationStatusOutput::Closed {
+                success: true,
+                open: false,
+            },
+        ))),
         Err(error) => Ok(error_payload(&error)),
     }
 }
@@ -80,17 +85,20 @@ pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Va
 pub(crate) fn op_list_open(
     _args: &Value,
     context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+) -> Result<OpResponse, DaemonError> {
     let workspace = &context.require_services()?.workspace;
-    Ok(json!({"success": true, "open_caller_ids": workspace.list_open()}))
+    Ok(success_response(to_wire_value(ListOpenOutput {
+        success: true,
+        open_caller_ids: workspace.list_open(),
+    })))
 }
 
 pub(crate) fn op_test_reset(
     _args: &Value,
     context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+) -> Result<OpResponse, DaemonError> {
     if !env_true(TEST_HARNESS_ENV) {
-        return Ok(error_json(
+        return Ok(refused_response(
             "forbidden",
             "sandbox.isolation.test_reset requires EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true",
             json!({}),
@@ -98,18 +106,22 @@ pub(crate) fn op_test_reset(
     }
     let workspace = &context.require_services()?.workspace;
     let exited_callers = workspace.test_reset();
-    Ok(json!({"success": true, "reset": true, "exited_callers": exited_callers}))
+    Ok(success_response(to_wire_value(TestResetOutput {
+        success: true,
+        reset: true,
+        exited_callers,
+    })))
 }
 
 fn status_response(handle: &WorkspaceHandle) -> Value {
-    json!({
-        "success": true,
-        "open": true,
-        "manifest_version": handle.manifest_version,
-        "manifest_root_hash": handle.manifest_root_hash,
-        "workspace_root": handle.workspace_root,
-        "created_at": handle.created_at,
-        "last_activity": handle.last_activity,
+    to_wire_value(IsolationStatusOutput::Open {
+        success: true,
+        open: true,
+        manifest_version: handle.manifest_version,
+        manifest_root_hash: handle.manifest_root_hash.clone(),
+        workspace_root: handle.workspace_root.clone(),
+        created_at: handle.created_at,
+        last_activity: handle.last_activity,
     })
 }
 
@@ -125,13 +137,13 @@ pub(crate) fn exit_response(exit: ExitOutcome) -> Value {
             json!(exit.active_leases_after),
         );
     }
-    json!({
-        "success": true,
-        "evicted_upperdir_bytes": outcome.evicted_upperdir_bytes,
-        "lifetime_s": outcome.lifetime_s,
-        "total_ms": outcome.total_ms,
-        "phases_ms": outcome.phases_ms,
-        "inspection": inspection,
+    to_wire_value(IsolationExitOutput {
+        success: true,
+        evicted_upperdir_bytes: outcome.evicted_upperdir_bytes,
+        lifetime_s: outcome.lifetime_s,
+        total_ms: outcome.total_ms,
+        phases_ms: to_wire_value(outcome.phases_ms),
+        inspection,
     })
 }
 
@@ -147,7 +159,19 @@ pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
 
 /// Map an [`IsolatedError`] onto the structured error payload, carrying the
 /// variant-specific detail fields.
-fn error_payload(error: &IsolatedError) -> Value {
+fn success_response(value: Value) -> OpResponse {
+    OpResponse::Success(value)
+}
+
+fn refused_response(kind: &'static str, message: impl Into<String>, details: Value) -> OpResponse {
+    OpResponse::Refused(OpError {
+        kind,
+        message: message.into(),
+        details: Some(details),
+    })
+}
+
+fn error_payload(error: &IsolatedError) -> OpResponse {
     let details = match error {
         IsolatedError::AlreadyOpen {
             created_at,
@@ -171,7 +195,7 @@ fn error_payload(error: &IsolatedError) -> Value {
         }),
         _ => json!({}),
     };
-    error_json(error.kind(), error.to_string(), details)
+    refused_response(error.kind(), error.to_string(), details)
 }
 
 fn env_true(key: &str) -> bool {

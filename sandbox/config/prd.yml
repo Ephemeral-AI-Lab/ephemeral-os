@@ -34,7 +34,7 @@ daemon:
 
   files:
     # Per-file read/write caps. Keep below the 16 MiB transport frame so file
-    # content fits one request/response envelope.
+    # content fits one request/response message.
     max_read_bytes: 16777216
     max_write_bytes: 8388608
 

@@ -11,8 +11,8 @@ pub enum DaemonError {
     #[error("daemon io error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("invalid envelope: {0}")]
-    InvalidEnvelope(String),
+    #[error("invalid request: {0}")]
+    InvalidRequest(String),
 
     #[error("request exceeds {limit} byte limit")]
     RequestTooLarge { limit: usize },
@@ -52,7 +52,7 @@ impl DaemonError {
         use crate::wire::ErrorKind;
         match self {
             Self::Protocol(_) => ErrorKind::BadJson,
-            Self::InvalidEnvelope(_) => ErrorKind::InvalidEnvelope,
+            Self::InvalidRequest(_) => ErrorKind::InvalidRequest,
             Self::RequestTooLarge { .. } => ErrorKind::RequestTooLarge,
             Self::Unauthorized => ErrorKind::Unauthorized,
             Self::Forbidden(_) => ErrorKind::Forbidden,
@@ -73,7 +73,7 @@ impl From<eos_operation::plugin::PluginRuntimeError> for DaemonError {
             PluginRuntimeError::Launch(source) => Self::from(source),
             PluginRuntimeError::StateLockPoisoned(what) => Self::StateLockPoisoned(what),
             PluginRuntimeError::OverlayPipeline(message) => Self::OverlayPipeline(message),
-            PluginRuntimeError::InvalidRequest(message) => Self::InvalidEnvelope(message),
+            PluginRuntimeError::InvalidRequest(message) => Self::InvalidRequest(message),
             PluginRuntimeError::Io(source) => Self::Io(source),
             PluginRuntimeError::LayerStack(source) => Self::LayerStack(source),
             PluginRuntimeError::Commit(source) => Self::Commit(source),
@@ -85,7 +85,7 @@ impl From<eos_operation::plugin::LaunchError> for DaemonError {
     fn from(err: eos_operation::plugin::LaunchError) -> Self {
         use eos_operation::plugin::LaunchError;
         match err {
-            LaunchError::InvalidRequest(message) => Self::InvalidEnvelope(message),
+            LaunchError::InvalidRequest(message) => Self::InvalidRequest(message),
             LaunchError::Io(source) => Self::Io(source),
             LaunchError::Failed(message) => Self::OverlayPipeline(message),
         }
@@ -114,7 +114,7 @@ impl From<eos_operation::checkpoint::CheckpointError> for DaemonError {
     fn from(err: eos_operation::checkpoint::CheckpointError) -> Self {
         use eos_operation::checkpoint::CheckpointError;
         match err {
-            CheckpointError::InvalidEnvelope(message) => Self::InvalidEnvelope(message),
+            CheckpointError::InvalidRequest(message) => Self::InvalidRequest(message),
             CheckpointError::Forbidden(message) => Self::Forbidden(message),
             CheckpointError::OverlayPipeline(message) => Self::OverlayPipeline(message),
             CheckpointError::LayerStack(source) => Self::LayerStack(source),

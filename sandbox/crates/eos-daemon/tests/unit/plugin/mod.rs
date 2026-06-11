@@ -294,7 +294,7 @@ fn ensure_reloads_same_digest_when_workspace_root_changes() -> TestResult {
 }
 
 #[test]
-fn op_table_registers_plugin_status_and_ensure() -> TestResult {
+fn builtin_dispatch_routes_plugin_status_and_ensure() -> TestResult {
     let daemon = TestDaemon::new();
     let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),

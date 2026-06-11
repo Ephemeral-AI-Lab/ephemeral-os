@@ -52,7 +52,7 @@ fn main() -> Result<()> {
         // The committed `crates/eos-operation/ops.json`; `cargo xtask
         // check-contract` fails when this output drifts from the artifact.
         Some("dump-ops") => {
-            print!("{}", eos_operation::core::ops::ops_json_document());
+            print!("{}", eos_operation::core::catalog::ops_json_document());
             Ok(())
         }
         Some(other) => Err(anyhow!(

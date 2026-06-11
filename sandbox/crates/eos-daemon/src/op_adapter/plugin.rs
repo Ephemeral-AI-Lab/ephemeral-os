@@ -5,6 +5,10 @@
 use std::time::Instant;
 
 use eos_layerstack::LayerStack;
+use eos_operation::plugin::contract::{
+    LoadedPluginStatusOutput, PluginEnsureInput, PluginEnsureReadyOutput, PluginStatusInput,
+    PluginStatusOutput,
+};
 use eos_operation::plugin::needs_upload_response;
 use eos_operation::plugin::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_operation::plugin::PackageEnsureReport;
@@ -21,18 +25,15 @@ use eos_operation::plugin::{
     ServiceHealthReport, StatusOutcome,
 };
 
-pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+use super::to_wire_value;
+
+pub(crate) fn op_ensure(
+    input: PluginEnsureInput,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_family_allowed(args)?;
-    let start_services = args
-        .get("start_services")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    match services
-        .plugin
-        .ensure(args, start_services)
-        .map_err(DaemonError::from)?
-    {
+    services.ensure_plugin_caller_allowed(&input.caller)?;
+    match services.plugin.ensure(&input).map_err(DaemonError::from)? {
         EnsureOutcome::NeedsUpload { manifest, report } => {
             Ok(needs_upload_response(&manifest, &report))
         }
@@ -40,20 +41,16 @@ pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Va
     }
 }
 
-pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+pub(crate) fn op_status(
+    input: PluginStatusInput,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
-    services.ensure_plugin_family_allowed(args)?;
-    let probe_services = args
-        .get("probe_services")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let probe_timeout = args
-        .get("probe_timeout_ms")
-        .and_then(Value::as_u64)
-        .map(std::time::Duration::from_millis);
+    services.ensure_plugin_caller_allowed(&input.caller)?;
+    let probe_timeout = input.probe_timeout_ms.map(std::time::Duration::from_millis);
     let outcome = services
         .plugin
-        .status(probe_services, probe_timeout)
+        .status(input.probe_services, probe_timeout)
         .map_err(DaemonError::from)?;
     Ok(status_response(&outcome))
 }
@@ -95,57 +92,57 @@ pub(crate) fn dispatch_registered_op(
 }
 
 fn ensure_response(ready: &EnsureReady) -> Value {
-    json!({
-        "success": true,
-        "plugin": ready.plugin_id,
-        "digest": ready.digest,
-        "registered_ops": ready.registered_ops,
-        "runtime_loaded": ready.runtime_loaded,
-        "runtime_warmed": false,
-        "service_processes_started": ready.started_count > 0,
-        "started_service_process_count": ready.started_count,
-        "already_loaded": ready.already_loaded,
-        "operation_routes": route_values(&ready.operation_routes),
-        "services": ready.services,
-        "service_processes": process_values(&ready.service_processes),
-        "running_service_processes": ready.running_service_processes,
-        "connected_ppc_routes": ready.connected_ppc_routes,
-        "connected_ppc_services": ready.connected_ppc_services,
-        "package": package_report_value(&ready.package),
+    to_wire_value(PluginEnsureReadyOutput {
+        success: true,
+        plugin: ready.plugin_id.clone(),
+        digest: ready.digest.clone(),
+        registered_ops: ready.registered_ops.clone(),
+        runtime_loaded: ready.runtime_loaded,
+        runtime_warmed: false,
+        service_processes_started: ready.started_count > 0,
+        started_service_process_count: ready.started_count,
+        already_loaded: ready.already_loaded,
+        operation_routes: route_values(&ready.operation_routes),
+        services: to_wire_value(&ready.services),
+        service_processes: process_values(&ready.service_processes),
+        running_service_processes: to_wire_value(&ready.running_service_processes),
+        connected_ppc_routes: ready.connected_ppc_routes.clone(),
+        connected_ppc_services: ready.connected_ppc_services.clone(),
+        package: package_report_value(&ready.package),
     })
 }
 
 fn status_response(outcome: &StatusOutcome) -> Value {
-    json!({
-        "success": true,
-        "loaded_plugins": outcome
+    to_wire_value(PluginStatusOutput {
+        success: true,
+        loaded_plugins: outcome
             .loaded_plugins
             .iter()
             .map(loaded_plugin_value)
             .collect::<Vec<_>>(),
-        "running_service_processes": outcome.running_service_processes,
-        "connected_ppc_routes": outcome.connected_ppc_routes,
-        "connected_ppc_services": outcome.connected_ppc_services,
-        "setup_failures": outcome.setup_failures,
-        "service_health": outcome
+        running_service_processes: to_wire_value(&outcome.running_service_processes),
+        connected_ppc_routes: outcome.connected_ppc_routes.clone(),
+        connected_ppc_services: outcome.connected_ppc_services.clone(),
+        setup_failures: to_wire_value(&outcome.setup_failures),
+        service_health: outcome
             .service_health
             .iter()
             .map(service_health_value)
             .collect::<Vec<_>>(),
-        "pending": [],
+        pending: Vec::new(),
     })
 }
 
-fn loaded_plugin_value(loaded: &LoadedPluginStatus) -> Value {
-    json!({
-        "name": loaded.name,
-        "digest": loaded.digest,
-        "ops": loaded.ops,
-        "operation_routes": route_values(&loaded.operation_routes),
-        "services": loaded.services,
-        "service_processes": process_values(&loaded.service_processes),
-        "runtime_loaded": loaded.runtime_loaded,
-    })
+fn loaded_plugin_value(loaded: &LoadedPluginStatus) -> LoadedPluginStatusOutput {
+    LoadedPluginStatusOutput {
+        name: loaded.name.clone(),
+        digest: loaded.digest.clone(),
+        ops: loaded.ops.clone(),
+        operation_routes: route_values(&loaded.operation_routes),
+        services: to_wire_value(&loaded.services),
+        service_processes: process_values(&loaded.service_processes),
+        runtime_loaded: loaded.runtime_loaded,
+    }
 }
 
 fn service_health_value(health: &ServiceHealthReport) -> Value {

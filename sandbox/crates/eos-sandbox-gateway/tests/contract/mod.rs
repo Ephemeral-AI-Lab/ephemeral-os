@@ -63,12 +63,12 @@ impl Engine for StubEngine {
 }
 
 fn request(op: &str, sandbox_id: Option<&str>) -> ClientRequest {
-    let mut envelope =
+    let mut request =
         json!({"op": op, "invocation_id": "00000000000000000000000000000001", "args": {}});
     if let Some(id) = sandbox_id {
-        envelope["sandbox_id"] = json!(id);
+        request["sandbox_id"] = json!(id);
     }
-    parse_request(&serde_json::to_vec(&envelope).expect("encode")).expect("parse")
+    parse_request(&serde_json::to_vec(&request).expect("encode")).expect("parse")
 }
 
 fn kind(response: &Value) -> Option<&str> {
@@ -167,7 +167,7 @@ fn api_error_kinds_are_produced() {
     let cases = [
         ("api.totally.bogus.op", Some(KNOWN_SANDBOX), "unknown_op"),
         ("sandbox.file.read", Some("sb-missing"), "unknown_sandbox"),
-        ("sandbox.file.read", None, "invalid_envelope"),
+        ("sandbox.file.read", None, "invalid_request"),
         (
             "sandbox.file.write",
             Some(KNOWN_SANDBOX),

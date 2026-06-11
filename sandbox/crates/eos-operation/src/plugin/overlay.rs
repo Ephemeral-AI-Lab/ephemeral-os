@@ -107,7 +107,7 @@ impl PluginRuntime {
     }
 }
 
-/// Typed result of one oneshot plugin overlay run; the `ops::plugin` adapter
+/// Typed result of one oneshot plugin overlay run; the `catalog::plugin` adapter
 /// shapes the wire response and splices daemon resource telemetry.
 pub struct PluginOverlayOutcome {
     pub layer_stack_root: PathBuf,

@@ -1,24 +1,24 @@
-//! `api.v1.cancel` envelope: unknown-id done envelope + live in-flight cancel.
+//! `api.v1.cancel` response: unknown-id done response + live in-flight cancel.
 
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 use eos_e2e_test::unique_suffix;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::spawn_inflight_exec;
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
-fn cancel_unknown_invocation_returns_done_envelope() -> Result<()> {
+fn cancel_unknown_invocation_returns_done_response() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
     let invocation_id = format!("never-registered-{}", unique_suffix());
     let cancel = lease.call_ok(
-        ops::SANDBOX_CALL_CANCEL,
+        catalog::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": invocation_id.clone()}),
     )?;
     // Cancelling an id the registry never saw is a deterministic "already done".
@@ -54,7 +54,7 @@ fn live_cancel_of_inflight_sets_cancelled() -> Result<()> {
     // Only cancel once the registry actually holds the entry (gate on inflight).
     let deadline = Instant::now() + Duration::from_secs(4);
     loop {
-        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
+        let count = lease.call_ok(catalog::SANDBOX_CALL_COUNT, json!({}))?;
         if as_i64(&count, "count")? >= 1 {
             break;
         }
@@ -66,7 +66,7 @@ fn live_cancel_of_inflight_sets_cancelled() -> Result<()> {
     }
 
     let cancel = lease.call_ok(
-        ops::SANDBOX_CALL_CANCEL,
+        catalog::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": invocation_id}),
     )?;
     let cancelled = as_bool(&cancel, "cancelled")?;

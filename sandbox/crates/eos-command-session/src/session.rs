@@ -12,7 +12,7 @@ use crate::process::{
 };
 use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
 use crate::yield_wait_loop::CommandSessionWaitTarget;
-use crate::{CommandResponse, CommandSessionError};
+use crate::CommandSessionError;
 
 #[cfg(test)]
 #[path = "../tests/unit/session.rs"]
@@ -39,9 +39,9 @@ pub struct CommandSessionSpec {
 
 /// The raw, policy-free result of reaping a finished command process. The
 /// substrate produces this; the owning workspace run turns it into a
-/// `CommandResponse` by publishing (complete) or discarding (cancel). Keeping the
-/// publish/discard decision out of the session is the structural guarantee that a
-/// cancelled command never reaches the OCC merge.
+/// rendered operation response by publishing (complete) or discarding (cancel).
+/// Keeping the publish/discard decision out of the session is the structural
+/// guarantee that a cancelled command never reaches the OCC merge.
 #[derive(Debug, Clone)]
 pub struct ReapedCommand {
     pub status: String,
@@ -239,7 +239,7 @@ impl CommandSession {
     /// remove the transcript. Best-effort: `final_path` is only a crash-recovery
     /// convenience, so a write failure does not undo the already-decided
     /// publish/discard or fail the operation.
-    pub fn persist_final(&self, response: &CommandResponse) {
+    pub fn persist_final(&self, response: &serde_json::Value) {
         let _ = write_final_response(&self.runtime.final_path, response);
         self.remove_transcript_file();
     }
@@ -287,12 +287,12 @@ fn transcript_len(path: &Path) -> u64 {
 
 fn write_final_response(
     path: &Path,
-    response: &CommandResponse,
+    response: &serde_json::Value,
 ) -> Result<(), CommandSessionError> {
     if path.as_os_str().is_empty() {
         return Ok(());
     }
-    let bytes = serde_json::to_vec_pretty(&response.to_wire_value()).map_err(|error| {
+    let bytes = serde_json::to_vec_pretty(response).map_err(|error| {
         CommandSessionError::InvalidRequest(format!("serialize final command response: {error}"))
     })?;
     std::fs::write(path, bytes)?;

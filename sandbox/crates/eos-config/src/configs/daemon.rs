@@ -79,7 +79,7 @@ pub struct LayerStackConfig {
 ///
 /// Each bounds a single file payload. Both must stay below the transport frame
 /// limit (the daemon wire `MAX_REQUEST_BYTES`, 16 MiB): file content travels
-/// inside one request/response frame next to the JSON envelope, so values near
+/// inside one request/response frame next to the JSON message, so values near
 /// 16 MiB risk frame overflow once content is JSON-escaped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -93,7 +93,7 @@ pub struct FileLimitsConfig {
 pub const MAX_READ_BYTES: usize = 16 * 1024 * 1024;
 /// Default per-file `write_file` / `edit_file` cap; the fallback for
 /// `daemon.files.max_write_bytes`. Kept below the 16 MiB request frame so a
-/// single file payload fits one envelope.
+/// single file payload fits one request.
 pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 
 impl DaemonConfig {

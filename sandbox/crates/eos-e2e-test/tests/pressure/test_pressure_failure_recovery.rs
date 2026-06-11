@@ -2,7 +2,7 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::helpers::{pressure_levels, request_with_identity, workload_timeout_s};
@@ -12,7 +12,7 @@ use crate::support::{
 
 fn start_sleep(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("sh -c 'echo {marker}; sleep 60'"),
             "yield_time_ms": 100,
@@ -30,15 +30,15 @@ fn daemon_recovers_after_midflight_cancel() -> Result<()> {
     let lease = pool.acquire()?;
     let id = start_sleep(&lease, "midflight")?;
     lease.call(
-        ops::SANDBOX_COMMAND_CANCEL,
+        catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": id}),
     )?;
-    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(
         as_bool(&ready, "ready")?,
         "daemon should remain ready after midflight cancel: {ready}"
     );
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         0,
@@ -58,9 +58,9 @@ fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
     let ids: Vec<String> = (0..5)
         .map(|index| start_sleep(&lease, &format!("burst-{index}")))
         .collect::<Result<_>>()?;
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 5, "five live sessions: {count}");
-    let leased = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let leased = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&leased, "active_leases")? >= 5,
         "five running commands must each hold a lease: {leased}"
@@ -68,7 +68,7 @@ fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
 
     for id in ids {
         lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;
     }
@@ -101,7 +101,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::SANDBOX_COMMAND_EXEC,
+                        catalog::SANDBOX_COMMAND_EXEC,
                         &root,
                         &caller_id,
                         json!({
@@ -124,13 +124,13 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
             ids.push(as_str(&response, "command_session_id")?.to_owned());
         }
 
-        let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+        let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
         assert_eq!(
             as_i64(&count, "count")?,
             i64::try_from(level).unwrap_or(i64::MAX),
             "command ladder should expose all running sessions at level {level}: {count}"
         );
-        let leased = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+        let leased = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
         assert!(
             as_i64(&leased, "active_leases")? >= i64::try_from(level).unwrap_or(i64::MAX),
             "running command sessions should each hold a lease at level {level}: {leased}"
@@ -138,7 +138,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
 
         for id in ids {
             let cancel = lease.call(
-                ops::SANDBOX_COMMAND_CANCEL,
+                catalog::SANDBOX_COMMAND_CANCEL,
                 json!({"command_session_id": id}),
             )?;
             assert!(
@@ -168,7 +168,7 @@ fn cancel_storm() -> Result<()> {
         .collect::<Result<_>>()?;
     for id in ids {
         let cancel = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;
         assert!(
@@ -176,7 +176,7 @@ fn cancel_storm() -> Result<()> {
             "cancel storm should return structured status: {cancel}"
         );
     }
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 0);
     Ok(())
 }

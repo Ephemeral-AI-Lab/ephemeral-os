@@ -20,7 +20,7 @@ fn error_kind_snake_case_wire() -> TestResult {
 
 #[test]
 fn encode_appends_single_newline() -> TestResult {
-    let env = Envelope::Response(serde_json::json!({"success": true, "touched": 0}));
+    let env = WireMessage::Response(serde_json::json!({"success": true, "touched": 0}));
     let bytes = encode(&env)?;
     assert_eq!(bytes.last(), Some(&b'\n'));
     assert_ne!(bytes[bytes.len() - 2], b'\n');
@@ -31,7 +31,7 @@ fn encode_appends_single_newline() -> TestResult {
 fn request_args_order_preserved_roundtrip() -> TestResult {
     let raw = b"{\"op\":\"x\",\"invocation_id\":\"i\",\"args\":{\"z\":1,\"a\":2,\"_eos_daemon_protocol_version\":1}}\n";
     let env = decode(raw)?;
-    assert!(matches!(env, Envelope::Request(_)));
+    assert!(matches!(env, WireMessage::Request(_)));
     assert_eq!(encode(&env)?, raw);
     Ok(())
 }
@@ -57,7 +57,7 @@ proptest! {
     #[test]
     fn decode_encode_roundtrips_requests(op in "[a-z.]{1,12}", id in "[a-z0-9]{0,16}", args in arb_json()) {
         let args = if args.is_object() { args } else { serde_json::json!({"v": args}) };
-        let env = Envelope::Request(Request { op, invocation_id: id, args });
+        let env = WireMessage::Request(Request { op, invocation_id: id, args });
         let bytes = encode(&env)
             .map_err(|error| TestCaseError::fail(error.to_string()))?;
         let back = decode(&bytes)

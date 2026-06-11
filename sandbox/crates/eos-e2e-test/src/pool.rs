@@ -1,7 +1,7 @@
 //! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,
 //! plus `NodeLease`, the ergonomic per-test handle that mints a fresh
 //! `layer_stack_root`, resets the configured workspace root, and injects the
-//! standard envelope members.
+//! standard response members.
 //!
 //! A lease holds its node exclusively for the test's duration; the node (and its
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
@@ -10,7 +10,7 @@
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Map, Value};
 
 use crate::client::{error_kind, is_success, ProtocolClient};
@@ -180,7 +180,7 @@ impl<'p> NodeLease<'p> {
         }
         let iid = next_invocation_id();
         let ensure = node.container.client().request(
-            ops::SANDBOX_CHECKPOINT_ENSURE_BASE,
+            catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
             &iid,
             &json!({
                 "layer_stack_root": stack_root,
@@ -241,7 +241,7 @@ impl<'p> NodeLease<'p> {
     /// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`
     /// (unless the caller already set them) plus a fresh invocation id.
     ///
-    /// Returns the decoded response (success payload OR daemon error envelope).
+    /// Returns the decoded response (success payload OR daemon error response).
     ///
     /// # Errors
     /// Returns an error only on transport failure.

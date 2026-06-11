@@ -214,12 +214,12 @@
             <span class="rs-type">Some</span>(record.token.clone()),
             <span class="rs-self">self</span>.config.request_timeout,
         );
-        <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-80">request_unstamped</a>(
+        <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-81">request_unstamped</a>(
             <span class="rs-type">READY_OP</span>,
             &quot;status-probe&quot;,
             &amp;json!({&quot;layer_stack_root&quot;: <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>}),
         ) {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp) =&gt; resp,
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp) =&gt; resp,
             <span class="rs-type">Ok</span>(resp) =&gt; json!({&quot;ready&quot;: <span class="rs-kw">false</span>, &quot;error&quot;: resp}),
             <span class="rs-type">Err</span>(err) =&gt; json!({&quot;ready&quot;: <span class="rs-kw">false</span>, &quot;error&quot;: err.to_string()}),
         }
@@ -539,7 +539,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-400">ForwardError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(op, invocation_id, args, <span class="rs-type">Some</span>(&amp;record.token));
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(op, invocation_id, args, <span class="rs-type">Some</span>(&amp;record.token));
     tcp_line.push(b&#x27;\n&#x27;);
     <span class="rs-kw">let</span> attempt = <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-ForwardAttempt-408">ForwardAttempt</a> {
         record,
@@ -616,16 +616,16 @@
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-restore-if-unreachable-452">restore_if_unreachable</a>(attempt: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-ForwardAttempt-408">ForwardAttempt</a>&lt;&#x27;_&gt;) {
     <span class="rs-kw">let</span> probe = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-resolve-endpoint-363">resolve_endpoint</a>(attempt.record).ok().and_then(|endpoint| {
         <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(endpoint, <span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(2));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
             <span class="rs-type">HEARTBEAT_OP</span>,
             &quot;recovery-probe&quot;,
             &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>()),
             <span class="rs-type">Some</span>(&amp;attempt.record.token),
         );
         line.push(b&#x27;\n&#x27;);
-        client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line).ok()
+        client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line).ok()
     });
-    <span class="rs-kw">if</span> probe.is_some_and(|resp| <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp)) {
+    <span class="rs-kw">if</span> probe.is_some_and(|resp| <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp)) {
         <span class="rs-kw">return</span>;
     }
     <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-respawn-and-gate-544">respawn_and_gate</a>(attempt);
@@ -682,7 +682,7 @@
     endpoint: std::net::<span class="rs-type">SocketAddr</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
     <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(endpoint, <span class="rs-type">None</span>, attempt.config.request_timeout);
-    client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;attempt.tcp_line)
+    client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;attempt.tcp_line)
 }
 </code></pre>
 </details>
@@ -747,7 +747,7 @@
         .remote_eosd_path
         .to_string_lossy()
         .into_owned();
-    <span class="rs-kw">let</span> payload = <span class="rs-type">String</span>::from_utf8(<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+    <span class="rs-kw">let</span> payload = <span class="rs-type">String</span>::from_utf8(<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
         attempt.op,
         attempt.invocation_id,
         attempt.args,
@@ -819,7 +819,7 @@
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::protocol::{
-    is_success, stamped_envelope_bytes, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>, <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>,
+    encode_request_with_metadata, is_success, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>, <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>,
     <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>, <span class="rs-type">HEARTBEAT_OP</span>, <span class="rs-type">READY_OP</span>,
 };
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::{
@@ -989,12 +989,12 @@
             <span class="rs-type">Some</span>(record.token.clone()),
             <span class="rs-self">self</span>.config.request_timeout,
         );
-        <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-80">request_unstamped</a>(
+        <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-81">request_unstamped</a>(
             <span class="rs-type">READY_OP</span>,
             &quot;status-probe&quot;,
             &amp;json!({&quot;layer_stack_root&quot;: <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>}),
         ) {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp) =&gt; resp,
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp) =&gt; resp,
             <span class="rs-type">Ok</span>(resp) =&gt; json!({&quot;ready&quot;: <span class="rs-kw">false</span>, &quot;error&quot;: resp}),
             <span class="rs-type">Err</span>(err) =&gt; json!({&quot;ready&quot;: <span class="rs-kw">false</span>, &quot;error&quot;: err.to_string()}),
         }
@@ -1193,7 +1193,7 @@
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-400">ForwardError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(op, invocation_id, args, <span class="rs-type">Some</span>(&amp;record.token));
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(op, invocation_id, args, <span class="rs-type">Some</span>(&amp;record.token));
     tcp_line.push(b&#x27;\n&#x27;);
     <span class="rs-kw">let</span> attempt = <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-ForwardAttempt-408">ForwardAttempt</a> {
         record,
@@ -1262,16 +1262,16 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-restore-if-unreachable-452">restore_if_unreachable</a>(attempt: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-ForwardAttempt-408">ForwardAttempt</a>&lt;&#x27;_&gt;) {
     <span class="rs-kw">let</span> probe = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-resolve-endpoint-363">resolve_endpoint</a>(attempt.record).ok().and_then(|endpoint| {
         <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(endpoint, <span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(2));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
             <span class="rs-type">HEARTBEAT_OP</span>,
             &quot;recovery-probe&quot;,
             &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>()),
             <span class="rs-type">Some</span>(&amp;attempt.record.token),
         );
         line.push(b&#x27;\n&#x27;);
-        client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line).ok()
+        client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line).ok()
     });
-    <span class="rs-kw">if</span> probe.is_some_and(|resp| <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp)) {
+    <span class="rs-kw">if</span> probe.is_some_and(|resp| <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp)) {
         <span class="rs-kw">return</span>;
     }
     <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-respawn-and-gate-544">respawn_and_gate</a>(attempt);
@@ -1302,7 +1302,7 @@
     endpoint: std::net::<span class="rs-type">SocketAddr</span>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
     <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(endpoint, <span class="rs-type">None</span>, attempt.config.request_timeout);
-    client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;attempt.tcp_line)
+    client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;attempt.tcp_line)
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-fallback-chain-498">fallback_chain</a>(
@@ -1341,7 +1341,7 @@
         .remote_eosd_path
         .to_string_lossy()
         .into_owned();
-    <span class="rs-kw">let</span> payload = <span class="rs-type">String</span>::from_utf8(<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+    <span class="rs-kw">let</span> payload = <span class="rs-type">String</span>::from_utf8(<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
         attempt.op,
         attempt.invocation_id,
         attempt.args,

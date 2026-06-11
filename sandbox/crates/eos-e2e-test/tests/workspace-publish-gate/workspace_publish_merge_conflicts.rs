@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{next_invocation_id, unique_suffix};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -29,7 +29,7 @@ fn concurrent_conflicting_writes() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::SANDBOX_FILE_WRITE,
+                    catalog::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -58,7 +58,10 @@ fn concurrent_conflicting_writes() -> Result<()> {
             "write should either commit or surface a conflict: {response}"
         );
     }
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "occ/conflict.txt"}))?;
+    let read = lease.call_ok(
+        catalog::SANDBOX_FILE_READ,
+        json!({"path": "occ/conflict.txt"}),
+    )?;
     assert!(
         matches!(as_str(&read, "content")?, "left\n" | "right\n"),
         "final content should be one coherent writer output: {read}"
@@ -82,7 +85,7 @@ fn concurrent_disjoint_writes() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::SANDBOX_FILE_WRITE,
+                    catalog::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -104,7 +107,7 @@ fn concurrent_disjoint_writes() -> Result<()> {
     }
     for index in 0..6 {
         let read = lease.call_ok(
-            ops::SANDBOX_FILE_READ,
+            catalog::SANDBOX_FILE_READ,
             json!({"path": format!("occ/disjoint-{index}.txt")}),
         )?;
         assert_eq!(as_str(&read, "content")?, format!("{index}\n"));
@@ -119,11 +122,11 @@ fn edit_overlap_conflict() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "occ/overlap.txt", "content": "dup dup\n", "overwrite": true}),
     )?;
     let edit = lease.call(
-        ops::SANDBOX_FILE_EDIT,
+        catalog::SANDBOX_FILE_EDIT,
         json!({
             "path": "occ/overlap.txt",
             "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]
@@ -146,15 +149,15 @@ fn edit_anchor_errors_do_not_publish_or_advance_manifest() -> Result<()> {
     let path = format!("occ/edit-anchor-{}.txt", unique_suffix());
     let original = "alpha beta alpha\n";
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": original, "overwrite": true}),
     )?;
-    let baseline = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let baseline = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let baseline_depth = as_i64(&baseline, "manifest_depth")?;
 
     for old_text in ["missing", "alpha"] {
         let edit = lease.call(
-            ops::SANDBOX_FILE_EDIT,
+            catalog::SANDBOX_FILE_EDIT,
             json!({
                 "path": path,
                 "edits": [{"old_text": old_text, "new_text": "changed", "replace_all": false}]
@@ -169,13 +172,13 @@ fn edit_anchor_errors_do_not_publish_or_advance_manifest() -> Result<()> {
             "anchor conflict must not publish changed paths: {edit}"
         );
 
-        let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
+        let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
         assert_eq!(
             as_str(&read, "content")?,
             original,
             "anchor conflict must leave content unchanged: {read}"
         );
-        let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+        let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
         assert_eq!(
             as_i64(&metrics, "manifest_depth")?,
             baseline_depth,
@@ -201,7 +204,7 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::SANDBOX_FILE_WRITE,
+                    catalog::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -222,7 +225,7 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
         );
     }
     let read = lease.call_ok(
-        ops::SANDBOX_FILE_READ,
+        catalog::SANDBOX_FILE_READ,
         json!({"path": "occ/retry-budget.txt"}),
     )?;
     assert!(
@@ -242,12 +245,12 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
     let conflicted = format!("{dir}/conflicted.txt");
     let sibling = format!("{dir}/sibling.txt");
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": &conflicted, "content": "base\n", "overwrite": true}),
     )?;
 
     let exec = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; mkdir -p {dir}; printf stale > {conflicted}; printf sibling > {sibling}'"),
             "yield_time_ms": 500,
@@ -263,7 +266,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
 
     let body = (|| -> Result<()> {
         lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({"path": &conflicted, "content": "newer\n", "overwrite": true}),
         )?;
         let result = wait_for_completion(&lease, &session_id)?;
@@ -288,13 +291,13 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
         wait_for_session_count(&lease, 0)?;
 
         let conflicted_read =
-            lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &conflicted}))?;
+            lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &conflicted}))?;
         assert_eq!(
             as_str(&conflicted_read, "content")?,
             "newer\n",
             "newer direct content must win: {conflicted_read}"
         );
-        let sibling_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &sibling}))?;
+        let sibling_read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &sibling}))?;
         assert!(
             !as_bool(&sibling_read, "exists")?,
             "non-conflicting sibling from the same atomic changeset must not publish: {sibling_read}"
@@ -304,7 +307,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
 
     if body.is_err() {
         let _ = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
@@ -318,13 +321,13 @@ fn publish_accounting() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let write = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "occ/publish.txt", "content": "published\n", "overwrite": true}),
     )?;
     assert!(!array(&write, "changed_paths")?.is_empty());
-    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&after, "manifest_version")? > as_i64(&before, "manifest_version")?,
         "write publish should advance the active manifest version: before={before} after={after}"
@@ -336,7 +339,7 @@ fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, session_id: &str) ->
     let deadline = Instant::now() + Duration::from_secs(8);
     loop {
         let collected = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
@@ -359,18 +362,18 @@ fn route_fileresult_catalog() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let committed = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "occ/catalog.txt", "content": "one\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&committed, "status")?, "committed");
     let rejected = lease.call(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "occ/catalog.txt", "content": "two\n", "overwrite": false}),
     )?;
     assert_eq!(as_str(&rejected, "status")?, "rejected");
     assert_eq!(conflict_reason(&rejected), "create_only_existing");
     let missing_edit = lease.call(
-        ops::SANDBOX_FILE_EDIT,
+        catalog::SANDBOX_FILE_EDIT,
         json!({
             "path": "occ/missing.txt",
             "edits": [{"old_text": "x", "new_text": "y", "replace_all": false}]

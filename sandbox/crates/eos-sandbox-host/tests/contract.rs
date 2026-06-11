@@ -6,16 +6,16 @@
 use serde_json::json;
 
 use eos_sandbox_host::protocol::{
-    raw_envelope_bytes, stamped_envelope_bytes, CONNECT_RETRY_DELAYS_S, DAEMON_AUTH_FIELD,
+    encode_request, encode_request_with_metadata, CONNECT_RETRY_DELAYS_S, DAEMON_AUTH_FIELD,
     DAEMON_PROTOCOL_FIELD, DAEMON_PROTOCOL_VERSION, MAX_REQUEST_BYTES,
 };
 
 const READ_FILE_FIXTURE: &[u8] =
-    include_bytes!("../../../contract/fixtures/envelopes/read_file_request.json");
+    include_bytes!("../../../contract/fixtures/wire_messages/read_file_request.json");
 const HEARTBEAT_FIXTURE: &[u8] =
-    include_bytes!("../../../contract/fixtures/envelopes/heartbeat_request.json");
+    include_bytes!("../../../contract/fixtures/wire_messages/heartbeat_request.json");
 const READINESS_FIXTURE: &[u8] =
-    include_bytes!("../../../contract/fixtures/envelopes/readiness_request.json");
+    include_bytes!("../../../contract/fixtures/wire_messages/readiness_request.json");
 
 fn fixture_line(raw: &[u8]) -> Vec<u8> {
     let mut line = raw.to_vec();
@@ -37,7 +37,7 @@ fn stamped_encoder_reproduces_read_file_fixture() {
         "path": "/workspace/repo/README.md",
         "caller_id": "caller-1",
     });
-    let encoded = stamped_envelope_bytes("sandbox.file.read", invocation_id, &args, None);
+    let encoded = encode_request_with_metadata("sandbox.file.read", invocation_id, &args, None);
     assert_eq!(
         encoded,
         fixture_line(READ_FILE_FIXTURE),
@@ -55,7 +55,8 @@ fn stamped_encoder_reproduces_heartbeat_fixture() {
         DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
         "invocation_ids": [invocation_id],
     });
-    let encoded = stamped_envelope_bytes("sandbox.call.heartbeat", invocation_id, &args, None);
+    let encoded =
+        encode_request_with_metadata("sandbox.call.heartbeat", invocation_id, &args, None);
     assert_eq!(
         encoded,
         fixture_line(HEARTBEAT_FIXTURE),
@@ -67,7 +68,7 @@ fn stamped_encoder_reproduces_heartbeat_fixture() {
 /// args-level invocation id.
 #[test]
 fn raw_encoder_reproduces_readiness_fixture() {
-    let encoded = raw_envelope_bytes(
+    let encoded = encode_request(
         "sandbox.runtime.ready",
         "00000000000000000000000000000001",
         &json!({"layer_stack_root": "/eos/layer-stack"}),
@@ -80,10 +81,11 @@ fn raw_encoder_reproduces_readiness_fixture() {
     );
 }
 
-/// The auth token is a TOP-LEVEL envelope field, never inside args.
+/// The auth token is a TOP-LEVEL request field, never inside args.
 #[test]
 fn auth_token_is_stamped_top_level() {
-    let encoded = stamped_envelope_bytes("sandbox.call.heartbeat", "i1", &json!({}), Some("tok-1"));
+    let encoded =
+        encode_request_with_metadata("sandbox.call.heartbeat", "i1", &json!({}), Some("tok-1"));
     let value: serde_json::Value = serde_json::from_slice(&encoded).expect("decode");
     assert_eq!(value[DAEMON_AUTH_FIELD], json!("tok-1"));
     assert!(value["args"].get(DAEMON_AUTH_FIELD).is_none());

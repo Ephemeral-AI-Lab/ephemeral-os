@@ -113,7 +113,7 @@ fn ensure_bound_workspace(
 ) -> Result<(), CheckpointError> {
     let bound = Path::new(&binding.workspace_root);
     if bound != workspace_root {
-        return Err(CheckpointError::InvalidEnvelope(format!(
+        return Err(CheckpointError::InvalidRequest(format!(
             "workspace_root must match LayerStack binding: expected {}, got {}",
             bound.display(),
             workspace_root.display()
@@ -282,14 +282,14 @@ fn resolve_git_dir(workspace_root: &Path) -> Result<PathBuf, CheckpointError> {
         .args(["rev-parse", "--absolute-git-dir"])
         .output()?;
     if !output.status.success() {
-        return Err(CheckpointError::InvalidEnvelope(format!(
+        return Err(CheckpointError::InvalidRequest(format!(
             "workspace_root must be a git repository: {}",
             command_stderr(&output)
         )));
     }
     let path = command_stdout(&output);
     if path.is_empty() {
-        return Err(CheckpointError::InvalidEnvelope(
+        return Err(CheckpointError::InvalidRequest(
             "git rev-parse returned an empty git dir".to_owned(),
         ));
     }

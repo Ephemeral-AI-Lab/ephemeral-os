@@ -7,9 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use eos_plugin::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
-use serde_json::{json, Value};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use super::contract::{PluginEnsureInput, PluginNeedsUploadOutput, PluginPackageInput};
 use super::route::{
     ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_DIGEST, ENV_PLUGIN_ID, ENV_PLUGIN_PACKAGE_ROOT,
 };
@@ -35,36 +36,36 @@ pub(crate) struct PackageRoots {
 }
 
 pub(crate) fn package_roots(
-    args: &Value,
+    package: &PluginPackageInput,
     manifest: &PluginManifest,
 ) -> Result<PackageRoots, PpcError> {
-    let paths = PackagePaths::new(args, manifest)?;
+    let paths = PackagePaths::new(package, manifest)?;
     Ok(PackageRoots {
         package_root: paths.package_root,
         dependency_root: paths.dependency_root,
     })
 }
 
-fn package_contract_active(args: &Value) -> bool {
-    args.get("staged_package_root").is_some()
-        || args.get("manifest").is_some_and(|manifest| {
+fn package_contract_active(input: &PluginEnsureInput) -> bool {
+    input.package.staged_package_root_present
+        || input.manifest.as_ref().is_some_and(|manifest| {
             manifest.get("package").is_some() || manifest.get("setup").is_some()
         })
 }
 
 pub(super) fn ensure_package(
-    args: &Value,
+    input: &PluginEnsureInput,
     manifest: Option<&PluginManifest>,
 ) -> Result<PackageEnsureReport, PpcError> {
     let Some(manifest) = manifest else {
         return Ok(PackageEnsureReport::default());
     };
-    if !package_contract_active(args) {
+    if !package_contract_active(input) {
         return Ok(PackageEnsureReport::default());
     }
 
-    let paths = PackagePaths::new(args, manifest)?;
-    let Some(staged_package_root) = staged_package_root(args)? else {
+    let paths = PackagePaths::new(&input.package, manifest)?;
+    let Some(staged_package_root) = staged_package_root(&input.package)? else {
         return Ok(warm_probe(manifest, &paths));
     };
     validate_staged_package_root(&staged_package_root, &paths.upload_digest_root)?;
@@ -85,16 +86,17 @@ pub(super) fn ensure_package(
 }
 
 pub fn needs_upload_response(manifest: &PluginManifest, report: &PackageEnsureReport) -> Value {
-    json!({
-        "success": true,
-        "plugin": manifest.plugin_id,
-        "digest": manifest.plugin_digest,
-        "ready": false,
-        "needs_upload": true,
-        "runtime_loaded": false,
-        "package_root": report.package_root,
-        "dependency_root": report.dependency_root,
+    serde_json::to_value(PluginNeedsUploadOutput {
+        success: true,
+        plugin: manifest.plugin_id.clone(),
+        digest: manifest.plugin_digest.clone(),
+        ready: false,
+        needs_upload: true,
+        runtime_loaded: false,
+        package_root: report.package_root.clone(),
+        dependency_root: report.dependency_root.clone(),
     })
+    .expect("plugin needs-upload output serializes")
 }
 
 fn warm_probe(manifest: &PluginManifest, paths: &PackagePaths) -> PackageEnsureReport {
@@ -124,12 +126,14 @@ struct PackagePaths {
 }
 
 impl PackagePaths {
-    fn new(args: &Value, manifest: &PluginManifest) -> Result<Self, PpcError> {
-        let runtime_plugins_root =
-            root_arg(args, "package_runtime_root", "/eos/runtime/plugins/catalog");
-        let dependency_base = root_arg(args, "package_dependency_root", "/eos/runtime/packages");
-        let upload_base = root_arg(args, "package_upload_root", "/eos/scratch/uploads/plugins");
-        let setup_base = root_arg(args, "package_setup_root", "/eos/scratch/setup");
+    fn new(package: &PluginPackageInput, manifest: &PluginManifest) -> Result<Self, PpcError> {
+        let runtime_plugins_root = root_arg(
+            &package.package_runtime_root,
+            "/eos/runtime/plugins/catalog",
+        );
+        let dependency_base = root_arg(&package.package_dependency_root, "/eos/runtime/packages");
+        let upload_base = root_arg(&package.package_upload_root, "/eos/scratch/uploads/plugins");
+        let setup_base = root_arg(&package.package_setup_root, "/eos/scratch/setup");
         Ok(Self {
             package_root: runtime_plugins_root
                 .join(&manifest.plugin_id)
@@ -147,26 +151,22 @@ impl PackagePaths {
     }
 }
 
-fn root_arg(args: &Value, key: &str, default: &str) -> PathBuf {
+fn root_arg(value: &Option<PathBuf>, default: &str) -> PathBuf {
     #[cfg(feature = "test-root-override")]
-    if let Some(root) = args
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|root| !root.is_empty())
-    {
-        return PathBuf::from(root);
+    if let Some(root) = value {
+        return root.clone();
     }
-    let _ = args;
-    let _ = key;
+    let _ = value;
     PathBuf::from(default)
 }
 
-fn staged_package_root(args: &Value) -> Result<Option<PathBuf>, PpcError> {
-    let Some(value) = args.get("staged_package_root") else {
+fn staged_package_root(package: &PluginPackageInput) -> Result<Option<PathBuf>, PpcError> {
+    if !package.staged_package_root_present {
         return Ok(None);
     };
-    let Some(path) = value
-        .as_str()
+    let Some(path) = package
+        .staged_package_root
+        .as_deref()
         .map(str::trim)
         .filter(|path| !path.is_empty())
     else {

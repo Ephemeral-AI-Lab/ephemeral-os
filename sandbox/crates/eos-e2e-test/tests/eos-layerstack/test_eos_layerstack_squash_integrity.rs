@@ -1,5 +1,5 @@
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_i64, as_str, live_pool_or_skip};
@@ -8,7 +8,7 @@ fn grow_past_auto_squash(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Res
     let mut last = Value::Null;
     for version in 0..105 {
         last = lease.call_ok(
-            ops::SANDBOX_FILE_WRITE,
+            catalog::SANDBOX_FILE_WRITE,
             json!({"path": path, "content": format!("version-{version}\n"), "overwrite": true}),
         )?;
     }
@@ -24,7 +24,7 @@ fn auto_squash_triggers_past_depth() -> Result<()> {
     grow_past_auto_squash(&lease, "squash/depth.txt")?;
     // 105 publishes against the suite's `auto_squash_max_depth: 8` end shallow
     // only if auto-squash kept folding the stack into checkpoint layers.
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let depth = as_i64(&metrics, "manifest_depth")?;
     assert!(
         depth <= 8,
@@ -45,7 +45,10 @@ fn head_readable_after_squash() -> Result<()> {
     };
     let lease = pool.acquire()?;
     grow_past_auto_squash(&lease, "squash/head.txt")?;
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "squash/head.txt"}))?;
+    let read = lease.call_ok(
+        catalog::SANDBOX_FILE_READ,
+        json!({"path": "squash/head.txt"}),
+    )?;
     assert_eq!(as_str(&read, "content")?, "version-104\n");
     Ok(())
 }

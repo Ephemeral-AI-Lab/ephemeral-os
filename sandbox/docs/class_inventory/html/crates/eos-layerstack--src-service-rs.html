@@ -162,7 +162,7 @@
     <h3>RootService</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-type-RootService-12">RootService</a> = Arc &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-CommitWriter-155">CommitWriter</a> &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-type-RootService-12">RootService</a> = Arc &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-CommitWriter-154">CommitWriter</a> &gt;</code>
   <div class="tags"><span>port/service</span></div>
 
   <p class="source">crates/eos-layerstack/src/service.rs:12</p>
@@ -229,7 +229,7 @@
     <h3>commit_direct</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-fn-commit-direct-148">commit_direct</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>] , base_hashes : &amp; [(<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> , Option &lt; String &gt;)] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-fn-commit-direct-148">commit_direct</a> (root : &amp; Path , snapshot_version : Option &lt; u64 &gt; , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>] , base_hashes : &amp; [(<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a> , Option &lt; String &gt;)] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -238,8 +238,8 @@
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>],
     base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-service-for-root-103">service_for_root</a>(root)?.<a class="symbol-link rs-fn" href="eos-layerstack.html#method-apply-changeset-with-base-hashes-168">apply_changeset_with_base_hashes</a>(
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-service-for-root-103">service_for_root</a>(root)?.<a class="symbol-link rs-fn" href="eos-layerstack.html#method-apply-changeset-with-base-hashes-167">apply_changeset_with_base_hashes</a>(
         changes,
         snapshot_version,
         <span class="rs-kw">true</span>,
@@ -256,7 +256,7 @@
     <h3>publish_capture</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-fn-publish-capture-162">publish_capture</a> (root : &amp; Path , snapshot_manifest_version : i64 , snapshot_layer_paths : &amp; [PathBuf] , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-layerstack--src-service-rs.html#item-fn-publish-capture-162">publish_capture</a> (root : &amp; Path , snapshot_manifest_version : i64 , snapshot_layer_paths : &amp; [PathBuf] , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -265,9 +265,9 @@
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &amp;[<span class="rs-type">PathBuf</span>],
     changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>],
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-snapshot-manifest-178">snapshot_manifest</a>(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-layerstack.html#item-fn-base-hashes-for-snapshot-339">base_hashes_for_snapshot</a>(root, &amp;manifest, changes)?;
+    <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-layerstack.html#item-fn-base-hashes-for-snapshot-338">base_hashes_for_snapshot</a>(root, &amp;manifest, changes)?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-commit-direct-148">commit_direct</a>(
         root,
         <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-manifest-version-u64-207">manifest_version_u64</a>(snapshot_manifest_version)?),
@@ -368,8 +368,8 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-services-92">services</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt; {
-    <span class="rs-kw">static</span> <span class="rs-type">SERVICES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-type">SERVICES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>::default()))
+    <span class="rs-kw">static</span> <span class="rs-type">SERVICES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-type">SERVICES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>::default()))
 }
 </code></pre>
 </details>
@@ -413,7 +413,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(service);
         }
     }
-    <span class="rs-kw">let</span> service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-155">CommitWriter</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(root.to_path_buf())?);
+    <span class="rs-kw">let</span> service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-154">CommitWriter</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(root.to_path_buf())?);
     <span class="rs-kw">let</span> lock_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cache = <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-lock-services-97">lock_services</a>()?;
     <span class="rs-type">Ok</span>(cache.<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#method-insert-or-get-47">insert_or_get</a>(key, service, lock_start.elapsed().as_secs_f64()))
@@ -458,7 +458,7 @@
             })
         })
         .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)?)
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)?)
 }
 </code></pre>
 </details>
@@ -480,10 +480,10 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerRef-62">LayerRef</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>};
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::commit::{base_hashes_for_snapshot, <a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-155">CommitWriter</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::commit::{base_hashes_for_snapshot, <a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-154">CommitWriter</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-layerstack--src-stack-mod-rs.html#item-struct-LayerStack-246">LayerStack</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>};
 
-<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-type-RootService-12">RootService</a> = <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-155">CommitWriter</a>&gt;;
+<span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-type-RootService-12">RootService</a> = <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-154">CommitWriter</a>&gt;;
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">SERVICE_CACHE_MAX</span>: usize = 256;
 
@@ -564,8 +564,8 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-services-92">services</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt; {
-    <span class="rs-kw">static</span> <span class="rs-type">SERVICES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-type">SERVICES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>::default()))
+    <span class="rs-kw">static</span> <span class="rs-type">SERVICES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-type">SERVICES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>::default()))
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-lock-services-97">lock_services</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-service-rs.html#item-struct-ServiceCache-26">ServiceCache</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
@@ -583,7 +583,7 @@
             <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(service);
         }
     }
-    <span class="rs-kw">let</span> service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-155">CommitWriter</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(root.to_path_buf())?);
+    <span class="rs-kw">let</span> service = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-CommitWriter-154">CommitWriter</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(root.to_path_buf())?);
     <span class="rs-kw">let</span> lock_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cache = <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-lock-services-97">lock_services</a>()?;
     <span class="rs-type">Ok</span>(cache.<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#method-insert-or-get-47">insert_or_get</a>(key, service, lock_start.elapsed().as_secs_f64()))
@@ -624,8 +624,8 @@
     snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
     changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>],
     base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-21">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
-    <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-service-for-root-103">service_for_root</a>(root)?.<a class="symbol-link rs-fn" href="eos-layerstack.html#method-apply-changeset-with-base-hashes-168">apply_changeset_with_base_hashes</a>(
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-service-for-root-103">service_for_root</a>(root)?.<a class="symbol-link rs-fn" href="eos-layerstack.html#method-apply-changeset-with-base-hashes-167">apply_changeset_with_base_hashes</a>(
         changes,
         snapshot_version,
         <span class="rs-kw">true</span>,
@@ -638,9 +638,9 @@
     snapshot_manifest_version: i64,
     snapshot_layer_paths: &amp;[<span class="rs-type">PathBuf</span>],
     changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-155">LayerChange</a>],
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-119">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack.html#item-struct-ChangesetResult-118">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-17">CommitError</a>&gt; {
     <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-snapshot-manifest-178">snapshot_manifest</a>(root, snapshot_manifest_version, snapshot_layer_paths)?;
-    <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-layerstack.html#item-fn-base-hashes-for-snapshot-339">base_hashes_for_snapshot</a>(root, &amp;manifest, changes)?;
+    <span class="rs-kw">let</span> base_hashes = <a class="symbol-link rs-fn" href="eos-layerstack.html#item-fn-base-hashes-for-snapshot-338">base_hashes_for_snapshot</a>(root, &amp;manifest, changes)?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-commit-direct-148">commit_direct</a>(
         root,
         <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-manifest-version-u64-207">manifest_version_u64</a>(snapshot_manifest_version)?),
@@ -675,7 +675,7 @@
             })
         })
         .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)?)
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(version, layers, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)?)
 }
 
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#item-fn-manifest-version-u64-207">manifest_version_u64</a>(version: i64) -&gt; <span class="rs-type">Result</span>&lt;u64, <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {

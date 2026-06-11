@@ -72,7 +72,8 @@ impl ProtocolClient {
         invocation_id: &str,
         args: &Value,
     ) -> Result<Value, ClientError> {
-        let mut line = stamped_envelope_bytes(op, invocation_id, args, self.auth_token.as_deref());
+        let mut line =
+            encode_request_with_metadata(op, invocation_id, args, self.auth_token.as_deref());
         line.push(b'\n');
         self.request_raw(&line)
     }
@@ -83,7 +84,7 @@ impl ProtocolClient {
         invocation_id: &str,
         args: &Value,
     ) -> Result<Value, ClientError> {
-        let mut line = raw_envelope_bytes(op, invocation_id, args, self.auth_token.as_deref());
+        let mut line = encode_request(op, invocation_id, args, self.auth_token.as_deref());
         line.push(b'\n');
         self.request_raw(&line)
     }
@@ -114,7 +115,7 @@ impl ProtocolClient {
         })
     }
 }
-pub fn stamped_envelope_bytes(
+pub fn encode_request_with_metadata(
     op: &str,
     invocation_id: &str,
     args: &Value,
@@ -130,22 +131,17 @@ pub fn stamped_envelope_bytes(
     args_obj
         .entry("invocation_id".to_owned())
         .or_insert_with(|| json!(invocation_id));
-    raw_envelope_bytes(op, invocation_id, &Value::Object(args_obj), token)
+    encode_request(op, invocation_id, &Value::Object(args_obj), token)
 }
-pub fn raw_envelope_bytes(
-    op: &str,
-    invocation_id: &str,
-    args: &Value,
-    token: Option<&str>,
-) -> Vec<u8> {
-    let mut envelope = Map::new();
-    envelope.insert("op".to_owned(), json!(op));
-    envelope.insert("invocation_id".to_owned(), json!(invocation_id));
-    envelope.insert("args".to_owned(), args.clone());
+pub fn encode_request(op: &str, invocation_id: &str, args: &Value, token: Option<&str>) -> Vec<u8> {
+    let mut request = Map::new();
+    request.insert("op".to_owned(), json!(op));
+    request.insert("invocation_id".to_owned(), json!(invocation_id));
+    request.insert("args".to_owned(), args.clone());
     if let Some(token) = token {
-        envelope.insert(DAEMON_AUTH_FIELD.to_owned(), json!(token));
+        request.insert(DAEMON_AUTH_FIELD.to_owned(), json!(token));
     }
-    serde_json::to_vec(&Value::Object(envelope)).unwrap_or_default()
+    serde_json::to_vec(&Value::Object(request)).unwrap_or_default()
 }
 pub fn is_success(response: &Value) -> bool {
     response.get("success") != Some(&Value::Bool(false))

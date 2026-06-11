@@ -1,7 +1,7 @@
 //! Daemon identity + per-response dispatch timings.
 
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{array, as_i64, as_str, live_pool_or_skip};
@@ -12,7 +12,7 @@ fn runtime_ready_exposes_daemon_identity() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     // The daemon is the in-sandbox parent process: ready exposes its pid + uptime.
     assert!(
         as_i64(&ready, "daemon_pid")? > 0,
@@ -41,7 +41,7 @@ fn every_response_carries_dispatch_timings() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     let timings = ready
         .get("timings")
         .and_then(Value::as_object)
@@ -56,7 +56,7 @@ fn every_response_carries_dispatch_timings() -> Result<()> {
             "every response must report {key}: {ready}"
         );
     }
-    // Dispatch timings ride even error envelopes.
+    // Dispatch timings ride even error responses.
     let bogus = lease.call("api.totally.bogus.op", json!({}))?;
     assert_eq!(as_str(&bogus, "success").unwrap_or("false"), "false");
     assert!(
@@ -65,7 +65,7 @@ fn every_response_carries_dispatch_timings() -> Result<()> {
             .and_then(|timings| timings.get("runtime.dispatch_s"))
             .and_then(Value::as_f64)
             .is_some(),
-        "error envelopes must still carry dispatch timing: {bogus}"
+        "error responses must still carry dispatch timing: {bogus}"
     );
     Ok(())
 }

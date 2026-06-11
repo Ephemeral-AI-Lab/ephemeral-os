@@ -1,5 +1,5 @@
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::live_pool_or_skip;
@@ -10,10 +10,10 @@ fn generic_plugin_rejected_in_isolated_workspace() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let response = lease.call("plugin.generic.query", json!({"path": "anything.txt"}))?;
     assert_eq!(response["success"], false);
     assert_eq!(response["error"]["kind"], "forbidden_in_isolated_workspace");
-    lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
+    lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     Ok(())
 }

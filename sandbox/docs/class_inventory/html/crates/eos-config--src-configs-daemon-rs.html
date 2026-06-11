@@ -235,7 +235,7 @@
     <span class="visibility">pub</span>
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-config--src-configs-daemon-rs.html#item-struct-FileLimitsConfig-78">FileLimitsConfig</a></code>
-  <p class="docstring">Per-file read/write byte caps for `read_file` / `write_file` / `edit_file`.<br>Each bounds a single file payload. Both must stay below the transport frame<br>limit (the daemon wire `MAX_REQUEST_BYTES`, 16 MiB): file content travels<br>inside one request/response frame next to the JSON envelope, so values near<br>16 MiB risk frame overflow once content is JSON-escaped.</p>
+  <p class="docstring">Per-file read/write byte caps for `read_file` / `write_file` / `edit_file`.<br>Each bounds a single file payload. Both must stay below the transport frame<br>limit (the daemon wire `MAX_REQUEST_BYTES`, 16 MiB): file content travels<br>inside one request/response frame next to the JSON message, so values near<br>16 MiB risk frame overflow once content is JSON-escaped.</p>
   <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>max_read_bytes</td><td><code>usize</code></td></tr><tr><td>pub</td><td>max_write_bytes</td><td><code>usize</code></td></tr></tbody></table>
 
@@ -329,7 +329,7 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Each bounds a single file payload. Both must stay below the transport frame</span>
 <span class="rs-comment">/// limit (the daemon wire `MAX_REQUEST_BYTES`, 16 MiB): file content travels</span>
-<span class="rs-comment">/// inside one request/response frame next to the JSON envelope, so values near</span>
+<span class="rs-comment">/// inside one request/response frame next to the JSON message, so values near</span>
 <span class="rs-comment">/// 16 MiB risk frame overflow once content is JSON-escaped.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Deserialize</span>)]
 #[serde(deny_unknown_fields)]
@@ -343,7 +343,7 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MAX_READ_BYTES</span>: usize = 16 * 1024 * 1024;
 <span class="rs-comment">/// Default per-file `write_file` / `edit_file` cap; the fallback for</span>
 <span class="rs-comment">/// `daemon.files.max_write_bytes`. Kept below the 16 MiB request frame so a</span>
-<span class="rs-comment">/// single file payload fits one envelope.</span>
+<span class="rs-comment">/// single file payload fits one request.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MAX_FILE_BYTES</span>: usize = 8 * 1024 * 1024;
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-config--src-configs-daemon-rs.html#item-struct-DaemonConfig-17">DaemonConfig</a> {

@@ -1,4 +1,4 @@
-# Sandbox Protocol — framing, envelopes, auth, errors, canonicalization
+# Sandbox Protocol — framing, wire messages, auth, errors, canonicalization
 
 This file plus `../crates/eos-operation/ops.json` and `fixtures/` is the
 **complete shared artifact** between the host side (`eos-sandbox-gateway`,
@@ -18,7 +18,7 @@ normative subset both sides build against.
   filesystem permissions; there is no auth field on this hop.
 - **Framing:** one UTF-8 compact-JSON object terminated by `\n` per
   connection; the response is one JSON line, then the server half-closes.
-- **Request envelope:**
+- **Request:**
 
 ```json
 {"op":"sandbox.file.read","sandbox_id":"sb-…","invocation_id":"<uuid4hex>","args":{}}
@@ -37,7 +37,7 @@ normative subset both sides build against.
   `visibility != public` → `forbidden`; `served_by == "host"` → host engine; `served_by == "daemon"`
   (and dynamic `plugin.*`) → forward to the sandbox daemon; unknown op →
   `unknown_op`. `eos-sandbox-gateway` never branches on specific op names.
-- **API-level error kinds** (same envelope shape as §4, in addition to daemon
+- **API-level error kinds** (same response shape as §4, in addition to daemon
   kinds passed through):
 
 | kind | Raised when |
@@ -52,15 +52,15 @@ normative subset both sides build against.
 
 - **Transport:** loopback TCP to the docker-published port; one request per
   connection; compact JSON + `\n`; response read to EOF. Inside the container
-  the daemon also serves the identical envelope on an AF_UNIX socket
+  the daemon also serves the identical request protocol on an AF_UNIX socket
   (`/eos/runtime/daemon/runtime.sock`) with **no** auth.
-- **Auth:** `_eos_daemon_auth_token` is stamped as a **top-level** envelope
+- **Auth:** `_eos_daemon_auth_token` is stamped as a **top-level** request
   field by the host on the TCP hop and popped by the daemon before dispatch.
   Mismatch → `unauthorized`.
 - **Protocol version:** `_eos_daemon_protocol_version` (currently `1`) is
   carried **inside `args`** and is currently inert on the daemon side.
 - **`sandbox_id` is stripped** by the host before forwarding; the daemon
-  envelope is byte-compatible with the frozen fixtures in `fixtures/envelopes/`.
+  request is byte-compatible with the frozen fixtures in `fixtures/wire_messages/`.
 - **Fallback transport:** `docker exec <container> eosd daemon --client
   <socket> <payload>` — the daemon binary as its own thin client over its
   AF_UNIX socket. Thin-client exit codes: `97` connect failed, `98` I/O failed.
@@ -73,28 +73,28 @@ normative subset both sides build against.
 | request read timeout | 30 s |
 | connect-retry backoff | 0.25 / 0.5 / 1.0 / 2.0 s, then one final attempt |
 
-## 4. Error envelope (both hops)
+## 4. Error Response (Both Hops)
 
 ```json
 {"success":false,"warnings":[],"timings":{},"error":{"kind":"…","message":"…","details":{}}}
 ```
 
-Daemon error kinds: `invalid_envelope`, `bad_json`, `request_too_large`,
+Daemon error kinds: `invalid_request`, `bad_json`, `request_too_large`,
 `unauthorized`, `unknown_op`, `internal_error`, `forbidden`,
 `forbidden_in_isolated_workspace`, `lifecycle_in_progress`. `internal_error`
 details always carry a generated `error_id`. On the client hop, error
-envelopes built by `eos-sandbox-gateway` use the same shape with the §1 kinds.
+responses built by `eos-sandbox-gateway` use the same shape with the §1 kinds.
 
 ## 5. Canonicalization (response comparison bar)
 
-Requests and error envelopes are **byte-identity**: decode → encode must
+Requests and error responses are **byte-identity**: decode → encode must
 reproduce the fixture bytes exactly (compact separators, key order preserved,
 one trailing `\n`).
 
 Success responses are **canonical-equal**: before comparison, drop the
 non-deterministic fields — the entire `timings` object, `daemon_pid`, and
 `uptime_s` — then sort object keys recursively. Everything else must match the
-fixtures in `fixtures/envelopes/` exactly.
+fixtures in `fixtures/wire_messages/` exactly.
 
 ## 6. CAS byte-identity
 

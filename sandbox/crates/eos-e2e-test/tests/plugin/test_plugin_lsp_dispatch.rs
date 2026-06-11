@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -193,7 +193,7 @@ fn lsp_package_uses_generic_lifecycle_and_dispatches_symbols() -> Result<()> {
     let expected_dependency_root = format!("/eos/runtime/packages/lsp/{digest}");
 
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({
             "path": "phase7_lsp/sample.py",
             "content": "class PhaseSeven:\n    pass\n\ndef live_symbol(value):\n    return value\n",
@@ -202,7 +202,7 @@ fn lsp_package_uses_generic_lifecycle_and_dispatches_symbols() -> Result<()> {
     )?;
 
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),
@@ -216,7 +216,7 @@ fn lsp_package_uses_generic_lifecycle_and_dispatches_symbols() -> Result<()> {
 
     let staged = stage_lsp_package(&lease, &digest)?;
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest(&digest, &setup_digest),

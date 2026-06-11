@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Context, Result};
 use eos_e2e_test::NodeLease;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -23,11 +23,11 @@ fn iws_same_port_discard() -> Result<()> {
     // `>/eos/scratch/...` redirect makes the server fail before it binds the
     // port (the `&&` short-circuits on the mkdir). The log is throwaway.
     let server_cmd = "python3 -m http.server 39001 >/tmp/eos-e2e-iws-http.log 2>&1";
-    let first_enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let first_enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let first_handle_id = as_str(&first_enter, "workspace_handle_id")?.to_owned();
     let first_body = (|| -> Result<()> {
         let first = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": server_cmd,
                 "yield_time_ms": 100,
@@ -39,21 +39,21 @@ fn iws_same_port_discard() -> Result<()> {
         );
         let first_id = as_str(&first, "command_session_id")?.to_owned();
         lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &first_id}),
         )?;
         wait_for_isolated_command_session_transcript_recycled(&lease, &first_handle_id, &first_id)?;
         Ok(())
     })();
-    let first_exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
+    let first_exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     first_body?;
     first_exit?;
 
-    let second_enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let second_enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let second_handle_id = as_str(&second_enter, "workspace_handle_id")?.to_owned();
     let second_body = (|| -> Result<()> {
         let second = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": server_cmd,
                 "yield_time_ms": 100,
@@ -65,13 +65,13 @@ fn iws_same_port_discard() -> Result<()> {
         );
         let id = as_str(&second, "command_session_id")?.to_owned();
         lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &id}),
         )?;
         wait_for_isolated_command_session_transcript_recycled(&lease, &second_handle_id, &id)?;
         Ok(())
     })();
-    let second_exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
+    let second_exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     second_body?;
     second_exit?;
     Ok(())
@@ -99,10 +99,10 @@ print(\"iws-wrote:\" + payload, flush=True); \
 time.sleep(60)'"
     );
 
-    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let handle_id = as_str(&enter, "workspace_handle_id")?.to_owned();
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": cmd,
             "yield_time_ms": 500,
@@ -118,7 +118,7 @@ time.sleep(60)'"
         wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
         let answered = lease.call_ok(
-            ops::SANDBOX_COMMAND_WRITE_STDIN,
+            catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
                 "command_session_id": session_id,
                 "chars": "private-payload\n",
@@ -143,7 +143,7 @@ time.sleep(60)'"
             "stdin write should drive the isolated prompt command: {reply}"
         );
 
-        let read_private = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &path}))?;
+        let read_private = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &path}))?;
         ensure!(
             as_str(&read_private, "workspace")? == "isolated",
             "read while isolated should route through isolated workspace: {read_private}"
@@ -154,7 +154,7 @@ time.sleep(60)'"
         );
 
         let progress = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": session_id,
                 "last_n_lines": 8,
@@ -166,7 +166,7 @@ time.sleep(60)'"
         );
 
         let not_done = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id.clone()]}),
         )?;
         ensure!(
@@ -175,7 +175,7 @@ time.sleep(60)'"
         );
 
         let cancelled = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         )?;
         ensure!(
@@ -189,15 +189,15 @@ time.sleep(60)'"
 
     if body.is_err() {
         let _ = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         );
     }
-    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
+    let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     body?;
     exit?;
 
-    let after_exit = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &path}))?;
+    let after_exit = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &path}))?;
     ensure!(
         as_str(&after_exit, "workspace")? == "ephemeral",
         "read after isolated exit should route back to ephemeral workspace: {after_exit}"
@@ -219,7 +219,7 @@ fn poll_read_progress_until_stdout_contains(
     let mut last = None;
     while Instant::now() < deadline {
         let poll = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": session_id,
                 "last_n_lines": 8,
@@ -244,7 +244,7 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
         "eos_e2e_iws_escape_{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     // The same escaped-`setsid` descendant that LEAKS in ephemeral mode is reaped
     // here: isolated workspaces run commands under a cgroup, and exit's cgroup kill
     // reaps even a pgid-escaped descendant. This is the contained counterpart that
@@ -253,7 +253,7 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
     // which is itself the finding.)
     let body = (|| -> Result<()> {
         let completed = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 // The outer `bash` holds for `sleep 3` after backgrounding the
                 // setsid child so the escapee reliably calls setsid() (escapes the
@@ -285,7 +285,7 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
 
     // Always exit isolated mode so a tripped assertion cannot leak an open
     // workspace past the cap; exit's cgroup kill is also what reaps the escapee.
-    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
+    let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     body?;
     exit?;
     // The isolated cgroup must reap the escaped descendant on exit (widened for

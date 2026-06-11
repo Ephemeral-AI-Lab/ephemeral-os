@@ -6,8 +6,9 @@ use serde_json::json;
 
 use super::direct::{api_error, parse_layer_path, resolve_layer_path, usize_to_f64_saturating};
 use super::{
-    FileBackend, FileOpsError, Mutation, MutationKind, MutationOutcome, ReadBytes,
-    ResolvedWorkspacePath, WorkspaceTimings,
+    ChangedPathKind, FileBackend, FileOpsError, Mutation, MutationCore, MutationKind,
+    MutationOutcome, MutationSource, MutationStatus, ReadBytes, ResolvedWorkspacePath,
+    WorkspaceKind, WorkspaceTimings,
 };
 
 #[derive(Debug, Clone)]
@@ -21,12 +22,12 @@ pub struct IsolatedBackend {
 }
 
 impl FileBackend for IsolatedBackend {
-    fn workspace_kind(&self) -> &'static str {
-        "isolated"
+    fn workspace_kind(&self) -> WorkspaceKind {
+        WorkspaceKind::Isolated
     }
 
-    fn mutation_source(&self, _kind: MutationKind) -> &'static str {
-        "isolated_workspace"
+    fn mutation_source(&self, _kind: MutationKind) -> MutationSource {
+        MutationSource::IsolatedWorkspace
     }
 
     fn resolve_path(&self, request_path: &str) -> Result<ResolvedWorkspacePath, FileOpsError> {
@@ -67,19 +68,21 @@ impl FileBackend for IsolatedBackend {
         std::fs::write(target, &mutation.content).map_err(api_error)?;
         let changed_paths = vec![layer_path.as_str().to_owned()];
         Ok(MutationOutcome {
-            workspace_kind: "isolated".to_owned(),
-            success: true,
+            core: MutationCore {
+                success: true,
+                conflict: None,
+                conflict_reason: None,
+                changed_path_kinds: BTreeMap::from([(
+                    layer_path.as_str().to_owned(),
+                    ChangedPathKind::Write,
+                )]),
+                changed_paths,
+                mutation_source: Some(self.mutation_source(mutation.kind)),
+                timings: self.timings(1),
+            },
+            workspace_kind: WorkspaceKind::Isolated,
             published: false,
-            status: "committed".to_owned(),
-            conflict: None,
-            conflict_reason: None,
-            changed_path_kinds: BTreeMap::from([(
-                layer_path.as_str().to_owned(),
-                "write".to_owned(),
-            )]),
-            changed_paths,
-            mutation_source: self.mutation_source(mutation.kind).to_owned(),
-            timings: self.timings(1),
+            status: MutationStatus::Committed,
             ..MutationOutcome::default()
         })
     }

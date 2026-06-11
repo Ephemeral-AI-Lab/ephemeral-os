@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, live_pool_or_skip};
@@ -24,7 +24,7 @@ fn background_plugin_operation_control() -> Result<()> {
     wait_for_inflight_count(&lease, 1, Duration::from_secs(4))?;
 
     let heartbeat = lease.call_ok(
-        ops::SANDBOX_CALL_HEARTBEAT,
+        catalog::SANDBOX_CALL_HEARTBEAT,
         json!({"invocation_ids": [invocation_id.clone(), "not-live"]}),
     )?;
     assert_eq!(
@@ -34,7 +34,7 @@ fn background_plugin_operation_control() -> Result<()> {
     );
 
     let cancel = lease.call_ok(
-        ops::SANDBOX_CALL_CANCEL,
+        catalog::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": invocation_id.clone()}),
     )?;
     assert!(
@@ -52,7 +52,7 @@ fn background_plugin_operation_control() -> Result<()> {
 fn ensure_slow_plugin_service(lease: &NodeLease<'_>, digest: &str) -> Result<()> {
     let manifest = slow_plugin_manifest(digest);
     let warm = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": manifest,
@@ -62,7 +62,7 @@ fn ensure_slow_plugin_service(lease: &NodeLease<'_>, digest: &str) -> Result<()>
     assert_eq!(warm["needs_upload"], true, "{warm}");
     let staged = stage_slow_plugin_package(lease, digest)?;
     let cold = lease.call_ok(
-        ops::SANDBOX_PLUGIN_ENSURE,
+        catalog::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": slow_plugin_manifest(digest),
@@ -201,7 +201,7 @@ fn wait_for_inflight_count(
 ) -> Result<Value> {
     let deadline = Instant::now() + timeout;
     loop {
-        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
+        let count = lease.call_ok(catalog::SANDBOX_CALL_COUNT, json!({}))?;
         if as_i64(&count, "count")? == expected {
             return Ok(count);
         }

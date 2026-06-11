@@ -1,18 +1,19 @@
 use std::path::Path;
 
-use eos_command_session::CommandResponse;
 use eos_layerstack::service::Snapshot;
 use eos_layerstack::{service, FileResult};
 use eos_workspace::IsolatedWorkspaceBinding;
 use eos_workspace::{
     capture_upperdir, path_changes_to_wire, EphemeralWorkspace, TreeResourceStats,
 };
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
+use super::contract::{u64_to_f64_saturating, CommandMetadata, CommandResponse};
 use super::outcome::{
-    ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceConflict,
-    WorkspaceTimings,
+    ChangedPathKind, ChangedPathKinds, FinalizeCommandRequest, MutationSource, WorkspaceApiError,
+    WorkspaceConflict, WorkspaceKind, WorkspaceTimings,
 };
+use crate::{CommandSessionId, MutationCore};
 
 pub(crate) fn settle_ephemeral(
     root: &Path,
@@ -32,8 +33,7 @@ pub(crate) fn settle_ephemeral(
     .map_err(finalize_error)?;
     let publish_s = publish_start.elapsed().as_secs_f64();
 
-    let path_kinds = path_changes_to_wire(&captured.changes);
-    let changed_path_kinds = path_kinds.into_iter().collect::<ChangedPathKinds>();
+    let changed_path_kinds = changed_path_kinds_from_wire(path_changes_to_wire(&captured.changes));
     let first_conflict = changeset.first_conflict();
     let command_success = request.command_succeeded();
     let publish_success = changeset.success();
@@ -66,16 +66,16 @@ pub(crate) fn settle_ephemeral(
     );
 
     Ok(command_response(
-        "ephemeral",
+        WorkspaceKind::Ephemeral,
         request,
         command_success && publish_success,
         changeset.published_paths(),
         changed_path_kinds,
-        "overlay_capture",
+        Some(MutationSource::OverlayCapture),
         first_conflict.map(conflict_from_file),
         first_conflict.map(|file| conflict_message(file).to_owned()),
         timings,
-        Value::Null,
+        Map::new(),
     ))
 }
 
@@ -86,9 +86,7 @@ pub(crate) fn settle_isolated(
     let mut timings = base_timings(&binding.layer_stack_root)?;
     let captured = capture_upperdir(&binding.upperdir)
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
-    let changed_path_kinds = path_changes_to_wire(&captured.changes)
-        .into_iter()
-        .collect::<ChangedPathKinds>();
+    let changed_path_kinds = changed_path_kinds_from_wire(path_changes_to_wire(&captured.changes));
     let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
     merge_runner_timings(&mut timings, request.runner_result.as_ref());
     let command_success = request.command_succeeded();
@@ -100,34 +98,36 @@ pub(crate) fn settle_isolated(
         request.command_elapsed_s,
         true,
     );
-    let metadata = json!({
-            "isolated_workspace": {
-                "caller_id": binding.caller_id,
-                "workspace_handle_id": binding.workspace_handle_id,
-                "manifest_version": binding.manifest_version,
-                "manifest_root_hash": binding.manifest_root_hash,
-                "published": false,
-            },
-            "warnings": [],
-    });
+    let mut extras = Map::new();
+    extras.insert(
+        "isolated_workspace".to_owned(),
+        json!({
+            "caller_id": binding.caller_id,
+            "workspace_handle_id": binding.workspace_handle_id,
+            "manifest_version": binding.manifest_version,
+            "manifest_root_hash": binding.manifest_root_hash,
+            "published": false,
+        }),
+    );
+    extras.insert("warnings".to_owned(), json!([]));
     let mut response = command_response(
-        "isolated",
+        WorkspaceKind::Isolated,
         request,
         command_success,
         changed_paths,
         changed_path_kinds,
-        "isolated_workspace",
+        Some(MutationSource::IsolatedWorkspace),
         None,
         None,
         timings,
-        metadata,
+        extras,
     );
     response.exit_code = Some(response.exit_code.unwrap_or(1));
     Ok(response)
 }
 
 pub(crate) fn discarded_response(
-    workspace_kind: &'static str,
+    workspace_kind: WorkspaceKind,
     request: FinalizeCommandRequest,
 ) -> CommandResponse {
     command_response(
@@ -136,44 +136,57 @@ pub(crate) fn discarded_response(
         false,
         Vec::new(),
         ChangedPathKinds::default(),
-        "",
+        None,
         None,
         None,
         WorkspaceTimings::default(),
-        Value::Null,
+        Map::new(),
     )
 }
 
 fn command_response(
-    workspace_kind: &'static str,
+    workspace_kind: WorkspaceKind,
     request: FinalizeCommandRequest,
     success: bool,
     changed_paths: Vec<String>,
     changed_path_kinds: ChangedPathKinds,
-    mutation_source: &'static str,
+    mutation_source: Option<MutationSource>,
     conflict: Option<WorkspaceConflict>,
     conflict_reason: Option<String>,
     timings: WorkspaceTimings,
-    metadata: Value,
+    extras: Map<String, Value>,
 ) -> CommandResponse {
     CommandResponse {
         status: request.status,
         exit_code: request.exit_code,
         stdout: request.stdout,
         stderr: request.stderr,
-        command_session_id: request.command_session_id,
-        workspace: Some(workspace_kind.to_owned()),
-        metadata: json!({
-            "success": success,
-            "changed_paths": changed_paths,
-            "changed_path_kinds": changed_path_kinds,
-            "mutation_source": mutation_source,
-            "conflict": conflict,
-            "conflict_reason": conflict_reason,
-            "timings": timings,
-            "metadata": metadata,
+        command_session_id: request.command_session_id.map(CommandSessionId::new),
+        settled: Some(CommandMetadata {
+            core: MutationCore {
+                success,
+                changed_paths,
+                changed_path_kinds,
+                mutation_source,
+                conflict,
+                conflict_reason,
+                timings,
+            },
+            workspace: workspace_kind,
+            extras,
         }),
     }
+}
+
+fn changed_path_kinds_from_wire(path_kinds: Vec<(String, String)>) -> ChangedPathKinds {
+    path_kinds
+        .into_iter()
+        .map(|(path, kind)| {
+            let kind = ChangedPathKind::from_wire_str(&kind)
+                .expect("eos_workspace path_changes_to_wire emits supported changed-path kinds");
+            (path, kind)
+        })
+        .collect()
 }
 
 fn insert_command_timings(
@@ -360,13 +373,6 @@ fn insert_tree_resource_timings(
 
 fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64) {
     timings.insert(key.to_owned(), json!(u64_to_f64_saturating(value)));
-}
-
-fn u64_to_f64_saturating(value: u64) -> f64 {
-    const U32_FACTOR: f64 = 4_294_967_296.0;
-    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
-    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
-    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn usize_to_f64_saturating(value: usize) -> f64 {

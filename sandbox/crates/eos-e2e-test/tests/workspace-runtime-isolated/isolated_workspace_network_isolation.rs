@@ -14,7 +14,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, ensure, Context, Result};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_str, live_pool_or_skip, reset_isolated_workspaces, stdout};
@@ -47,7 +47,7 @@ fn start_server(
     if let Some(caller) = caller_id {
         args["caller_id"] = json!(caller);
     }
-    lease.call_ok(ops::SANDBOX_COMMAND_EXEC, args)
+    lease.call_ok(catalog::SANDBOX_COMMAND_EXEC, args)
 }
 
 fn start_bound_socket(
@@ -57,7 +57,7 @@ fn start_bound_socket(
     label: &str,
 ) -> Result<Value> {
     lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "caller_id": caller_id,
             "cmd": format!("python3 -c \"import socket,time;s=socket.socket();s.bind(('0.0.0.0',{port}));s.listen(1);print('BOUND-{label}',flush=True);time.sleep(20)\""),
@@ -71,7 +71,7 @@ fn cancel(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, id: &str
     if let Some(caller) = caller_id {
         args["caller_id"] = json!(caller);
     }
-    let _ = lease.call(ops::SANDBOX_COMMAND_CANCEL, args);
+    let _ = lease.call(catalog::SANDBOX_COMMAND_CANCEL, args);
 }
 
 fn wait_for_output(
@@ -94,7 +94,7 @@ fn wait_for_output(
         if let Some(caller) = caller_id {
             poll_args["caller_id"] = json!(caller);
         }
-        if let Ok(poll) = lease.call_ok(ops::SANDBOX_COMMAND_POLL, poll_args) {
+        if let Ok(poll) = lease.call_ok(catalog::SANDBOX_COMMAND_POLL, poll_args) {
             if stdout(&poll).contains(marker) {
                 return Ok(());
             }
@@ -105,7 +105,7 @@ fn wait_for_output(
         if let Some(caller) = caller_id {
             collect_args["caller_id"] = json!(caller);
         }
-        let collected = lease.call_ok(ops::SANDBOX_COMMAND_COLLECT_COMPLETED, collect_args)?;
+        let collected = lease.call_ok(catalog::SANDBOX_COMMAND_COLLECT_COMPLETED, collect_args)?;
         let completions = collected
             .get("completions")
             .and_then(Value::as_array)
@@ -196,9 +196,12 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
             "ephemeral server must start: {server_a}"
         );
         // Caller B enters isolated mode (its own netns), then binds the SAME port.
-        lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
+        lease.call_ok(
+            catalog::SANDBOX_ISOLATION_ENTER,
+            json!({"caller_id": caller_b}),
+        )?;
         let bind_b = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "caller_id": caller_b,
                 "cmd": format!("python3 -c \"import socket,time;s=socket.socket();s.bind(('0.0.0.0',{port}));print('BOUND',flush=True);time.sleep(20)\""),
@@ -221,7 +224,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
         cancel(&lease, None, id_a);
     }
     let _ = lease.call(
-        ops::SANDBOX_ISOLATION_EXIT,
+        catalog::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": caller_b, "grace_s": 0.1}),
     );
     body
@@ -247,7 +250,7 @@ fn same_mode_same_port_conflicts() -> Result<()> {
             "first ephemeral server must start: {server}"
         );
         let bind = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": bind_probe_command(port, "BOUND"),
                 "yield_time_ms": 2000,
@@ -281,13 +284,19 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
     let caller_b = format!("iws-loopback-b-{}", eos_e2e_test::unique_suffix());
     let marker = format!("A_ONLY_{}", eos_e2e_test::unique_suffix().replace('-', "_"));
 
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_a}))?;
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
+    lease.call_ok(
+        catalog::SANDBOX_ISOLATION_ENTER,
+        json!({"caller_id": caller_a}),
+    )?;
+    lease.call_ok(
+        catalog::SANDBOX_ISOLATION_ENTER,
+        json!({"caller_id": caller_b}),
+    )?;
 
     let mut sessions: Vec<(String, String)> = Vec::new();
     let body = (|| -> Result<()> {
         let server_a = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "caller_id": caller_a,
                 "cmd": loopback_server_command(port, &marker),
@@ -305,7 +314,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         ));
 
         let own_probe = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "caller_id": caller_a,
                 "cmd": loopback_probe_command(port, &marker),
@@ -317,7 +326,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         })?;
 
         let peer_probe = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "caller_id": caller_b,
                 "cmd": loopback_probe_command(port, &marker),
@@ -338,11 +347,11 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         cancel(&lease, Some(caller_id), session_id);
     }
     let _ = lease.call(
-        ops::SANDBOX_ISOLATION_EXIT,
+        catalog::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": caller_b, "grace_s": 0.1}),
     );
     let _ = lease.call(
-        ops::SANDBOX_ISOLATION_EXIT,
+        catalog::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": caller_a, "grace_s": 0.1}),
     );
     body
@@ -355,8 +364,8 @@ fn isolated_exit_reports_dedicated_netns() -> Result<()> {
     };
     let lease = pool.acquire()?;
     reset_isolated_workspaces(&lease);
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
-    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
+    lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let inspection = exit.get("inspection").context("exit inspection")?;
     // Four namespace fds (user, mnt, pid, net) — the net fd is the netns proof.
     assert_eq!(
@@ -394,8 +403,14 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
     let caller_a = format!("iws-net-a-{}", eos_e2e_test::unique_suffix());
     let caller_b = format!("iws-net-b-{}", eos_e2e_test::unique_suffix());
 
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_a}))?;
-    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
+    lease.call_ok(
+        catalog::SANDBOX_ISOLATION_ENTER,
+        json!({"caller_id": caller_a}),
+    )?;
+    lease.call_ok(
+        catalog::SANDBOX_ISOLATION_ENTER,
+        json!({"caller_id": caller_b}),
+    )?;
 
     let mut sessions: Vec<(String, String)> = Vec::new();
     let body = (|| -> Result<()> {
@@ -424,7 +439,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
         ));
 
         let same_namespace = lease.call_ok(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "caller_id": caller_a,
                 "cmd": bind_probe_command(port, "SAME_CALLER_BOUND"),
@@ -445,11 +460,11 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
         cancel(&lease, Some(caller_id), session_id);
     }
     let _ = lease.call(
-        ops::SANDBOX_ISOLATION_EXIT,
+        catalog::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": caller_b, "grace_s": 0.1}),
     );
     let _ = lease.call(
-        ops::SANDBOX_ISOLATION_EXIT,
+        catalog::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": caller_a, "grace_s": 0.1}),
     );
     body

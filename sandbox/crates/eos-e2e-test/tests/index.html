@@ -95,7 +95,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, envelope guards, and basic metrics visibility. It exercises daemon ops including `api.runtime.ready`, `api.v1.heartbeat`, `api.workspace.binding`, `api.layer_metrics`, `api.ensure_workspace_base`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.v1.read_file`, `api.v1.write_file`, `api.v1.edit_file`, `api.v1.exec_command`, and raw malformed/auth envelope paths. Module config: `crates/eos-e2e-test/tests/core/config/default.test.yml`.",
+        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, wire-message guards, and basic metrics visibility. It exercises daemon ops including `api.runtime.ready`, `api.v1.heartbeat`, `api.workspace.binding`, `api.layer_metrics`, `api.ensure_workspace_base`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.v1.read_file`, `api.v1.write_file`, `api.v1.edit_file`, `api.v1.exec_command`, and raw malformed/auth wire-message paths. Module config: `crates/eos-e2e-test/tests/core/config/default.test.yml`.",
         "moduleConfig": "crates/eos-e2e-test/tests/core/config/default.test.yml",
         "ops": [
           "api.runtime.ready",
@@ -140,8 +140,8 @@
           ]
         },
         {
-          "id": "core-envelope-guards",
-          "title": "Envelope Guards",
+          "id": "core-wire-message-guards",
+          "title": "WireMessage Guards",
           "description": "Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors.",
           "tags": [
             "core"
@@ -176,12 +176,12 @@
           ]
         },
         {
-          "id": "core-envelope-and-error-catalog",
-          "name": "core-envelope-and-error-catalog",
+          "id": "core-wire-message-and-error-catalog",
+          "name": "core-wire-message-and-error-catalog",
           "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
           "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
           "checklist": [
-            "core-envelope-guards",
+            "core-wire-message-guards",
             "core-file-error-catalog",
             "core-direct-file-ops"
           ]
@@ -211,7 +211,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation envelopes, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
+        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation responses, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
         "moduleConfig": "crates/eos-e2e-test/tests/daemon/config/default.test.yml",
         "ops": [
           "api.runtime.ready",
@@ -231,7 +231,7 @@
         {
           "id": "daemon-ready-identity",
           "title": "Ready Identity",
-          "description": "Runtime readiness exposes daemon PID, uptime, successful probes, and dispatch timing counters on success and error envelopes.",
+          "description": "Runtime readiness exposes daemon PID, uptime, successful probes, and dispatch timing counters on success and error responses.",
           "tags": [
             "daemon"
           ]
@@ -263,7 +263,7 @@
         {
           "id": "daemon-cancel-control",
           "title": "Cancel Control",
-          "description": "Cancel envelopes are coherent for unknown and live inflight invocation ids, including already-done and cancelled semantics.",
+          "description": "Cancel responses are coherent for unknown and live inflight invocation ids, including already-done and cancelled semantics.",
           "tags": [
             "daemon"
           ]
@@ -279,7 +279,7 @@
         {
           "id": "daemon-plugin-control",
           "title": "Plugin Control",
-          "description": "Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel envelope control. Plugin process-group cancellation is not asserted: `sandbox/crates/eos-daemon/src/transport/server.rs` registers every background request, while `sandbox/crates/eos-daemon/src/services/overlay/mod.rs` is the only current `register_process_group` caller.",
+          "description": "Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel request control. Plugin process-group cancellation is not asserted: `sandbox/crates/eos-daemon/src/transport/server.rs` registers every background request, while `sandbox/crates/eos-daemon/src/services/overlay/mod.rs` is the only current `register_process_group` caller.",
           "tags": [
             "daemon"
           ]
@@ -307,7 +307,7 @@
         {
           "id": "daemon-inflight-heartbeat-cancel-control",
           "name": "daemon-inflight-heartbeat-cancel-control",
-          "description": "Groups `inflight_count_observes_concurrent_background_invocations`, `heartbeat_touched_counts_only_bogus_as_zero`, `heartbeat_touched_distinguishes_live_from_bogus`, `cancel_unknown_invocation_returns_done_envelope`, and `live_cancel_of_inflight_sets_cancelled` so the registry count, heartbeat touch, unknown cancel, live cancel, and join-cleanup behavior are validated together.",
+          "description": "Groups `inflight_count_observes_concurrent_background_invocations`, `heartbeat_touched_counts_only_bogus_as_zero`, `heartbeat_touched_distinguishes_live_from_bogus`, `cancel_unknown_invocation_returns_done_response`, and `live_cancel_of_inflight_sets_cancelled` so the registry count, heartbeat touch, unknown cancel, live cancel, and join-cleanup behavior are validated together.",
           "command": "cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture",
           "checklist": [
             "daemon-inflight",
@@ -1054,7 +1054,7 @@
         {
           "id": "occ-git-drop",
           "title": "Occ Git Drop",
-          "description": "`.git/**` writes return a committed success envelope without published paths, stay unreadable, and must not advance manifest-visible state.",
+          "description": "`.git/**` writes return a committed success response without published paths, stay unreadable, and must not advance manifest-visible state.",
           "tags": [
             "workspace-publish-gate"
           ]
@@ -1874,7 +1874,7 @@
         {
           "id": "plugin-dispatch-roundtrip",
           "title": "Dispatch Roundtrip",
-          "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success envelope, package root, and dependency root.",
+          "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success response, package root, and dependency root.",
           "tags": [
             "plugin"
           ]
@@ -1983,7 +1983,7 @@
         {
           "id": "plugin_failure_contracts",
           "name": "plugin_failure_contracts",
-          "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error envelopes with stable kind/message payloads.",
+          "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error responses with stable kind/message payloads.",
           "command": "cargo test -p eos-e2e-test --features e2e --test plugin plugin_setup_and_manifest_failures_are_structured -- --nocapture",
           "checklist": [
             "plugin-lsp-apply-and-failures",
@@ -1993,7 +1993,7 @@
         {
           "id": "plugin_service_dispatch_and_health",
           "name": "plugin_service_dispatch_and_health",
-          "description": "Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/response envelopes, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
+          "description": "Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/responses, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
           "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
           "checklist": [
             "plugin-dispatch-roundtrip",

@@ -157,7 +157,7 @@
     <span class="rs-kw">let</span> workspace = workspace_root.as_ref();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(binding) = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-read-workspace-binding-132">read_workspace_binding</a>(stack)? {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-validate-manifest-for-root-413">validate_manifest_for_root</a>(stack)?;
-        <span class="rs-kw">if</span> <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.workspace_root) != workspace {
+        <span class="rs-kw">if</span> <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.workspace_root) != workspace {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>(format!(
                 &quot;workspace binding points at a different workspace: {} != {}&quot;,
                 binding.workspace_root,
@@ -255,7 +255,7 @@
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-remove-path-57">remove_path</a>(stack)?;
     }
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">let</span> prepare_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> _stack_guard = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-mod-rs.html#item-struct-LayerStack-246">LayerStack</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-mod-rs.html#method-open-255">open</a>(stack.to_path_buf())?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-reject-existing-base-state-229">reject_existing_base_state</a>(stack)?;
@@ -278,7 +278,7 @@
         write_layer_start,
     );
 
-    <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(1, vec![layer_ref], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)
+    <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(1, vec![layer_ref], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)
         .map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)?;
     <span class="rs-kw">let</span> write_manifest_start = <span class="rs-type">Instant</span>::now();
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-write-manifest-264">write_manifest</a>(stack.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest)?;
@@ -379,9 +379,9 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-collect-base-entries-252">collect_base_entries</a>(workspace: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-enum-BaseEntry-78">BaseEntry</a>&gt;, <span class="rs-type">String</span>), <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> special = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unstable = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> special = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unstable = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-collect-dir-282">collect_dir</a>(
         workspace,
         workspace,
@@ -401,7 +401,7 @@
         )));
     }
     entries.sort_by(|left, right| left.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>().cmp(right.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>()));
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> &amp;entries {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-update-root-hash-487">update_root_hash</a>(&amp;<span class="rs-kw">mut</span> digest, entry);
     }
@@ -647,13 +647,13 @@
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-write-workspace-binding-454">write_workspace_binding</a>(binding: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-validate-workspace-binding-paths-431">validate_workspace_binding_paths</a>(
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.workspace_root),
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.layer_stack_root),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.workspace_root),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.layer_stack_root),
     )?;
     <span class="rs-kw">let</span> encoded = serde_json::to_vec_pretty(binding)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>(err.to_string()))?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-write-atomic-185">write_atomic</a>(
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.layer_stack_root).join(<span class="rs-type">WORKSPACE_BINDING_FILE</span>),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.layer_stack_root).join(<span class="rs-type">WORKSPACE_BINDING_FILE</span>),
         &amp;encoded,
     )
 }
@@ -692,7 +692,7 @@
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-file-hash-473">file_hash</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, std::io::<span class="rs-type">Error</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-mod-rs.html#method-open-255">open</a>(path)?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buffer = vec![0_u8; 1024 * 1024].into_boxed_slice();
     loop {
         <span class="rs-kw">let</span> count = file.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-149">read</a>(&amp;<span class="rs-kw">mut</span> buffer)?;
@@ -930,7 +930,7 @@
     <span class="rs-kw">let</span> workspace = workspace_root.as_ref();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(binding) = <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-read-workspace-binding-132">read_workspace_binding</a>(stack)? {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-validate-manifest-for-root-413">validate_manifest_for_root</a>(stack)?;
-        <span class="rs-kw">if</span> <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.workspace_root) != workspace {
+        <span class="rs-kw">if</span> <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.workspace_root) != workspace {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>(format!(
                 &quot;workspace binding points at a different workspace: {} != {}&quot;,
                 binding.workspace_root,
@@ -989,7 +989,7 @@
         <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-remove-path-57">remove_path</a>(stack)?;
     }
 
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">let</span> prepare_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">let</span> _stack_guard = <a class="symbol-link rs-type" href="eos-layerstack--src-stack-mod-rs.html#item-struct-LayerStack-246">LayerStack</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-mod-rs.html#method-open-255">open</a>(stack.to_path_buf())?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-reject-existing-base-state-229">reject_existing_base_state</a>(stack)?;
@@ -1012,7 +1012,7 @@
         write_layer_start,
     );
 
-    <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(1, vec![layer_ref], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)
+    <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-Manifest-68">Manifest</a>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(1, vec![layer_ref], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>)
         .map_err(<a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::from)?;
     <span class="rs-kw">let</span> write_manifest_start = <span class="rs-type">Instant</span>::now();
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-write-manifest-264">write_manifest</a>(stack.join(<span class="rs-type">ACTIVE_MANIFEST_FILE</span>), &amp;manifest)?;
@@ -1064,9 +1064,9 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-collect-base-entries-252">collect_base_entries</a>(workspace: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-enum-BaseEntry-78">BaseEntry</a>&gt;, <span class="rs-type">String</span>), <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> special = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unstable = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> special = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unstable = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-collect-dir-282">collect_dir</a>(
         workspace,
         workspace,
@@ -1086,7 +1086,7 @@
         )));
     }
     entries.sort_by(|left, right| left.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>().cmp(right.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-184">path</a>()));
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> &amp;entries {
         <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-update-root-hash-487">update_root_hash</a>(&amp;<span class="rs-kw">mut</span> digest, entry);
     }
@@ -1267,13 +1267,13 @@
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-write-workspace-binding-454">write_workspace_binding</a>(binding: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>&gt; {
     <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-validate-workspace-binding-paths-431">validate_workspace_binding_paths</a>(
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.workspace_root),
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.layer_stack_root),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.workspace_root),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.layer_stack_root),
     )?;
     <span class="rs-kw">let</span> encoded = serde_json::to_vec_pretty(binding)
         .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack--src-error-rs.html#item-enum-LayerStackError-5">LayerStackError</a>::<a class="symbol-link rs-type" href="eos-layerstack--src-workspace-rs.html#item-struct-WorkspaceBinding-22">WorkspaceBinding</a>(err.to_string()))?;
     <a class="symbol-link rs-fn" href="eos-layerstack--src-fs-rs.html#item-fn-write-atomic-185">write_atomic</a>(
-        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>(&amp;binding.layer_stack_root).join(<span class="rs-type">WORKSPACE_BINDING_FILE</span>),
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>(&amp;binding.layer_stack_root).join(<span class="rs-type">WORKSPACE_BINDING_FILE</span>),
         &amp;encoded,
     )
 }
@@ -1286,7 +1286,7 @@
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-rs.html#item-fn-file-hash-473">file_hash</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, std::io::<span class="rs-type">Error</span>&gt; {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-mod-rs.html#method-open-255">open</a>(path)?;
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-161">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> digest = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-layerstack.html#method-new-160">new</a>();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buffer = vec![0_u8; 1024 * 1024].into_boxed_slice();
     loop {
         <span class="rs-kw">let</span> count = file.<a class="symbol-link rs-fn" href="eos-layerstack--src-lock-rs.html#method-read-149">read</a>(&amp;<span class="rs-kw">mut</span> buffer)?;

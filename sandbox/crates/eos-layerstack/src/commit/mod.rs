@@ -53,7 +53,6 @@ pub(crate) enum Route {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[non_exhaustive]
 pub enum CommitStatus {
     #[serde(rename = "accepted")]
     Accepted,

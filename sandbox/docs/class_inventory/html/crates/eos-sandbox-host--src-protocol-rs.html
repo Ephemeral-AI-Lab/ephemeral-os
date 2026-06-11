@@ -42,7 +42,7 @@
 </section>
 <main class="crate-layout">
   <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/12</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="protocol crates/eos-sandbox-host/src/protocol.rs ClientError impl ClientError ProtocolClient impl ProtocolClient stamped_envelope_bytes raw_envelope_bytes is_success error_kind">
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="protocol crates/eos-sandbox-host/src/protocol.rs ClientError impl ClientError ProtocolClient impl ProtocolClient encode_request_with_metadata encode_request is_success error_kind">
   <div class="module-head">
     <div>
       <h2>src/protocol.rs</h2>
@@ -98,27 +98,28 @@
         invocation_id: &amp;str,
         args: &amp;<span class="rs-type">Value</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line =
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
         line.push(b&#x27;\n&#x27;);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line)
     }
 </code></pre>
-</details></td></tr><tr id="method-request-unstamped-80"><td>method</td><td>request_unstamped</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-80">request_unstamped</a> (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-request-unstamped-81"><td>method</td><td>request_unstamped</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-81">request_unstamped</a> (&amp; self , op : &amp; str , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-80">request_unstamped</a>(
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-81">request_unstamped</a>(
         &amp;<span class="rs-self">self</span>,
         op: &amp;str,
         invocation_id: &amp;str,
         args: &amp;<span class="rs-type">Value</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
         line.push(b&#x27;\n&#x27;);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line)
     }
 </code></pre>
-</details></td></tr><tr id="method-request-raw-91"><td>method</td><td>request_raw</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a> (&amp; self , line : &amp; [u8]) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-request-raw-92"><td>method</td><td>request_raw</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a> (&amp; self , line : &amp; [u8]) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;<span class="rs-self">self</span>, line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;<span class="rs-self">self</span>, line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream =
             <span class="rs-type">TcpStream</span>::connect_timeout(&amp;<span class="rs-self">self</span>.addr, <span class="rs-self">self</span>.timeout).map_err(|source| {
                 <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>::<span class="rs-type">Connect</span> {
@@ -164,17 +165,17 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-sandbox-host/src/protocol.rs:16</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-stamped-envelope-bytes-117" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stamped_envelope_bytes pub pub fn stamped_envelope_bytes (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt; crates/eos-sandbox-host/src/protocol.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-encode-request-with-metadata-118" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_request_with_metadata pub pub fn encode_request_with_metadata (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt; crates/eos-sandbox-host/src/protocol.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>stamped_envelope_bytes</h3>
+    <h3>encode_request_with_metadata</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
     op: &amp;str,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
@@ -190,75 +191,70 @@
     args_obj
         .entry(&quot;invocation_id&quot;.to_owned())
         .or_insert_with(|| json!(invocation_id));
-    <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(op, invocation_id, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(args_obj), token)
+    <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op, invocation_id, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(args_obj), token)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-sandbox-host/src/protocol.rs:117</p>
-</article><article id="item-fn-raw-envelope-bytes-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn raw_envelope_bytes pub pub fn raw_envelope_bytes (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt; crates/eos-sandbox-host/src/protocol.rs  ">
+  <p class="source">crates/eos-sandbox-host/src/protocol.rs:118</p>
+</article><article id="item-fn-encode-request-136" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_request pub pub fn encode_request (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt; crates/eos-sandbox-host/src/protocol.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>raw_envelope_bytes</h3>
+    <h3>encode_request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt; ,) -&gt; Vec &lt; u8 &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a> (op : &amp; str , invocation_id : &amp; str , args : &amp; Value , token : Option &lt; &amp; str &gt;) -&gt; Vec &lt; u8 &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(
-    op: &amp;str,
-    invocation_id: &amp;str,
-    args: &amp;<span class="rs-type">Value</span>,
-    token: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
-) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> envelope = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;op&quot;.to_owned(), json!(op));
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;invocation_id&quot;.to_owned(), json!(invocation_id));
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;args&quot;.to_owned(), args.clone());
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;op&quot;.to_owned(), json!(op));
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;invocation_id&quot;.to_owned(), json!(invocation_id));
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;args&quot;.to_owned(), args.clone());
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = token {
-        envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(<span class="rs-type">DAEMON_AUTH_FIELD</span>.to_owned(), json!(token));
+        request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(<span class="rs-type">DAEMON_AUTH_FIELD</span>.to_owned(), json!(token));
     }
-    serde_json::to_vec(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(envelope)).unwrap_or_default()
+    serde_json::to_vec(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(request)).unwrap_or_default()
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-sandbox-host/src/protocol.rs:135</p>
-</article><article id="item-fn-is-success-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_success pub pub fn is_success (response : &amp; Value) -&gt; bool crates/eos-sandbox-host/src/protocol.rs  ">
+  <p class="source">crates/eos-sandbox-host/src/protocol.rs:136</p>
+</article><article id="item-fn-is-success-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_success pub pub fn is_success (response : &amp; Value) -&gt; bool crates/eos-sandbox-host/src/protocol.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_success</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a> (response : &amp; Value) -&gt; bool</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a> (response : &amp; Value) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
     response.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;success&quot;) != <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>))
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-sandbox-host/src/protocol.rs:150</p>
-</article><article id="item-fn-error-kind-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind pub pub fn error_kind (response : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-sandbox-host/src/protocol.rs  ">
+  <p class="source">crates/eos-sandbox-host/src/protocol.rs:146</p>
+</article><article id="item-fn-error-kind-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind pub pub fn error_kind (response : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-sandbox-host/src/protocol.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_kind</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-153">error_kind</a> (response : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-149">error_kind</a> (response : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-153">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-149">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     response.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;error&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;kind&quot;)?.as_str()
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-sandbox-host/src/protocol.rs:153</p>
+  <p class="source">crates/eos-sandbox-host/src/protocol.rs:149</p>
 </article></div>
 </section></div>
 </main>
@@ -341,23 +337,24 @@
         invocation_id: &amp;str,
         args: &amp;<span class="rs-type">Value</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line =
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
         line.push(b&#x27;\n&#x27;);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line)
     }
 
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-80">request_unstamped</a>(
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-unstamped-81">request_unstamped</a>(
         &amp;<span class="rs-self">self</span>,
         op: &amp;str,
         invocation_id: &amp;str,
         args: &amp;<span class="rs-type">Value</span>,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op, invocation_id, args, <span class="rs-self">self</span>.auth_token.as_deref());
         line.push(b&#x27;\n&#x27;);
-        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;line)
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;line)
     }
 
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-91">request_raw</a>(&amp;<span class="rs-self">self</span>, line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-raw-92">request_raw</a>(&amp;<span class="rs-self">self</span>, line: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>&gt; {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream =
             <span class="rs-type">TcpStream</span>::connect_timeout(&amp;<span class="rs-self">self</span>.addr, <span class="rs-self">self</span>.timeout).map_err(|source| {
                 <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>::<span class="rs-type">Connect</span> {
@@ -383,7 +380,7 @@
         })
     }
 }
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-stamped-envelope-bytes-117">stamped_envelope_bytes</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-with-metadata-118">encode_request_with_metadata</a>(
     op: &amp;str,
     invocation_id: &amp;str,
     args: &amp;<span class="rs-type">Value</span>,
@@ -399,27 +396,22 @@
     args_obj
         .entry(&quot;invocation_id&quot;.to_owned())
         .or_insert_with(|| json!(invocation_id));
-    <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(op, invocation_id, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(args_obj), token)
+    <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op, invocation_id, &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(args_obj), token)
 }
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-raw-envelope-bytes-135">raw_envelope_bytes</a>(
-    op: &amp;str,
-    invocation_id: &amp;str,
-    args: &amp;<span class="rs-type">Value</span>,
-    token: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
-) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> envelope = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;op&quot;.to_owned(), json!(op));
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;invocation_id&quot;.to_owned(), json!(invocation_id));
-    envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;args&quot;.to_owned(), args.clone());
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-encode-request-136">encode_request</a>(op: &amp;str, invocation_id: &amp;str, args: &amp;<span class="rs-type">Value</span>, token: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Vec</span>&lt;u8&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request = <span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;op&quot;.to_owned(), json!(op));
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;invocation_id&quot;.to_owned(), json!(invocation_id));
+    request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(&quot;args&quot;.to_owned(), args.clone());
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = token {
-        envelope.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(<span class="rs-type">DAEMON_AUTH_FIELD</span>.to_owned(), json!(token));
+        request.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-insert-305">insert</a>(<span class="rs-type">DAEMON_AUTH_FIELD</span>.to_owned(), json!(token));
     }
-    serde_json::to_vec(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(envelope)).unwrap_or_default()
+    serde_json::to_vec(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(request)).unwrap_or_default()
 }
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; bool {
     response.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;success&quot;) != <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>))
 }
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-153">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-error-kind-149">error_kind</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
     response.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;error&quot;)?.<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-get-311">get</a>(&quot;kind&quot;)?.as_str()
 }
 </code></pre>

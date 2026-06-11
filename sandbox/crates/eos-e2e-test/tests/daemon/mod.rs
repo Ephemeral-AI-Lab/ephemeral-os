@@ -2,9 +2,9 @@
 //! invocation registry, and runtime-identity surfaces over the live wire.
 //!
 //! Complements `core/` (which already covers heartbeat-idle, inflight-idle,
-//! envelope errors, and the basic ready handshake) with the registry-coupled
+//! wire-message errors, and the basic ready handshake) with the registry-coupled
 //! behavior that needs a real in-flight invocation: inflight accounting,
-//! heartbeat `touched` discrimination, cancel envelopes, end-to-end op
+//! heartbeat `touched` discrimination, cancel responses, end-to-end op
 //! registration, and the daemon-identity / dispatch-timing fields.
 
 #![allow(dead_code)]
@@ -16,7 +16,7 @@ use std::thread::{self, JoinHandle};
 
 use anyhow::Result;
 use eos_e2e_test::NodeLease;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/daemon/config/default.test.yml";
@@ -44,7 +44,7 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
         Ok(client.request(
-            ops::SANDBOX_COMMAND_EXEC,
+            catalog::SANDBOX_COMMAND_EXEC,
             &invocation_id,
             &json!({
                 "layer_stack_root": root,

@@ -20,9 +20,8 @@ mod transcript;
 pub mod yield_wait_loop;
 
 pub use contract::{
-    CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSessionCompletion, CommandSessionError, ReadCommandProgress, StartCommandSession,
-    WriteStdin,
+    tail_lines, CancelCommandSession, CollectCompleted, CommandSessionError, ReadCommandProgress,
+    StartCommandSession, WriteStdin,
 };
 pub use eos_config::configs::command_session::CommandSessionConfig;
 pub use session::{CommandSession, CommandSessionSpec};

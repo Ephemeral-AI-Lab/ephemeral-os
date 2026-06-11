@@ -7,7 +7,7 @@
 //! teardown facts.
 
 use anyhow::{Context, Result};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -22,7 +22,7 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
     };
     let lease = pool.acquire()?;
 
-    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let handle_id = as_str(&enter, "workspace_handle_id")?.to_owned();
     let pinned_version = enter
         .get("manifest_version")
@@ -40,7 +40,7 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
     );
 
     // status reports the same pin while open.
-    let status = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
+    let status = lease.call_ok(catalog::SANDBOX_ISOLATION_STATUS, json!({}))?;
     assert!(
         as_bool(&status, "open")?,
         "status must report open: {status}"
@@ -52,7 +52,7 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
     );
 
     // exit tears down and reports inspection facts.
-    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
+    let exit = lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let inspection = exit.get("inspection").context("exit inspection")?;
     assert_eq!(
         inspection
@@ -81,7 +81,7 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
     );
 
     // status after exit reports closed.
-    let closed = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
+    let closed = lease.call_ok(catalog::SANDBOX_ISOLATION_STATUS, json!({}))?;
     assert!(
         !as_bool(&closed, "open")?,
         "status must report closed: {closed}"
@@ -96,7 +96,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
     };
     let lease = pool.acquire()?;
     let exec = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "bash -lc 'printf ACTIVE; sleep 30'",
             "yield_time_ms": 500,
@@ -109,7 +109,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
     wait_for_command_stdout_contains(&lease, &session_id, "ACTIVE")?;
 
     let body = (|| -> Result<()> {
-        let rejected = lease.call(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+        let rejected = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert_eq!(
             rejected.get("success").and_then(Value::as_bool),
             Some(false),
@@ -134,17 +134,17 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
         );
 
         lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": session_id}),
         )?;
         wait_for_session_count(&lease, 0)?;
 
-        let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+        let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert!(
             !as_str(&enter, "workspace_handle_id")?.is_empty(),
             "{enter}"
         );
-        let repeated = lease.call(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+        let repeated = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert_eq!(
             repeated.get("success").and_then(Value::as_bool),
             Some(false),
@@ -158,16 +158,16 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
             Some("already_open"),
             "repeated enter should report already_open: {repeated}"
         );
-        lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
+        lease.call_ok(catalog::SANDBOX_ISOLATION_EXIT, json!({}))?;
         Ok(())
     })();
 
     if body.is_err() {
         let _ = lease.call(
-            ops::SANDBOX_COMMAND_CANCEL,
+            catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": session_id}),
         );
-        let _ = lease.call(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}));
+        let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}));
         let _ = wait_for_session_count(&lease, 0);
     }
     body
@@ -183,16 +183,19 @@ fn isolated_write_is_private_and_discarded_on_exit() -> Result<()> {
     let path = format!("private/{}.txt", eos_e2e_test::unique_suffix());
 
     let enter = lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
+        catalog::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": caller_id}),
     )?;
     as_str(&enter, "workspace_handle_id")?;
     let write = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"caller_id": caller_id, "path": path, "content": "isolated private\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "workspace")?, "isolated", "{write}");
-    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"caller_id": caller_id}))?;
+    let exit = lease.call_ok(
+        catalog::SANDBOX_ISOLATION_EXIT,
+        json!({"caller_id": caller_id}),
+    )?;
     assert!(
         as_i64(&exit, "evicted_upperdir_bytes")? > 0,
         "exit should report discarded private bytes: {exit}"

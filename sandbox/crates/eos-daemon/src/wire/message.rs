@@ -1,8 +1,8 @@
-//! Newline-delimited JSON wire envelopes.
+//! Newline-delimited JSON wire messages.
 //!
 //! Invariant: one compact JSON object per message + a single trailing `\n`
 //! (`json.dumps(obj, separators=(",",":")) + "\n"`). [`encode`]/[`decode`] are
-//! byte-stable for requests and error envelopes; responses are heterogeneous
+//! byte-stable for requests and error responses; responses are heterogeneous
 //! `Value`s compared at the canonical bar (see [`super::canonical`]).
 //!
 //! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`
@@ -22,11 +22,11 @@ pub enum ProtocolError {
     #[error("bad json: {0}")]
     BadJson(#[from] serde_json::Error),
     /// The decoded value was not a JSON object.
-    #[error("envelope must be a json object")]
+    #[error("wire message must be a json object")]
     NotAnObject,
 }
 
-/// Request envelope (host -> daemon): `{op, invocation_id, args}`.
+/// Request message (host -> daemon): `{op, invocation_id, args}`.
 ///
 /// Field order on the wire is exactly this; top-level keys are not sorted by the
 /// daemon.
@@ -37,10 +37,10 @@ pub struct Request {
     pub args: Value,
 }
 
-/// Daemon error envelope (`success:false`). `warnings`/`timings` are always
+/// Daemon error response (`success:false`). `warnings`/`timings` are always
 /// `[]`/`{}` at the builder.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ErrorEnvelope {
+pub struct ErrorResponse {
     pub success: bool,
     #[serde(default)]
     pub warnings: Vec<Value>,
@@ -49,7 +49,7 @@ pub struct ErrorEnvelope {
     pub error: ErrorBody,
 }
 
-/// The `error` body of an [`ErrorEnvelope`].
+/// The `error` body of an [`ErrorResponse`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ErrorBody {
     pub kind: ErrorKind,
@@ -64,7 +64,7 @@ pub struct ErrorBody {
 #[non_exhaustive]
 pub enum ErrorKind {
     /// `op` missing/non-string/empty, or `args` present but not a dict.
-    InvalidEnvelope,
+    InvalidRequest,
     /// Request line was not valid UTF-8 JSON.
     BadJson,
     /// Request line exceeded `MAX_REQUEST_BYTES`.
@@ -75,7 +75,7 @@ pub enum ErrorKind {
     UnknownOp,
     /// A handler raised; `details.error_id` carries a uuid4 hex.
     InternalError,
-    /// Handler/gate policy refusal.
+    /// Operation/gate policy refusal.
     Forbidden,
     /// Refused because an isolated workspace is active for this agent.
     ForbiddenInIsolatedWorkspace,
@@ -83,30 +83,30 @@ pub enum ErrorKind {
     LifecycleInProgress,
 }
 
-/// A framed wire message: a request, an error envelope, or any response
+/// A framed wire message: a request, an error response, or any response
 /// `Value`. Untagged: a request has `op`; an error has `success:false` + `error`;
 /// any other object is a response.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum Envelope {
+pub enum WireMessage {
     /// Host -> daemon request.
     Request(Request),
-    /// Daemon -> host error envelope.
-    Error(ErrorEnvelope),
+    /// Daemon -> host error response.
+    Error(ErrorResponse),
     /// Daemon -> host response (heterogeneous; compared canonically).
     Response(Value),
 }
 
-/// Serialize an envelope as compact JSON plus a single trailing `\n`.
+/// Serialize a wire message as compact JSON plus a single trailing `\n`.
 ///
 /// `serde_json` compact formatting matches the daemon for these ASCII payloads;
 /// `args` key order is preserved (the `preserve_order` feature is required).
 ///
 /// # Errors
 ///
-/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the envelope.
-pub fn encode(envelope: &Envelope) -> Result<Vec<u8>, ProtocolError> {
-    let mut bytes = serde_json::to_vec(envelope)?;
+/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the message.
+pub fn encode(message: &WireMessage) -> Result<Vec<u8>, ProtocolError> {
+    let mut bytes = serde_json::to_vec(message)?;
     bytes.push(b'\n');
     Ok(bytes)
 }
@@ -118,11 +118,11 @@ pub fn encode(envelope: &Envelope) -> Result<Vec<u8>, ProtocolError> {
 ///
 /// Returns [`ProtocolError::BadJson`] for invalid JSON and
 /// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.
-pub fn decode(bytes: &[u8]) -> Result<Envelope, ProtocolError> {
+pub fn decode(bytes: &[u8]) -> Result<WireMessage, ProtocolError> {
     decode_value(serde_json::from_slice(bytes)?)
 }
 
-/// Disambiguate an already-parsed JSON value into an [`Envelope`].
+/// Disambiguate an already-parsed JSON value into an [`WireMessage`].
 ///
 /// Lets a caller that already holds a [`Value`] (e.g. after stripping a
 /// transport auth field) avoid re-serializing and re-parsing the payload.
@@ -130,23 +130,23 @@ pub fn decode(bytes: &[u8]) -> Result<Envelope, ProtocolError> {
 /// # Errors
 ///
 /// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or
-/// [`ProtocolError::BadJson`] when a request/error envelope fails to deserialize.
-pub fn decode_value(value: Value) -> Result<Envelope, ProtocolError> {
+/// [`ProtocolError::BadJson`] when a request/error response fails to deserialize.
+pub fn decode_value(value: Value) -> Result<WireMessage, ProtocolError> {
     // Disambiguate so a request never deserializes as a bare `Response(Value)`.
     let Some(obj) = value.as_object() else {
         return Err(ProtocolError::NotAnObject);
     };
     if obj.contains_key("op") {
         let req: Request = serde_json::from_value(value)?;
-        return Ok(Envelope::Request(req));
+        return Ok(WireMessage::Request(req));
     }
     if obj.get("success") == Some(&Value::Bool(false)) && obj.contains_key("error") {
-        let err: ErrorEnvelope = serde_json::from_value(value)?;
-        return Ok(Envelope::Error(err));
+        let err: ErrorResponse = serde_json::from_value(value)?;
+        return Ok(WireMessage::Error(err));
     }
-    Ok(Envelope::Response(value))
+    Ok(WireMessage::Response(value))
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/wire/envelope.rs"]
+#[path = "../../tests/unit/wire/message.rs"]
 mod tests;

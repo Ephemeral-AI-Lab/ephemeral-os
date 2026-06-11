@@ -9,7 +9,8 @@ fn host_ram_pressure_error_keeps_capacity_details() {
     let response = error_payload(&IsolatedError::HostRamPressure {
         required_bytes: 30,
         budget_bytes: 29,
-    });
+    })
+    .into_wire();
     assert_eq!(response["success"], false);
     assert_eq!(response["error"]["kind"], "host_ram_pressure");
     assert_eq!(response["error"]["details"]["required_bytes"], 30);

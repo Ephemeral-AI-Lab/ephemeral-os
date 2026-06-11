@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
@@ -14,7 +14,7 @@ use crate::support::{
 
 fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("sh -c 'echo {marker}; sleep 60'"),
             "yield_time_ms": 500,
@@ -31,7 +31,7 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
 
 fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(
-        ops::SANDBOX_COMMAND_CANCEL,
+        catalog::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": id}),
     )?;
     wait_for_command_session_transcript_recycled(lease, id)?;
@@ -66,7 +66,7 @@ fn assert_teardown_control_reaps_marker_process(
 ) -> Result<()> {
     let marker = process_marker();
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
                 "bash -lc 'bash -c \"exec -a {marker} sleep 60\" & python3 -u -c \"import sys,time; print(\\\"{label}-ready\\\", flush=True); sys.stdin.readline(); time.sleep(60)\"'"
@@ -84,7 +84,7 @@ fn assert_teardown_control_reaps_marker_process(
     wait_for_marker_at_least(lease, &marker, 1)?;
 
     let cancelled = lease.call(
-        ops::SANDBOX_COMMAND_WRITE_STDIN,
+        catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": chars,
@@ -170,7 +170,7 @@ fn exec_command_outputs_timestamped_transcript_lines() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let completed = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "printf 'stamp-one\\nstamp-two\\n'",
             "yield_time_ms": 2000,
@@ -197,7 +197,7 @@ fn write_stdin_echo() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 -u -c 'import sys; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True)'",
             "yield_time_ms": 500,
@@ -208,7 +208,7 @@ fn write_stdin_echo() -> Result<()> {
     let transcript_path = command_session_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
     let stdin = lease.call_ok(
-        ops::SANDBOX_COMMAND_WRITE_STDIN,
+        catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": "payload\n",
@@ -238,7 +238,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"progress-first\", flush=True); line=sys.stdin.readline().strip(); print(\"progress-second:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
@@ -253,7 +253,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     let id = as_str(&started, "command_session_id")?.to_owned();
 
     let second = lease.call_ok(
-        ops::SANDBOX_COMMAND_WRITE_STDIN,
+        catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": "payload\n",
@@ -270,7 +270,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     );
 
     let progress = lease.call_ok(
-        ops::SANDBOX_COMMAND_POLL,
+        catalog::SANDBOX_COMMAND_POLL,
         json!({
             "command_session_id": &id,
             "last_n_lines": 10
@@ -282,7 +282,7 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
         "progress reads are stateless tail snapshots: {progress}"
     );
     let tail = lease.call_ok(
-        ops::SANDBOX_COMMAND_POLL,
+        catalog::SANDBOX_COMMAND_POLL,
         json!({
             "command_session_id": &id,
             "last_n_lines": 1
@@ -304,7 +304,7 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo progress-start; sleep 1; echo progress-end'",
             "yield_time_ms": 100,
@@ -319,7 +319,7 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let progress = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": &id,
                 "last_n_lines": 10
@@ -351,7 +351,7 @@ fn collect_completed_drains() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo queued; sleep 1; echo done'",
             "yield_time_ms": 100,
@@ -362,7 +362,7 @@ fn collect_completed_drains() -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         let collected = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [&id]}),
         )?;
         let completions = array(&collected, "completions")?;
@@ -380,7 +380,7 @@ fn collect_completed_drains() -> Result<()> {
         thread::sleep(Duration::from_millis(100));
     }
     let redelivered = lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_session_ids": [&id]}),
     )?;
     assert!(
@@ -409,7 +409,7 @@ fn collect_completed_preserves_full_timestamped_transcript() -> Result<()> {
         "sh -c 'echo {first}; sleep 1; yes filler | head -c 1200000; printf \"\\n{last}\\n\"'"
     );
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": cmd,
             "yield_time_ms": 100,
@@ -452,7 +452,7 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     let completed = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("printf '{marker}-a\\n{marker}-b\\n{marker}-c\\n'"),
             "yield_time_ms": 3000
@@ -486,7 +486,7 @@ fn completed_session_removes_transcript_file() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo transcript-start; sleep 1; echo transcript-end'",
             "yield_time_ms": 100,
@@ -533,7 +533,7 @@ fn session_count_accuracy() -> Result<()> {
     let lease = pool.acquire()?;
     let first = start_sleeping_session(&lease, "count-one")?;
     let second = start_sleeping_session(&lease, "count-two")?;
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         2,
@@ -541,7 +541,7 @@ fn session_count_accuracy() -> Result<()> {
     );
     cancel_session(&lease, &first)?;
     cancel_session(&lease, &second)?;
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         0,
@@ -559,7 +559,7 @@ fn exec_timeout() -> Result<()> {
     let before = command_session_transcript_logs(&lease)?;
     let start = Instant::now();
     let timed_out = lease.call(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sleep 5",
             "yield_time_ms": 2500
@@ -597,7 +597,7 @@ fn output_burst_returns_full_timestamped_transcript() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let exec = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 - <<'PY'\nimport sys, time\nsys.stdout.write('x' * 20000)\nsys.stdout.flush()\ntime.sleep(60)\nPY",
             "yield_time_ms": 500,
@@ -623,7 +623,7 @@ fn cancel_by_invocation_id_reports_already_done_for_idle_id() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let cancel = lease.call_ok(
-        ops::SANDBOX_CALL_CANCEL,
+        catalog::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": "eos-e2e-not-running"}),
     )?;
     assert_eq!(cancel["already_done"], Value::Bool(true));
@@ -648,7 +648,7 @@ fn nohup_child_keeps_session_running() -> Result<()> {
     let lease = pool.acquire()?;
     let marker = process_marker();
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
                 "bash -lc 'nohup bash -c \"exec -a {marker} sleep 60\" >/dev/null 2>&1 & echo nohup-ready'"
@@ -667,7 +667,7 @@ fn nohup_child_keeps_session_running() -> Result<()> {
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
     let collected = lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_session_ids": [id.clone()]}),
     )?;
     assert!(
@@ -688,7 +688,7 @@ fn setsid_nohup_contract() -> Result<()> {
     let lease = pool.acquire()?;
     let marker = process_marker();
     let completed = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
                 "bash -lc 'setsid nohup bash -c \"exec -a {marker} sleep 4\" >/dev/null 2>&1 & echo setsid-ready'"
@@ -733,7 +733,7 @@ fn wait_for_session_stdout(
             bail!("session output never contained {marker}: {last}");
         }
         let poll = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": session_id,
                 "last_n_lines": 20
@@ -838,7 +838,7 @@ fn collect_completion(lease: &NodeLease<'_>, id: &str, within: Duration) -> Resu
     let deadline = Instant::now() + within;
     loop {
         let collected = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({ "command_session_ids": [id] }),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
@@ -871,7 +871,7 @@ fn external_signal_kill_is_structured() -> Result<()> {
     // signal death, finalize the session, park exactly one completion, and release
     // the lease.
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("bash -lc 'echo kill-ready; exec -a {marker} sleep 60'"),
             "yield_time_ms": 1000,
@@ -916,9 +916,9 @@ fn self_kill_reports_signal_exit() -> Result<()> {
     // The command kills its own process-group leader; termination is driven by the
     // process itself, not by the cancel API, but must still surface a signal-coded
     // terminal exit. Fast self-kill usually completes within the yield window, so
-    // read the structured envelope with `call` rather than `call_ok`.
+    // read the structured response with `call` rather than `call_ok`.
     let exec = lease.call(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo bye; kill -9 $$'",
             "yield_time_ms": 2000,
@@ -964,7 +964,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     // running until the surviving peer also exits. This is the intersection of
     // "killed by other process" and "remains running".
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
                 "bash -lc 'bash -c \"exec -a {peer} sleep 60\" & echo group-ready; exec -a {fg} sleep 60'"
@@ -984,14 +984,14 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
 
     // Peer still alive keeps the pgid non-empty, so the session stays running and
     // does not finalize.
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         1,
         "a surviving same-pgid peer must keep the session running: {count}"
     );
     let still = lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({ "command_session_ids": [id.clone()] }),
     )?;
     assert!(
@@ -1018,10 +1018,10 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     let lease = pool.acquire()?;
     // A session that finishes on its own and is left uncollected. A late
     // write_stdin against the finished id must return a structured terminal
-    // envelope (not a hang or a running zombie), distinct from the not-found error
+    // response (not a hang or a running zombie), distinct from the not-found error
     // returned for an id that never existed.
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo quick; sleep 1'",
             "yield_time_ms": 100,
@@ -1035,7 +1035,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     wait_for_command_session_transcript_recycled(&lease, &id)?;
 
     let late = lease.call(
-        ops::SANDBOX_COMMAND_WRITE_STDIN,
+        catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": "late\n",
@@ -1049,7 +1049,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
 
     // Drain the parked completion so a recycled container starts clean.
     lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({ "command_session_ids": [&id] }),
     )?;
     wait_for_active_leases(&lease, 0)?;
@@ -1076,7 +1076,7 @@ fn model_shell_sees_masked_proc() -> Result<()> {
     // command itself must STILL see an empty /proc — this guards that the masking
     // fd stays CLOEXEC and is never inherited by the command.
     let exec = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'printf \"procvisible=%s\\n\" \"$(ls /proc 2>/dev/null | grep -cE \"^[0-9]+$\")\"'",
             "yield_time_ms": 2000,

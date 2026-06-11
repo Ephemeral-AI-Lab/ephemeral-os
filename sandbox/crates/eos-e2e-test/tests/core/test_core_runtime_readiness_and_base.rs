@@ -1,5 +1,5 @@
 use anyhow::Result;
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, live_pool_or_skip};
@@ -10,7 +10,7 @@ fn runtime_ready_handshake() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(as_bool(&ready, "ready")?, "daemon must be ready: {ready}");
     assert!(
         ready
@@ -28,7 +28,7 @@ fn ensure_base_creates_single_base_layer() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&metrics, "manifest_depth")?,
         1,
@@ -48,16 +48,16 @@ fn ensure_base_idempotent() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let ensure = lease.call_ok(
-        ops::SANDBOX_CHECKPOINT_ENSURE_BASE,
+        catalog::SANDBOX_CHECKPOINT_ENSURE_BASE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(
         !as_bool(&ensure, "created")?,
         "second ensure should not rebuild an existing base: {ensure}"
     );
-    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&after, "manifest_depth")?,
         as_i64(&before, "manifest_depth")?,
@@ -73,11 +73,11 @@ fn build_base_reset_rebuilds() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "setup/reset.txt", "content": "before\n", "overwrite": true}),
     )?;
     let rebuilt = lease.call_ok(
-        ops::SANDBOX_CHECKPOINT_BUILD_BASE,
+        catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
         json!({"workspace_root": lease.workspace_root(), "reset": true}),
     )?;
     assert!(as_bool(&rebuilt, "success")?);
@@ -88,7 +88,7 @@ fn build_base_reset_rebuilds() -> Result<()> {
             .is_some(),
         "build_base response should expose workspace-base timing: {rebuilt}"
     );
-    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&metrics, "manifest_depth")?,
         1,
@@ -103,7 +103,7 @@ fn workspace_binding_roundtrip() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let binding = lease.call_ok(ops::SANDBOX_CHECKPOINT_BINDING, json!({}))?;
+    let binding = lease.call_ok(catalog::SANDBOX_CHECKPOINT_BINDING, json!({}))?;
     assert_eq!(
         binding["binding"]["workspace_root"],
         Value::String(lease.workspace_root().to_owned()),
@@ -118,9 +118,12 @@ fn heartbeat_inflight_idle_zero() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let heartbeat = lease.call_ok(ops::SANDBOX_CALL_HEARTBEAT, json!({"invocation_ids": []}))?;
+    let heartbeat = lease.call_ok(
+        catalog::SANDBOX_CALL_HEARTBEAT,
+        json!({"invocation_ids": []}),
+    )?;
     assert!(as_bool(&heartbeat, "success")?);
-    let inflight = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
+    let inflight = lease.call_ok(catalog::SANDBOX_CALL_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&inflight, "count")?,
         0,

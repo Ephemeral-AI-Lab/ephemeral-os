@@ -7,6 +7,9 @@ use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use eos_layerstack::{LayerChange, LayerStack};
+use eos_operation::checkpoint::contract::CommitInput;
+use eos_operation::core::catalog::BuiltinOp;
+use eos_operation::OpRequest;
 use serde_json::json;
 
 use super::*;
@@ -28,7 +31,7 @@ fn commit_to_git_response_shape_for_committed_and_noop() -> TestResult {
     });
 
     // committed = true: a fresh path projects, stages, and commits.
-    let committed = commit_to_git(&args, DispatchContext::empty())?;
+    let committed = commit_to_git(parse_commit_input(args.clone()), DispatchContext::empty())?;
     assert_response_keys(&committed);
     assert_eq!(committed["success"], json!(true));
     assert_eq!(committed["committed"], json!(true));
@@ -44,7 +47,7 @@ fn commit_to_git_response_shape_for_committed_and_noop() -> TestResult {
 
     // committed = false: re-committing the same staged paths is a no-op that
     // still reports the prior HEAD and the full response shape.
-    let noop = commit_to_git(&args, DispatchContext::empty())?;
+    let noop = commit_to_git(parse_commit_input(args), DispatchContext::empty())?;
     assert_response_keys(&noop);
     assert_eq!(noop["success"], json!(true));
     assert_eq!(noop["committed"], json!(false));
@@ -78,17 +81,24 @@ fn assert_response_keys(response: &serde_json::Value) {
 fn commit_to_git_rejects_git_pathspecs() -> TestResult {
     let fixture = Fixture::new("reject-git")?;
     let response = commit_to_git(
-        &json!({
+        parse_commit_input(json!({
             "layer_stack_root": fixture.root,
             "workspace_root": fixture.workspace,
             "paths": [".git/config"],
             "message": "bad checkpoint",
-        }),
+        })),
         DispatchContext::empty(),
     );
 
     assert!(matches!(response, Err(DaemonError::Forbidden(_))));
     Ok(())
+}
+
+fn parse_commit_input(args: serde_json::Value) -> CommitInput {
+    match OpRequest::parse(BuiltinOp::CommitToGit, &args).expect("valid commit input") {
+        OpRequest::CommitToGit(input) => input,
+        _ => unreachable!("commit op parses to commit input"),
+    }
 }
 
 struct Fixture {

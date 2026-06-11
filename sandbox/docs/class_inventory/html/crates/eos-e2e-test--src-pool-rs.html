@@ -245,12 +245,12 @@
         &amp;<span class="rs-self">self</span>.caller_id
     }
 </code></pre>
-</details></td></tr><tr id="method-call-241"><td>method</td><td>call</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-call-241">call</a> (&amp; self , op : &amp; str , args : Value) -&gt; Result &lt; Value &gt;</code><p class="docstring">Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`<br>(unless the caller already set them) plus a fresh invocation id.<br>Returns the decoded response (success payload OR daemon error envelope).<br># Errors<br>Returns an error only on transport failure.</p><details class="function-source">
+</details></td></tr><tr id="method-call-241"><td>method</td><td>call</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#method-call-241">call</a> (&amp; self , op : &amp; str , args : Value) -&gt; Result &lt; Value &gt;</code><p class="docstring">Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`<br>(unless the caller already set them) plus a fresh invocation id.<br>Returns the decoded response (success payload OR daemon error response).<br># Errors<br>Returns an error only on transport failure.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`</span>
     <span class="rs-comment">/// (unless the caller already set them) plus a fresh invocation id.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns the decoded response (success payload OR daemon error envelope).</span>
+    <span class="rs-comment">/// Returns the decoded response (success payload OR daemon error response).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error only on transport failure.</span>
@@ -328,7 +328,7 @@
         }
         <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
         <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-client-211">client</a>().request(
-            ops::<span class="rs-type">SANDBOX_CHECKPOINT_ENSURE_BASE</span>,
+            catalog::<span class="rs-type">SANDBOX_CHECKPOINT_ENSURE_BASE</span>,
             &amp;iid,
             &amp;json!({
                 &quot;layer_stack_root&quot;: stack_root,
@@ -437,7 +437,7 @@
   <pre class="file-source"><code><span class="rs-comment">//! `NodePool` — up to `sandboxes` daemon containers behind a blocking semaphore,</span>
 <span class="rs-comment">//! plus `NodeLease`, the ergonomic per-test handle that mints a fresh</span>
 <span class="rs-comment">//! `layer_stack_root`, resets the configured workspace root, and injects the</span>
-<span class="rs-comment">//! standard envelope members.</span>
+<span class="rs-comment">//! standard response members.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! A lease holds its node exclusively for the test's duration; the node (and its</span>
 <span class="rs-comment">//! daemon) is reused across leases until `recycle_after` checkouts bound scratch</span>
@@ -446,7 +446,7 @@
 <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Condvar</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
 
 <span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Result</span>};
-<span class="rs-kw">use</span> eos_operation::core::ops;
+<span class="rs-kw">use</span> eos_operation::core::catalog;
 <span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{error_kind, is_success, <span class="rs-type">ProtocolClient</span>};
@@ -616,7 +616,7 @@
         }
         <span class="rs-kw">let</span> iid = <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-42">next_invocation_id</a>();
         <span class="rs-kw">let</span> ensure = node.container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-client-211">client</a>().request(
-            ops::<span class="rs-type">SANDBOX_CHECKPOINT_ENSURE_BASE</span>,
+            catalog::<span class="rs-type">SANDBOX_CHECKPOINT_ENSURE_BASE</span>,
             &amp;iid,
             &amp;json!({
                 &quot;layer_stack_root&quot;: stack_root,
@@ -677,7 +677,7 @@
     <span class="rs-comment">/// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`</span>
     <span class="rs-comment">/// (unless the caller already set them) plus a fresh invocation id.</span>
     <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns the decoded response (success payload OR daemon error envelope).</span>
+    <span class="rs-comment">/// Returns the decoded response (success payload OR daemon error response).</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error only on transport failure.</span>

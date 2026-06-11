@@ -60,13 +60,13 @@ impl<'ctx> DispatchContext<'ctx> {
         }
     }
 
-    /// The owned daemon services, when threaded. Handlers that can degrade
+    /// The owned daemon services, when threaded. Operations that can degrade
     /// (e.g. isolated-workspace routing checks) treat `None` as "no state".
     pub(crate) const fn services(&self) -> Option<&'ctx RuntimeServices> {
         self.services
     }
 
-    /// The owned daemon services, required. Handlers that cannot operate
+    /// The owned daemon services, required. Operations that cannot operate
     /// without service state fail closed with a structured internal error.
     pub(crate) const fn require_services(&self) -> Result<&'ctx RuntimeServices, DaemonError> {
         match self.services {

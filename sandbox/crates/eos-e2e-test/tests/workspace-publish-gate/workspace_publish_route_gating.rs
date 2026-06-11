@@ -4,7 +4,7 @@
 //! every change into one of three lanes — Drop (`.git/*`, never published),
 //! Direct (gitignored, no base-hash gate), or Gated (normal CAS merge). These
 //! tests assert the two non-default lanes purely from the wire:
-//!   - `.git/*` writes return a success/committed envelope with EMPTY
+//!   - `.git/*` writes return a success/committed response with EMPTY
 //!     `changed_paths`, and the file reads back `exists=false` (Route::Drop).
 //!   - a gitignored write reports `timings.occ.commit.direct_path_count == 1`
 //!     (Route::Direct), with a non-ignored control reporting `gated_path_count`.
@@ -14,7 +14,7 @@ use std::thread;
 
 use anyhow::Result;
 use eos_e2e_test::{next_invocation_id, unique_suffix};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{array, as_bool, as_str, live_pool_or_skip};
@@ -38,11 +38,11 @@ fn git_writes_are_dropped_and_unreadable() -> Result<()> {
     // read positively proves the Drop (rather than a coincidentally-absent file).
     let path = ".git/eos-probe.txt";
     let write = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "blocked\n", "overwrite": true}),
     )?;
     // .git/* routes Route::Drop -> OccStatus::Dropped, which is_success()==true,
-    // so the wire envelope is committed/success with NO published path.
+    // so the wire response is committed/success with NO published path.
     assert_eq!(as_str(&write, "status")?, "committed", "{write}");
     assert!(as_bool(&write, "success")?, "{write}");
     assert!(
@@ -50,7 +50,7 @@ fn git_writes_are_dropped_and_unreadable() -> Result<()> {
         "a .git write must publish nothing: {write}"
     );
 
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
+    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert!(
         !as_bool(&read, "exists")?,
         "a dropped .git write must not be readable: {read}"
@@ -68,13 +68,13 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
     // so the warm pooled node is not globally polluted. The .gitignore file is
     // itself a normal (gated) write.
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/.gitignore", "content": "*.txt\n", "overwrite": true}),
     )?;
 
     // An ignored path (*.txt) routes Route::Direct: no base-hash gate.
     let ignored = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/secret.txt", "content": "ignored\n", "overwrite": true}),
     )?;
     assert!(as_bool(&ignored, "success")?, "{ignored}");
@@ -91,7 +91,7 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
 
     // Control: a non-ignored sibling (.log not matched by *.txt) stays Gated.
     let tracked = lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/tracked.log", "content": "tracked\n", "overwrite": true}),
     )?;
     assert_eq!(
@@ -116,7 +116,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
     let dir = format!("ignore-race-{}", unique_suffix());
     let path = format!("{dir}/same.txt");
     lease.call_ok(
-        ops::SANDBOX_FILE_WRITE,
+        catalog::SANDBOX_FILE_WRITE,
         json!({"path": format!("{dir}/.gitignore"), "content": "*.txt\n", "overwrite": true}),
     )?;
 
@@ -139,7 +139,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::SANDBOX_FILE_WRITE,
+                    catalog::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -171,7 +171,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
         );
     }
 
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
+    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
     let final_content = as_str(&read, "content")?;
     assert!(
         payloads.iter().any(|payload| payload == final_content),

@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/wire/message.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>20</b><span>modules</span></div>
+  <div><b>150</b><span>items</span></div>
+  <div><b>88</b><span>fields</span></div>
+  <div><b>58</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>dispatcher.rs</span><small>0/15</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">op_adapter</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-op-adapter-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-command-rs.html"><span>command.rs</span><small>2/15</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-control-rs.html"><span>control.rs</span><small>0/7</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-files-rs.html"><span>files.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-isolation-rs.html"><span>isolation.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-plugin-rs.html"><span>plugin.rs</span><small>0/14</small></a></li><li><a class="file-link" href="eos-daemon--src-op-adapter-workspace-run-rs.html"><span>workspace_run.rs</span><small>0/2</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-rs.html"><span>response.rs</span><small>2/10</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-services-rs.html"><span>services.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-workspace-rs.html"><span>workspace.rs</span><small>5/4</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link active" href="eos-daemon--src-wire-message-rs.html"><span>message.rs</span><small>6/3</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="wire::message crates/eos-daemon/src/wire/message.rs ProtocolError Request ErrorResponse ErrorBody ErrorKind WireMessage encode decode decode_value">
+  <div class="module-head">
+    <div>
+      <h2>src/wire/message.rs</h2>
+      <p class="path">module <code>wire::message</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>0 impls</span>
+      <span>3 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Request-29" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Request pub pub struct Request crates/eos-daemon/src/wire/message.rs op String invocation_id String args Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Request</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a></code>
+  <p class="docstring">Request message (host -&gt; daemon): `{op, invocation_id, args}`.<br>Field order on the wire is exactly this; top-level keys are not sorted by the<br>daemon.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>op</td><td><code>String</code></td></tr><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:29</p>
+</article><article id="item-struct-ErrorResponse-40" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorResponse pub pub struct ErrorResponse crates/eos-daemon/src/wire/message.rs success bool warnings Vec &lt; Value &gt; timings serde_json :: Map &lt; String , Value &gt; error ErrorBody ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ErrorResponse</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a></code>
+  <p class="docstring">Daemon error response (`success:false`). `warnings`/`timings` are always<br>`[]`/`{}` at the builder.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>warnings</td><td><code>Vec &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>serde_json :: Map &lt; String , Value &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code><a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorBody-52">ErrorBody</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:40</p>
+</article><article id="item-struct-ErrorBody-52" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorBody pub pub struct ErrorBody crates/eos-daemon/src/wire/message.rs kind ErrorKind message String details Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ErrorBody</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorBody-52">ErrorBody</a></code>
+  <p class="docstring">The `error` body of an [`ErrorResponse`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>error</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ErrorKind-61">ErrorKind</a></code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr><tr><td>pub</td><td>details</td><td><code>Value</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:52</p>
+</article><article id="item-enum-ProtocolError-16" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProtocolError pub pub enum ProtocolError crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ProtocolError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a></code>
+  <p class="docstring">Encode/decode failures for the framed wire protocol. Distinct from the wire<br>[`ErrorKind`] (which is daemon policy, not a transport parse failure).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>BadJson</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>NotAnObject</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:16</p>
+</article><article id="item-enum-ErrorKind-61" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ErrorKind pub pub enum ErrorKind crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ErrorKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ErrorKind-61">ErrorKind</a></code>
+  <p class="docstring">Verified daemon error `kind` values. Serialized `snake_case` on the wire.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>InvalidRequest</td><td><code></code></td></tr><tr><td>BadJson</td><td><code></code></td></tr><tr><td>RequestTooLarge</td><td><code></code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>UnknownOp</td><td><code></code></td></tr><tr><td>InternalError</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code></code></td></tr><tr><td>ForbiddenInIsolatedWorkspace</td><td><code></code></td></tr><tr><td>LifecycleInProgress</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:61</p>
+</article><article id="item-enum-WireMessage-86" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WireMessage pub pub enum WireMessage crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WireMessage</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a></code>
+  <p class="docstring">A framed wire message: a request, an error response, or any response<br>`Value`. Untagged: a request has `op`; an error has `success:false` + `error`;<br>any other object is a response.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: untagged</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Request</td><td><code>0: <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a></code></td></tr><tr><td>Error</td><td><code>0: <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a></code></td></tr><tr><td>Response</td><td><code>0: Value</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:86</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-encode-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode pub pub fn encode (message : &amp; WireMessage) -&gt; Result &lt; Vec &lt; u8 &gt; , ProtocolError &gt; crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>encode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-fn-encode-100">encode</a> (message : &amp; <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Serialize a wire message as compact JSON plus a single trailing `\n`.<br>`serde_json` compact formatting matches the daemon for these ASCII payloads;<br>`args` key order is preserved (the `preserve_order` feature is required).<br># Errors<br>Returns [`ProtocolError::BadJson`] when serde cannot serialize the message.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Serialize a wire message as compact JSON plus a single trailing `\n`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `serde_json` compact formatting matches the daemon for these ASCII payloads;</span>
+<span class="rs-comment">/// `args` key order is preserved (the `preserve_order` feature is required).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the message.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-encode-100">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = serde_json::to_vec(message)?;
+    bytes.push(b&#x27;\n&#x27;);
+    <span class="rs-type">Ok</span>(bytes)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:100</p>
+</article><article id="item-fn-decode-114" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode pub pub fn decode (bytes : &amp; [u8]) -&gt; Result &lt; WireMessage , ProtocolError &gt; crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-114">decode</a> (bytes : &amp; [u8]) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a> , <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Decode one framed message. A trailing `\n` (and surrounding whitespace) is<br>tolerated; the body must be a single JSON object.<br># Errors<br>Returns [`ProtocolError::BadJson`] for invalid JSON and<br>[`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Decode one framed message. A trailing `\n` (and surrounding whitespace) is</span>
+<span class="rs-comment">/// tolerated; the body must be a single JSON object.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] for invalid JSON and</span>
+<span class="rs-comment">/// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-114">decode</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-value-125">decode_value</a>(serde_json::from_slice(bytes)?)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:114</p>
+</article><article id="item-fn-decode-value-125" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_value pub pub fn decode_value (value : Value) -&gt; Result &lt; WireMessage , ProtocolError &gt; crates/eos-daemon/src/wire/message.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>decode_value</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-value-125">decode_value</a> (value : Value) -&gt; Result &lt; <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a> , <a class="symbol-link" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Disambiguate an already-parsed JSON value into an [`WireMessage`].<br>Lets a caller that already holds a [`Value`] (e.g. after stripping a<br>transport auth field) avoid re-serializing and re-parsing the payload.<br># Errors<br>Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or<br>[`ProtocolError::BadJson`] when a request/error response fails to deserialize.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Disambiguate an already-parsed JSON value into an [`WireMessage`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Lets a caller that already holds a [`Value`] (e.g. after stripping a</span>
+<span class="rs-comment">/// transport auth field) avoid re-serializing and re-parsing the payload.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or</span>
+<span class="rs-comment">/// [`ProtocolError::BadJson`] when a request/error response fails to deserialize.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-value-125">decode_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-comment">// Disambiguate so a request never deserializes as a bare `Response(Value)`.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>::<span class="rs-type">NotAnObject</span>);
+    };
+    <span class="rs-kw">if</span> obj.contains_key(&quot;op&quot;) {
+        <span class="rs-kw">let</span> req: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a>(req));
+    }
+    <span class="rs-kw">if</span> obj.get(&quot;success&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)) &amp;&amp; obj.contains_key(&quot;error&quot;) {
+        <span class="rs-kw">let</span> err: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<span class="rs-type">Error</span>(err));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<span class="rs-type">Response</span>(value))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/wire/message.rs:125</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/wire/message.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Newline-delimited JSON wire messages.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Invariant: one compact JSON object per message + a single trailing `\n`</span>
+<span class="rs-comment">//! (`json.dumps(obj, separators=(",",":")) + "\n"`). [`encode`]/[`decode`] are</span>
+<span class="rs-comment">//! byte-stable for requests and error responses; responses are heterogeneous</span>
+<span class="rs-comment">//! `Value`s compared at the canonical bar (see [`super::canonical`]).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`</span>
+<span class="rs-comment">//! and the daemon NEVER reads it (an inert versioning hook). We reproduce its</span>
+<span class="rs-comment">//! presence but do not validate it.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Encode/decode failures for the framed wire protocol. Distinct from the wire</span>
+<span class="rs-comment">/// [`ErrorKind`] (which is daemon policy, not a transport parse failure).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a> {
+    <span class="rs-comment">/// The request line was not valid UTF-8 JSON.</span>
+    #[error(&quot;bad json: {0}&quot;)]
+    <span class="rs-type">BadJson</span>(#[from] serde_json::<span class="rs-type">Error</span>),
+    <span class="rs-comment">/// The decoded value was not a JSON object.</span>
+    #[error(&quot;wire message must be a json object&quot;)]
+    <span class="rs-type">NotAnObject</span>,
+}
+
+<span class="rs-comment">/// Request message (host -&gt; daemon): `{op, invocation_id, args}`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Field order on the wire is exactly this; top-level keys are not sorted by the</span>
+<span class="rs-comment">/// daemon.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a> {
+    <span class="rs-kw">pub</span> op: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> args: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-comment">/// Daemon error response (`success:false`). `warnings`/`timings` are always</span>
+<span class="rs-comment">/// `[]`/`{}` at the builder.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a> {
+    <span class="rs-kw">pub</span> success: bool,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> warnings: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    <span class="rs-kw">pub</span> error: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorBody-52">ErrorBody</a>,
+}
+
+<span class="rs-comment">/// The `error` body of an [`ErrorResponse`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorBody-52">ErrorBody</a> {
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ErrorKind-61">ErrorKind</a>,
+    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> details: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-comment">/// Verified daemon error `kind` values. Serialized `snake_case` on the wire.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ErrorKind-61">ErrorKind</a> {
+    <span class="rs-comment">/// `op` missing/non-string/empty, or `args` present but not a dict.</span>
+    <span class="rs-type">InvalidRequest</span>,
+    <span class="rs-comment">/// Request line was not valid UTF-8 JSON.</span>
+    <span class="rs-type">BadJson</span>,
+    <span class="rs-comment">/// Request line exceeded `MAX_REQUEST_BYTES`.</span>
+    <span class="rs-type">RequestTooLarge</span>,
+    <span class="rs-comment">/// TCP only: configured auth token did not match.</span>
+    <span class="rs-type">Unauthorized</span>,
+    <span class="rs-comment">/// `op` not registered in the daemon op table.</span>
+    <span class="rs-type">UnknownOp</span>,
+    <span class="rs-comment">/// A handler raised; `details.error_id` carries a uuid4 hex.</span>
+    <span class="rs-type">InternalError</span>,
+    <span class="rs-comment">/// Operation/gate policy refusal.</span>
+    <span class="rs-type">Forbidden</span>,
+    <span class="rs-comment">/// Refused because an isolated workspace is active for this agent.</span>
+    <span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+    <span class="rs-comment">/// Refused because a lifecycle operation is in progress.</span>
+    <span class="rs-type">LifecycleInProgress</span>,
+}
+
+<span class="rs-comment">/// A framed wire message: a request, an error response, or any response</span>
+<span class="rs-comment">/// `Value`. Untagged: a request has `op`; an error has `success:false` + `error`;</span>
+<span class="rs-comment">/// any other object is a response.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(untagged)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a> {
+    <span class="rs-comment">/// Host -&gt; daemon request.</span>
+    <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a>),
+    <span class="rs-comment">/// Daemon -&gt; host error response.</span>
+    <span class="rs-type">Error</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a>),
+    <span class="rs-comment">/// Daemon -&gt; host response (heterogeneous; compared canonically).</span>
+    <span class="rs-type">Response</span>(<span class="rs-type">Value</span>),
+}
+
+<span class="rs-comment">/// Serialize a wire message as compact JSON plus a single trailing `\n`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `serde_json` compact formatting matches the daemon for these ASCII payloads;</span>
+<span class="rs-comment">/// `args` key order is preserved (the `preserve_order` feature is required).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the message.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-encode-100">encode</a>(message: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = serde_json::to_vec(message)?;
+    bytes.push(b&#x27;\n&#x27;);
+    <span class="rs-type">Ok</span>(bytes)
+}
+
+<span class="rs-comment">/// Decode one framed message. A trailing `\n` (and surrounding whitespace) is</span>
+<span class="rs-comment">/// tolerated; the body must be a single JSON object.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] for invalid JSON and</span>
+<span class="rs-comment">/// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-114">decode</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-value-125">decode_value</a>(serde_json::from_slice(bytes)?)
+}
+
+<span class="rs-comment">/// Disambiguate an already-parsed JSON value into an [`WireMessage`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Lets a caller that already holds a [`Value`] (e.g. after stripping a</span>
+<span class="rs-comment">/// transport auth field) avoid re-serializing and re-parsing the payload.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or</span>
+<span class="rs-comment">/// [`ProtocolError::BadJson`] when a request/error response fails to deserialize.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-message-rs.html#item-fn-decode-value-125">decode_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>, <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-comment">// Disambiguate so a request never deserializes as a bare `Response(Value)`.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-ProtocolError-16">ProtocolError</a>::<span class="rs-type">NotAnObject</span>);
+    };
+    <span class="rs-kw">if</span> obj.contains_key(&quot;op&quot;) {
+        <span class="rs-kw">let</span> req: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-Request-29">Request</a>(req));
+    }
+    <span class="rs-kw">if</span> obj.get(&quot;success&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)) &amp;&amp; obj.contains_key(&quot;error&quot;) {
+        <span class="rs-kw">let</span> err: <a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-struct-ErrorResponse-40">ErrorResponse</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<span class="rs-type">Error</span>(err));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-wire-message-rs.html#item-enum-WireMessage-86">WireMessage</a>::<span class="rs-type">Response</span>(value))
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/wire/message.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -81,7 +81,7 @@
         <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
         <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
         <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
-            print!(&quot;{}&quot;, eos_operation::core::ops::ops_json_document());
+            print!(&quot;{}&quot;, eos_operation::core::catalog::ops_json_document());
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(
@@ -231,7 +231,7 @@
         <span class="rs-comment">// The committed `crates/eos-operation/ops.json`; `cargo xtask</span>
         <span class="rs-comment">// check-contract` fails when this output drifts from the artifact.</span>
         <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
-            print!(&quot;{}&quot;, eos_operation::core::ops::ops_json_document());
+            print!(&quot;{}&quot;, eos_operation::core::catalog::ops_json_document());
             <span class="rs-type">Ok</span>(())
         }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(

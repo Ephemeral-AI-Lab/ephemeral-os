@@ -1,4 +1,3 @@
-use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::wire::Request;
 use crate::DispatchContext;
@@ -6,7 +5,9 @@ use crate::RuntimeServices;
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_namespace::protocol::{RunRequest, RunResult};
+use eos_operation::core::catalog::BuiltinOp;
 use eos_operation::plugin::{LaunchError, NsRunnerLauncher};
+use eos_operation::OpRequest;
 use serde_json::{json, Value};
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -18,12 +19,11 @@ use std::time::Duration;
 pub(super) type TestError = Box<dyn Error + Send + Sync + 'static>;
 pub(super) type TestResult = Result<(), TestError>;
 
-/// One isolated daemon under test: an op table plus its own runtime services
-/// instance (no process-global state survives between tests). These adapter
-/// tests never start service processes; service runtime behavior lives in
-/// the operation-runtime tests.
+/// One isolated daemon under test: its own runtime services instance (no
+/// process-global state survives between tests). These adapter tests never
+/// start service processes; service runtime behavior lives in the
+/// operation-runtime tests.
 pub(super) struct TestDaemon {
-    table: OpTable,
     services: RuntimeServices,
 }
 
@@ -49,7 +49,6 @@ impl TestDaemon {
 
     fn with_configs(plugin: PluginRuntimeConfig, isolated: IsolatedWorkspaceConfig) -> Self {
         Self {
-            table: OpTable::with_builtins(),
             services: RuntimeServices::new(plugin, isolated, Arc::new(NoLaunch)),
         }
     }
@@ -59,18 +58,28 @@ impl TestDaemon {
     }
 
     pub(super) fn dispatch(&self, request: &Request) -> Value {
-        self.table.dispatch_with_context(request, self.context())
+        crate::dispatcher::dispatch_with_context(request, self.context())
     }
 
     /// `api.plugin.ensure` through the adapter (arg parsing + response shaping
-    /// + caller gate), without the dispatcher envelope decoration.
+    /// + caller gate), without the dispatcher error-response decoration.
     pub(super) fn op_ensure(&self, args: &Value) -> Result<Value, DaemonError> {
-        crate::op_adapter::plugin::op_ensure(args, self.context())
+        let OpRequest::PluginEnsure(input) =
+            OpRequest::parse(BuiltinOp::PluginEnsure, args).expect("valid plugin ensure args")
+        else {
+            unreachable!("plugin ensure op must parse into plugin ensure input");
+        };
+        crate::op_adapter::plugin::op_ensure(input, self.context())
     }
 
     /// `api.plugin.status` through the adapter.
     pub(super) fn op_status(&self, args: &Value) -> Result<Value, DaemonError> {
-        crate::op_adapter::plugin::op_status(args, self.context())
+        let OpRequest::PluginStatus(input) =
+            OpRequest::parse(BuiltinOp::PluginStatus, args).expect("valid plugin status args")
+        else {
+            unreachable!("plugin status op must parse into plugin status input");
+        };
+        crate::op_adapter::plugin::op_status(input, self.context())
     }
 }
 

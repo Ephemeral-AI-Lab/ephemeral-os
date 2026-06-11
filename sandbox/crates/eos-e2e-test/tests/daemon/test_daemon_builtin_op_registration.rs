@@ -3,12 +3,12 @@
 //!
 //! Complements the in-process `registry` unit test by proving the live `eosd`
 //! serves each catalog spelling over TCP: a registered handler returns success
-//! OR a non-`unknown_op` error (e.g. a missing-arg `invalid_envelope`), whereas
+//! OR a non-`unknown_op` error (e.g. a missing-arg `invalid_request`), whereas
 //! an unregistered string returns `unknown_op`.
 
 use anyhow::Result;
 use eos_e2e_test::client::error_kind;
-use eos_operation::core::ops::{BuiltinOp, ServedBy, BUILTIN_OPS};
+use eos_operation::core::catalog::{BuiltinOp, ServedBy, BUILTIN_OPS};
 use serde_json::json;
 
 use crate::support::live_pool_or_skip;

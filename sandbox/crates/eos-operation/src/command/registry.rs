@@ -8,12 +8,12 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::path::PathBuf;
 
 use eos_command_session::session::CommandSession;
-use eos_command_session::{
-    CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSessionCompletion,
-};
+use eos_command_session::CollectCompleted;
 use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
+
+use super::contract::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
 
 pub(crate) struct EphemeralRun {
     pub(crate) session: CommandSession,

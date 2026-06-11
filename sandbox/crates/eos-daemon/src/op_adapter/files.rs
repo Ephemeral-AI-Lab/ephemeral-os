@@ -3,20 +3,21 @@
 use std::path::PathBuf;
 
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
+use eos_operation::file::contract::{EditFileInput, ReadFileInput, ReadFileOutput, WriteFileInput};
 use eos_operation::file::{
     edit_file as edit_with_backend, read_file as read_with_backend,
     write_file as write_with_backend, DirectBackend, EditFileOutcome, EditFileRequest,
-    FileOpsError, IsolatedBackend, MutationOutcome, ReadFileOutcome, ReadFileRequest,
-    SearchReplaceEdit, WorkspaceConflict, WriteFileOutcome, WriteFileRequest,
+    FileOpsError, IsolatedBackend, ReadFileOutcome, ReadFileRequest, WriteFileOutcome,
+    WriteFileRequest,
 };
 use eos_workspace::IsolatedWorkspaceBinding;
-use serde_json::{json, Value};
+use serde_json::Value;
 use thiserror::Error;
 
 use crate::error::DaemonError;
-use crate::request_args::{optional_path, require_raw_string, require_string};
-use crate::response::GuardedResponse;
 use crate::{DispatchContext, WorkspaceRuntime};
+
+use super::to_wire_value;
 
 #[derive(Debug, Clone)]
 enum FileRoute {
@@ -45,13 +46,21 @@ enum FileOpError {
 
 /// `api.v1.read_file` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(
-    args: &Value,
+    input: ReadFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = read_request(args, context)?;
-    let caller_id = super::caller_id_or_default(args);
-    let routed =
-        route_read_file(file_context(args, context, &caller_id), request).map_err(file_op_error)?;
+    let request = ReadFileRequest {
+        path: input.path,
+        max_read_bytes: context
+            .file_limits()
+            .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
+    };
+    let caller_id = input.caller.to_string();
+    let routed = route_read_file(
+        file_context(input.layer_stack_root, context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(&layer_stack_root, &mut outcome.timings, 0);
@@ -61,54 +70,69 @@ pub(crate) fn op_read_file(
 
 /// `api.v1.write_file` — shared public write op, routed by active workspace mode.
 pub(crate) fn op_write_file(
-    args: &Value,
+    input: WriteFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = write_request(args, context)?;
-    let caller_id = super::caller_id_or_default(args);
-    let routed = route_write_file(file_context(args, context, &caller_id), request)
-        .map_err(file_op_error)?;
+    let request = WriteFileRequest {
+        path: input.path,
+        content: input.content.into_bytes(),
+        overwrite: input.overwrite,
+        max_file_bytes: context
+            .file_limits()
+            .map_or(MAX_FILE_BYTES, |limits| limits.max_write_bytes),
+    };
+    let caller_id = input.caller.to_string();
+    let routed = route_write_file(
+        file_context(input.layer_stack_root, context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(
             &layer_stack_root,
-            &mut outcome.timings,
-            outcome.changed_paths.len(),
+            &mut outcome.core.timings,
+            outcome.core.changed_paths.len(),
         );
     }
-    Ok(mutation_response(outcome, None))
+    Ok(to_wire_value(outcome))
 }
 
 /// `api.v1.edit_file` — shared public edit op, routed by active workspace mode.
 pub(crate) fn op_edit_file(
-    args: &Value,
+    input: EditFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = edit_request(args)?;
-    let caller_id = super::caller_id_or_default(args);
-    let routed =
-        route_edit_file(file_context(args, context, &caller_id), request).map_err(file_op_error)?;
+    let request = EditFileRequest {
+        path: input.path,
+        edits: input.edits,
+    };
+    let caller_id = input.caller.to_string();
+    let routed = route_edit_file(
+        file_context(input.layer_stack_root, context, &caller_id),
+        request,
+    )
+    .map_err(file_op_error)?;
     let mut mutation = routed.outcome;
-    let applied_edits = mutation.applied_edits;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(
             &layer_stack_root,
-            &mut mutation.timings,
-            mutation.changed_paths.len(),
+            &mut mutation.core.timings,
+            mutation.core.changed_paths.len(),
         );
     }
-    Ok(mutation_response(mutation, Some(applied_edits)))
+    Ok(to_wire_value(mutation))
 }
 
 fn file_context<'a, 'ctx: 'a>(
-    args: &Value,
+    layer_stack_root: Option<PathBuf>,
     context: DispatchContext<'ctx>,
     caller_id: &'a str,
 ) -> FileOpContext<'a> {
     FileOpContext {
         workspace: context.services().map(|services| &services.workspace),
         caller_id,
-        layer_stack_root: optional_path(args, "layer_stack_root"),
+        layer_stack_root,
     }
 }
 
@@ -186,90 +210,14 @@ fn isolated_backend(binding: &IsolatedWorkspaceBinding) -> IsolatedBackend {
     }
 }
 
-fn read_request(
-    args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<ReadFileRequest, DaemonError> {
-    Ok(ReadFileRequest {
-        path: require_string(args, "path")?,
-        max_read_bytes: context
-            .file_limits()
-            .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
-    })
-}
-
-fn write_request(
-    args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<WriteFileRequest, DaemonError> {
-    Ok(WriteFileRequest {
-        path: require_string(args, "path")?,
-        content: require_raw_string(args, "content")?.into_bytes(),
-        overwrite: args
-            .get("overwrite")
-            .and_then(Value::as_bool)
-            .unwrap_or(true),
-        max_file_bytes: context
-            .file_limits()
-            .map_or(MAX_FILE_BYTES, |limits| limits.max_write_bytes),
-    })
-}
-
-fn edit_request(args: &Value) -> Result<EditFileRequest, DaemonError> {
-    let edits = args
-        .get("edits")
-        .and_then(Value::as_array)
-        .ok_or_else(|| DaemonError::InvalidEnvelope("edits must be a list".to_owned()))?;
-    let mut parsed = Vec::with_capacity(edits.len());
-    for raw in edits {
-        let edit: SearchReplaceEdit = serde_json::from_value(raw.clone())
-            .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
-        if edit.old_text.is_empty() {
-            return Err(DaemonError::InvalidEnvelope(
-                "edit anchor old_text must be non-empty".to_owned(),
-            ));
-        }
-        parsed.push(edit);
-    }
-    Ok(EditFileRequest {
-        path: require_string(args, "path")?,
-        edits: parsed,
-    })
-}
-
 fn read_response(outcome: ReadFileOutcome) -> Value {
-    json!({
-        "success": outcome.success,
-        "workspace": outcome.workspace_kind,
-        "content": outcome.content,
-        "exists": outcome.exists,
-        "encoding": outcome.encoding,
-        "timings": outcome.timings,
-    })
-}
-
-fn mutation_response(outcome: MutationOutcome, applied_edits: Option<i64>) -> Value {
-    GuardedResponse {
+    to_wire_value(ReadFileOutput {
+        workspace_kind: outcome.workspace_kind,
         success: outcome.success,
-        published: Some(outcome.published),
-        workspace: outcome.workspace_kind,
-        changed_paths: json!(outcome.changed_paths),
-        changed_path_kinds: json!(outcome.changed_path_kinds),
-        mutation_source: outcome.mutation_source,
-        status: outcome.status,
-        conflict: outcome.conflict.map(conflict_value),
-        conflict_reason: outcome.conflict_reason,
-        timings: json!(outcome.timings),
-        applied_edits,
-    }
-    .into_json()
-}
-
-fn conflict_value(conflict: WorkspaceConflict) -> Value {
-    json!({
-        "reason": conflict.reason,
-        "conflict_file": conflict.conflict_file,
-        "message": conflict.message,
+        content: outcome.content,
+        exists: outcome.exists,
+        encoding: outcome.encoding,
+        timings: outcome.timings,
     })
 }
 
@@ -291,8 +239,8 @@ fn enrich_direct_timings(
 fn file_op_error(error: FileOpError) -> DaemonError {
     match error {
         FileOpError::MissingLayerStackRoot => {
-            DaemonError::InvalidEnvelope("layer_stack_root is required".to_owned())
+            DaemonError::InvalidRequest("layer_stack_root is required".to_owned())
         }
-        FileOpError::File(error) => DaemonError::InvalidEnvelope(error.to_string()),
+        FileOpError::File(error) => DaemonError::InvalidRequest(error.to_string()),
     }
 }

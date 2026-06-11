@@ -1,8 +1,13 @@
 use serde_json::json;
 
-use eos_command_session::{
-    CollectCompleted, CommandResponse, CommandSessionCompletion, ReadCommandProgress,
+use eos_command_session::{CollectCompleted, ReadCommandProgress};
+use eos_operation::command::contract::{
+    CancelCommandInput, CommandResponse, CommandSessionCompletion, CommandStatus, ExecCommandInput,
+    ReadProgressInput, WriteStdinInput,
 };
+use eos_operation::control::contract::CallerCountInput;
+use eos_operation::core::catalog::BuiltinOp;
+use eos_operation::{CommandSessionId, OpRequest};
 
 use super::*;
 
@@ -10,14 +15,16 @@ type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
 fn exec_command_requires_string_wire_shape() {
-    assert!(require_command_string(&json!({"cmd": "echo hi"}), "cmd").is_ok());
-    assert!(require_command_string(&json!({"cmd": ["true"]}), "cmd").is_err());
+    assert!(parse_exec_input(json!({"cmd": "echo hi"})).is_ok());
+    assert!(parse_exec_input(json!({"cmd": ["true"]})).is_err());
 }
 
 #[test]
 fn exec_command_preserves_shell_string_bytes_after_validation() -> TestResult {
     assert_eq!(
-        require_command_string(&json!({"cmd": "  printf hi\n"}), "cmd")?,
+        parse_exec_input(json!({"cmd": "  printf hi\n"}))
+            .expect("valid command input")
+            .cmd,
         "  printf hi\n"
     );
     Ok(())
@@ -25,9 +32,24 @@ fn exec_command_preserves_shell_string_bytes_after_validation() -> TestResult {
 
 #[test]
 fn optional_u64_accepts_unsigned_and_nonnegative_signed_numbers() {
-    assert_eq!(optional_u64(&json!({"timeout": 7_u64}), "timeout"), Some(7));
-    assert_eq!(optional_u64(&json!({"timeout": 7_i64}), "timeout"), Some(7));
-    assert_eq!(optional_u64(&json!({"timeout": -1_i64}), "timeout"), None);
+    assert_eq!(
+        parse_exec_input(json!({"cmd": "true", "timeout": 7_u64}))
+            .expect("valid command input")
+            .timeout,
+        Some(7)
+    );
+    assert_eq!(
+        parse_exec_input(json!({"cmd": "true", "timeout": 7_i64}))
+            .expect("valid command input")
+            .timeout,
+        Some(7)
+    );
+    assert_eq!(
+        parse_exec_input(json!({"cmd": "true", "timeout": -1_i64}))
+            .expect("valid command input")
+            .timeout,
+        None
+    );
 }
 
 #[test]
@@ -37,14 +59,30 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
         ..crate::config::CommandSessionConfig::default()
     };
 
-    assert_eq!(exec_timeout_seconds(&json!({}), &config), 600.0);
-    assert_eq!(exec_timeout_seconds(&json!({"timeout": 12}), &config), 12.0);
     assert_eq!(
-        exec_timeout_seconds(&json!({"timeout_seconds": 34}), &config),
+        exec_timeout_seconds(&parse_exec_input(json!({"cmd": "true"})).unwrap(), &config),
+        600.0
+    );
+    assert_eq!(
+        exec_timeout_seconds(
+            &parse_exec_input(json!({"cmd": "true", "timeout": 12})).unwrap(),
+            &config
+        ),
+        12.0
+    );
+    assert_eq!(
+        exec_timeout_seconds(
+            &parse_exec_input(json!({"cmd": "true", "timeout_seconds": 34})).unwrap(),
+            &config
+        ),
         34.0
     );
     assert_eq!(
-        exec_timeout_seconds(&json!({"timeout": 12, "timeout_seconds": 34}), &config),
+        exec_timeout_seconds(
+            &parse_exec_input(json!({"cmd": "true", "timeout": 12, "timeout_seconds": 34}))
+                .unwrap(),
+            &config
+        ),
         12.0
     );
 }
@@ -61,7 +99,7 @@ fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResul
         command_session_id: "cmd_done".to_owned(),
         last_n_lines: 1,
     })?;
-    assert_eq!(result.status, "ok");
+    assert_eq!(result.status, CommandStatus::Ok);
     assert_eq!(result.stdout, "done\n");
 
     let redelivered = manager.read_command_progress(ReadCommandProgress {
@@ -89,9 +127,9 @@ fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResul
 #[test]
 fn command_session_count_uses_runtime_manager() -> TestResult {
     let response = op_command_session_count(
-        &json!({"caller_id": "no-live-session"}),
+        parse_count_input(json!({"caller_id": "no-live-session"})),
         DispatchContext::empty(),
-    )?;
+    );
 
     assert_eq!(response["success"], true);
     assert_eq!(response["caller_id"], "no-live-session");
@@ -106,7 +144,7 @@ fn command_session_read_progress_returns_completed_result_when_live_session_is_g
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
     let response = command_session_read_progress(
-        &json!({"command_session_id": id, "last_n_lines": 1}),
+        parse_read_progress_input(json!({"command_session_id": id, "last_n_lines": 1})),
         DispatchContext::empty(),
     )?;
 
@@ -126,7 +164,7 @@ fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult 
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
     let response = command_session_write_stdin(
-        &json!({"command_session_id": id, "chars": "ignored"}),
+        parse_write_stdin_input(json!({"command_session_id": id, "chars": "ignored"})),
         DispatchContext::empty(),
     )?;
 
@@ -140,8 +178,10 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
     let id = "command_session_cancel_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "already-finished\n"));
 
-    let response =
-        command_session_cancel(&json!({"command_session_id": id}), DispatchContext::empty())?;
+    let response = command_session_cancel(
+        parse_cancel_input(json!({"command_session_id": id})),
+        DispatchContext::empty(),
+    )?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "already-finished\n");
@@ -153,15 +193,51 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
     Ok(())
 }
 
+fn parse_exec_input(
+    args: serde_json::Value,
+) -> Result<ExecCommandInput, eos_operation::RequestError> {
+    match OpRequest::parse(BuiltinOp::ExecCommand, &args)? {
+        OpRequest::ExecCommand(input) => Ok(input),
+        _ => unreachable!("exec op parses to exec input"),
+    }
+}
+
+fn parse_count_input(args: serde_json::Value) -> CallerCountInput {
+    match OpRequest::parse(BuiltinOp::CommandSessionCount, &args).expect("valid count input") {
+        OpRequest::CommandSessionCount(input) => input,
+        _ => unreachable!("count op parses to count input"),
+    }
+}
+
+fn parse_read_progress_input(args: serde_json::Value) -> ReadProgressInput {
+    match OpRequest::parse(BuiltinOp::CommandReadProgress, &args).expect("valid poll input") {
+        OpRequest::CommandReadProgress(input) => input,
+        _ => unreachable!("poll op parses to poll input"),
+    }
+}
+
+fn parse_write_stdin_input(args: serde_json::Value) -> WriteStdinInput {
+    match OpRequest::parse(BuiltinOp::WriteStdin, &args).expect("valid stdin input") {
+        OpRequest::WriteStdin(input) => input,
+        _ => unreachable!("stdin op parses to stdin input"),
+    }
+}
+
+fn parse_cancel_input(args: serde_json::Value) -> CancelCommandInput {
+    match OpRequest::parse(BuiltinOp::CommandCancel, &args).expect("valid cancel input") {
+        OpRequest::CommandCancel(input) => input,
+        _ => unreachable!("cancel op parses to cancel input"),
+    }
+}
+
 fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCompletion {
     let result = CommandResponse {
-        status: "ok".to_owned(),
+        status: CommandStatus::Ok,
         exit_code: Some(0),
         stdout: stdout.to_owned(),
         stderr: String::new(),
-        command_session_id: Some(id.to_owned()),
-        workspace: None,
-        metadata: serde_json::Value::Null,
+        command_session_id: Some(CommandSessionId::new(id.to_owned())),
+        settled: None,
     };
     CommandSessionCompletion {
         command_session_id: id.to_owned(),

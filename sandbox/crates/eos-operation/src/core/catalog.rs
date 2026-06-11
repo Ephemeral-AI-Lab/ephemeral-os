@@ -105,7 +105,6 @@ macro_rules! declare_builtin_ops {
     ) => {
         /// One built-in operation in the static sandbox catalog.
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        #[non_exhaustive]
         pub enum BuiltinOp {
             $(
                 #[doc = concat!("`", $name, "`: ", $summary)]
@@ -151,6 +150,26 @@ macro_rules! declare_builtin_ops {
                 },
             )+
         ];
+
+        impl BuiltinOp {
+            /// Protocol catalog entry for this op.
+            #[must_use]
+            pub fn contract(self) -> &'static OpContract {
+                BUILTIN_OPS
+                    .iter()
+                    .find(|contract| contract.op == self)
+                    .expect("builtin op must be declared in BUILTIN_OPS")
+            }
+
+            /// Resolve a canonical operation name into its typed catalog identity.
+            #[must_use]
+            pub fn from_op_name(name: &str) -> Option<Self> {
+                match name {
+                    $($name => Some(Self::$variant),)+
+                    _ => None,
+                }
+            }
+        }
     };
 }
 
@@ -221,47 +240,6 @@ declare_builtin_ops! {
         Daemon, WorkspaceRun, Operator, true, "Cancel every workspace run in the sandbox: the whole-sandbox sweep backstop.";
 }
 
-impl BuiltinOp {
-    /// Protocol catalog entry for this op.
-    #[must_use]
-    pub fn contract(self) -> &'static OpContract {
-        match self {
-            Self::SandboxAcquire => &BUILTIN_OPS[0],
-            Self::SandboxRelease => &BUILTIN_OPS[1],
-            Self::SandboxStatus => &BUILTIN_OPS[2],
-            Self::SandboxList => &BUILTIN_OPS[3],
-            Self::RuntimeReady => &BUILTIN_OPS[4],
-            Self::InvocationHeartbeat => &BUILTIN_OPS[5],
-            Self::InvocationCancel => &BUILTIN_OPS[6],
-            Self::InflightCount => &BUILTIN_OPS[7],
-            Self::LayerMetrics => &BUILTIN_OPS[8],
-            Self::EnsureWorkspaceBase => &BUILTIN_OPS[9],
-            Self::BuildWorkspaceBase => &BUILTIN_OPS[10],
-            Self::CommitToWorkspace => &BUILTIN_OPS[11],
-            Self::CommitToGit => &BUILTIN_OPS[12],
-            Self::WorkspaceBinding => &BUILTIN_OPS[13],
-            Self::ReadFile => &BUILTIN_OPS[14],
-            Self::WriteFile => &BUILTIN_OPS[15],
-            Self::EditFile => &BUILTIN_OPS[16],
-            Self::PluginEnsure => &BUILTIN_OPS[17],
-            Self::PluginStatus => &BUILTIN_OPS[18],
-            Self::IsolatedWorkspaceEnter => &BUILTIN_OPS[19],
-            Self::IsolatedWorkspaceExit => &BUILTIN_OPS[20],
-            Self::IsolatedWorkspaceStatus => &BUILTIN_OPS[21],
-            Self::IsolatedWorkspaceListOpen => &BUILTIN_OPS[22],
-            Self::IsolatedWorkspaceTestReset => &BUILTIN_OPS[23],
-            Self::ExecCommand => &BUILTIN_OPS[24],
-            Self::WriteStdin => &BUILTIN_OPS[25],
-            Self::CommandReadProgress => &BUILTIN_OPS[26],
-            Self::CommandCancel => &BUILTIN_OPS[27],
-            Self::CommandCollectCompleted => &BUILTIN_OPS[28],
-            Self::CommandSessionCount => &BUILTIN_OPS[29],
-            Self::CancelWorkspaceRunsByCaller => &BUILTIN_OPS[30],
-            Self::CancelWorkspaceRuns => &BUILTIN_OPS[31],
-        }
-    }
-}
-
 #[derive(Serialize)]
 struct CatalogOp {
     name: &'static str,
@@ -315,6 +293,15 @@ mod tests {
         for contract in BUILTIN_OPS {
             assert_eq!(contract, contract.op.contract());
         }
+    }
+
+    #[test]
+    fn canonical_names_resolve_to_builtin_ops() {
+        for contract in BUILTIN_OPS {
+            assert_eq!(BuiltinOp::from_op_name(contract.name), Some(contract.op));
+        }
+        assert_eq!(BuiltinOp::from_op_name("plugin.dynamic.echo"), None);
+        assert_eq!(BuiltinOp::from_op_name(""), None);
     }
 
     #[test]

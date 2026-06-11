@@ -42,7 +42,7 @@
 </section>
 <main class="crate-layout">
   <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-sandbox-gateway.html"><span>gateway.rs</span><small>9/18</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-main-rs.html"><span>main.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-sandbox-gateway--src-serve-rs.html"><span>serve.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="gateway crates/eos-sandbox-gateway/src/gateway.rs Visibility HostVerb Route OpEntry Catalog impl Catalog host_verb str_field Engine impl Engine for SandboxHost status_value Surface impl Surface handle forward host_call unknown_sandbox operator_socket_path serve serve_with_catalog bind accept_loop handle_connection ClientRequest WireError impl WireError read_request_line parse_request take_string error_envelope response_line">
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="gateway crates/eos-sandbox-gateway/src/gateway.rs Visibility HostVerb Route OpEntry Catalog impl Catalog host_verb str_field Engine impl Engine for SandboxHost status_value Surface impl Surface handle forward host_call unknown_sandbox operator_socket_path serve serve_with_catalog bind accept_loop handle_connection ClientRequest WireError impl WireError read_request_line parse_request take_string error_response response_line">
   <div class="module-head">
     <div>
       <h2>src/gateway.rs</h2>
@@ -280,10 +280,10 @@
         <span class="rs-kw">if</span> request.op.starts_with(&quot;plugin.&quot;) {
             <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, <span class="rs-kw">true</span>);
         }
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
     };
     <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(entry.visibility) {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(
             &quot;forbidden&quot;,
             &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
         );
@@ -383,13 +383,13 @@
         .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;bad_json&quot;, format!(&quot;request is not valid <span class="rs-type">JSON</span>: {err}&quot;)))?;
     <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">mut</span> object) = value <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             &quot;request must be a <span class="rs-type">JSON</span> object&quot;,
         ));
     };
     <span class="rs-kw">let</span> op = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;op&quot;)?;
     <span class="rs-kw">if</span> op.trim().is_empty() {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;op is required&quot;));
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, &quot;op is required&quot;));
     }
     <span class="rs-kw">let</span> invocation_id = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;invocation_id&quot;)?;
     <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> object.remove(&quot;sandbox_id&quot;) {
@@ -397,14 +397,14 @@
         <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(id)) =&gt; <span class="rs-type">Some</span>(id),
         <span class="rs-type">Some</span>(_) =&gt; {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-                &quot;invalid_envelope&quot;,
+                &quot;invalid_request&quot;,
                 &quot;sandbox_id must be a string&quot;,
             ))
         }
     };
     <span class="rs-kw">let</span> args = object.remove(&quot;args&quot;).unwrap_or_else(|| json!({}));
     <span class="rs-kw">if</span> !args.is_object() {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;args must be an object&quot;));
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, &quot;args must be an object&quot;));
     }
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> {
         op,
@@ -498,7 +498,7 @@
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, mutates_state: bool) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;invalid_request&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
     };
     <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
         sandbox_id,
@@ -509,10 +509,10 @@
     ) {
         <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(response)) =&gt; response,
         <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(message))) =&gt; {
-            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;uncertain_outcome&quot;, &amp;message)
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;uncertain_outcome&quot;, &amp;message)
         }
         <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(message))) =&gt; {
-            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;message)
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;sandbox_unavailable&quot;, &amp;message)
         }
         <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
     }
@@ -535,12 +535,12 @@
     <span class="rs-kw">match</span> verb {
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>() {
             <span class="rs-type">Ok</span>(sandbox_id) =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id}),
-            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
         },
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>()}),
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; {
             <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
-                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;invalid_request&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
             };
             <span class="rs-kw">match</span> verb {
                 <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> =&gt; {
@@ -574,7 +574,7 @@
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
-    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
 }
 </code></pre>
 </details>
@@ -655,7 +655,7 @@
     <span class="rs-kw">let</span> _ = stream.set_read_timeout(<span class="rs-type">Some</span>(<span class="rs-type">REQUEST_READ_TIMEOUT</span>));
     <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(&amp;stream).and_then(|line| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(&amp;line)) {
         <span class="rs-type">Ok</span>(request) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(catalog, engine, surface, &amp;request),
-        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(err.kind, &amp;err.message),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(err.kind, &amp;err.message),
     };
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = stream;
     <span class="rs-kw">let</span> _ = stream.write_all(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(&amp;response));
@@ -681,10 +681,10 @@
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
     reader
         .read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> line)
-        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, format!(&quot;read request: {err}&quot;)))?;
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, format!(&quot;read request: {err}&quot;)))?;
     <span class="rs-kw">if</span> line.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             &quot;connection closed before a request line&quot;,
         ));
     }
@@ -714,7 +714,7 @@
     <span class="rs-kw">match</span> object.remove(field) {
         <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(value)) =&gt; <span class="rs-type">Ok</span>(value),
         _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             format!(&quot;{field} is required and must be a string&quot;),
         )),
     }
@@ -723,17 +723,17 @@
 </details>
 
   <p class="source">crates/eos-sandbox-gateway/src/gateway.rs:435</p>
-</article><article id="item-fn-error-envelope-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope private fn error_envelope (kind : &amp; str , message : &amp; str) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
+</article><article id="item-fn-error-response-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_response private fn error_response (kind : &amp; str , message : &amp; str) -&gt; Value crates/eos-sandbox-gateway/src/gateway.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>error_envelope</h3>
+    <h3>error_response</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a> (kind : &amp; str , message : &amp; str) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a> (kind : &amp; str , message : &amp; str) -&gt; Value</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
     json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;warnings&quot;: [],
@@ -1033,10 +1033,10 @@
         <span class="rs-kw">if</span> request.op.starts_with(&quot;plugin.&quot;) {
             <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine, request, <span class="rs-kw">true</span>);
         }
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;unknown_op&quot;, &amp;format!(&quot;unknown op: {}&quot;, request.op));
     };
     <span class="rs-kw">if</span> !surface.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-allows-188">allows</a>(entry.visibility) {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(
             &quot;forbidden&quot;,
             &amp;format!(&quot;op {} is not served on this socket&quot;, entry.name),
         );
@@ -1049,7 +1049,7 @@
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(engine: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-trait-Engine-120">Engine</a>, request: &amp;<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a>, mutates_state: bool) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;invalid_request&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
     };
     <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-forward-125">forward</a>(
         sandbox_id,
@@ -1060,10 +1060,10 @@
     ) {
         <span class="rs-type">Some</span>(<span class="rs-type">Ok</span>(response)) =&gt; response,
         <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">UncertainOutcome</span>(message))) =&gt; {
-            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;uncertain_outcome&quot;, &amp;message)
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;uncertain_outcome&quot;, &amp;message)
         }
         <span class="rs-type">Some</span>(<span class="rs-type">Err</span>(<span class="rs-type">ForwardError</span>::<span class="rs-type">SandboxUnavailable</span>(message))) =&gt; {
-            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;message)
+            <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;sandbox_unavailable&quot;, &amp;message)
         }
         <span class="rs-type">None</span> =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id),
     }
@@ -1073,12 +1073,12 @@
     <span class="rs-kw">match</span> verb {
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Acquire</span> =&gt; <span class="rs-kw">match</span> engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-acquire-121">acquire</a>() {
             <span class="rs-type">Ok</span>(sandbox_id) =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandbox_id&quot;: sandbox_id}),
-            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;sandbox_unavailable&quot;, &amp;format!(&quot;acquire failed: {err:#}&quot;)),
         },
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">List</span> =&gt; json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;sandboxes&quot;: engine.<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-list-124">list</a>()}),
         <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> | <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Status</span> =&gt; {
             <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = request.sandbox_id.as_deref() <span class="rs-kw">else</span> {
-                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;invalid_envelope&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
+                <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;invalid_request&quot;, &quot;sandbox_id is required <span class="rs-kw">for</span> this op&quot;);
             };
             <span class="rs-kw">match</span> verb {
                 <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-enum-HostVerb-25">HostVerb</a>::<span class="rs-type">Release</span> =&gt; {
@@ -1099,7 +1099,7 @@
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-unknown-sandbox-272">unknown_sandbox</a>(sandbox_id: &amp;str) -&gt; <span class="rs-type">Value</span> {
-    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
+    <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(&quot;unknown_sandbox&quot;, &amp;format!(&quot;unknown sandbox: {sandbox_id}&quot;))
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-operator-socket-path-276">operator_socket_path</a>(listen: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
@@ -1173,7 +1173,7 @@
     <span class="rs-kw">let</span> _ = stream.set_read_timeout(<span class="rs-type">Some</span>(<span class="rs-type">REQUEST_READ_TIMEOUT</span>));
     <span class="rs-kw">let</span> response = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-read-request-line-378">read_request_line</a>(&amp;stream).and_then(|line| <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-parse-request-399">parse_request</a>(&amp;line)) {
         <span class="rs-type">Ok</span>(request) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-handle-197">handle</a>(catalog, engine, surface, &amp;request),
-        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(err.kind, &amp;err.message),
+        <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(err.kind, &amp;err.message),
     };
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = stream;
     <span class="rs-kw">let</span> _ = stream.write_all(&amp;<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-response-line-458">response_line</a>(&amp;response));
@@ -1209,10 +1209,10 @@
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>();
     reader
         .read_until(b&#x27;\n&#x27;, &amp;<span class="rs-kw">mut</span> line)
-        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, format!(&quot;read request: {err}&quot;)))?;
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, format!(&quot;read request: {err}&quot;)))?;
     <span class="rs-kw">if</span> line.is_empty() {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             &quot;connection closed before a request line&quot;,
         ));
     }
@@ -1230,13 +1230,13 @@
         .map_err(|err| <a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;bad_json&quot;, format!(&quot;request is not valid <span class="rs-type">JSON</span>: {err}&quot;)))?;
     <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(<span class="rs-kw">mut</span> object) = value <span class="rs-kw">else</span> {
         <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             &quot;request must be a <span class="rs-type">JSON</span> object&quot;,
         ));
     };
     <span class="rs-kw">let</span> op = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;op&quot;)?;
     <span class="rs-kw">if</span> op.trim().is_empty() {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;op is required&quot;));
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, &quot;op is required&quot;));
     }
     <span class="rs-kw">let</span> invocation_id = <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-take-string-435">take_string</a>(&amp;<span class="rs-kw">mut</span> object, &quot;invocation_id&quot;)?;
     <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> object.remove(&quot;sandbox_id&quot;) {
@@ -1244,14 +1244,14 @@
         <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(id)) =&gt; <span class="rs-type">Some</span>(id),
         <span class="rs-type">Some</span>(_) =&gt; {
             <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-                &quot;invalid_envelope&quot;,
+                &quot;invalid_request&quot;,
                 &quot;sandbox_id must be a string&quot;,
             ))
         }
     };
     <span class="rs-kw">let</span> args = object.remove(&quot;args&quot;).unwrap_or_else(|| json!({}));
     <span class="rs-kw">if</span> !args.is_object() {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_envelope&quot;, &quot;args must be an object&quot;));
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(&quot;invalid_request&quot;, &quot;args must be an object&quot;));
     }
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-ClientRequest-355">ClientRequest</a> {
         op,
@@ -1265,13 +1265,13 @@
     <span class="rs-kw">match</span> object.remove(field) {
         <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(value)) =&gt; <span class="rs-type">Ok</span>(value),
         _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-gateway.html#item-struct-WireError-363">WireError</a>::<a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#method-new-370">new</a>(
-            &quot;invalid_envelope&quot;,
+            &quot;invalid_request&quot;,
             format!(&quot;{field} is required and must be a string&quot;),
         )),
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-envelope-445">error_envelope</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-gateway.html#item-fn-error-response-445">error_response</a>(kind: &amp;str, message: &amp;str) -&gt; <span class="rs-type">Value</span> {
     json!({
         &quot;success&quot;: <span class="rs-kw">false</span>,
         &quot;warnings&quot;: [],

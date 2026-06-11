@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-operation · src/core/workspace_outcome.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-operation File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>49</b><span>modules</span></div>
+  <div><b>470</b><span>items</span></div>
+  <div><b>554</b><span>fields</span></div>
+  <div><b>192</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-operation.html"><span>commit.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-contract-rs.html"><span>contract.rs</span><small>11/1</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-lib-rs.html"><span>lib.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-contract-rs.html"><span>contract.rs</span><small>10/4</small></a></li><li><a class="file-link" href="eos-operation--src-command-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-command-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-operation--src-command-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-operation--src-command-service-rs.html"><span>service.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-command-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-tests-registry-rs.html"><span>registry.rs</span><small>0/4</small></a></li></ul></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-control-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-control-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-core-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-catalog-rs.html"><span>catalog.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-operation--src-core-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-id-rs.html"><span>id.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-request-rs.html"><span>request.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-operation--src-core-response-rs.html"><span>response.rs</span><small>3/3</small></a></li><li><a class="file-link active" href="eos-operation--src-core-workspace-outcome-rs.html"><span>workspace_outcome.rs</span><small>6/2</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-file-contract-rs.html"><span>contract.rs</span><small>4/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-lib-rs.html"><span>lib.rs</span><small>11/7</small></a></li><li><a class="file-link" href="eos-operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/7</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-isolation-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-isolation-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-contract-rs.html"><span>contract.rs</span><small>8/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-tests-ensure-args-rs.html"><span>ensure_args.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-package-rs.html"><span>package.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-process-rs.html"><span>process.rs</span><small>1/10</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-workspace-run-contract-rs.html"><span>contract.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-operation--src-workspace-run-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::workspace_outcome crates/eos-operation/src/core/workspace_outcome.rs WorkspaceTimings ChangedPathKinds WorkspaceKind impl WorkspaceKind MutationStatus impl MutationStatus impl From &lt; CommitStatus &gt; for MutationStatus ChangedPathKind impl ChangedPathKind WorkspaceConflict impl WorkspaceConflict MutationCore WorkspaceMutationOutcome impl Default for WorkspaceMutationOutcome serialize_mutation_source serialize_null">
+  <div class="module-head">
+    <div>
+      <h2>src/core/workspace_outcome.rs</h2>
+      <p class="path">module <code>core::workspace_outcome</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>6 types</span>
+      <span>6 impls</span>
+      <span>2 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceConflict-103" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceConflict pub pub struct WorkspaceConflict crates/eos-operation/src/core/workspace_outcome.rs reason String conflict_file Option &lt; String &gt; message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceConflict</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceConflict-103">WorkspaceConflict</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>reason</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict_file</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-path-112"><td>associated-fn</td><td>path</td><td><code>pub fn <a class="symbol-link" href="eos-operation.html#method-path-168">path</a> (reason : &amp; str , conflict_file : &amp; str , message : &amp; str) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation.html#method-path-168">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            reason: reason.to_owned(),
+            conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
+            message: message.to_owned(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:103</p>
+</article><article id="item-struct-MutationCore-122" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MutationCore pub pub struct MutationCore crates/eos-operation/src/core/workspace_outcome.rs success bool changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source Option &lt; MutationSource &gt; conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; timings WorkspaceTimings ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>MutationCore</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-ChangedPathKinds-11">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>Option &lt; <a class="symbol-link" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceConflict-103">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:122</p>
+</article><article id="item-struct-WorkspaceMutationOutcome-137" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceMutationOutcome pub pub struct WorkspaceMutationOutcome crates/eos-operation/src/core/workspace_outcome.rs core MutationCore workspace_kind WorkspaceKind published bool status MutationStatus error () applied_edits Option &lt; i64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceMutationOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceMutationOutcome-137">WorkspaceMutationOutcome</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>core</td><td><code><a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a></code></td></tr><tr><td>pub</td><td>workspace_kind</td><td><code><a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a></code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a></code></td></tr><tr><td>pub</td><td>error</td><td><code>()</code></td></tr><tr><td>pub</td><td>applied_edits</td><td><code>Option &lt; i64 &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceMutationOutcome-137">WorkspaceMutationOutcome</a></code></summary><table><tbody><tr id="method-default-152"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            core: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            workspace_kind: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            published: <span class="rs-kw">false</span>,
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            error: (),
+            applied_edits: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:137</p>
+</article><article id="item-enum-WorkspaceKind-13" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum WorkspaceKind pub pub enum WorkspaceKind crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>WorkspaceKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code></code></td></tr><tr><td>Isolated</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-22"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span> =&gt; &quot;ephemeral&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span> =&gt; &quot;isolated&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:13</p>
+</article><article id="item-enum-MutationStatus-31" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum MutationStatus pub pub enum MutationStatus crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>MutationStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Accepted</td><td><code></code></td></tr><tr><td>Committed</td><td><code></code></td></tr><tr><td>Rejected</td><td><code></code></td></tr><tr><td>AbortedVersion</td><td><code></code></td></tr><tr><td>AbortedOverlap</td><td><code></code></td></tr><tr><td>Dropped</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-45"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> =&gt; &quot;accepted&quot;,
+            <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a> =&gt; &quot;committed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Rejected</span> =&gt; &quot;rejected&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span> =&gt; &quot;aborted_version&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedOverlap</span> =&gt; &quot;aborted_overlap&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span> =&gt; &quot;dropped&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; CommitStatus &gt; for <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a></code></summary><table><tbody><tr id="method-from-60"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-operation--src-command-outcome-rs.html#method-from-11">from</a> (status : CommitStatus) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-11">from</a>(status: <span class="rs-type">CommitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> status {
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Accepted</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span>,
+            <span class="rs-type">CommitStatus</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a> =&gt; <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">AbortedVersion</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Dropped</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Failed</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:31</p>
+</article><article id="item-enum-ChangedPathKind-71" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ChangedPathKind pub pub enum ChangedPathKind crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ChangedPathKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-ChangedPathKind-71">ChangedPathKind</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Delete</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr><tr><td>OpaqueDir</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-str-91"><td>constructor</td><td>from_wire_str</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-from-wire-str-149">from_wire_str</a> (raw : &amp; str) -&gt; Option &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-from-wire-str-149">from_wire_str</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">match</span> raw {
+            &quot;write&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Write</span>),
+            &quot;delete&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Delete</span>),
+            &quot;symlink&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Symlink</span>),
+            &quot;opaque_dir&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span>),
+            _ =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-81"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:71</p>
+</article><div class="group-label">Aliases</div><article id="item-type-WorkspaceTimings-9" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WorkspaceTimings pub pub type WorkspaceTimings = BTreeMap &lt; String , Value &gt; crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>WorkspaceTimings</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> = BTreeMap &lt; String , Value &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:9</p>
+</article><article id="item-type-ChangedPathKinds-11" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type ChangedPathKinds pub pub type ChangedPathKinds = BTreeMap &lt; String , ChangedPathKind &gt; crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>ChangedPathKinds</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-ChangedPathKinds-11">ChangedPathKinds</a> = BTreeMap &lt; String , <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-ChangedPathKind-71">ChangedPathKind</a> &gt;</code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:11</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-serialize-mutation-source-164" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_mutation_source private fn serialize_mutation_source &lt; S &gt; (source : &amp; Option &lt; MutationSource &gt; , serializer : S ,) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : serde :: Serializer , crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serialize_mutation_source</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-fn-serialize-mutation-source-164">serialize_mutation_source</a> &lt; S &gt; (source : &amp; Option &lt; <a class="symbol-link" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a> &gt; , serializer : S ,) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : serde :: Serializer ,</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> serialize_mutation_source&lt;<span class="rs-type">S</span>&gt;(
+    source: &amp;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>&gt;,
+    serializer: <span class="rs-type">S</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: serde::<span class="rs-type">Serializer</span>,
+{
+    serializer.serialize_str(source.map(<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>::as_str).unwrap_or(&quot;&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:164</p>
+</article><article id="item-fn-serialize-null-174" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_null private fn serialize_null &lt; S &gt; (_value : &amp; () , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : serde :: Serializer , crates/eos-operation/src/core/workspace_outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serialize_null</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-workspace-outcome-rs.html#item-fn-serialize-null-174">serialize_null</a> &lt; S &gt; (_value : &amp; () , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : serde :: Serializer ,</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> serialize_null&lt;<span class="rs-type">S</span>&gt;(_value: &amp;(), serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: serde::<span class="rs-type">Serializer</span>,
+{
+    serializer.serialize_none()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/workspace_outcome.rs:174</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-operation/src/core/workspace_outcome.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">CommitStatus</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-ChangedPathKinds-11">ChangedPathKinds</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-ChangedPathKind-71">ChangedPathKind</a>&gt;;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a> {
+    #[default]
+    <span class="rs-type">Ephemeral</span>,
+    <span class="rs-type">Isolated</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span> =&gt; &quot;ephemeral&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span> =&gt; &quot;isolated&quot;,
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a> {
+    <span class="rs-type">Accepted</span>,
+    #[default]
+    <a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a>,
+    <span class="rs-type">Rejected</span>,
+    <span class="rs-type">AbortedVersion</span>,
+    <span class="rs-type">AbortedOverlap</span>,
+    <span class="rs-type">Dropped</span>,
+    <span class="rs-type">Failed</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> =&gt; &quot;accepted&quot;,
+            <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a> =&gt; &quot;committed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Rejected</span> =&gt; &quot;rejected&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span> =&gt; &quot;aborted_version&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedOverlap</span> =&gt; &quot;aborted_overlap&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span> =&gt; &quot;dropped&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<span class="rs-type">CommitStatus</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-from-11">from</a>(status: <span class="rs-type">CommitStatus</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> status {
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Accepted</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span>,
+            <span class="rs-type">CommitStatus</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a> =&gt; <span class="rs-self">Self</span>::<a class="symbol-link rs-type" href="eos-operation.html#item-struct-Committed-102">Committed</a>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">AbortedVersion</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Dropped</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span>,
+            <span class="rs-type">CommitStatus</span>::<span class="rs-type">Failed</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Failed</span>,
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-ChangedPathKind-71">ChangedPathKind</a> {
+    <span class="rs-type">Write</span>,
+    <span class="rs-type">Delete</span>,
+    <span class="rs-type">Symlink</span>,
+    <span class="rs-type">OpaqueDir</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-ChangedPathKind-71">ChangedPathKind</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-from-wire-str-149">from_wire_str</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">match</span> raw {
+            &quot;write&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Write</span>),
+            &quot;delete&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Delete</span>),
+            &quot;symlink&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Symlink</span>),
+            &quot;opaque_dir&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">OpaqueDir</span>),
+            _ =&gt; <span class="rs-type">None</span>,
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceConflict-103">WorkspaceConflict</a> {
+    <span class="rs-kw">pub</span> reason: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> conflict_file: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceConflict-103">WorkspaceConflict</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation.html#method-path-168">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            reason: reason.to_owned(),
+            conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
+            message: message.to_owned(),
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a> {
+    <span class="rs-kw">pub</span> success: bool,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-ChangedPathKinds-11">ChangedPathKinds</a>,
+    #[serde(serialize_with = &quot;serialize_mutation_source&quot;)]
+    <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>&gt;,
+    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceConflict-103">WorkspaceConflict</a>&gt;,
+    <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceMutationOutcome-137">WorkspaceMutationOutcome</a> {
+    #[serde(flatten)]
+    <span class="rs-kw">pub</span> core: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a>,
+    #[serde(rename = &quot;workspace&quot;)]
+    <span class="rs-kw">pub</span> workspace_kind: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a>,
+    <span class="rs-kw">pub</span> published: bool,
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a>,
+    #[serde(serialize_with = &quot;serialize_null&quot;)]
+    <span class="rs-kw">pub</span> error: (),
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> applied_edits: <span class="rs-type">Option</span>&lt;i64&gt;,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-WorkspaceMutationOutcome-137">WorkspaceMutationOutcome</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            core: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-struct-MutationCore-122">MutationCore</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            workspace_kind: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-WorkspaceKind-13">WorkspaceKind</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            published: <span class="rs-kw">false</span>,
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-workspace-outcome-rs.html#item-enum-MutationStatus-31">MutationStatus</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-workspace-outcome-rs.html#method-default-152">default</a>(),
+            error: (),
+            applied_edits: <span class="rs-type">None</span>,
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> serialize_mutation_source&lt;<span class="rs-type">S</span>&gt;(
+    source: &amp;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>&gt;,
+    serializer: <span class="rs-type">S</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: serde::<span class="rs-type">Serializer</span>,
+{
+    serializer.serialize_str(source.map(<a class="symbol-link rs-type" href="eos-operation--src-core-audit-rs.html#item-enum-MutationSource-3">MutationSource</a>::as_str).unwrap_or(&quot;&quot;))
+}
+
+<span class="rs-kw">fn</span> serialize_null&lt;<span class="rs-type">S</span>&gt;(_value: &amp;(), serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: serde::<span class="rs-type">Serializer</span>,
+{
+    serializer.serialize_none()
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -8,8 +8,9 @@ use eos_layerstack::{
 use serde_json::json;
 
 use super::{
-    ChangedPathKinds, FileBackend, FileOpsError, Mutation, MutationKind, MutationOutcome,
-    ReadBytes, ResolvedWorkspacePath, WorkspaceConflict, WorkspaceTimings,
+    ChangedPathKind, ChangedPathKinds, FileBackend, FileOpsError, Mutation, MutationCore,
+    MutationKind, MutationOutcome, MutationSource, MutationStatus, ReadBytes,
+    ResolvedWorkspacePath, WorkspaceConflict, WorkspaceKind, WorkspaceTimings,
 };
 
 #[derive(Debug, Clone)]
@@ -25,14 +26,14 @@ impl DirectBackend {
 }
 
 impl FileBackend for DirectBackend {
-    fn workspace_kind(&self) -> &'static str {
-        "ephemeral"
+    fn workspace_kind(&self) -> WorkspaceKind {
+        WorkspaceKind::Ephemeral
     }
 
-    fn mutation_source(&self, kind: MutationKind) -> &'static str {
+    fn mutation_source(&self, kind: MutationKind) -> MutationSource {
         match kind {
-            MutationKind::Write => "api_write",
-            MutationKind::Edit => "api_edit",
+            MutationKind::Write => MutationSource::ApiWrite,
+            MutationKind::Edit => MutationSource::ApiEdit,
         }
     }
 
@@ -93,7 +94,7 @@ impl FileBackend for DirectBackend {
 }
 
 fn changeset_outcome(
-    mutation_source: &str,
+    mutation_source: MutationSource,
     result: &ChangesetResult,
     mut timings: WorkspaceTimings,
 ) -> MutationOutcome {
@@ -103,26 +104,26 @@ fn changeset_outcome(
     let changed_paths = result.published_paths();
     let changed_path_kinds = changed_paths
         .iter()
-        .map(|path| (path.clone(), "write".to_owned()))
+        .map(|path| (path.clone(), ChangedPathKind::Write))
         .collect::<ChangedPathKinds>();
     let conflict = result.first_conflict();
     MutationOutcome {
-        workspace_kind: "ephemeral".to_owned(),
-        success: result.success(),
+        core: MutationCore {
+            success: result.success(),
+            conflict: conflict.map(|file| {
+                let reason = file.status.wire_str();
+                WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
+            }),
+            conflict_reason: conflict
+                .map(|file| file.conflict_message(file.status.wire_str()).to_owned()),
+            changed_paths,
+            changed_path_kinds,
+            mutation_source: Some(mutation_source),
+            timings,
+        },
+        workspace_kind: WorkspaceKind::Ephemeral,
         published: result.success(),
-        status: conflict
-            .map_or("committed", |file| file.status.wire_str())
-            .to_owned(),
-        conflict: conflict.map(|file| {
-            let reason = file.status.wire_str();
-            WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
-        }),
-        conflict_reason: conflict
-            .map(|file| file.conflict_message(file.status.wire_str()).to_owned()),
-        changed_paths,
-        changed_path_kinds,
-        mutation_source: mutation_source.to_owned(),
-        timings,
+        status: conflict.map_or(MutationStatus::Committed, |file| file.status.into()),
         ..MutationOutcome::default()
     }
 }

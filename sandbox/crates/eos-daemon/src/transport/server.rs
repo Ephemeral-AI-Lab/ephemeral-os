@@ -1,5 +1,5 @@
 //! Async RPC server: `AF_UNIX` plus optional loopback TCP, one framed request per
-//! connection, dispatch through [`crate::dispatcher::OpTable`], and token-driven
+//! connection, dispatch through the daemon dispatcher, and token-driven
 //! shutdown. Connection handlers keep mutex guards out of await points.
 
 use std::path::PathBuf;
@@ -11,14 +11,13 @@ use tokio::net::{TcpListener, UnixListener};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
-use crate::wire::{decode_value, encode, Envelope, ErrorKind, Request};
+use crate::wire::{decode_value, encode, ErrorKind, Request, WireMessage};
 use eos_config::configs::{
     daemon::{DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
 use eos_workspace::CurrentExeNsRunnerLauncher;
 
-use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 use crate::request_args::trimmed_string;
@@ -48,7 +47,6 @@ pub struct ServerConfig {
 /// shutdown token.
 pub struct DaemonServer {
     config: ServerConfig,
-    op_table: Arc<OpTable>,
     services: Arc<RuntimeServices>,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
@@ -63,7 +61,6 @@ impl DaemonServer {
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
-            op_table: Arc::new(OpTable::with_builtins()),
             services: Arc::new(RuntimeServices::new(
                 eos_config::configs::daemon::PluginRuntimeConfig::default(),
                 IsolatedWorkspaceConfig::default(),
@@ -96,7 +93,6 @@ impl DaemonServer {
         );
         Self {
             config,
-            op_table: Arc::new(OpTable::with_builtins()),
             services: Arc::new(RuntimeServices::new(
                 daemon_config.plugin.clone(),
                 isolated_config.clone(),
@@ -262,7 +258,7 @@ impl DaemonServer {
     }
 
     /// Handle one accepted connection: read one capped, timed request line, pop
-    /// the TCP-only auth token, decode the envelope, dispatch, write one framed
+    /// the TCP-only auth token, decode the request, dispatch, write one framed
     /// response. Per-connection; never holds a lock across the await points.
     async fn handle_connection<S>(&self, stream: S, is_tcp: bool) -> Result<(), DaemonError>
     where
@@ -274,18 +270,18 @@ impl DaemonServer {
         let read_request_s = read_start.elapsed().as_secs_f64();
         let response = match bytes {
             Ok(bytes) => self.dispatch_bytes(bytes, is_tcp, read_request_s).await,
-            Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_envelope(
+            Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_response(
                 err.wire_kind(),
                 &format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
                 serde_json::json!({"limit": MAX_REQUEST_BYTES}),
             ),
-            Err(err) => crate::dispatcher::error_envelope(
+            Err(err) => crate::dispatcher::error_response(
                 err.wire_kind(),
                 &err.to_string(),
                 serde_json::json!({}),
             ),
         };
-        let framed = encode(&Envelope::Response(response))?;
+        let framed = encode(&WireMessage::Response(response))?;
         writer.write_all(&framed).await?;
         writer.shutdown().await?;
         Ok(())
@@ -300,7 +296,7 @@ impl DaemonServer {
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
             Err(err) => {
-                return crate::dispatcher::error_envelope(
+                return crate::dispatcher::error_response(
                     ErrorKind::BadJson,
                     &crate::wire::ProtocolError::from(err).to_string(),
                     serde_json::json!({}),
@@ -311,7 +307,7 @@ impl DaemonServer {
             match self.strip_tcp_auth(value) {
                 Ok(value) => value,
                 Err(err) => {
-                    return crate::dispatcher::error_envelope(
+                    return crate::dispatcher::error_response(
                         err.wire_kind(),
                         &err.to_string(),
                         serde_json::json!({}),
@@ -322,13 +318,15 @@ impl DaemonServer {
             value
         };
         match decode_value(value) {
-            Ok(Envelope::Request(request)) => self.dispatch_request(request, read_request_s).await,
-            Ok(_) => crate::dispatcher::error_envelope(
-                ErrorKind::InvalidEnvelope,
-                "request envelope must include op, invocation_id, and args",
+            Ok(WireMessage::Request(request)) => {
+                self.dispatch_request(request, read_request_s).await
+            }
+            Ok(_) => crate::dispatcher::error_response(
+                ErrorKind::InvalidRequest,
+                "request must include op, invocation_id, and args",
                 serde_json::json!({}),
             ),
-            Err(err) => crate::dispatcher::error_envelope(
+            Err(err) => crate::dispatcher::error_response(
                 ErrorKind::BadJson,
                 &err.to_string(),
                 serde_json::json!({}),
@@ -345,7 +343,6 @@ impl DaemonServer {
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         let op = request.op.clone();
-        let table = Arc::clone(&self.op_table);
         let registry = Arc::clone(&self.invocation_registry);
         let task_registry = Arc::clone(&registry);
         let task_services = Arc::clone(&self.services);
@@ -353,7 +350,7 @@ impl DaemonServer {
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
-            table.dispatch_with_context(
+            crate::dispatcher::dispatch_with_context(
                 &request,
                 DispatchContext::with_runtime_config(
                     &task_services,
@@ -367,12 +364,12 @@ impl DaemonServer {
         let _ = start_tx.send(());
         let response = match task.await {
             Ok(response) => response,
-            Err(err) if err.is_cancelled() => crate::dispatcher::error_envelope(
+            Err(err) if err.is_cancelled() => crate::dispatcher::error_response(
                 ErrorKind::InternalError,
                 "daemon invocation cancelled",
                 serde_json::json!({"op": op}),
             ),
-            Err(err) => crate::dispatcher::error_envelope(
+            Err(err) => crate::dispatcher::error_response(
                 ErrorKind::InternalError,
                 &format!("daemon invocation failed: {err}"),
                 serde_json::json!({"op": op}),

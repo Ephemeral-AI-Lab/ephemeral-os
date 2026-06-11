@@ -204,10 +204,10 @@ pub(crate) fn handle(
         if request.op.starts_with("plugin.") {
             return forward(engine, request, true);
         }
-        return error_envelope("unknown_op", &format!("unknown op: {}", request.op));
+        return error_response("unknown_op", &format!("unknown op: {}", request.op));
     };
     if !surface.allows(entry.visibility) {
-        return error_envelope(
+        return error_response(
             "forbidden",
             &format!("op {} is not served on this socket", entry.name),
         );
@@ -220,7 +220,7 @@ pub(crate) fn handle(
 
 fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) -> Value {
     let Some(sandbox_id) = request.sandbox_id.as_deref() else {
-        return error_envelope("invalid_envelope", "sandbox_id is required for this op");
+        return error_response("invalid_request", "sandbox_id is required for this op");
     };
     match engine.forward(
         sandbox_id,
@@ -231,10 +231,10 @@ fn forward(engine: &dyn Engine, request: &ClientRequest, mutates_state: bool) ->
     ) {
         Some(Ok(response)) => response,
         Some(Err(ForwardError::UncertainOutcome(message))) => {
-            error_envelope("uncertain_outcome", &message)
+            error_response("uncertain_outcome", &message)
         }
         Some(Err(ForwardError::SandboxUnavailable(message))) => {
-            error_envelope("sandbox_unavailable", &message)
+            error_response("sandbox_unavailable", &message)
         }
         None => unknown_sandbox(sandbox_id),
     }
@@ -244,12 +244,12 @@ fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Va
     match verb {
         HostVerb::Acquire => match engine.acquire() {
             Ok(sandbox_id) => json!({"success": true, "sandbox_id": sandbox_id}),
-            Err(err) => error_envelope("sandbox_unavailable", &format!("acquire failed: {err:#}")),
+            Err(err) => error_response("sandbox_unavailable", &format!("acquire failed: {err:#}")),
         },
         HostVerb::List => json!({"success": true, "sandboxes": engine.list()}),
         HostVerb::Release | HostVerb::Status => {
             let Some(sandbox_id) = request.sandbox_id.as_deref() else {
-                return error_envelope("invalid_envelope", "sandbox_id is required for this op");
+                return error_response("invalid_request", "sandbox_id is required for this op");
             };
             match verb {
                 HostVerb::Release => {
@@ -270,7 +270,7 @@ fn host_call(engine: &dyn Engine, verb: HostVerb, request: &ClientRequest) -> Va
 }
 
 fn unknown_sandbox(sandbox_id: &str) -> Value {
-    error_envelope("unknown_sandbox", &format!("unknown sandbox: {sandbox_id}"))
+    error_response("unknown_sandbox", &format!("unknown sandbox: {sandbox_id}"))
 }
 
 pub(crate) fn operator_socket_path(listen: &Path) -> PathBuf {
@@ -344,7 +344,7 @@ fn handle_connection(stream: UnixStream, surface: Surface, catalog: &Catalog, en
     let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
     let response = match read_request_line(&stream).and_then(|line| parse_request(&line)) {
         Ok(request) => handle(catalog, engine, surface, &request),
-        Err(err) => error_envelope(err.kind, &err.message),
+        Err(err) => error_response(err.kind, &err.message),
     };
     let mut stream = stream;
     let _ = stream.write_all(&response_line(&response));
@@ -380,10 +380,10 @@ fn read_request_line(stream: impl Read) -> Result<Vec<u8>, WireError> {
     let mut line = Vec::new();
     reader
         .read_until(b'\n', &mut line)
-        .map_err(|err| WireError::new("invalid_envelope", format!("read request: {err}")))?;
+        .map_err(|err| WireError::new("invalid_request", format!("read request: {err}")))?;
     if line.is_empty() {
         return Err(WireError::new(
-            "invalid_envelope",
+            "invalid_request",
             "connection closed before a request line",
         ));
     }
@@ -401,13 +401,13 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
         .map_err(|err| WireError::new("bad_json", format!("request is not valid JSON: {err}")))?;
     let Value::Object(mut object) = value else {
         return Err(WireError::new(
-            "invalid_envelope",
+            "invalid_request",
             "request must be a JSON object",
         ));
     };
     let op = take_string(&mut object, "op")?;
     if op.trim().is_empty() {
-        return Err(WireError::new("invalid_envelope", "op is required"));
+        return Err(WireError::new("invalid_request", "op is required"));
     }
     let invocation_id = take_string(&mut object, "invocation_id")?;
     let sandbox_id = match object.remove("sandbox_id") {
@@ -415,14 +415,14 @@ pub(crate) fn parse_request(line: &[u8]) -> Result<ClientRequest, WireError> {
         Some(Value::String(id)) => Some(id),
         Some(_) => {
             return Err(WireError::new(
-                "invalid_envelope",
+                "invalid_request",
                 "sandbox_id must be a string",
             ))
         }
     };
     let args = object.remove("args").unwrap_or_else(|| json!({}));
     if !args.is_object() {
-        return Err(WireError::new("invalid_envelope", "args must be an object"));
+        return Err(WireError::new("invalid_request", "args must be an object"));
     }
     Ok(ClientRequest {
         op,
@@ -436,13 +436,13 @@ fn take_string(object: &mut Map<String, Value>, field: &str) -> Result<String, W
     match object.remove(field) {
         Some(Value::String(value)) => Ok(value),
         _ => Err(WireError::new(
-            "invalid_envelope",
+            "invalid_request",
             format!("{field} is required and must be a string"),
         )),
     }
 }
 
-fn error_envelope(kind: &str, message: &str) -> Value {
+fn error_response(kind: &str, message: &str) -> Value {
     json!({
         "success": false,
         "warnings": [],

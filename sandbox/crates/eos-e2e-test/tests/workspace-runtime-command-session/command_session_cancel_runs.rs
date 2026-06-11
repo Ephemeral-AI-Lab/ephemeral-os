@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
-use eos_operation::core::ops;
+use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::{
@@ -24,14 +24,17 @@ fn start_sleeping(lease: &NodeLease<'_>, caller_id: Option<&str>, marker: &str) 
     if let Some(caller_id) = caller_id {
         args["caller_id"] = json!(caller_id);
     }
-    let started = lease.call_ok(ops::SANDBOX_COMMAND_EXEC, args)?;
+    let started = lease.call_ok(catalog::SANDBOX_COMMAND_EXEC, args)?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     Ok(as_str(&started, "command_session_id")?.to_owned())
 }
 
 /// Live command-session count for one caller (empty `caller_id` counts all).
 fn count_for(lease: &NodeLease<'_>, caller_id: &str) -> Result<i64> {
-    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({"caller_id": caller_id}))?;
+    let count = lease.call_ok(
+        catalog::SANDBOX_COMMAND_COUNT,
+        json!({"caller_id": caller_id}),
+    )?;
     as_i64(&count, "count")
 }
 
@@ -41,7 +44,7 @@ fn wait_for_progress(lease: &NodeLease<'_>, session_id: &str, marker: &str) -> R
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let progress = lease.call_ok(
-            ops::SANDBOX_COMMAND_POLL,
+            catalog::SANDBOX_COMMAND_POLL,
             json!({"command_session_id": session_id, "last_n_lines": 10}),
         )?;
         if stdout(&progress).contains(marker) {
@@ -74,7 +77,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     );
     assert_eq!(count_for(&lease, &sibling)?, 1, "sibling owns one run");
 
-    let cancelled = lease.call_ok(ops::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
+    let cancelled = lease.call_ok(catalog::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
     assert_eq!(
         as_i64(&cancelled, "cancelled_command_sessions")?,
         2,
@@ -96,7 +99,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
 
     // Cancel discards — no completion is parked for the torn-down sessions.
     let drained = lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_session_ids": [a, b]}),
     )?;
     assert!(
@@ -105,7 +108,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     );
 
     // Tear the sibling down too and confirm every overlay lease released.
-    let _ = lease.call(ops::SANDBOX_RUN_END, json!({"caller_id": sibling}));
+    let _ = lease.call(catalog::SANDBOX_RUN_END, json!({"caller_id": sibling}));
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -126,7 +129,7 @@ fn cancel_workspace_runs_sweeps_every_caller() -> Result<()> {
         "two runs across two callers are live"
     );
 
-    let swept = lease.call_ok(ops::SANDBOX_RUN_CANCEL_ALL, json!({}))?;
+    let swept = lease.call_ok(catalog::SANDBOX_RUN_CANCEL_ALL, json!({}))?;
     assert_eq!(
         as_i64(&swept, "cancelled_command_sessions")?,
         2,
@@ -153,14 +156,14 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
     let owner = lease.caller_id().to_owned();
 
     // Baseline the shared-LayerStack manifest version.
-    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let before = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let v0 = as_i64(&before, "manifest_version")?;
 
     // A command that writes a workspace file, then blocks. The write lands in the
     // ephemeral overlay's upperdir but is not yet published.
     let marker = format!("cancel-marker-{}.txt", unique_suffix().replace('-', "_"));
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("sh -c 'printf overlay-data > {marker}; echo wrote; sleep 60'"),
             "yield_time_ms": 1000,
@@ -172,7 +175,7 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
     wait_for_progress(&lease, &session_id, "wrote")?;
 
     // Cancel the caller's run mid-write via the per-caller op.
-    let cancelled = lease.call_ok(ops::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
+    let cancelled = lease.call_ok(catalog::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
     assert_eq!(
         as_i64(&cancelled, "cancelled_command_sessions")?,
         1,
@@ -182,14 +185,14 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
     wait_for_active_leases(&lease, 0)?;
 
     // The shared LayerStack manifest is unchanged — the cancelled write never merged.
-    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
+    let after = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&after, "manifest_version")?,
         v0,
         "a cancelled command must not OCC-merge its overlay writes: {after}"
     );
     // And the write is absent from the published workspace.
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": marker}))?;
+    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": marker}))?;
     assert!(
         !as_bool(&read, "exists")?,
         "cancelled overlay write must not be published to the shared workspace: {read}"
@@ -213,7 +216,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
     // Background a never-finishing command with a short timeout, then DON'T poll
     // it — only the periodic reaper sweep can reap and park its completion.
     let started = lease.call_ok(
-        ops::SANDBOX_COMMAND_EXEC,
+        catalog::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo running; sleep 60'",
             "yield_time_ms": 200,
@@ -226,7 +229,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(15);
     let completion = loop {
         let collected = lease.call_ok(
-            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+            catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [&id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
@@ -248,7 +251,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
     );
     // A re-collect must not redeliver the drained completion.
     let redelivered = lease.call_ok(
-        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
+        catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_session_ids": [&id]}),
     )?;
     assert!(

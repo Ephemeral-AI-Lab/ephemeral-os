@@ -4,8 +4,6 @@
 //!
 #![forbid(unsafe_code)]
 
-#[path = "dispatch/builtin_handlers.rs"]
-pub(crate) mod builtin_handlers;
 #[path = "runtime/context.rs"]
 pub(crate) mod context;
 #[path = "dispatch/dispatcher.rs"]
@@ -28,6 +26,7 @@ pub mod wire;
 pub(crate) mod workspace_runtime;
 
 pub use context::DispatchContext;
+pub use dispatcher::{dispatch, dispatch_with_context};
 
 pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};

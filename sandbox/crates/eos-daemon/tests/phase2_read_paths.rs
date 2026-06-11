@@ -9,9 +9,9 @@ use std::sync::Mutex;
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use eos_daemon::wire::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
+use eos_daemon::wire::{decode, encode, Request, WireMessage, DAEMON_AUTH_FIELD};
 use eos_daemon::{DaemonServer, RuntimeServices, ServerConfig};
-use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
+use eos_daemon::{DispatchContext, InFlightRegistry};
 use eos_layerstack as _;
 use eos_namespace::protocol::{RunRequest, RunResult};
 use eos_operation::plugin::{LaunchError, NsRunnerLauncher};
@@ -29,9 +29,8 @@ static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-/// One daemon under test: the builtin op table plus its own runtime services.
+/// One daemon under test with its own runtime services.
 struct TestDaemon {
-    table: OpTable,
     services: RuntimeServices,
 }
 
@@ -55,15 +54,11 @@ impl TestDaemon {
     }
 
     fn with_services(services: RuntimeServices) -> Self {
-        Self {
-            table: OpTable::with_builtins(),
-            services,
-        }
+        Self { services }
     }
 
     fn dispatch(&self, request: &Request) -> Value {
-        self.table
-            .dispatch_with_context(request, DispatchContext::with_services(&self.services))
+        eos_daemon::dispatch_with_context(request, DispatchContext::with_services(&self.services))
     }
 }
 
@@ -113,7 +108,7 @@ fn dispatches_layerstack_read_file() -> TestResult {
         }),
     };
 
-    let response = OpTable::with_builtins().dispatch(&request);
+    let response = eos_daemon::dispatch(&request);
 
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["workspace"], Value::String("ephemeral".to_owned()));
@@ -132,7 +127,7 @@ fn dispatches_runtime_ready_probe() -> TestResult {
         args: json!({"layer_stack_root": root}),
     };
 
-    let response = OpTable::with_builtins().dispatch(&request);
+    let response = eos_daemon::dispatch(&request);
 
     assert_eq!(response["success"], Value::Bool(true));
     assert_eq!(response["ready"], Value::Bool(true));
@@ -195,7 +190,7 @@ fn unknown_op_uses_structured_contract() {
         args: json!({}),
     };
 
-    let response = OpTable::with_builtins().dispatch(&request);
+    let response = eos_daemon::dispatch(&request);
 
     assert_eq!(response["success"], Value::Bool(false));
     assert_eq!(
@@ -328,13 +323,12 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
 
 #[tokio::test]
 async fn control_ops_use_inflight_registry() -> TestResult {
-    let table = OpTable::with_builtins();
     let registry = InFlightRegistry::new(300.0, 30.0);
     let task = tokio::spawn(std::future::pending::<()>());
     registry.register("bg-shell", task.abort_handle(), "caller-a", true);
     let context = DispatchContext::with_invocation_registry(&registry);
 
-    let count = table.dispatch_with_context(
+    let count = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.call.count".to_owned(),
             invocation_id: "count".to_owned(),
@@ -345,7 +339,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
 
-    let command_session_count = table.dispatch_with_context(
+    let command_session_count = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.command.count".to_owned(),
             invocation_id: "command-session-count".to_owned(),
@@ -356,7 +350,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     assert_eq!(command_session_count["success"], Value::Bool(true));
     assert_eq!(command_session_count["count"], json!(0));
 
-    let heartbeat = table.dispatch_with_context(
+    let heartbeat = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.call.heartbeat".to_owned(),
             invocation_id: "heartbeat".to_owned(),
@@ -367,7 +361,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     assert_eq!(heartbeat["success"], Value::Bool(true));
     assert_eq!(heartbeat["touched"], json!(1));
 
-    let cancel = table.dispatch_with_context(
+    let cancel = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.call.cancel".to_owned(),
             invocation_id: "cancel".to_owned(),
@@ -384,7 +378,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     }
 
     registry.deregister("bg-shell");
-    let count = table.dispatch_with_context(
+    let count = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.call.count".to_owned(),
             invocation_id: "count-after".to_owned(),
@@ -421,7 +415,7 @@ async fn unix_server_dispatches_framed_ready_request() -> TestResult {
         sleep(Duration::from_millis(10)).await;
     }
 
-    let request = Envelope::Request(Request {
+    let request = WireMessage::Request(Request {
         op: "sandbox.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
@@ -435,7 +429,7 @@ async fn unix_server_dispatches_framed_ready_request() -> TestResult {
     let _ = timeout(Duration::from_secs(2), task).await??;
 
     let response = match decode(&response)? {
-        Envelope::Response(value) => value,
+        WireMessage::Response(value) => value,
         other => return Err(format!("expected response, got {other:?}").into()),
     };
     assert_eq!(response["success"], Value::Bool(true));
@@ -491,7 +485,7 @@ async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
     let _ = timeout(Duration::from_secs(2), task).await??;
 
     let response = match decode(&response)? {
-        Envelope::Response(value) => value,
+        WireMessage::Response(value) => value,
         other => return Err(format!("expected response, got {other:?}").into()),
     };
     assert_eq!(response["success"], Value::Bool(true));

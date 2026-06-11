@@ -1,9 +1,9 @@
-//! Daemon conformance (SPEC §9.2): envelope wire fixtures decode byte-stably
+//! Daemon conformance (SPEC §9.2): wire-message fixtures decode byte-stably
 //! for requests/errors and canonical-equal (drop timings/daemon_pid/uptime_s)
 //! for responses. Fixtures are immutable ground truth from the live runtime
 //! (`json.dumps(separators=(",",":")) + "\n"`).
 
-use eos_daemon::wire::envelope::{decode, encode, Envelope};
+use eos_daemon::wire::message::{decode, encode, WireMessage};
 use serde_json::Value;
 
 mod support;
@@ -16,13 +16,13 @@ macro_rules! fixture {
     ($name:literal) => {
         include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../contract/fixtures/envelopes/",
+            "/../../contract/fixtures/wire_messages/",
             $name
         ))
     };
 }
 
-/// Requests and error envelopes are byte-identity: decode -> encode == original.
+/// Requests and error responses are byte-identity: decode -> encode == original.
 #[test]
 fn requests_and_errors_byte_stable() -> TestResult {
     let raws: &[&[u8]] = &[
@@ -35,8 +35,8 @@ fn requests_and_errors_byte_stable() -> TestResult {
     for raw in raws {
         let env = decode(raw)?;
         match &env {
-            Envelope::Request(_) | Envelope::Error(_) => {}
-            Envelope::Response(_) => {
+            WireMessage::Request(_) | WireMessage::Error(_) => {}
+            WireMessage::Response(_) => {
                 return Err(std::io::Error::other(format!(
                     "expected request/error, got response: {env:?}"
                 ))
@@ -65,7 +65,7 @@ fn responses_canonical_stable() -> TestResult {
     for raw in raws {
         let env = decode(raw)?;
         let value = match &env {
-            Envelope::Response(v) => v.clone(),
+            WireMessage::Response(v) => v.clone(),
             other => {
                 return Err(
                     std::io::Error::other(format!("expected response, got {other:?}")).into(),
@@ -76,7 +76,7 @@ fn responses_canonical_stable() -> TestResult {
         let reencoded = encode(&env)?;
         let redecoded = decode(&reencoded)?;
         let value2 = match redecoded {
-            Envelope::Response(v) => v,
+            WireMessage::Response(v) => v,
             other => {
                 return Err(
                     std::io::Error::other(format!("expected response, got {other:?}")).into(),

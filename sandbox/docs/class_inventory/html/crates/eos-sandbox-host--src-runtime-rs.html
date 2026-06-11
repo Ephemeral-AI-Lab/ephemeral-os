@@ -620,7 +620,7 @@
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> delay = <span class="rs-type">Duration</span>::from_millis(150);
     loop {
         <span class="rs-kw">let</span> observed = <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-69">request</a>(<span class="rs-type">HEARTBEAT_OP</span>, &quot;ready-probe&quot;, &amp;json!({})) {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
             <span class="rs-type">Ok</span>(resp) =&gt; format!(&quot;non-success heartbeat: {resp}&quot;),
             <span class="rs-type">Err</span>(err) =&gt; err.to_string(),
         };
@@ -1174,7 +1174,7 @@
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> delay = <span class="rs-type">Duration</span>::from_millis(150);
     loop {
         <span class="rs-kw">let</span> observed = <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#method-request-69">request</a>(<span class="rs-type">HEARTBEAT_OP</span>, &quot;ready-probe&quot;, &amp;json!({})) {
-            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-150">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
+            <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-protocol-rs.html#item-fn-is-success-146">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
             <span class="rs-type">Ok</span>(resp) =&gt; format!(&quot;non-success heartbeat: {resp}&quot;),
             <span class="rs-type">Err</span>(err) =&gt; err.to_string(),
         };

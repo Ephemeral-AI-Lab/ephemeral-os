@@ -23,7 +23,7 @@ eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `eos-sandbox-gateway` | bin | decode envelope, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
+| `eos-sandbox-gateway` | bin | decode requests, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
 | `eos-sandbox-host` | lib | host engine, duplicated protocol client, Docker runtime | depend on a workspace-internal crate |
 | `eosd` / `eos-daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
 | `crates/eos-operation/ops.json` | data | reviewed static op catalog | drift from `eosd dump-ops` |
@@ -59,7 +59,7 @@ The shared artifacts are `crates/eos-operation/ops.json` plus `contract/`
 cargo run -p xtask -- check-contract
 
 # regenerate the catalog artifact and its rendered doc after editing
-# eos_operation::core::ops
+# eos_operation::core::catalog
 cargo run -p eosd -- dump-ops > crates/eos-operation/ops.json
 cargo run -p xtask -- gen-docs
 

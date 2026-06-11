@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eos-operation · src/core/ops.rs</title>
+  <title>eos-operation · src/core/catalog.rs</title>
   <link rel="stylesheet" href="../assets/inventory.css">
 </head>
 <body>
@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>47</b><span>modules</span></div>
-  <div><b>346</b><span>items</span></div>
-  <div><b>296</b><span>fields</span></div>
-  <div><b>145</b><span>methods</span></div>
+  <div><b>49</b><span>modules</span></div>
+  <div><b>470</b><span>items</span></div>
+  <div><b>554</b><span>fields</span></div>
+  <div><b>192</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,35 +41,35 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-operation.html"><span>commit.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-lib-rs.html"><span>lib.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-command-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-operation--src-command-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-operation--src-command-service-rs.html"><span>service.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-command-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-tests-registry-rs.html"><span>registry.rs</span><small>0/4</small></a></li></ul></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-control-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-control-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-core-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-operation--src-core-ops-rs.html"><span>ops.rs</span><small>5/5</small></a></li><li><a class="file-link" href="eos-operation--src-core-outcome-rs.html"><span>outcome.rs</span><small>2/1</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-lib-rs.html"><span>lib.rs</span><small>12/7</small></a></li><li><a class="file-link" href="eos-operation--src-file-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-file-port-rs.html"><span>port.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/7</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-isolation-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-isolation-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-tests-ensure-args-rs.html"><span>ensure_args.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-package-rs.html"><span>package.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-process-rs.html"><span>process.rs</span><small>1/10</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li><li><span class="folder">sandbox</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-sandbox-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-sandbox-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-workspace-run-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-workspace-run-ops-rs.html"><span>ops.rs</span><small>1/0</small></a></li></ul></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::ops crates/eos-operation/src/core/ops.rs OpFamily impl OpFamily ServedBy impl ServedBy OpVisibility impl OpVisibility impl BuiltinOp CatalogOp CatalogDocument ops_json_document builtin_contracts_are_returned_by_ops canonical_names_follow_grammar no_spelling_is_claimed_twice ops_json_document_is_complete_and_stable">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-operation.html"><span>commit.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-contract-rs.html"><span>contract.rs</span><small>11/1</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-lib-rs.html"><span>lib.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-contract-rs.html"><span>contract.rs</span><small>10/4</small></a></li><li><a class="file-link" href="eos-operation--src-command-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-command-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-operation--src-command-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-operation--src-command-service-rs.html"><span>service.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-command-settle-rs.html"><span>settle.rs</span><small>0/16</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-tests-registry-rs.html"><span>registry.rs</span><small>0/4</small></a></li></ul></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-control-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-control-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-core-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-operation--src-core-catalog-rs.html"><span>catalog.rs</span><small>5/6</small></a></li><li><a class="file-link" href="eos-operation--src-core-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-id-rs.html"><span>id.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-request-rs.html"><span>request.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-operation--src-core-response-rs.html"><span>response.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-core-workspace-outcome-rs.html"><span>workspace_outcome.rs</span><small>6/2</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-file-contract-rs.html"><span>contract.rs</span><small>4/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-lib-rs.html"><span>lib.rs</span><small>11/7</small></a></li><li><a class="file-link" href="eos-operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/7</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-isolation-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-isolation-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-contract-rs.html"><span>contract.rs</span><small>8/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><span class="folder">tests</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-tests-ensure-args-rs.html"><span>ensure_args.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-occ-callbacks-rs.html"><span>occ_callbacks.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-package-rs.html"><span>package.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-tests-process-rs.html"><span>process.rs</span><small>1/10</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-workspace-run-contract-rs.html"><span>contract.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-operation--src-workspace-run-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::catalog crates/eos-operation/src/core/catalog.rs OpFamily impl OpFamily ServedBy impl ServedBy OpVisibility impl OpVisibility CatalogOp CatalogDocument ops_json_document builtin_contracts_are_returned_by_ops canonical_names_resolve_to_builtin_ops canonical_names_follow_grammar no_spelling_is_claimed_twice ops_json_document_is_complete_and_stable">
   <div class="module-head">
     <div>
-      <h2>src/core/ops.rs</h2>
-      <p class="path">module <code>core::ops</code></p>
+      <h2>src/core/catalog.rs</h2>
+      <p class="path">module <code>core::catalog</code></p>
     </div>
     <div class="module-stats">
       <span>file owns</span>
       <span>5 types</span>
-      <span>4 impls</span>
-      <span>5 fns</span>
-      <span>4 methods</span>
+      <span>3 impls</span>
+      <span>6 fns</span>
+      <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-OpFamily-13" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpFamily pub pub enum OpFamily crates/eos-operation/src/core/ops.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-OpFamily-13" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpFamily pub pub enum OpFamily crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OpFamily</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-enum-OpFamily-13">OpFamily</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-enum-OpFamily-13">OpFamily</a></code>
   <p class="docstring">Functional owner for a catalog op.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Sandbox</td><td><code></code></td></tr><tr><td>Control</td><td><code></code></td></tr><tr><td>Checkpoint</td><td><code></code></td></tr><tr><td>Files</td><td><code></code></td></tr><tr><td>Plugins</td><td><code></code></td></tr><tr><td>IsolatedWorkspace</td><td><code></code></td></tr><tr><td>CommandSession</td><td><code></code></td></tr><tr><td>WorkspaceRun</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-35"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Sandbox</td><td><code></code></td></tr><tr><td>Control</td><td><code></code></td></tr><tr><td>Checkpoint</td><td><code></code></td></tr><tr><td>Files</td><td><code></code></td></tr><tr><td>Plugins</td><td><code></code></td></tr><tr><td>IsolatedWorkspace</td><td><code></code></td></tr><tr><td>CommandSession</td><td><code></code></td></tr><tr><td>WorkspaceRun</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-35"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Sandbox</span> =&gt; &quot;<span class="rs-type">Sandbox</span>&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Control</span> =&gt; &quot;<span class="rs-type">Control</span>&quot;,
@@ -84,21 +84,21 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:13</p>
-</article><article id="item-enum-ServedBy-51" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ServedBy pub pub enum ServedBy crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:13</p>
+</article><article id="item-enum-ServedBy-51" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ServedBy pub pub enum ServedBy crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ServedBy</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a></code>
   <p class="docstring">Runtime side that serves a static catalog operation.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Host</td><td><code></code></td></tr><tr><td>Daemon</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-61"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Host</td><td><code></code></td></tr><tr><td>Daemon</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-61"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Host</span> =&gt; &quot;host&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Daemon</span> =&gt; &quot;daemon&quot;,
@@ -107,21 +107,21 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:51</p>
-</article><article id="item-enum-OpVisibility-71" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpVisibility pub pub enum OpVisibility crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:51</p>
+</article><article id="item-enum-OpVisibility-71" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpVisibility pub pub enum OpVisibility crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OpVisibility</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-enum-OpVisibility-71">OpVisibility</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-enum-OpVisibility-71">OpVisibility</a></code>
   <p class="docstring">Caller surface allowed to invoke an op; `eos-sandbox-gateway` enforces it at<br>the client socket (`visibility != public` -&gt; `forbidden`).</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Public</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr><tr><td>Internal</td><td><code></code></td></tr><tr><td>Test</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-86"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Public</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr><tr><td>Internal</td><td><code></code></td></tr><tr><td>Test</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-86"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `crates/eos-operation/ops.json`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Public</span> =&gt; &quot;public&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
@@ -132,36 +132,36 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:71</p>
-</article><article id="item-struct-CatalogOp-265" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogOp private struct CatalogOp crates/eos-operation/src/core/ops.rs name &amp; 'static str served_by &amp; 'static str visibility &amp; 'static str family &amp; 'static str mutates_state bool summary &amp; 'static str ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:71</p>
+</article><article id="item-struct-CatalogOp-243" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogOp private struct CatalogOp crates/eos-operation/src/core/catalog.rs name &amp; 'static str served_by &amp; 'static str visibility &amp; 'static str family &amp; 'static str mutates_state bool summary &amp; 'static str ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CatalogOp</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a></code>
   <div class="tags"><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>name</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>served_by</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>visibility</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>family</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>mutates_state</td><td><code>bool</code></td></tr><tr><td>private</td><td>summary</td><td><code>&amp; &#x27;static str</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:265</p>
-</article><article id="item-struct-CatalogDocument-275" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogDocument private struct CatalogDocument crates/eos-operation/src/core/ops.rs protocol_version i64 ops Vec &lt; CatalogOp &gt; ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:243</p>
+</article><article id="item-struct-CatalogDocument-253" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogDocument private struct CatalogDocument crates/eos-operation/src/core/catalog.rs protocol_version i64 ops Vec &lt; CatalogOp &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CatalogDocument</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogDocument-275">CatalogDocument</a></code>
+  <code class="signature">struct <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogDocument-253">CatalogDocument</a></code>
   <div class="tags"><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>protocol_version</td><td><code>i64</code></td></tr><tr><td>private</td><td>ops</td><td><code>Vec &lt; <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a> &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>protocol_version</td><td><code>i64</code></td></tr><tr><td>private</td><td>ops</td><td><code>Vec &lt; <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a> &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:275</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-ops-json-document-281" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ops_json_document pub pub fn ops_json_document () -&gt; String crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:253</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-ops-json-document-259" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ops_json_document pub pub fn ops_json_document () -&gt; String crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ops_json_document</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-281">ops_json_document</a> () -&gt; String</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-259">ops_json_document</a> () -&gt; String</code>
   <p class="docstring">Render the static `ops.json` document.<br>Pretty-printed with a trailing newline so `eosd dump-ops` output can be<br>committed and diffed byte-for-byte.</p>
   <div class="tags"><span>must_use</span></div>
   <details class="function-source">
@@ -171,16 +171,16 @@
 <span class="rs-comment">/// Pretty-printed with a trailing newline so `eosd dump-ops` output can be</span>
 <span class="rs-comment">/// committed and diffed byte-for-byte.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-281">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogDocument-275">CatalogDocument</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-259">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogDocument-253">CatalogDocument</a> {
         protocol_version: <span class="rs-type">PROTOCOL_VERSION</span>,
         ops: <span class="rs-type">BUILTIN_OPS</span>
             .iter()
-            .map(|contract| <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a> {
+            .map(|contract| <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a> {
                 name: contract.name,
-                served_by: contract.served_by.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
-                visibility: contract.visibility.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
-                family: contract.family.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
+                served_by: contract.served_by.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
+                visibility: contract.visibility.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
+                family: contract.family.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
                 mutates_state: contract.mutates_state,
                 summary: contract.summary,
             })
@@ -194,39 +194,61 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:281</p>
-</article><article id="item-fn-builtin-contracts-are-returned-by-ops-313" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_contracts_are_returned_by_ops private fn builtin_contracts_are_returned_by_ops () crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:259</p>
+</article><article id="item-fn-builtin-contracts-are-returned-by-ops-291" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_contracts_are_returned_by_ops private fn builtin_contracts_are_returned_by_ops () crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>builtin_contracts_are_returned_by_ops</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-fn-builtin-contracts-are-returned-by-ops-313">builtin_contracts_are_returned_by_ops</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-builtin-contracts-are-returned-by-ops-291">builtin_contracts_are_returned_by_ops</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-builtin-contracts-are-returned-by-ops-313">builtin_contracts_are_returned_by_ops</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-builtin-contracts-are-returned-by-ops-291">builtin_contracts_are_returned_by_ops</a>() {
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
-            assert_eq!(contract, contract.op.<a class="symbol-link rs-fn" href="eos-operation--src-checkpoint-ops-rs.html#method-contract-23">contract</a>());
+            assert_eq!(contract, contract.op.contract());
         }
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:313</p>
-</article><article id="item-fn-canonical-names-follow-grammar-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_names_follow_grammar private fn canonical_names_follow_grammar () crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:291</p>
+</article><article id="item-fn-canonical-names-resolve-to-builtin-ops-298" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_names_resolve_to_builtin_ops private fn canonical_names_resolve_to_builtin_ops () crates/eos-operation/src/core/catalog.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>canonical_names_resolve_to_builtin_ops</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-resolve-to-builtin-ops-298">canonical_names_resolve_to_builtin_ops</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-resolve-to-builtin-ops-298">canonical_names_resolve_to_builtin_ops</a>() {
+        <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
+            assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(contract.name), <span class="rs-type">Some</span>(contract.op));
+        }
+        assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(&quot;plugin.dynamic.echo&quot;), <span class="rs-type">None</span>);
+        assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(&quot;&quot;), <span class="rs-type">None</span>);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/catalog.rs:298</p>
+</article><article id="item-fn-canonical-names-follow-grammar-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn canonical_names_follow_grammar private fn canonical_names_follow_grammar () crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>canonical_names_follow_grammar</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-fn-canonical-names-follow-grammar-320">canonical_names_follow_grammar</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-follow-grammar-307">canonical_names_follow_grammar</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-canonical-names-follow-grammar-320">canonical_names_follow_grammar</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-follow-grammar-307">canonical_names_follow_grammar</a>() {
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
             assert!(
                 contract.name.starts_with(&quot;sandbox.&quot;),
@@ -238,7 +260,7 @@
                 &quot;the v1 token is dead <span class="rs-kw">in</span> canonical names: {}&quot;,
                 contract.name
             );
-            <span class="rs-kw">if</span> contract.served_by == <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a>::<span class="rs-type">Host</span> {
+            <span class="rs-kw">if</span> contract.served_by == <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a>::<span class="rs-type">Host</span> {
                 assert_eq!(
                     contract.name.split(&#x27;.&#x27;).count(),
                     2,
@@ -251,20 +273,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:320</p>
-</article><article id="item-fn-no-spelling-is-claimed-twice-344" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn no_spelling_is_claimed_twice private fn no_spelling_is_claimed_twice () crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:307</p>
+</article><article id="item-fn-no-spelling-is-claimed-twice-331" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn no_spelling_is_claimed_twice private fn no_spelling_is_claimed_twice () crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>no_spelling_is_claimed_twice</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-fn-no-spelling-is-claimed-twice-344">no_spelling_is_claimed_twice</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-no-spelling-is-claimed-twice-331">no_spelling_is_claimed_twice</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-no-spelling-is-claimed-twice-344">no_spelling_is_claimed_twice</a>() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spellings = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-no-spelling-is-claimed-twice-331">no_spelling_is_claimed_twice</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spellings = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>();
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
             assert!(
                 spellings.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-insert-75">insert</a>(contract.name),
@@ -276,20 +298,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:344</p>
-</article><article id="item-fn-ops-json-document-is-complete-and-stable-356" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ops_json_document_is_complete_and_stable private fn ops_json_document_is_complete_and_stable () crates/eos-operation/src/core/ops.rs  ">
+  <p class="source">crates/eos-operation/src/core/catalog.rs:331</p>
+</article><article id="item-fn-ops-json-document-is-complete-and-stable-343" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ops_json_document_is_complete_and_stable private fn ops_json_document_is_complete_and_stable () crates/eos-operation/src/core/catalog.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ops_json_document_is_complete_and_stable</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-is-complete-and-stable-356">ops_json_document_is_complete_and_stable</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-is-complete-and-stable-343">ops_json_document_is_complete_and_stable</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-is-complete-and-stable-356">ops_json_document_is_complete_and_stable</a>() {
-        <span class="rs-kw">let</span> document = <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-281">ops_json_document</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-is-complete-and-stable-343">ops_json_document_is_complete_and_stable</a>() {
+        <span class="rs-kw">let</span> document = <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-259">ops_json_document</a>();
         <span class="rs-kw">let</span> parsed: serde_json::<span class="rs-type">Value</span> =
             serde_json::from_str(&amp;document).expect(&quot;document parses back&quot;);
         assert_eq!(parsed[&quot;protocol_version&quot;], <span class="rs-type">PROTOCOL_VERSION</span>);
@@ -300,66 +322,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-operation/src/core/ops.rs:356</p>
-</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-BuiltinOp-224" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl BuiltinOp private impl BuiltinOp crates/eos-operation/src/core/ops.rs  contract pub fn contract (self) -&gt; &amp; 'static OpContract">
-  <div class="item-head">
-    <span class="kind">impl</span>
-    <h3>impl BuiltinOp</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">impl BuiltinOp</code>
-  <div class="tags"><span>impl</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-contract-225"><td>method</td><td>contract</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-checkpoint-ops-rs.html#method-contract-23">contract</a> (self) -&gt; &amp; &#x27;static OpContract</code><p class="docstring">Protocol catalog entry for this op.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Protocol catalog entry for this op.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-checkpoint-ops-rs.html#method-contract-23">contract</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">OpContract</span> {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxAcquire</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[0],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxRelease</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[1],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[2],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxList</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[3],
-            <span class="rs-self">Self</span>::<span class="rs-type">RuntimeReady</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[4],
-            <span class="rs-self">Self</span>::<span class="rs-type">InvocationHeartbeat</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[5],
-            <span class="rs-self">Self</span>::<span class="rs-type">InvocationCancel</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[6],
-            <span class="rs-self">Self</span>::<span class="rs-type">InflightCount</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[7],
-            <span class="rs-self">Self</span>::<span class="rs-type">LayerMetrics</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[8],
-            <span class="rs-self">Self</span>::<span class="rs-type">EnsureWorkspaceBase</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[9],
-            <span class="rs-self">Self</span>::<span class="rs-type">BuildWorkspaceBase</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[10],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommitToWorkspace</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[11],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommitToGit</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[12],
-            <span class="rs-self">Self</span>::<span class="rs-type">WorkspaceBinding</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[13],
-            <span class="rs-self">Self</span>::<span class="rs-type">ReadFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[14],
-            <span class="rs-self">Self</span>::<span class="rs-type">WriteFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[15],
-            <span class="rs-self">Self</span>::<span class="rs-type">EditFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[16],
-            <span class="rs-self">Self</span>::<span class="rs-type">PluginEnsure</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[17],
-            <span class="rs-self">Self</span>::<span class="rs-type">PluginStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[18],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceEnter</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[19],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceExit</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[20],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[21],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceListOpen</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[22],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceTestReset</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[23],
-            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[24],
-            <span class="rs-self">Self</span>::<span class="rs-type">WriteStdin</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[25],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandReadProgress</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[26],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandCancel</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[27],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandCollectCompleted</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[28],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandSessionCount</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[29],
-            <span class="rs-self">Self</span>::<span class="rs-type">CancelWorkspaceRunsByCaller</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[30],
-            <span class="rs-self">Self</span>::<span class="rs-type">CancelWorkspaceRuns</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[31],
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table>
-
-  <p class="source">crates/eos-operation/src/core/ops.rs:224</p>
+  <p class="source">crates/eos-operation/src/core/catalog.rs:343</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-operation/src/core/ops.rs</p>
+    <p class="path">crates/eos-operation/src/core/catalog.rs</p>
   </div>
   <pre class="file-source"><code><span class="rs-comment">//! Static sandbox operation contracts and catalog rendering.</span>
 <span class="rs-comment">//!</span>
@@ -375,7 +345,7 @@
 
 <span class="rs-comment">/// Functional owner for a catalog op.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpFamily-13">OpFamily</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpFamily-13">OpFamily</a> {
     <span class="rs-comment">/// Host-side sandbox lifecycle (acquire/release/status/list).</span>
     <span class="rs-type">Sandbox</span>,
     <span class="rs-comment">/// Runtime readiness, heartbeat, cancellation, and in-flight accounting.</span>
@@ -394,10 +364,10 @@
     <span class="rs-type">WorkspaceRun</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpFamily-13">OpFamily</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpFamily-13">OpFamily</a> {
     <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Sandbox</span> =&gt; &quot;<span class="rs-type">Sandbox</span>&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Control</span> =&gt; &quot;<span class="rs-type">Control</span>&quot;,
@@ -413,17 +383,17 @@
 
 <span class="rs-comment">/// Runtime side that serves a static catalog operation.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a> {
     <span class="rs-comment">/// Host-side gateway/registry operation.</span>
     <span class="rs-type">Host</span>,
     <span class="rs-comment">/// Sandbox daemon operation.</span>
     <span class="rs-type">Daemon</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a> {
     <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Host</span> =&gt; &quot;host&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Daemon</span> =&gt; &quot;daemon&quot;,
@@ -434,7 +404,7 @@
 <span class="rs-comment">/// Caller surface allowed to invoke an op; `eos-sandbox-gateway` enforces it at</span>
 <span class="rs-comment">/// the client socket (`visibility != public` -&gt; `forbidden`).</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpVisibility-71">OpVisibility</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpVisibility-71">OpVisibility</a> {
     <span class="rs-comment">/// Part of the public client vocabulary.</span>
     <span class="rs-type">Public</span>,
     <span class="rs-comment">/// Operator socket only; never the client socket.</span>
@@ -445,10 +415,10 @@
     <span class="rs-type">Test</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpVisibility-71">OpVisibility</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpVisibility-71">OpVisibility</a> {
     <span class="rs-comment">/// Stable spelling used in `crates/eos-operation/ops.json`.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Public</span> =&gt; &quot;public&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
@@ -468,7 +438,6 @@ macro_rules! declare_builtin_ops {
     ) =&gt; {
         <span class="rs-comment">/// One built-in operation in the static sandbox catalog.</span>
         #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
-        #[non_exhaustive]
         <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <span class="rs-type">BuiltinOp</span> {
             $(
                 #[doc = concat!(&quot;`&quot;, $name, &quot;`: &quot;, $summary)]
@@ -484,11 +453,11 @@ macro_rules! declare_builtin_ops {
             <span class="rs-comment">/// Canonical wire spelling.</span>
             <span class="rs-kw">pub</span> name: &amp;&#x27;<span class="rs-kw">static</span> str,
             <span class="rs-comment">/// Runtime side that serves the operation.</span>
-            <span class="rs-kw">pub</span> served_by: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a>,
+            <span class="rs-kw">pub</span> served_by: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a>,
             <span class="rs-comment">/// Functional owner.</span>
-            <span class="rs-kw">pub</span> family: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpFamily-13">OpFamily</a>,
+            <span class="rs-kw">pub</span> family: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpFamily-13">OpFamily</a>,
             <span class="rs-comment">/// Caller surface that may invoke the op.</span>
-            <span class="rs-kw">pub</span> visibility: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpVisibility-71">OpVisibility</a>,
+            <span class="rs-kw">pub</span> visibility: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpVisibility-71">OpVisibility</a>,
             <span class="rs-comment">/// Whether the op may change daemon, workspace, or process state.</span>
             <span class="rs-kw">pub</span> mutates_state: bool,
             <span class="rs-comment">/// One-line summary rendered into `ops.json`.</span>
@@ -506,14 +475,34 @@ macro_rules! declare_builtin_ops {
                 <span class="rs-type">OpContract</span> {
                     op: <span class="rs-type">BuiltinOp</span>::$variant,
                     name: $name,
-                    served_by: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a>::$served_by,
-                    family: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpFamily-13">OpFamily</a>::$family,
-                    visibility: <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-OpVisibility-71">OpVisibility</a>::$visibility,
+                    served_by: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a>::$served_by,
+                    family: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpFamily-13">OpFamily</a>::$family,
+                    visibility: <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-OpVisibility-71">OpVisibility</a>::$visibility,
                     mutates_state: $mutates_state,
                     summary: $summary,
                 },
             )+
         ];
+
+        <span class="rs-kw">impl</span> <span class="rs-type">BuiltinOp</span> {
+            <span class="rs-comment">/// Protocol catalog entry for this op.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> contract(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">OpContract</span> {
+                <span class="rs-type">BUILTIN_OPS</span>
+                    .iter()
+                    .find(|contract| contract.op == <span class="rs-self">self</span>)
+                    .expect(&quot;builtin op must be declared <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span>&quot;)
+            }
+
+            <span class="rs-comment">/// Resolve a canonical operation name into its typed catalog identity.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> from_op_name(name: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+                <span class="rs-kw">match</span> name {
+                    $($name =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::$variant),)+
+                    _ =&gt; <span class="rs-type">None</span>,
+                }
+            }
+        }
     };
 }
 
@@ -584,49 +573,8 @@ declare_builtin_ops! {
         <span class="rs-type">Daemon</span>, <span class="rs-type">WorkspaceRun</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Cancel</span> every workspace run <span class="rs-kw">in</span> the sandbox: the whole-sandbox sweep backstop.&quot;;
 }
 
-<span class="rs-kw">impl</span> <span class="rs-type">BuiltinOp</span> {
-    <span class="rs-comment">/// Protocol catalog entry for this op.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-checkpoint-ops-rs.html#method-contract-23">contract</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">OpContract</span> {
-        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxAcquire</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[0],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxRelease</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[1],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[2],
-            <span class="rs-self">Self</span>::<span class="rs-type">SandboxList</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[3],
-            <span class="rs-self">Self</span>::<span class="rs-type">RuntimeReady</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[4],
-            <span class="rs-self">Self</span>::<span class="rs-type">InvocationHeartbeat</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[5],
-            <span class="rs-self">Self</span>::<span class="rs-type">InvocationCancel</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[6],
-            <span class="rs-self">Self</span>::<span class="rs-type">InflightCount</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[7],
-            <span class="rs-self">Self</span>::<span class="rs-type">LayerMetrics</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[8],
-            <span class="rs-self">Self</span>::<span class="rs-type">EnsureWorkspaceBase</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[9],
-            <span class="rs-self">Self</span>::<span class="rs-type">BuildWorkspaceBase</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[10],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommitToWorkspace</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[11],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommitToGit</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[12],
-            <span class="rs-self">Self</span>::<span class="rs-type">WorkspaceBinding</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[13],
-            <span class="rs-self">Self</span>::<span class="rs-type">ReadFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[14],
-            <span class="rs-self">Self</span>::<span class="rs-type">WriteFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[15],
-            <span class="rs-self">Self</span>::<span class="rs-type">EditFile</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[16],
-            <span class="rs-self">Self</span>::<span class="rs-type">PluginEnsure</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[17],
-            <span class="rs-self">Self</span>::<span class="rs-type">PluginStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[18],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceEnter</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[19],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceExit</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[20],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceStatus</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[21],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceListOpen</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[22],
-            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspaceTestReset</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[23],
-            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[24],
-            <span class="rs-self">Self</span>::<span class="rs-type">WriteStdin</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[25],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandReadProgress</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[26],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandCancel</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[27],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandCollectCompleted</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[28],
-            <span class="rs-self">Self</span>::<span class="rs-type">CommandSessionCount</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[29],
-            <span class="rs-self">Self</span>::<span class="rs-type">CancelWorkspaceRunsByCaller</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[30],
-            <span class="rs-self">Self</span>::<span class="rs-type">CancelWorkspaceRuns</span> =&gt; &amp;<span class="rs-type">BUILTIN_OPS</span>[31],
-        }
-    }
-}
-
 #[derive(<span class="rs-type">Serialize</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a> {
     name: &amp;&#x27;<span class="rs-kw">static</span> str,
     served_by: &amp;&#x27;<span class="rs-kw">static</span> str,
     visibility: &amp;&#x27;<span class="rs-kw">static</span> str,
@@ -636,9 +584,9 @@ declare_builtin_ops! {
 }
 
 #[derive(<span class="rs-type">Serialize</span>)]
-<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogDocument-275">CatalogDocument</a> {
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogDocument-253">CatalogDocument</a> {
     protocol_version: i64,
-    ops: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a>&gt;,
+    ops: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a>&gt;,
 }
 
 <span class="rs-comment">/// Render the static `ops.json` document.</span>
@@ -646,16 +594,16 @@ declare_builtin_ops! {
 <span class="rs-comment">/// Pretty-printed with a trailing newline so `eosd dump-ops` output can be</span>
 <span class="rs-comment">/// committed and diffed byte-for-byte.</span>
 #[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-281">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
-    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogDocument-275">CatalogDocument</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-259">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogDocument-253">CatalogDocument</a> {
         protocol_version: <span class="rs-type">PROTOCOL_VERSION</span>,
         ops: <span class="rs-type">BUILTIN_OPS</span>
             .iter()
-            .map(|contract| <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-struct-CatalogOp-265">CatalogOp</a> {
+            .map(|contract| <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-struct-CatalogOp-243">CatalogOp</a> {
                 name: contract.name,
-                served_by: contract.served_by.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
-                visibility: contract.visibility.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
-                family: contract.family.<a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#method-as-str-35">as_str</a>(),
+                served_by: contract.served_by.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
+                visibility: contract.visibility.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
+                family: contract.family.<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-as-str-138">as_str</a>(),
                 mutates_state: contract.mutates_state,
                 summary: contract.summary,
             })
@@ -674,14 +622,23 @@ declare_builtin_ops! {
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-builtin-contracts-are-returned-by-ops-313">builtin_contracts_are_returned_by_ops</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-builtin-contracts-are-returned-by-ops-291">builtin_contracts_are_returned_by_ops</a>() {
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
-            assert_eq!(contract, contract.op.<a class="symbol-link rs-fn" href="eos-operation--src-checkpoint-ops-rs.html#method-contract-23">contract</a>());
+            assert_eq!(contract, contract.op.contract());
         }
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-canonical-names-follow-grammar-320">canonical_names_follow_grammar</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-resolve-to-builtin-ops-298">canonical_names_resolve_to_builtin_ops</a>() {
+        <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
+            assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(contract.name), <span class="rs-type">Some</span>(contract.op));
+        }
+        assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(&quot;plugin.dynamic.echo&quot;), <span class="rs-type">None</span>);
+        assert_eq!(<span class="rs-type">BuiltinOp</span>::from_op_name(&quot;&quot;), <span class="rs-type">None</span>);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-canonical-names-follow-grammar-307">canonical_names_follow_grammar</a>() {
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
             assert!(
                 contract.name.starts_with(&quot;sandbox.&quot;),
@@ -693,7 +650,7 @@ declare_builtin_ops! {
                 &quot;the v1 token is dead <span class="rs-kw">in</span> canonical names: {}&quot;,
                 contract.name
             );
-            <span class="rs-kw">if</span> contract.served_by == <a class="symbol-link rs-type" href="eos-operation--src-core-ops-rs.html#item-enum-ServedBy-51">ServedBy</a>::<span class="rs-type">Host</span> {
+            <span class="rs-kw">if</span> contract.served_by == <a class="symbol-link rs-type" href="eos-operation--src-core-catalog-rs.html#item-enum-ServedBy-51">ServedBy</a>::<span class="rs-type">Host</span> {
                 assert_eq!(
                     contract.name.split(&#x27;.&#x27;).count(),
                     2,
@@ -705,8 +662,8 @@ declare_builtin_ops! {
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-no-spelling-is-claimed-twice-344">no_spelling_is_claimed_twice</a>() {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spellings = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-outcome-rs.html#method-new-10">new</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-no-spelling-is-claimed-twice-331">no_spelling_is_claimed_twice</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> spellings = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>();
         <span class="rs-kw">for</span> contract <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
             assert!(
                 spellings.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-insert-75">insert</a>(contract.name),
@@ -717,8 +674,8 @@ declare_builtin_ops! {
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-is-complete-and-stable-356">ops_json_document_is_complete_and_stable</a>() {
-        <span class="rs-kw">let</span> document = <a class="symbol-link rs-fn" href="eos-operation--src-core-ops-rs.html#item-fn-ops-json-document-281">ops_json_document</a>();
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-is-complete-and-stable-343">ops_json_document_is_complete_and_stable</a>() {
+        <span class="rs-kw">let</span> document = <a class="symbol-link rs-fn" href="eos-operation--src-core-catalog-rs.html#item-fn-ops-json-document-259">ops_json_document</a>();
         <span class="rs-kw">let</span> parsed: serde_json::<span class="rs-type">Value</span> =
             serde_json::from_str(&amp;document).expect(&quot;document parses back&quot;);
         assert_eq!(parsed[&quot;protocol_version&quot;], <span class="rs-type">PROTOCOL_VERSION</span>);
