@@ -12,6 +12,7 @@ pub use error::OpError;
 pub use id::{CallerId, CommandSessionId, InvocationId};
 pub use request::{ArgProblem, ArgsError, OpRequest, RequestError};
 pub use response::{OpResponse, OpResponseError, OpResponseErrorKind};
+pub(crate) use workspace_outcome::changed_path_kind_pairs;
 pub use workspace_outcome::{
     ChangedPathKind, ChangedPathKinds, MutationCore, MutationStatus, WorkspaceConflict,
     WorkspaceKind, WorkspaceMutationOutcome, WorkspaceTimings,

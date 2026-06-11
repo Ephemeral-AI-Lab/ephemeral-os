@@ -17,6 +17,7 @@ use eos_workspace::{capture_upperdir, overlay_run_dirs, OverlayDirs, OverlayDirs
 use serde_json::{json, Value};
 
 use crate::command::contract::u64_to_f64_saturating;
+use crate::core::changed_path_kind_pairs;
 use crate::ChangedPathKind;
 
 use super::state::PluginRuntime;
@@ -177,16 +178,7 @@ fn run_plugin_overlay_once(
         &captured.changes,
     )?;
     let publish_s = publish_start.elapsed().as_secs_f64();
-    let path_kinds = captured
-        .changes
-        .iter()
-        .map(|change| {
-            (
-                change.path().as_str().to_owned(),
-                ChangedPathKind::from(change),
-            )
-        })
-        .collect();
+    let path_kinds = changed_path_kind_pairs(&captured.changes).collect();
     let upperdir_stats = captured.stats;
     let capture_s = captured.capture_s;
     let occ_s = changeset

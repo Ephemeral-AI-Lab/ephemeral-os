@@ -22,6 +22,8 @@ use crate::error::DaemonError;
 use crate::response::u64_to_f64_saturating;
 use crate::{DispatchContext, WorkspaceRuntime};
 
+use super::to_wire_value;
+
 /// Typed command start request after daemon JSON parsing.
 struct ExecCommandRequest {
     invocation_id: String,
@@ -147,7 +149,7 @@ pub(crate) fn op_command_session_count(
 ) -> Value {
     let caller_id = input.caller.to_string();
     let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
-    super::to_wire_value(CommandSessionCountOutput {
+    to_wire_value(CommandSessionCountOutput {
         success: true,
         caller_id,
         count,

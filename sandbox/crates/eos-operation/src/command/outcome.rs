@@ -3,8 +3,8 @@ use serde_json::Value;
 
 use super::contract::CommandStatus;
 pub use crate::{
-    ChangedPathKind, ChangedPathKinds, MutationSource, OpError as WorkspaceApiError,
-    WorkspaceConflict, WorkspaceKind, WorkspaceTimings,
+    ChangedPathKinds, MutationSource, OpError as WorkspaceApiError, WorkspaceConflict,
+    WorkspaceKind, WorkspaceTimings,
 };
 
 impl From<WorkspaceApiError> for eos_command_session::CommandSessionError {

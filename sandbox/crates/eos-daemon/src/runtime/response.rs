@@ -94,7 +94,7 @@ pub(crate) fn merge_runner_timings(
 }
 
 #[derive(Serialize)]
-struct ChangesetMutationResponse {
+struct PluginOverlayMutationResponse {
     #[serde(flatten)]
     core: MutationCore,
     workspace: WorkspaceKind,
@@ -123,7 +123,7 @@ pub(crate) fn plugin_overlay_changeset_response(
         changed_path_kinds.insert(path.to_owned(), ChangedPathKind::Write);
     }
     let conflict = result.first_conflict();
-    let mut response = serde_json::to_value(ChangesetMutationResponse {
+    let mut response = serde_json::to_value(PluginOverlayMutationResponse {
         core: MutationCore {
             success: result.success(),
             changed_paths,

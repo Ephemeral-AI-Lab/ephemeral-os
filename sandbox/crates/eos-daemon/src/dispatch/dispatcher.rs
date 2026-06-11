@@ -1,24 +1,23 @@
-//! Op routing and request validation. Built-ins are mapped from the catalog;
-//! `plugin.*` misses defer to the runtime plugin registry.
+//! Op routing and request validation. Built-ins resolve through the catalog
+//! into [`crate::builtin::dispatch`]; `plugin.*` misses defer to the runtime
+//! plugin registry.
 
 #[cfg(test)]
 use std::path::PathBuf;
 use std::time::Instant;
 
 use eos_operation::core::catalog::BuiltinOp;
-use eos_operation::{
-    ArgsError, OpError, OpRequest, OpResponse, OpResponseError, OpResponseErrorKind, RequestError,
-};
+use eos_operation::{OpRequest, RequestError};
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
 
-use crate::error::DaemonError;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::op_adapter::{checkpoint, command, control, files, isolation, plugin, workspace_run};
+use crate::builtin;
+use crate::op_adapter::plugin;
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::DispatchContext;
@@ -55,13 +54,13 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
     let parsed = match OpRequest::parse(op, &request.args) {
         Ok(parsed) => parsed,
         Err(RequestError::Args(error)) => {
-            return finalize(parse_error_response(op, error).into_wire())
+            return finalize(builtin::parse_error_response(op, error).into_wire())
         }
         Err(RequestError::NotDaemonServed(_)) => {
             return finalize(plugin_fallback_or_unknown(request, context));
         }
     };
-    finalize(dispatch_builtin(parsed, context).into_wire())
+    finalize(builtin::dispatch(parsed, context).into_wire())
 }
 
 fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -> Value {
@@ -78,130 +77,6 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
         &format!("unknown op: {}", request.op),
         json!({"op": request.op}),
     )
-}
-
-fn dispatch_builtin(request: OpRequest, context: DispatchContext<'_>) -> OpResponse {
-    match request {
-        OpRequest::RuntimeReady(input) => daemon_result(control::op_runtime_ready(input, context)),
-        OpRequest::InvocationHeartbeat(input) => {
-            OpResponse::Success(control::op_heartbeat(input, context))
-        }
-        OpRequest::InvocationCancel(input) => {
-            OpResponse::Success(control::op_cancel(input, context))
-        }
-        OpRequest::InflightCount(input) => {
-            OpResponse::Success(control::op_inflight_count(input, context))
-        }
-        OpRequest::LayerMetrics(input) => daemon_result(checkpoint::layer_metrics(input, context)),
-        OpRequest::EnsureWorkspaceBase(input) => {
-            daemon_result(checkpoint::ensure_workspace_base(input, context))
-        }
-        OpRequest::BuildWorkspaceBase(input) => {
-            daemon_result(checkpoint::build_workspace_base(input, context))
-        }
-        OpRequest::CommitToWorkspace(input) => {
-            daemon_result(checkpoint::commit_to_workspace(input, context))
-        }
-        OpRequest::CommitToGit(input) => daemon_result(checkpoint::commit_to_git(input, context)),
-        OpRequest::WorkspaceBinding(input) => {
-            daemon_result(checkpoint::workspace_binding(input, context))
-        }
-        OpRequest::ReadFile(input) => daemon_result(files::op_read_file(input, context)),
-        OpRequest::WriteFile(input) => daemon_result(files::op_write_file(input, context)),
-        OpRequest::EditFile(input) => daemon_result(files::op_edit_file(input, context)),
-        OpRequest::PluginEnsure(input) => daemon_result(plugin::op_ensure(*input, context)),
-        OpRequest::PluginStatus(input) => daemon_result(plugin::op_status(input, context)),
-        OpRequest::IsolatedWorkspaceEnter(input) => {
-            daemon_response_result(isolation::op_enter(input, context))
-        }
-        OpRequest::IsolatedWorkspaceExit(input) => {
-            daemon_response_result(isolation::op_exit(input, context))
-        }
-        OpRequest::IsolatedWorkspaceStatus(input) => {
-            daemon_response_result(isolation::op_status(input, context))
-        }
-        OpRequest::IsolatedWorkspaceListOpen => {
-            daemon_response_result(isolation::op_list_open(context))
-        }
-        OpRequest::IsolatedWorkspaceTestReset => {
-            daemon_response_result(isolation::op_test_reset(context))
-        }
-        OpRequest::ExecCommand(input) => daemon_result(command::op_exec_command(input, context)),
-        OpRequest::WriteStdin(input) => {
-            daemon_result(command::command_session_write_stdin(input, context))
-        }
-        OpRequest::CommandReadProgress(input) => {
-            daemon_result(command::command_session_read_progress(input, context))
-        }
-        OpRequest::CommandCancel(input) => {
-            daemon_result(command::command_session_cancel(input, context))
-        }
-        OpRequest::CommandCollectCompleted(input) => {
-            OpResponse::Success(command::op_command_collect_completed(input, context))
-        }
-        OpRequest::CommandSessionCount(input) => {
-            OpResponse::Success(command::op_command_session_count(input, context))
-        }
-        OpRequest::CancelWorkspaceRunsByCaller(input) => daemon_result(
-            workspace_run::op_cancel_workspace_runs_by_caller_id(input, context),
-        ),
-        OpRequest::CancelWorkspaceRuns(input) => {
-            daemon_result(workspace_run::op_cancel_workspace_runs(input, context))
-        }
-    }
-}
-
-fn daemon_result(result: Result<Value, DaemonError>) -> OpResponse {
-    match result {
-        Ok(value) => OpResponse::Success(value),
-        Err(err) => daemon_error(err),
-    }
-}
-
-fn daemon_response_result(result: Result<OpResponse, DaemonError>) -> OpResponse {
-    match result {
-        Ok(response) => response,
-        Err(err) => daemon_error(err),
-    }
-}
-
-fn daemon_error(err: DaemonError) -> OpResponse {
-    OpResponse::Error(OpResponseError::new(
-        response_error_kind(err.wire_kind()),
-        err.to_string(),
-        json!({}),
-    ))
-}
-
-fn response_error_kind(kind: ErrorKind) -> OpResponseErrorKind {
-    match kind {
-        ErrorKind::InvalidRequest => OpResponseErrorKind::InvalidRequest,
-        ErrorKind::BadJson => OpResponseErrorKind::BadJson,
-        ErrorKind::RequestTooLarge => OpResponseErrorKind::RequestTooLarge,
-        ErrorKind::Unauthorized => OpResponseErrorKind::Unauthorized,
-        ErrorKind::UnknownOp => OpResponseErrorKind::UnknownOp,
-        ErrorKind::InternalError => OpResponseErrorKind::InternalError,
-        ErrorKind::Forbidden => OpResponseErrorKind::Forbidden,
-        ErrorKind::ForbiddenInIsolatedWorkspace => {
-            OpResponseErrorKind::ForbiddenInIsolatedWorkspace
-        }
-        ErrorKind::LifecycleInProgress => OpResponseErrorKind::LifecycleInProgress,
-    }
-}
-
-fn parse_error_response(op: BuiltinOp, error: ArgsError) -> OpResponse {
-    match op.contract().family {
-        eos_operation::core::catalog::OpFamily::IsolatedWorkspace
-        | eos_operation::core::catalog::OpFamily::WorkspaceRun => OpResponse::Refused(OpError {
-            kind: "invalid_argument",
-            message: error.message(),
-            details: Some(json!({"key": error.key})),
-        }),
-        _ => OpResponse::Error(OpResponseError::invalid_request(format!(
-            "invalid request: {}",
-            error.message()
-        ))),
-    }
 }
 
 fn finalize_response(

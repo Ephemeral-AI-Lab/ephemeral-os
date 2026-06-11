@@ -1,6 +1,7 @@
 //! Workspace checkpoint adapters: LayerStack base/binding/metrics plus the
 //! `eos_operation::checkpoint` commit module.
 
+use std::collections::BTreeMap;
 use std::time::Instant;
 
 use eos_layerstack::{
@@ -94,7 +95,7 @@ pub(crate) fn ensure_workspace_base(
     let workspace_root = input.workspace_root;
     let (binding, created) = ensure_layer_stack_workspace_base(&root, &workspace_root)?;
     let binding = binding_to_value(&binding)?;
-    let timings = std::collections::BTreeMap::from([(
+    let timings = BTreeMap::from([(
         "api.workspace_base.total_s".to_owned(),
         total_start.elapsed().as_secs_f64(),
     )]);

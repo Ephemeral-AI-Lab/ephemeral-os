@@ -111,6 +111,19 @@ impl From<&LayerChange> for ChangedPathKind {
     }
 }
 
+/// Map captured layer changes to `(path, kind)` pairs, preserving capture
+/// order; collect into [`ChangedPathKinds`] when sorted-by-path is wanted.
+pub(crate) fn changed_path_kind_pairs(
+    changes: &[LayerChange],
+) -> impl Iterator<Item = (String, ChangedPathKind)> + '_ {
+    changes.iter().map(|change| {
+        (
+            change.path().as_str().to_owned(),
+            ChangedPathKind::from(change),
+        )
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkspaceConflict {
     pub reason: String,

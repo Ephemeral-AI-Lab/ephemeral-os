@@ -6,6 +6,8 @@
 
 #[path = "runtime/context.rs"]
 pub(crate) mod context;
+#[path = "dispatch/builtin.rs"]
+pub(crate) mod builtin;
 #[path = "dispatch/dispatcher.rs"]
 pub(crate) mod dispatcher;
 #[path = "runtime/error.rs"]
