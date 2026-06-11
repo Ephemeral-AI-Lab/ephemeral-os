@@ -190,6 +190,7 @@ fn edit_anchor_count_mismatch_is_aborted_overlap() -> TestResult {
         outcome.core.conflict.as_ref().map(|c| c.message.as_str()),
         Some("anchor occurrence count mismatch")
     );
+    assert_eq!(outcome.applied_edits, Some(0));
     Ok(())
 }
 
@@ -209,5 +210,6 @@ fn edit_missing_file_is_aborted_version() -> TestResult {
     )?;
     assert!(!outcome.core.success);
     assert_eq!(outcome.status, MutationStatus::AbortedVersion);
+    assert_eq!(outcome.applied_edits, Some(0));
     Ok(())
 }

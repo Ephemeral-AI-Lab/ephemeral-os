@@ -13,7 +13,7 @@ use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
 
-use super::contract::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
+use super::contract::{CollectCompletedOutput, CommandResponse, CommandSessionCompletion};
 
 pub(crate) struct EphemeralRun {
     pub(crate) session: CommandSession,
@@ -159,7 +159,7 @@ impl CommandRegistry {
     }
 
     #[must_use]
-    pub(crate) fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedResponse {
+    pub(crate) fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedOutput {
         let wanted: Option<HashSet<String>> = request
             .command_session_ids
             .as_ref()
@@ -181,7 +181,7 @@ impl CommandRegistry {
             .filter_map(|id| completed.remove(id))
             .map(|entry| entry.completion)
             .collect();
-        CollectCompletedResponse {
+        CollectCompletedOutput {
             success: true,
             completions,
         }

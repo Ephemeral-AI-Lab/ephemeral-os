@@ -1,11 +1,9 @@
 use std::path::Path;
 
 use eos_layerstack::service::Snapshot;
-use eos_layerstack::{service, FileResult};
+use eos_layerstack::{service, FileResult, LayerChange};
 use eos_workspace::IsolatedWorkspaceBinding;
-use eos_workspace::{
-    capture_upperdir, path_changes_to_wire, EphemeralWorkspace, TreeResourceStats,
-};
+use eos_workspace::{capture_upperdir, EphemeralWorkspace, TreeResourceStats};
 use serde_json::{json, Map, Value};
 
 use super::contract::{u64_to_f64_saturating, CommandMetadata, CommandResponse};
@@ -33,7 +31,7 @@ pub(crate) fn settle_ephemeral(
     .map_err(finalize_error)?;
     let publish_s = publish_start.elapsed().as_secs_f64();
 
-    let changed_path_kinds = changed_path_kinds_from_wire(path_changes_to_wire(&captured.changes));
+    let changed_path_kinds = typed_changed_path_kinds(&captured.changes);
     let first_conflict = changeset.first_conflict();
     let command_success = request.command_succeeded();
     let publish_success = changeset.success();
@@ -88,7 +86,7 @@ pub(crate) fn settle_isolated(
     let mut timings = base_timings(&binding.layer_stack_root)?;
     let captured = capture_upperdir(&binding.upperdir)
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
-    let changed_path_kinds = changed_path_kinds_from_wire(path_changes_to_wire(&captured.changes));
+    let changed_path_kinds = typed_changed_path_kinds(&captured.changes);
     let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
     merge_runner_timings(&mut timings, request.runner_result.as_ref());
     let command_success = request.command_succeeded();
@@ -188,13 +186,14 @@ fn command_response(
     }
 }
 
-fn changed_path_kinds_from_wire(path_kinds: Vec<(String, String)>) -> ChangedPathKinds {
-    path_kinds
-        .into_iter()
-        .map(|(path, kind)| {
-            let kind = ChangedPathKind::from_wire_str(&kind)
-                .expect("eos_workspace path_changes_to_wire emits supported changed-path kinds");
-            (path, kind)
+fn typed_changed_path_kinds(changes: &[LayerChange]) -> ChangedPathKinds {
+    changes
+        .iter()
+        .map(|change| {
+            (
+                change.path().as_str().to_owned(),
+                ChangedPathKind::from(change),
+            )
         })
         .collect()
 }

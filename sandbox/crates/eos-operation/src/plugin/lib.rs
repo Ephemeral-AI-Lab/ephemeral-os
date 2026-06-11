@@ -42,7 +42,7 @@ use self::state::{connected_ppc_routes, connected_ppc_services, setup_failure_ke
 
 pub use self::dispatch::PluginDispatchOutcome;
 pub use self::overlay::PluginOverlayOutcome;
-pub use self::package::{needs_upload_response, PackageEnsureReport};
+pub use self::package::{needs_upload_output, PackageEnsureReport};
 pub use self::process::ServiceProcessStatus;
 pub use self::refresh::ServiceHealthReport;
 pub use self::state::{PluginRuntime, SetupFailure};

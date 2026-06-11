@@ -276,6 +276,7 @@ fn conflict_outcome<B: FileBackend>(
         workspace_kind: backend.workspace_kind(),
         published: false,
         status,
+        applied_edits: (kind == MutationKind::Edit).then_some(0),
         ..MutationOutcome::default()
     }
 }

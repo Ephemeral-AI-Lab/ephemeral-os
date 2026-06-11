@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-use crate::control::contract::CallerCountInput;
 use crate::core::request::{
     optional_path, optional_u64, require_command_string, require_nonempty_string, ArgProblem,
     ArgsError,
@@ -15,8 +14,8 @@ pub struct ExecCommandInput {
     pub cmd: String,
     pub caller: CallerId,
     pub layer_stack_root: Option<PathBuf>,
+    /// Wire alias `timeout` | `timeout_seconds`, resolved here; `timeout` wins.
     pub timeout: Option<u64>,
-    pub timeout_seconds: Option<u64>,
     pub yield_time_ms: Option<u64>,
     pub invocation_id: InvocationId,
 }
@@ -27,8 +26,7 @@ impl ExecCommandInput {
             cmd: require_command_string(args, "cmd")?,
             caller: CallerId::from_wire(args),
             layer_stack_root: optional_path(args, "layer_stack_root"),
-            timeout: optional_u64(args, "timeout"),
-            timeout_seconds: optional_u64(args, "timeout_seconds"),
+            timeout: optional_u64(args, "timeout").or_else(|| optional_u64(args, "timeout_seconds")),
             yield_time_ms: optional_u64(args, "yield_time_ms"),
             invocation_id: InvocationId::new(
                 args.get("invocation_id")
@@ -114,15 +112,20 @@ impl CollectCompletedInput {
                     .map(CommandSessionId::new)
                     .collect::<Vec<_>>()
             });
-        let caller = CallerId::from_wire(args);
+        // Optional caller filter: absent means "collect across all callers",
+        // so no default-caller fallback applies here.
+        let caller = args
+            .get("caller_id")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|caller| !caller.is_empty())
+            .map(CallerId::new);
         Self {
             command_session_ids,
-            caller: (!caller.as_str().is_empty()).then_some(caller),
+            caller,
         }
     }
 }
-
-pub type CommandSessionCountInput = CallerCountInput;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -271,10 +274,42 @@ pub struct CommandSessionCompletion {
     pub result: CommandResponse,
 }
 
+impl CommandSessionCompletion {
+    #[must_use]
+    pub fn to_wire_value(&self) -> Value {
+        json!({
+            "command_session_id": self.command_session_id,
+            "caller_id": self.caller_id,
+            "command": self.command,
+            "result": self.result.to_wire_value(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CollectCompletedResponse {
+pub struct CollectCompletedOutput {
     pub success: bool,
     pub completions: Vec<CommandSessionCompletion>,
+}
+
+impl CollectCompletedOutput {
+    #[must_use]
+    pub fn to_wire_value(&self) -> Value {
+        json!({
+            "success": self.success,
+            "completions": self.completions
+                .iter()
+                .map(CommandSessionCompletion::to_wire_value)
+                .collect::<Vec<_>>(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CommandSessionCountOutput {
+    pub success: bool,
+    pub caller_id: String,
+    pub count: usize,
 }
 
 #[cfg(test)]

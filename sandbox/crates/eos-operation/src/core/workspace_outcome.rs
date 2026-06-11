@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use eos_layerstack::CommitStatus;
+use eos_layerstack::{CommitStatus, LayerChange};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -96,6 +96,17 @@ impl ChangedPathKind {
             "symlink" => Some(Self::Symlink),
             "opaque_dir" => Some(Self::OpaqueDir),
             _ => None,
+        }
+    }
+}
+
+impl From<&LayerChange> for ChangedPathKind {
+    fn from(change: &LayerChange) -> Self {
+        match change {
+            LayerChange::Write { .. } => Self::Write,
+            LayerChange::Delete { .. } => Self::Delete,
+            LayerChange::Symlink { .. } => Self::Symlink,
+            LayerChange::OpaqueDir { .. } => Self::OpaqueDir,
         }
     }
 }

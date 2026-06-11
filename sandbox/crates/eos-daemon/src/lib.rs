@@ -13,8 +13,6 @@ pub(crate) mod error;
 #[path = "runtime/invocation_registry.rs"]
 pub(crate) mod invocation_registry;
 pub(crate) mod op_adapter;
-#[path = "runtime/request_args.rs"]
-pub(crate) mod request_args;
 #[path = "runtime/response.rs"]
 pub(crate) mod response;
 #[path = "runtime/services.rs"]

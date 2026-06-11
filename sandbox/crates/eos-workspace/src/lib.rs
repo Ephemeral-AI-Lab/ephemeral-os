@@ -18,6 +18,6 @@ pub use isolated_workspace::{
     Rfc1918Egress, WorkspaceHandle,
 };
 pub use shared::{
-    capture_upperdir, path_changes_to_wire, CaptureError, CapturedChanges, DirAllocationError,
-    OverlayDirs, OverlayDirsGuard, TreeResourceStats,
+    capture_upperdir, CaptureError, CapturedChanges, DirAllocationError, OverlayDirs,
+    OverlayDirsGuard, TreeResourceStats,
 };

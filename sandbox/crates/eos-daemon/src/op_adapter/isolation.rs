@@ -82,10 +82,7 @@ pub(crate) fn op_status(
     }
 }
 
-pub(crate) fn op_list_open(
-    _args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<OpResponse, DaemonError> {
+pub(crate) fn op_list_open(context: DispatchContext<'_>) -> Result<OpResponse, DaemonError> {
     let workspace = &context.require_services()?.workspace;
     Ok(success_response(to_wire_value(ListOpenOutput {
         success: true,
@@ -93,10 +90,7 @@ pub(crate) fn op_list_open(
     })))
 }
 
-pub(crate) fn op_test_reset(
-    _args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<OpResponse, DaemonError> {
+pub(crate) fn op_test_reset(context: DispatchContext<'_>) -> Result<OpResponse, DaemonError> {
     if !env_true(TEST_HARNESS_ENV) {
         return Ok(refused_response(
             "forbidden",

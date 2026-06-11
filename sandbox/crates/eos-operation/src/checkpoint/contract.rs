@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -146,7 +147,7 @@ pub struct WorkspaceBaseOutput {
     pub success: bool,
     pub created: bool,
     pub binding: Value,
-    pub timings: Value,
+    pub timings: BTreeMap<String, f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -159,7 +160,7 @@ pub struct BindingOutput {
 pub struct CommitToWorkspaceOutput {
     pub success: bool,
     pub manifest_version: i64,
-    pub timings: Value,
+    pub timings: BTreeMap<String, f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -171,5 +172,6 @@ pub struct CommitOutput {
     pub manifest_root_hash: String,
     pub paths: Vec<String>,
     pub worktree_mode: String,
-    pub timings: Value,
+    /// Wire-mirror of the commit pipeline's phase timings (`BTreeMap<String, f64>`).
+    pub timings: BTreeMap<String, f64>,
 }

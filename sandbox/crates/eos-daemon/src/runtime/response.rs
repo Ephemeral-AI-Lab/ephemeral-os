@@ -7,8 +7,8 @@ use eos_layerstack::ChangesetResult;
 use eos_layerstack::Manifest;
 use eos_namespace::protocol::RunResult;
 use eos_operation::{
-    ChangedPathKind, ChangedPathKinds, MutationCore, MutationSource, MutationStatus,
-    WorkspaceConflict, WorkspaceKind,
+    ChangedPathKind, ChangedPathKinds, MutationCore, MutationStatus, WorkspaceConflict,
+    WorkspaceKind,
 };
 use serde::Serialize;
 
@@ -100,22 +100,21 @@ struct ChangesetMutationResponse {
     workspace: WorkspaceKind,
     status: MutationStatus,
     error: Option<()>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    applied_edits: Option<i64>,
 }
 
-pub(crate) fn guarded_changeset_response(
-    verb: &str,
+/// Daemon-owned plugin-overlay response synthesis over [`MutationCore`].
+/// `"plugin_overlay"` is deliberately a daemon literal: it is not a
+/// [`MutationSource`] variant, so it is spliced after serialization.
+pub(crate) fn plugin_overlay_changeset_response(
     result: &ChangesetResult,
     mut timings: serde_json::Map<String, Value>,
     total_start: Instant,
-    applied_edits: Option<i64>,
 ) -> Value {
     for (key, value) in &result.timings {
         timings.insert(key.clone(), json!(value));
     }
     timings.insert(
-        format!("api.{verb}.total_s"),
+        "api.plugin_overlay.total_s".to_owned(),
         json!(total_start.elapsed().as_secs_f64()),
     );
     let changed_paths = result.published_paths();
@@ -129,7 +128,7 @@ pub(crate) fn guarded_changeset_response(
             success: result.success(),
             changed_paths,
             changed_path_kinds,
-            mutation_source: mutation_source(verb),
+            mutation_source: None,
             conflict: conflict.as_ref().map(|file| {
                 let reason = file.status.wire_str();
                 WorkspaceConflict::path(reason, file.path.as_str(), file.conflict_message(reason))
@@ -144,12 +143,9 @@ pub(crate) fn guarded_changeset_response(
             .as_ref()
             .map_or(MutationStatus::Committed, |file| file.status.into()),
         error: None,
-        applied_edits,
     })
     .expect("changeset mutation response serializes");
-    if verb == "plugin_overlay" {
-        response["mutation_source"] = json!("plugin_overlay");
-    }
+    response["mutation_source"] = json!("plugin_overlay");
     response
 }
 
@@ -280,15 +276,6 @@ fn insert_process_resource_timings(timings: &mut serde_json::Map<String, Value>)
         {
             timings.insert(key.to_owned(), json!(kib * 1024.0));
         }
-    }
-}
-
-fn mutation_source(verb: &str) -> Option<MutationSource> {
-    match verb {
-        "write" => Some(MutationSource::ApiWrite),
-        "edit" => Some(MutationSource::ApiEdit),
-        "exec_command" => Some(MutationSource::OverlayCapture),
-        _ => None,
     }
 }
 

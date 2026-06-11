@@ -6,18 +6,18 @@ use std::time::Instant;
 
 use eos_layerstack::LayerStack;
 use eos_operation::plugin::contract::{
-    LoadedPluginStatusOutput, PluginEnsureInput, PluginEnsureReadyOutput, PluginStatusInput,
-    PluginStatusOutput,
+    LoadedPluginStatusOutput, PluginEnsureInput, PluginEnsureOutput, PluginEnsureReadyOutput,
+    PluginStatusInput, PluginStatusOutput,
 };
-use eos_operation::plugin::needs_upload_response;
+use eos_operation::plugin::needs_upload_output;
 use eos_operation::plugin::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_operation::plugin::PackageEnsureReport;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::response::{
-    attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    merge_runner_timings, resource_timings, TreeResourceStats,
+    attach_runner_shell_fields, insert_tree_resource_timings, merge_runner_timings,
+    plugin_overlay_changeset_response, resource_timings, TreeResourceStats,
 };
 use crate::DispatchContext;
 use eos_operation::plugin::{
@@ -33,12 +33,13 @@ pub(crate) fn op_ensure(
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
     services.ensure_plugin_caller_allowed(&input.caller)?;
-    match services.plugin.ensure(&input).map_err(DaemonError::from)? {
+    let output = match services.plugin.ensure(&input).map_err(DaemonError::from)? {
         EnsureOutcome::NeedsUpload { manifest, report } => {
-            Ok(needs_upload_response(&manifest, &report))
+            PluginEnsureOutput::NeedsUpload(needs_upload_output(&manifest, &report))
         }
-        EnsureOutcome::Ready(ready) => Ok(ensure_response(&ready)),
-    }
+        EnsureOutcome::Ready(ready) => PluginEnsureOutput::Ready(Box::new(ensure_ready_output(&ready))),
+    };
+    Ok(to_wire_value(output))
 }
 
 pub(crate) fn op_status(
@@ -91,8 +92,8 @@ pub(crate) fn dispatch_registered_op(
     )
 }
 
-fn ensure_response(ready: &EnsureReady) -> Value {
-    to_wire_value(PluginEnsureReadyOutput {
+fn ensure_ready_output(ready: &EnsureReady) -> PluginEnsureReadyOutput {
+    PluginEnsureReadyOutput {
         success: true,
         plugin: ready.plugin_id.clone(),
         digest: ready.digest.clone(),
@@ -109,7 +110,7 @@ fn ensure_response(ready: &EnsureReady) -> Value {
         connected_ppc_routes: ready.connected_ppc_routes.clone(),
         connected_ppc_services: ready.connected_ppc_services.clone(),
         package: package_report_value(&ready.package),
-    })
+    }
 }
 
 fn status_response(outcome: &StatusOutcome) -> Value {
@@ -251,13 +252,7 @@ fn plugin_overlay_response(
         "command_exec.total_s".to_owned(),
         json!(total_start.elapsed().as_secs_f64()),
     );
-    let mut response = guarded_changeset_response(
-        "plugin_overlay",
-        &overlay.changeset,
-        timings,
-        total_start,
-        None,
-    );
+    let mut response = plugin_overlay_changeset_response(&overlay.changeset, timings, total_start);
     attach_runner_shell_fields(&mut response, &overlay.runner);
     response["changed_path_kinds"] = Value::Object(
         overlay

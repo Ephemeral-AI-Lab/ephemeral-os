@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use eos_plugin::{PluginError, PluginManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER};
-use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use super::contract::{PluginEnsureInput, PluginNeedsUploadOutput, PluginPackageInput};
@@ -85,8 +84,12 @@ pub(super) fn ensure_package(
     })
 }
 
-pub fn needs_upload_response(manifest: &PluginManifest, report: &PackageEnsureReport) -> Value {
-    serde_json::to_value(PluginNeedsUploadOutput {
+#[must_use]
+pub fn needs_upload_output(
+    manifest: &PluginManifest,
+    report: &PackageEnsureReport,
+) -> PluginNeedsUploadOutput {
+    PluginNeedsUploadOutput {
         success: true,
         plugin: manifest.plugin_id.clone(),
         digest: manifest.plugin_digest.clone(),
@@ -95,8 +98,7 @@ pub fn needs_upload_response(manifest: &PluginManifest, report: &PackageEnsureRe
         runtime_loaded: false,
         package_root: report.package_root.clone(),
         dependency_root: report.dependency_root.clone(),
-    })
-    .expect("plugin needs-upload output serializes")
+    }
 }
 
 fn warm_probe(manifest: &PluginManifest, paths: &PackagePaths) -> PackageEnsureReport {

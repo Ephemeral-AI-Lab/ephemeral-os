@@ -8,14 +8,14 @@ use eos_command_session::{
     StartCommandSession, WriteStdin,
 };
 use eos_operation::command::contract::{
-    CancelCommandInput, CollectCompletedInput, CommandResponse, CommandSessionCompletion,
-    ExecCommandInput, ReadProgressInput, WriteStdinInput,
+    CancelCommandInput, CollectCompletedInput, CommandResponse, CommandSessionCountOutput,
+    CommandStatus, ExecCommandInput, ReadProgressInput, WriteStdinInput,
 };
 use eos_operation::command::{
     command_ops, command_session_config, command_session_scratch_root, ExecTarget,
 };
 use eos_operation::control::contract::CallerCountInput;
-use serde_json::{json, Value};
+use serde_json::Value;
 use thiserror::Error;
 
 use crate::error::DaemonError;
@@ -65,12 +65,9 @@ pub(crate) fn op_exec_command(
         },
     )
     .map_err(command_op_error)?;
+    let running = response.status == CommandStatus::Running;
     let wire = response.to_wire_value();
-    if wire
-        .get("status")
-        .and_then(Value::as_str)
-        .is_some_and(|status| status == "running")
-    {
+    if running {
         Ok(wire)
     } else {
         Ok(strip_session_id(wire))
@@ -81,12 +78,7 @@ fn exec_timeout_seconds(
     input: &ExecCommandInput,
     config: &crate::config::CommandSessionConfig,
 ) -> f64 {
-    u64_to_f64_saturating(
-        input
-            .timeout
-            .or(input.timeout_seconds)
-            .unwrap_or(config.default_timeout_s),
-    )
+    u64_to_f64_saturating(input.timeout.unwrap_or(config.default_timeout_s))
 }
 
 fn exec_command(
@@ -144,13 +136,9 @@ pub(crate) fn op_command_collect_completed(
     input: CollectCompletedInput,
     _context: DispatchContext<'_>,
 ) -> Value {
-    let response = command_ops().collect_completed(&collect_completed_request(input));
-    let completions = response
-        .completions
-        .into_iter()
-        .map(command_session_completion_to_wire)
-        .collect::<Vec<_>>();
-    json!({"success": response.success, "completions": completions})
+    command_ops()
+        .collect_completed(&collect_completed_request(input))
+        .to_wire_value()
 }
 
 pub(crate) fn op_command_session_count(
@@ -159,7 +147,11 @@ pub(crate) fn op_command_session_count(
 ) -> Value {
     let caller_id = input.caller.to_string();
     let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
-    json!({"success": true, "caller_id": caller_id, "count": count})
+    super::to_wire_value(CommandSessionCountOutput {
+        success: true,
+        caller_id,
+        count,
+    })
 }
 
 pub(crate) fn command_session_write_stdin(
@@ -202,20 +194,13 @@ fn command_session_response_to_wire(
 ) -> Result<Value, DaemonError> {
     match response {
         Ok(response) => Ok(response.to_wire_value()),
-        Err(CommandSessionError::NotFound(_)) => Ok(command_session_not_found()),
+        // The not-found synthetic is not an error response; it stays a
+        // CommandResponse-shaped output.
+        Err(CommandSessionError::NotFound(_)) => {
+            Ok(CommandResponse::error("command_session_not_found").to_wire_value())
+        }
         Err(error) => Err(command_session_error(error)),
     }
-}
-
-fn command_session_not_found() -> Value {
-    json!({
-        "status": "error",
-        "exit_code": null,
-        "output": {
-            "stdout": "",
-            "stderr": "command_session_not_found",
-        },
-    })
 }
 
 fn strip_session_id(mut response: Value) -> Value {
@@ -251,15 +236,6 @@ fn collect_completed_request(input: CollectCompletedInput) -> CollectCompleted {
         }),
         caller_id: input.caller.map(|caller| caller.to_string()),
     }
-}
-
-fn command_session_completion_to_wire(completion: CommandSessionCompletion) -> Value {
-    json!({
-        "command_session_id": completion.command_session_id,
-        "caller_id": completion.caller_id,
-        "command": completion.command,
-        "result": completion.result.to_wire_value(),
-    })
 }
 
 #[cfg(test)]

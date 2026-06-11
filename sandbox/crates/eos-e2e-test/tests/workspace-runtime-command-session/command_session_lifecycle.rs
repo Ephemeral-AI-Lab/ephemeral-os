@@ -215,6 +215,7 @@ fn write_stdin_echo() -> Result<()> {
             "yield_time_ms": 2000
         }),
     )?;
+    let stdin = settle_foreground_command(&lease, stdin, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(
         as_str(&stdin, "status")?,
         "ok",

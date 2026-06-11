@@ -20,7 +20,6 @@ use eos_workspace::CurrentExeNsRunnerLauncher;
 
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
-use crate::request_args::trimmed_string;
 use crate::runtime_services::sweepers;
 use crate::DispatchContext;
 use crate::RuntimeServices;
@@ -433,4 +432,14 @@ where
 
 async fn signal_shutdown() {
     let _ = tokio::signal::ctrl_c().await;
+}
+
+/// Transport-level caller extraction for in-flight registry keys; runs before
+/// any operation parse, so it deliberately applies no default-caller fallback.
+fn trimmed_string(args: &serde_json::Value, key: &str) -> String {
+    args.get(key)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned()
 }

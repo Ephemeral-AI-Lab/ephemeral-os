@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use eos_overlay::LayerChange;
-
 /// Basic resource stats for a captured upperdir tree.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TreeResourceStats {
@@ -24,15 +22,6 @@ impl TreeResourceStats {
 #[must_use]
 pub fn directory_file_bytes(path: &Path) -> u64 {
     TreeResourceStats::collect(path).bytes
-}
-
-/// Map captured path changes to their wire `(path, kind)` string pairs.
-#[must_use]
-pub fn path_changes_to_wire(changes: &[LayerChange]) -> Vec<(String, String)> {
-    changes
-        .iter()
-        .map(|change| (change.path().as_str().to_owned(), change.kind().to_owned()))
-        .collect()
 }
 
 fn collect_path(path: &Path, stats: &mut TreeResourceStats) {

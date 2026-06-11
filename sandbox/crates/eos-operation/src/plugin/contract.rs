@@ -111,6 +111,16 @@ impl PluginStatusInput {
     }
 }
 
+/// `sandbox.plugin.ensure` output: either the package still needs an upload or
+/// the plugin is fully ensured. Untagged — each variant serializes as its own
+/// wire object.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PluginEnsureOutput {
+    NeedsUpload(PluginNeedsUploadOutput),
+    Ready(Box<PluginEnsureReadyOutput>),
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PluginNeedsUploadOutput {
     pub success: bool,

@@ -13,10 +13,11 @@ use eos_namespace::protocol::Intent;
 use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use eos_plugin::ServiceMode;
 use eos_workspace::NsRunnerLauncher;
-use eos_workspace::{
-    capture_upperdir, overlay_run_dirs, path_changes_to_wire, OverlayDirs, OverlayDirsGuard,
-};
+use eos_workspace::{capture_upperdir, overlay_run_dirs, OverlayDirs, OverlayDirsGuard};
 use serde_json::{json, Value};
+
+use crate::command::contract::u64_to_f64_saturating;
+use crate::ChangedPathKind;
 
 use super::state::PluginRuntime;
 use super::PluginRuntimeError;
@@ -114,7 +115,9 @@ pub struct PluginOverlayOutcome {
     pub runner: RunResult,
     pub changeset: eos_layerstack::ChangesetResult,
     pub plugin_result: Option<Value>,
-    pub path_kinds: Vec<(String, String)>,
+    /// Changed paths in upperdir capture order (a wire contract — never
+    /// re-sorted), each with its typed kind.
+    pub path_kinds: Vec<(String, ChangedPathKind)>,
     pub lease_acquire_s: f64,
     pub capture_s: f64,
     pub occ_s: f64,
@@ -174,7 +177,16 @@ fn run_plugin_overlay_once(
         &captured.changes,
     )?;
     let publish_s = publish_start.elapsed().as_secs_f64();
-    let path_kinds = path_changes_to_wire(&captured.changes);
+    let path_kinds = captured
+        .changes
+        .iter()
+        .map(|change| {
+            (
+                change.path().as_str().to_owned(),
+                ChangedPathKind::from(change),
+            )
+        })
+        .collect();
     let upperdir_stats = captured.stats;
     let capture_s = captured.capture_s;
     let occ_s = changeset
@@ -193,13 +205,6 @@ fn run_plugin_overlay_once(
         occ_s,
         upperdir_stats,
     })
-}
-
-fn u64_to_f64_saturating(value: u64) -> f64 {
-    const U32_FACTOR: f64 = 4_294_967_296.0;
-    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
-    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
-    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn plugin_overlay_dirs(invocation_id: &str) -> Result<OverlayDirs, PluginRuntimeError> {

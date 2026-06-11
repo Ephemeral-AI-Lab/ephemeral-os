@@ -61,7 +61,7 @@ pub fn dispatch_with_context(request: &Request, context: DispatchContext<'_>) ->
             return finalize(plugin_fallback_or_unknown(request, context));
         }
     };
-    finalize(dispatch_builtin(parsed, &request.args, context).into_wire())
+    finalize(dispatch_builtin(parsed, context).into_wire())
 }
 
 fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -> Value {
@@ -80,7 +80,7 @@ fn plugin_fallback_or_unknown(request: &Request, context: DispatchContext<'_>) -
     )
 }
 
-fn dispatch_builtin(request: OpRequest, args: &Value, context: DispatchContext<'_>) -> OpResponse {
+fn dispatch_builtin(request: OpRequest, context: DispatchContext<'_>) -> OpResponse {
     match request {
         OpRequest::RuntimeReady(input) => daemon_result(control::op_runtime_ready(input, context)),
         OpRequest::InvocationHeartbeat(input) => {
@@ -121,10 +121,10 @@ fn dispatch_builtin(request: OpRequest, args: &Value, context: DispatchContext<'
             daemon_response_result(isolation::op_status(input, context))
         }
         OpRequest::IsolatedWorkspaceListOpen => {
-            daemon_response_result(isolation::op_list_open(args, context))
+            daemon_response_result(isolation::op_list_open(context))
         }
         OpRequest::IsolatedWorkspaceTestReset => {
-            daemon_response_result(isolation::op_test_reset(args, context))
+            daemon_response_result(isolation::op_test_reset(context))
         }
         OpRequest::ExecCommand(input) => daemon_result(command::op_exec_command(input, context)),
         OpRequest::WriteStdin(input) => {

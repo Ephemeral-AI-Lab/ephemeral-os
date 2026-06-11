@@ -14,8 +14,7 @@
 mod workspace;
 
 pub use crate::shared::{
-    capture_upperdir, path_changes_to_wire, CapturedChanges, OverlayDirs, OverlayDirsGuard,
-    TreeResourceStats,
+    capture_upperdir, CapturedChanges, OverlayDirs, OverlayDirsGuard, TreeResourceStats,
 };
 pub use workspace::EphemeralWorkspace;
 

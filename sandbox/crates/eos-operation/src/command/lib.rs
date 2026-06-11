@@ -10,7 +10,7 @@ mod service;
 mod settle;
 
 pub use contract::{
-    CollectCompletedResponse, CommandMetadata, CommandResponse, CommandSessionCompletion,
+    CollectCompletedOutput, CommandMetadata, CommandResponse, CommandSessionCompletion,
     CommandStatus,
 };
 pub use outcome::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};

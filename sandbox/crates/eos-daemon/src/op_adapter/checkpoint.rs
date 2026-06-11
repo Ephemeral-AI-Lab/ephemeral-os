@@ -13,11 +13,11 @@ use eos_operation::checkpoint::contract::{
     CommitToWorkspaceOutput, EnsureBaseInput, LayerMetricsInput, LayerMetricsOutput,
     WorkspaceBaseOutput,
 };
+use eos_layerstack::WorkspaceBinding;
 use eos_operation::checkpoint::{CommitOutcome, CommitRequest};
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::error::DaemonError;
-use crate::request_args::{binding_to_value, timings_to_value_map};
 use crate::DispatchContext;
 use eos_layerstack::service::cache_snapshot;
 
@@ -71,17 +71,17 @@ pub(crate) fn build_workspace_base(
             .stop_services_for_layer_stack_root(&root.to_string_lossy())?;
     }
     let built = build_layer_stack_workspace_base(&root, &workspace_root, input.reset)?;
-    let mut timings = timings_to_value_map(&built.timings);
+    let mut timings = built.timings;
     timings.insert(
         "api.workspace_base.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
+        total_start.elapsed().as_secs_f64(),
     );
     let binding = binding_to_value(&built.binding)?;
     Ok(to_wire_value(WorkspaceBaseOutput {
         success: true,
         created: true,
         binding,
-        timings: Value::Object(timings),
+        timings,
     }))
 }
 
@@ -94,9 +94,10 @@ pub(crate) fn ensure_workspace_base(
     let workspace_root = input.workspace_root;
     let (binding, created) = ensure_layer_stack_workspace_base(&root, &workspace_root)?;
     let binding = binding_to_value(&binding)?;
-    let timings = json!({
-        "api.workspace_base.total_s": total_start.elapsed().as_secs_f64(),
-    });
+    let timings = std::collections::BTreeMap::from([(
+        "api.workspace_base.total_s".to_owned(),
+        total_start.elapsed().as_secs_f64(),
+    )]);
     Ok(to_wire_value(WorkspaceBaseOutput {
         success: true,
         created,
@@ -126,16 +127,15 @@ pub(crate) fn commit_to_workspace(
     let root = input.layer_stack_root;
     let workspace_root = input.workspace_root;
     let mut stack = LayerStack::open(root)?;
-    let (manifest, commit_timings) = stack.commit_to_workspace(&workspace_root)?;
-    let mut timings = timings_to_value_map(&commit_timings);
+    let (manifest, mut timings) = stack.commit_to_workspace(&workspace_root)?;
     timings.insert(
         "api.commit_to_workspace.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
+        total_start.elapsed().as_secs_f64(),
     );
     Ok(to_wire_value(CommitToWorkspaceOutput {
         success: true,
         manifest_version: manifest.version,
-        timings: Value::Object(timings),
+        timings,
     }))
 }
 
@@ -161,8 +161,12 @@ fn commit_response(outcome: &CommitOutcome) -> Value {
         manifest_root_hash: outcome.manifest_root_hash.clone(),
         paths: outcome.paths.clone(),
         worktree_mode: outcome.worktree_mode.to_owned(),
-        timings: Value::Object(timings_to_value_map(&outcome.timings)),
+        timings: outcome.timings.clone(),
     })
+}
+
+fn binding_to_value(binding: &WorkspaceBinding) -> Result<Value, DaemonError> {
+    serde_json::to_value(binding).map_err(|err| DaemonError::InvalidRequest(err.to_string()))
 }
 
 #[cfg(test)]

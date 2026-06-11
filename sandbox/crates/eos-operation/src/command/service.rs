@@ -18,7 +18,7 @@ use eos_workspace::IsolatedWorkspaceBinding;
 use crate::WorkspaceKind;
 
 use super::contract::{
-    CollectCompletedResponse, CommandResponse, CommandSessionCompletion, CommandStatus,
+    CollectCompletedOutput, CommandResponse, CommandSessionCompletion, CommandStatus,
 };
 use super::outcome::FinalizeCommandRequest;
 use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
@@ -315,7 +315,7 @@ impl CommandOps {
     }
 
     #[must_use]
-    pub fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedResponse {
+    pub fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedOutput {
         self.registry.collect_completed(request)
     }
 
