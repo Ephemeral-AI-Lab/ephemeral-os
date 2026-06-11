@@ -1,10 +1,9 @@
 //! A per-operation overlay transaction.
 //!
 //! An ephemeral workspace is an overlay that one command runs **on** — never a
-//! thing that runs commands. It is created against a frozen set of layer
-//! paths, exposes the mount plan a runner child needs, captures its upperdir
-//! delta when the operation settles, and removes its scratch directories on
-//! drop.
+//! thing that runs commands. It allocates fresh overlay dirs for a runner
+//! request, captures the upperdir delta when the operation settles, and removes
+//! scratch directories on drop.
 //!
 //! What this crate deliberately does NOT know: leases (the orchestrator that
 //! acquired the snapshot keeps custody), publishing (the captured changes are
@@ -16,17 +15,11 @@
 
 mod capture;
 mod dirs;
-mod runtime_dirs;
-mod stats;
 mod workspace;
 
-pub use capture::{
-    capture_upperdir, path_changes_to_wire, CapturedChanges, PathChange, PathChangeKind,
-};
-pub use dirs::{DirAllocator, OverlayDirs, OverlayDirsGuard};
-pub use runtime_dirs::overlay_run_dirs;
-pub use stats::TreeResourceStats;
-pub use workspace::{EphemeralWorkspace, MountPlan};
+pub use capture::{capture_upperdir, path_changes_to_wire, CapturedChanges, TreeResourceStats};
+pub use dirs::{overlay_run_dirs, OverlayDirs, OverlayDirsGuard};
+pub use workspace::EphemeralWorkspace;
 
 use std::path::PathBuf;
 

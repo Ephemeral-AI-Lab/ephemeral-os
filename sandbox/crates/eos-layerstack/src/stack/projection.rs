@@ -13,15 +13,7 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
         .iter()
         .filter(|entry| matches!(entry.kind, ProjectEntryKind::Opaque))
     {
-        let dir = entry
-            .rel
-            .parent()
-            .filter(|parent| !parent.as_os_str().is_empty())
-            .map_or_else(
-                || destination.to_path_buf(),
-                |parent| destination.join(parent),
-            );
-        clear_directory(&dir)?;
+        clear_directory(&destination_parent(destination, &entry.rel))?;
     }
     for entry in entries.iter().filter(|entry| {
         matches!(
@@ -34,15 +26,8 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
                 let Some(name) = entry.rel.file_name().and_then(|name| name.to_str()) else {
                     continue;
                 };
-                let target_name = name.trim_start_matches(LOGICAL_WHITEOUT_PREFIX);
-                entry
-                    .rel
-                    .parent()
-                    .filter(|parent| !parent.as_os_str().is_empty())
-                    .map_or_else(
-                        || destination.join(target_name),
-                        |parent| destination.join(parent).join(target_name),
-                    )
+                destination_parent(destination, &entry.rel)
+                    .join(name.trim_start_matches(LOGICAL_WHITEOUT_PREFIX))
             }
             ProjectEntryKind::KernelWhiteout => destination.join(&entry.rel),
             _ => continue,
@@ -58,20 +43,19 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
         let target = destination.join(&entry.rel);
         match entry.kind {
             ProjectEntryKind::Directory => ensure_directory(&target)?,
-            ProjectEntryKind::File => {
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
+            ProjectEntryKind::File | ProjectEntryKind::Symlink => {
+                create_parent(&target)?;
                 remove_path(&target)?;
-                std::fs::copy(entry.path, target)?;
-            }
-            ProjectEntryKind::Symlink => {
-                if let Some(parent) = target.parent() {
-                    std::fs::create_dir_all(parent)?;
+                match entry.kind {
+                    ProjectEntryKind::File => {
+                        std::fs::copy(entry.path, target)?;
+                    }
+                    ProjectEntryKind::Symlink => {
+                        let link_target = std::fs::read_link(entry.path)?;
+                        std::os::unix::fs::symlink(link_target, target)?;
+                    }
+                    _ => {}
                 }
-                remove_path(&target)?;
-                let link_target = std::fs::read_link(entry.path)?;
-                std::os::unix::fs::symlink(link_target, target)?;
             }
             ProjectEntryKind::Opaque
             | ProjectEntryKind::LogicalWhiteout
@@ -88,7 +72,7 @@ struct ProjectEntry {
     kind: ProjectEntryKind,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum ProjectEntryKind {
     Opaque,
     LogicalWhiteout,
@@ -102,10 +86,7 @@ fn collect_project_entries(layer_dir: &Path) -> Result<Vec<ProjectEntry>, LayerS
     let mut entries = Vec::new();
     let mut stack = vec![layer_dir.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let mut children = Vec::new();
-        for entry in std::fs::read_dir(&dir)? {
-            children.push(entry?);
-        }
+        let mut children = std::fs::read_dir(&dir)?.collect::<Result<Vec<_>, _>>()?;
         children.sort_by_key(std::fs::DirEntry::path);
         for entry in children {
             let path = entry.path();
@@ -139,6 +120,22 @@ fn collect_project_entries(layer_dir: &Path) -> Result<Vec<ProjectEntry>, LayerS
         }
     }
     Ok(entries)
+}
+
+fn destination_parent(destination: &Path, rel: &Path) -> PathBuf {
+    rel.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map_or_else(
+            || destination.to_path_buf(),
+            |parent| destination.join(parent),
+        )
+}
+
+fn create_parent(path: &Path) -> Result<(), LayerStackError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    Ok(())
 }
 
 fn clear_directory(path: &Path) -> Result<(), LayerStackError> {

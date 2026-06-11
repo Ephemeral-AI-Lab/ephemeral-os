@@ -7,7 +7,6 @@ license.workspace = true
 
 [dependencies]
 eos-overlay.workspace = true
-serde.workspace = true
 thiserror.workspace = true
 
 [lints]

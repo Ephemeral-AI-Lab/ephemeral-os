@@ -257,12 +257,13 @@ sandbox/
 │   ├── eos-overlay/                overlayfs mount/capture leaf
 │   ├── eos-namespace/              holder + runner namespace child support
 │   ├── eos-command-session/        PTY-backed command sessions
-│   ├── eos-command-ops/            command lifecycle/runtime policy
 │   ├── eos-ephemeral-workspace/    per-operation overlay workspace helpers
 │   ├── eos-isolated-workspace/     isolated session lifecycle + network setup
-│   ├── eos-file-ops/               file operation semantics
 │   ├── eos-plugin/                 plugin contracts and PPC protocol
-│   ├── eos-plugin-ops/             plugin package/process/dispatch runtime
+│   ├── eos-operation/
+│   │   ├── eos-command-ops/        command lifecycle/runtime policy
+│   │   ├── file-ops/               file operation semantics
+│   │   └── plugin-ops/             plugin package/process/dispatch runtime
 │   └── eos-e2e-test/               live protocol tests
 ├── docs/
 │   ├── README.md                   index

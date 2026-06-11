@@ -26,6 +26,7 @@ fn main() -> Result<()> {
     }
 
     inventory.crates.sort_by(|a, b| a.name.cmp(&b.name));
+    reset_output_dir(&out_dir)?;
     fs::create_dir_all(out_dir.join("assets"))?;
     fs::create_dir_all(out_dir.join("crates"))?;
     write_json(&out_dir, &inventory)?;
@@ -40,6 +41,17 @@ fn main() -> Result<()> {
         inventory.crates.len(),
         out_dir.display()
     );
+    Ok(())
+}
+
+fn reset_output_dir(out_dir: &Path) -> Result<()> {
+    for child in ["assets", "crates"] {
+        let path = out_dir.join(child);
+        if path.exists() {
+            fs::remove_dir_all(&path)
+                .with_context(|| format!("remove generated output {}", path.display()))?;
+        }
+    }
     Ok(())
 }
 
@@ -58,11 +70,16 @@ fn find_sandbox_root() -> Result<PathBuf> {
 fn crate_dirs(workspace: &Path) -> Result<Vec<PathBuf>> {
     let crates_root = workspace.join("crates");
     let mut dirs = Vec::new();
-    for entry in fs::read_dir(&crates_root).context("read crates directory")? {
-        let entry = entry?;
+    for entry in WalkDir::new(&crates_root)
+        .min_depth(1)
+        .into_iter()
+        .filter_entry(|entry| entry.file_name() != "target")
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_dir())
+    {
         let path = entry.path();
         if path.join("Cargo.toml").exists() && path.join("src").is_dir() {
-            dirs.push(path);
+            dirs.push(path.to_path_buf());
         }
     }
     let xtask = workspace.join("xtask");
@@ -74,11 +91,7 @@ fn crate_dirs(workspace: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn scan_crate(workspace: &Path, crate_dir: &Path) -> Result<CrateInventory> {
-    let name = crate_dir
-        .file_name()
-        .and_then(|name| name.to_str())
-        .context("crate directory has no utf-8 name")?
-        .to_string();
+    let name = package_name(&crate_dir.join("Cargo.toml"))?;
     let mut modules = Vec::new();
 
     for entry in WalkDir::new(crate_dir.join("src"))
@@ -112,6 +125,40 @@ fn scan_crate(workspace: &Path, crate_dir: &Path) -> Result<CrateInventory> {
         stats: CrateStats::from_modules(&modules),
         modules,
     })
+}
+
+fn package_name(manifest_path: &Path) -> Result<String> {
+    let manifest = fs::read_to_string(manifest_path)
+        .with_context(|| format!("read manifest {}", manifest_path.display()))?;
+    let mut in_package = false;
+    for raw_line in manifest.lines() {
+        let line = raw_line
+            .split_once('#')
+            .map_or(raw_line, |(before, _)| before)
+            .trim();
+        if line.starts_with('[') {
+            in_package = line == "[package]";
+            continue;
+        }
+        if !in_package {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        if key.trim() != "name" {
+            continue;
+        }
+        let value = value.trim();
+        if let Some(name) = value
+            .strip_prefix('"')
+            .and_then(|rest| rest.strip_suffix('"'))
+        {
+            return Ok(name.to_string());
+        }
+        anyhow::bail!("unsupported package name in {}", manifest_path.display());
+    }
+    anyhow::bail!("missing package name in {}", manifest_path.display());
 }
 
 fn collect_items(
@@ -680,7 +727,7 @@ fn write_crate_file_page(
     links: &SymbolLinks,
 ) -> Result<()> {
     let module_stats = ModuleStats::from_module(module);
-    let display_path = display_file_path(&krate.name, &module.path);
+    let display_path = display_file_path(&krate.path, &module.path);
     let module_nav = file_tree_nav(krate, &module.path);
     let items = module_inventory_body(module, links);
     let source_section = file_source_section(module, links);
@@ -770,7 +817,7 @@ fn write_crate_file_page(
 fn file_tree_nav(krate: &CrateInventory, selected_path: &str) -> String {
     let mut root = TreeNode::default();
     for module in &krate.modules {
-        let display_path = display_file_path(&krate.name, &module.path);
+        let display_path = display_file_path(&krate.path, &module.path);
         let parts = display_path.split('/').collect::<Vec<_>>();
         root.insert(&parts, krate, module);
     }
@@ -787,7 +834,7 @@ fn crate_file_page_name(krate: &CrateInventory, module: &ModuleInventory) -> Str
         format!(
             "{}--{}.html",
             krate.name,
-            slug(&display_file_path(&krate.name, &module.path))
+            slug(&display_file_path(&krate.path, &module.path))
         )
     }
 }
@@ -853,8 +900,8 @@ impl TreeNode {
     }
 }
 
-fn display_file_path(crate_name: &str, path: &str) -> String {
-    let prefix = format!("crates/{crate_name}/");
+fn display_file_path(crate_path: &str, path: &str) -> String {
+    let prefix = format!("{crate_path}/");
     path.strip_prefix(&prefix).unwrap_or(path).to_string()
 }
 

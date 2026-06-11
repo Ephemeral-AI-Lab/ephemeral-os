@@ -132,7 +132,7 @@
     <span class="rs-kw">let</span> manifest_depth = lease.manifest.depth();
     <span class="rs-kw">let</span> manifest_path_count = lease.layer_paths.len();
     <span class="rs-kw">let</span> lease_id = lease.lease_id.clone();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = lease.timings.clone();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::new();
 
     <span class="rs-kw">let</span> outcome = (|| {
         <span class="rs-kw">let</span> worktree = <a class="symbol-link rs-fn" href="eos-checkpoint.html#item-fn-prepare-worktree-184">prepare_worktree</a>(root, &amp;lease, &amp;<span class="rs-kw">mut</span> timings)?;
@@ -751,7 +751,7 @@
     <span class="rs-kw">let</span> manifest_depth = lease.manifest.depth();
     <span class="rs-kw">let</span> manifest_path_count = lease.layer_paths.len();
     <span class="rs-kw">let</span> lease_id = lease.lease_id.clone();
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = lease.timings.clone();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-type">BTreeMap</span>::new();
 
     <span class="rs-kw">let</span> outcome = (|| {
         <span class="rs-kw">let</span> worktree = <a class="symbol-link rs-fn" href="eos-checkpoint.html#item-fn-prepare-worktree-184">prepare_worktree</a>(root, &amp;lease, &amp;<span class="rs-kw">mut</span> timings)?;

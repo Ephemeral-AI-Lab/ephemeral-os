@@ -1,18 +1,12 @@
 //! Argv, cwd, and environment construction for fresh-ns command execution.
 
-#[cfg(target_os = "linux")]
 use std::collections::BTreeMap;
-#[cfg(target_os = "linux")]
 use std::fs;
-#[cfg(target_os = "linux")]
 use std::path::{Component, Path, PathBuf};
 
-#[cfg(target_os = "linux")]
 use crate::protocol::RunRequest;
-#[cfg(target_os = "linux")]
 use crate::runner::RunnerError;
 
-#[cfg(target_os = "linux")]
 pub(super) fn plugin_service_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
     let Some(command) = request.tool_call.args.get("command") else {
         return Err(RunnerError::InvalidRequest(
@@ -49,7 +43,6 @@ pub(super) fn plugin_service_argv(request: &RunRequest) -> Result<Vec<String>, R
     Ok(argv)
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
     let shell_args = &request.tool_call.args;
     let Some(command) = shell_args.get("command") else {
@@ -77,7 +70,6 @@ pub(super) fn shell_argv(request: &RunRequest) -> Result<Vec<String>, RunnerErro
     ))
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn shell_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
     let raw = request
         .tool_call
@@ -105,7 +97,6 @@ pub(super) fn shell_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
     Ok(resolved)
 }
 
-#[cfg(target_os = "linux")]
 fn normalize_lexical(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
     for component in path.components() {
@@ -120,7 +111,6 @@ fn normalize_lexical(path: &Path) -> PathBuf {
     normalized
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
     const HOST_KEYS: &[&str] = &["PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM", "TZ"];
     const RESTRICTED: &[&str] = &[
@@ -168,6 +158,6 @@ pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, 
     env
 }
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(test)]
 #[path = "../../../tests/unit/runner/fresh_ns/command.rs"]
 mod tests;

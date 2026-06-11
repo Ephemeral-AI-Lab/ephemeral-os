@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>44</b><span>items</span></div>
-  <div><b>69</b><span>fields</span></div>
-  <div><b>26</b><span>methods</span></div>
+  <div><b>42</b><span>items</span></div>
+  <div><b>48</b><span>fields</span></div>
+  <div><b>24</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-file-ops.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-file-ops--src-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="eos-file-ops--src-lib-rs.html"><span>lib.rs</span><small>16/8</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-file-ops/src/lib.rs WorkspaceTimings ChangedPathKinds WorkspaceConflict impl WorkspaceConflict FileOpsError impl FileOpsError ResolvedWorkspacePath impl ResolvedWorkspacePath ReadBytes MutationKind impl MutationKind Mutation MutationOutcome FileBackend ReadFileRequest WriteFileRequest SearchReplaceEdit EditFileRequest ReadFileOutcome WriteFileOutcome impl From &lt; MutationOutcome &gt; for WriteFileOutcome EditFileOutcome impl EditFileOutcome read_file write_file edit_file write_conflict edit_conflict insert_total SearchReplaceError search_replace_message apply_search_replace">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-file-ops.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-file-ops--src-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="eos-file-ops--src-lib-rs.html"><span>lib.rs</span><small>14/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-operation/file-ops/src/lib.rs WorkspaceTimings ChangedPathKinds WorkspaceConflict impl WorkspaceConflict FileOpsError impl FileOpsError ResolvedWorkspacePath impl ResolvedWorkspacePath ReadBytes MutationKind impl MutationKind Mutation MutationOutcome FileBackend ReadFileRequest WriteFileRequest SearchReplaceEdit EditFileRequest ReadFileOutcome WriteFileOutcome EditFileOutcome read_file write_file edit_file conflict_outcome is_zero_i64 insert_total SearchReplaceError search_replace_message apply_search_replace">
   <div class="module-head">
     <div>
       <h2>src/lib.rs</h2>
@@ -50,25 +50,24 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>16 types</span>
-      <span>6 impls</span>
+      <span>14 types</span>
+      <span>4 impls</span>
       <span>8 fns</span>
-      <span>12 methods</span>
+      <span>10 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceConflict-37" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceConflict pub pub struct WorkspaceConflict crates/eos-file-ops/src/lib.rs reason String conflict_file Option &lt; String &gt; message String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-WorkspaceConflict-22" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceConflict pub pub struct WorkspaceConflict crates/eos-operation/file-ops/src/lib.rs reason String conflict_file Option &lt; String &gt; message String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkspaceConflict</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a></code>
-  <p class="docstring">A per-path conflict surfaced on the response envelope.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>reason</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict_file</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-path-47"><td>associated-fn</td><td>path</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a> (reason : &amp; str , conflict_file : &amp; str , message : &amp; str) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>reason</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict_file</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-path-31"><td>associated-fn</td><td>path</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-path-31">path</a> (reason : &amp; str , conflict_file : &amp; str , message : &amp; str) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-31">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             reason: reason.to_owned(),
             conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
@@ -78,221 +77,150 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:37</p>
-</article><article id="item-struct-FileOpsError-57" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FileOpsError pub pub struct FileOpsError crates/eos-file-ops/src/lib.rs kind String message String ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:22</p>
+</article><article id="item-struct-FileOpsError-41" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FileOpsError pub pub struct FileOpsError crates/eos-operation/file-ops/src/lib.rs 0 String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>FileOpsError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a></code>
-  <p class="docstring">File-tier API error carrying a stable wire kind.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Error</span><span>derive: PartialEq</span><span>error</span><span>error: {message}</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-66"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops.html#method-new-29">new</a> (kind : &amp; str , message : String) -&gt; Self</code><details class="function-source">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Error</span><span>derive: PartialEq</span><span>error</span><span>error: {0}</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-46"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops.html#method-new-21">new</a> (_kind : &amp; str , message : String) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            kind: kind.to_owned(),
-            message,
-        }
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(_kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(message)
     }
 </code></pre>
-</details></td></tr><tr id="method-invalid-request-74"><td>associated-fn</td><td>invalid_request</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a> (message : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
+</details></td></tr><tr id="method-invalid-request-51"><td>associated-fn</td><td>invalid_request</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a> (message : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(&quot;invalid_request&quot;, message.into())
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(&quot;invalid_request&quot;, message.into())
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:57</p>
-</article><article id="item-struct-ResolvedWorkspacePath-80" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ResolvedWorkspacePath pub pub struct ResolvedWorkspacePath crates/eos-file-ops/src/lib.rs path String ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:41</p>
+</article><article id="item-struct-ResolvedWorkspacePath-57" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ResolvedWorkspacePath pub pub struct ResolvedWorkspacePath crates/eos-operation/file-ops/src/lib.rs path String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ResolvedWorkspacePath</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a></code>
-  <p class="docstring">A workspace-relative path after backend-specific root resolution.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-87"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops.html#method-new-29">new</a> (path : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-63"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops.html#method-new-21">new</a> (path : impl Into &lt; String &gt;) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { path: path.into() }
     }
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:80</p>
-</article><article id="item-struct-ReadBytes-93" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadBytes pub pub struct ReadBytes crates/eos-file-ops/src/lib.rs bytes Option &lt; Vec &lt; u8 &gt; &gt; exists bool manifest_version Option &lt; i64 &gt; timings WorkspaceTimings ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:57</p>
+</article><article id="item-struct-ReadBytes-69" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadBytes pub pub struct ReadBytes crates/eos-operation/file-ops/src/lib.rs bytes Option &lt; Vec &lt; u8 &gt; &gt; exists bool manifest_version Option &lt; i64 &gt; timings WorkspaceTimings ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReadBytes</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a></code>
-  <p class="docstring">Bytes read from the backend's view.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>bytes</td><td><code>Option &lt; Vec &lt; u8 &gt; &gt;</code></td></tr><tr><td>pub</td><td>exists</td><td><code>bool</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>bytes</td><td><code>Option &lt; Vec &lt; u8 &gt; &gt;</code></td></tr><tr><td>pub</td><td>exists</td><td><code>bool</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:93</p>
-</article><article id="item-struct-Mutation-123" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Mutation pub pub struct Mutation crates/eos-file-ops/src/lib.rs kind MutationKind path ResolvedWorkspacePath content Vec &lt; u8 &gt; base ReadBytes ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:69</p>
+</article><article id="item-struct-Mutation-97" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Mutation pub pub struct Mutation crates/eos-operation/file-ops/src/lib.rs kind MutationKind path ResolvedWorkspacePath content Vec &lt; u8 &gt; base ReadBytes ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Mutation</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a></code>
-  <p class="docstring">Mutation passed to the backend's apply.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a></code></td></tr><tr><td>pub</td><td>path</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a></code></td></tr><tr><td>pub</td><td>content</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>pub</td><td>base</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a></code></td></tr><tr><td>pub</td><td>path</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a></code></td></tr><tr><td>pub</td><td>content</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>pub</td><td>base</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:123</p>
-</article><article id="item-struct-MutationOutcome-132" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MutationOutcome pub pub struct MutationOutcome crates/eos-file-ops/src/lib.rs workspace_kind String success bool published bool status String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String timings WorkspaceTimings ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:97</p>
+</article><article id="item-struct-MutationOutcome-105" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MutationOutcome pub pub struct MutationOutcome crates/eos-operation/file-ops/src/lib.rs workspace_kind String success bool published bool status String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String timings WorkspaceTimings applied_edits i64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>MutationOutcome</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a></code>
-  <p class="docstring">Normalized mutation outcome before daemon JSON conversion.</p>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a></code></td></tr><tr><td>pub</td><td>applied_edits</td><td><code>i64</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:132</p>
-</article><article id="item-struct-ReadFileRequest-188" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileRequest pub pub struct ReadFileRequest crates/eos-file-ops/src/lib.rs path String max_read_bytes usize ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:105</p>
+</article><article id="item-struct-ReadFileRequest-139" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileRequest pub pub struct ReadFileRequest crates/eos-operation/file-ops/src/lib.rs path String max_read_bytes usize ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReadFileRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-188">ReadFileRequest</a></code>
-  <p class="docstring">Read one text file from a workspace.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-139">ReadFileRequest</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>max_read_bytes</td><td><code>usize</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:188</p>
-</article><article id="item-struct-WriteFileRequest-195" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WriteFileRequest pub pub struct WriteFileRequest crates/eos-file-ops/src/lib.rs path String content Vec &lt; u8 &gt; overwrite bool max_file_bytes usize ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:139</p>
+</article><article id="item-struct-WriteFileRequest-145" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WriteFileRequest pub pub struct WriteFileRequest crates/eos-operation/file-ops/src/lib.rs path String content Vec &lt; u8 &gt; overwrite bool max_file_bytes usize ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WriteFileRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-195">WriteFileRequest</a></code>
-  <p class="docstring">Write one file into a workspace.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-145">WriteFileRequest</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>content</td><td><code>Vec &lt; u8 &gt;</code></td></tr><tr><td>pub</td><td>overwrite</td><td><code>bool</code></td></tr><tr><td>pub</td><td>max_file_bytes</td><td><code>usize</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:195</p>
-</article><article id="item-struct-SearchReplaceEdit-204" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SearchReplaceEdit pub pub struct SearchReplaceEdit crates/eos-file-ops/src/lib.rs old_text String new_text String replace_all bool ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:145</p>
+</article><article id="item-struct-SearchReplaceEdit-153" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SearchReplaceEdit pub pub struct SearchReplaceEdit crates/eos-operation/file-ops/src/lib.rs old_text String new_text String replace_all bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SearchReplaceEdit</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-204">SearchReplaceEdit</a></code>
-  <p class="docstring">One exact-match replacement for edit_file.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-153">SearchReplaceEdit</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>old_text</td><td><code>String</code></td></tr><tr><td>pub</td><td>new_text</td><td><code>String</code></td></tr><tr><td>pub</td><td>replace_all</td><td><code>bool</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:204</p>
-</article><article id="item-struct-EditFileRequest-213" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EditFileRequest pub pub struct EditFileRequest crates/eos-file-ops/src/lib.rs path String edits Vec &lt; SearchReplaceEdit &gt; ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:153</p>
+</article><article id="item-struct-EditFileRequest-161" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EditFileRequest pub pub struct EditFileRequest crates/eos-operation/file-ops/src/lib.rs path String edits Vec &lt; SearchReplaceEdit &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>EditFileRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-213">EditFileRequest</a></code>
-  <p class="docstring">Apply search/replace edits to one file.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-161">EditFileRequest</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>edits</td><td><code>Vec &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-204">SearchReplaceEdit</a> &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>edits</td><td><code>Vec &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-153">SearchReplaceEdit</a> &gt;</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:213</p>
-</article><article id="item-struct-ReadFileOutcome-220" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileOutcome pub pub struct ReadFileOutcome crates/eos-file-ops/src/lib.rs workspace_kind String success bool content String exists bool encoding String timings WorkspaceTimings ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:161</p>
+</article><article id="item-struct-ReadFileOutcome-167" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileOutcome pub pub struct ReadFileOutcome crates/eos-operation/file-ops/src/lib.rs workspace_kind String success bool content String exists bool encoding String timings WorkspaceTimings ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReadFileOutcome</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>content</td><td><code>String</code></td></tr><tr><td>pub</td><td>exists</td><td><code>bool</code></td></tr><tr><td>pub</td><td>encoding</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>content</td><td><code>String</code></td></tr><tr><td>pub</td><td>exists</td><td><code>bool</code></td></tr><tr><td>pub</td><td>encoding</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:220</p>
-</article><article id="item-struct-WriteFileOutcome-231" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WriteFileOutcome pub pub struct WriteFileOutcome crates/eos-file-ops/src/lib.rs workspace_kind String success bool published bool status String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String timings WorkspaceTimings ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>WriteFileOutcome</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a></code>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> &gt; for <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a></code></summary><table><tbody><tr id="method-from-252"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a> (outcome : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>) -&gt; Self</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>(outcome: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            workspace_kind: outcome.workspace_kind,
-            success: outcome.success,
-            published: outcome.published,
-            status: outcome.status,
-            conflict: outcome.conflict,
-            conflict_reason: outcome.conflict_reason,
-            changed_paths: outcome.changed_paths,
-            changed_path_kinds: outcome.changed_path_kinds,
-            mutation_source: outcome.mutation_source,
-            timings: outcome.timings,
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table></details></div>
-
-  <p class="source">crates/eos-file-ops/src/lib.rs:231</p>
-</article><article id="item-struct-EditFileOutcome-268" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct EditFileOutcome pub pub struct EditFileOutcome crates/eos-file-ops/src/lib.rs workspace_kind String success bool published bool status String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String timings WorkspaceTimings applied_edits i64 ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>EditFileOutcome</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a></code>
-  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace_kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>published</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code></td></tr><tr><td>pub</td><td>applied_edits</td><td><code>i64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-mutation-290"><td>constructor</td><td>from_mutation</td><td><code>pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-from-mutation-290">from_mutation</a> (outcome : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> , applied_edits : i64) -&gt; Self</code><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-mutation-290">from_mutation</a>(outcome: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, applied_edits: i64) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            workspace_kind: outcome.workspace_kind,
-            success: outcome.success,
-            published: outcome.published,
-            status: outcome.status,
-            conflict: outcome.conflict,
-            conflict_reason: outcome.conflict_reason,
-            changed_paths: outcome.changed_paths,
-            changed_path_kinds: outcome.changed_path_kinds,
-            mutation_source: outcome.mutation_source,
-            timings: outcome.timings,
-            applied_edits,
-        }
-    }
-</code></pre>
-</details></td></tr></tbody></table>
-
-  <p class="source">crates/eos-file-ops/src/lib.rs:268</p>
-</article><article id="item-enum-MutationKind-105" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum MutationKind pub pub enum MutationKind crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:167</p>
+</article><article id="item-enum-MutationKind-80" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum MutationKind pub pub enum MutationKind crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>MutationKind</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a></code>
-  <p class="docstring">Mutation kind produced by a file operation.</p>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Edit</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-verb-114"><td>method</td><td>verb</td><td><code>pub const fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-verb-114">verb</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Edit</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-verb-88"><td>method</td><td>verb</td><td><code>pub const fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#method-verb-88">verb</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-verb-114">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-verb-88">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Edit</span> =&gt; &quot;edit&quot;,
@@ -301,118 +229,110 @@
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:105</p>
-</article><article id="item-trait-FileBackend-154" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait FileBackend pub pub trait FileBackend crates/eos-file-ops/src/lib.rs  workspace_kind fn workspace_kind (&amp; self) -&gt; &amp; 'static str mutation_source fn mutation_source (&amp; self , kind : MutationKind) -&gt; &amp; 'static str resolve_path fn resolve_path (&amp; self , request_path : &amp; str) -&gt; Result &lt; ResolvedWorkspacePath , FileOpsError &gt; read_bytes fn read_bytes (&amp; self , path : &amp; ResolvedWorkspacePath) -&gt; Result &lt; ReadBytes , FileOpsError &gt; apply fn apply (&amp; self , mutation : Mutation) -&gt; Result &lt; MutationOutcome , FileOpsError &gt;">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:80</p>
+</article><article id="item-trait-FileBackend-127" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait FileBackend pub pub trait FileBackend crates/eos-operation/file-ops/src/lib.rs  workspace_kind fn workspace_kind (&amp; self) -&gt; &amp; 'static str mutation_source fn mutation_source (&amp; self , kind : MutationKind) -&gt; &amp; 'static str resolve_path fn resolve_path (&amp; self , request_path : &amp; str) -&gt; Result &lt; ResolvedWorkspacePath , FileOpsError &gt; read_bytes fn read_bytes (&amp; self , path : &amp; ResolvedWorkspacePath) -&gt; Result &lt; ReadBytes , FileOpsError &gt; apply fn apply (&amp; self , mutation : Mutation) -&gt; Result &lt; MutationOutcome , FileOpsError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>FileBackend</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a></code>
-  <p class="docstring">What a read resolves against and what an apply means durably.<br>The two real implementations are [`DirectBackend`] (latest merged state +<br>gated single-writer commit) and [`IsolatedBackend`] (upperdir-first reads,<br>private upperdir writes, never published).</p>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a></code>
   <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr id="method-workspace-kind-160"><td>required</td><td>workspace_kind</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-workspace-kind-128"><td>required</td><td>workspace_kind</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
 </code></pre>
-</details></td></tr><tr id="method-mutation-source-162"><td>required</td><td>mutation_source</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a> (&amp; self , kind : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable `mutation_source` string for outcomes of `kind`.</p><details class="function-source">
+</details></td></tr><tr id="method-mutation-source-130"><td>required</td><td>mutation_source</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a> (&amp; self , kind : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Stable `mutation_source` string for outcomes of `kind`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(&amp;<span class="rs-self">self</span>, kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(&amp;<span class="rs-self">self</span>, kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
 </code></pre>
-</details></td></tr><tr id="method-resolve-path-165"><td>required</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><p class="docstring">Normalize a request path into the backend's workspace-relative form.<br># Errors<br>Returns [`FileOpsError`] when the path is invalid for the workspace.</p><details class="function-source">
+</details></td></tr><tr id="method-resolve-path-132"><td>required</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Normalize a request path into the backend's workspace-relative form.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the path is invalid for the workspace.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-read-bytes-172"><td>required</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><p class="docstring">Read the path's current bytes in the backend's view.<br># Errors<br>Returns [`FileOpsError`] when the view cannot be read.</p><details class="function-source">
+</details></td></tr><tr id="method-read-bytes-134"><td>required</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Read the path's current bytes in the backend's view.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the view cannot be read.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 </code></pre>
-</details></td></tr><tr id="method-apply-179"><td>required</td><td>apply</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-apply-70">apply</a> (&amp; self , mutation : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><p class="docstring">Make `mutation` durable per the backend's policy.<br># Errors<br>Returns [`FileOpsError`] when the apply fails (a publish conflict is an<br>`Ok` outcome carrying `conflict`, not an error).</p><details class="function-source">
+</details></td></tr><tr id="method-apply-136"><td>required</td><td>apply</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-apply-62">apply</a> (&amp; self , mutation : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Make `mutation` durable per the backend's policy.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the apply fails (a publish conflict is an</span>
-    <span class="rs-comment">/// `Ok` outcome carrying `conflict`, not an error).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 </code></pre>
 </details></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:154</p>
-</article><article id="item-enum-SearchReplaceError-503" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SearchReplaceError private enum SearchReplaceError crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:127</p>
+</article><article id="item-enum-SearchReplaceError-342" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SearchReplaceError private enum SearchReplaceError crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>SearchReplaceError</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a></code>
-  <p class="docstring">Search/replace failure. Message strings are part of the public conflict<br>contract.</p>
+  <code class="signature">enum <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Error</span><span>derive: PartialEq</span><span>error</span></div>
   <h4>Variants</h4><table><tbody><tr><td>NotFound</td><td><code></code></td></tr><tr><td>CountMismatch</td><td><code></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:503</p>
-</article><div class="group-label">Aliases</div><article id="item-type-WorkspaceTimings-31" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WorkspaceTimings pub pub type WorkspaceTimings = BTreeMap &lt; String , Value &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:342</p>
+</article><div class="group-label">Aliases</div><article id="item-type-WorkspaceTimings-18" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WorkspaceTimings pub pub type WorkspaceTimings = BTreeMap &lt; String , Value &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>WorkspaceTimings</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> = BTreeMap &lt; String , Value &gt;</code>
-  <p class="docstring">Timing/telemetry map keyed by stable wire strings.</p>
+  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> = BTreeMap &lt; String , Value &gt;</code>
   <div class="tags"></div>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:31</p>
-</article><article id="item-type-ChangedPathKinds-34" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type ChangedPathKinds pub pub type ChangedPathKinds = BTreeMap &lt; String , String &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:18</p>
+</article><article id="item-type-ChangedPathKinds-20" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type ChangedPathKinds pub pub type ChangedPathKinds = BTreeMap &lt; String , String &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>ChangedPathKinds</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a> = BTreeMap &lt; String , String &gt;</code>
-  <p class="docstring">`path -&gt; kind` map for changed paths (wire-stable kind strings).</p>
+  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a> = BTreeMap &lt; String , String &gt;</code>
   <div class="tags"></div>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:34</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-read-file-308" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_file pub pub fn read_file &lt; B : FileBackend &gt; (backend : &amp; B , request : ReadFileRequest ,) -&gt; Result &lt; ReadFileOutcome , FileOpsError &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:20</p>
+</article><article id="item-type-WriteFileOutcome-178" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type WriteFileOutcome pub pub type WriteFileOutcome = MutationOutcome crates/eos-operation/file-ops/src/lib.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>WriteFileOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WriteFileOutcome-178">WriteFileOutcome</a> = <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a></code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:178</p>
+</article><article id="item-type-EditFileOutcome-179" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type EditFileOutcome pub pub type EditFileOutcome = MutationOutcome crates/eos-operation/file-ops/src/lib.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>EditFileOutcome</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-EditFileOutcome-179">EditFileOutcome</a> = <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a></code>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:179</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-read-file-181" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_file pub pub fn read_file &lt; B : FileBackend &gt; (backend : &amp; B , request : ReadFileRequest ,) -&gt; Result &lt; ReadFileOutcome , FileOpsError &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-read-file-308">read_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-188">ReadFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code>
-  <p class="docstring">Read one text file through a backend.<br># Errors<br>Returns [`FileOpsError`] when the path cannot be resolved, the file cannot<br>be read, or the read exceeds `max_read_bytes`.</p>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-read-file-181">read_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-139">ReadFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Read one text file through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the file cannot</span>
-<span class="rs-comment">/// be read, or the read exceeds `max_read_bytes`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> read_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> read_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-188">ReadFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-139">ReadFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> read = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> read = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">let</span> content = <span class="rs-kw">if</span> read.exists {
         <span class="rs-kw">let</span> bytes = read.bytes.unwrap_or_default();
         <span class="rs-kw">if</span> bytes.len() &gt; request.max_read_bytes {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(
                 &quot;file too large: {} &gt; {} bytes&quot;,
                 bytes.len(),
                 request.max_read_bytes
@@ -420,12 +340,12 @@
         }
         <span class="rs-type">String</span>::from_utf8_lossy(&amp;bytes).into_owned()
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>()
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>()
     };
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = read.timings;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;read&quot;, total_start);
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;read&quot;, total_start);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a> {
+        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>().to_owned(),
         success: <span class="rs-kw">true</span>,
         content,
         exists: read.exists,
@@ -436,43 +356,37 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:308</p>
-</article><article id="item-fn-write-file-346" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_file pub pub fn write_file &lt; B : FileBackend &gt; (backend : &amp; B , request : WriteFileRequest ,) -&gt; Result &lt; WriteFileOutcome , FileOpsError &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:181</p>
+</article><article id="item-fn-write-file-213" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_file pub pub fn write_file &lt; B : FileBackend &gt; (backend : &amp; B , request : WriteFileRequest ,) -&gt; Result &lt; WriteFileOutcome , FileOpsError &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-write-file-346">write_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-195">WriteFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code>
-  <p class="docstring">Write one file through a backend.<br># Errors<br>Returns [`FileOpsError`] when the path cannot be resolved, the base cannot<br>be read, the request is too large, or the apply fails.</p>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-write-file-213">write_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-145">WriteFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WriteFileOutcome-178">WriteFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Write one file through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the base cannot</span>
-<span class="rs-comment">/// be read, the request is too large, or the apply fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> write_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> write_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-195">WriteFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-145">WriteFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WriteFileOutcome-178">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">if</span> request.content.len() &gt; request.max_file_bytes {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(
             &quot;file too large: {} &gt; {} bytes&quot;,
             request.content.len(),
             request.max_file_bytes
         )));
     }
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !request.overwrite &amp;&amp; base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-write-conflict-451">write_conflict</a>(
+        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
             backend,
+            <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Write</span>,
             &amp;path.path,
             &quot;rejected&quot;,
             &quot;create_only_existing&quot;,
@@ -480,48 +394,42 @@
             timings,
         ));
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a> {
-        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Write</span>,
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a> {
+        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Write</span>,
         path,
         content: request.content,
         base,
     })?;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;write&quot;, total_start);
-    <span class="rs-type">Ok</span>(outcome.into())
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;write&quot;, total_start);
+    <span class="rs-type">Ok</span>(outcome)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:346</p>
-</article><article id="item-fn-edit-file-388" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_file pub pub fn edit_file &lt; B : FileBackend &gt; (backend : &amp; B , request : EditFileRequest ,) -&gt; Result &lt; EditFileOutcome , FileOpsError &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:213</p>
+</article><article id="item-fn-edit-file-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_file pub pub fn edit_file &lt; B : FileBackend &gt; (backend : &amp; B , request : EditFileRequest ,) -&gt; Result &lt; EditFileOutcome , FileOpsError &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>edit_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-edit-file-388">edit_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-213">EditFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code>
-  <p class="docstring">Apply exact search/replace edits through a backend.<br># Errors<br>Returns [`FileOpsError`] when the path cannot be resolved, the base cannot<br>be read, the file is not UTF-8, or the apply fails.</p>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-edit-file-250">edit_file</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> &gt; (backend : &amp; B , request : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-161">EditFileRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-EditFileOutcome-179">EditFileOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Apply exact search/replace edits through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the base cannot</span>
-<span class="rs-comment">/// be read, the file is not UTF-8, or the apply fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> edit_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+  <pre><code><span class="rs-kw">pub</span> <span class="rs-kw">fn</span> edit_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-213">EditFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-161">EditFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-EditFileOutcome-179">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-edit-conflict-473">edit_conflict</a>(
+        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
             backend,
+            <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
             &amp;path.path,
             &quot;aborted_version&quot;,
             &quot;aborted_version&quot;,
@@ -531,127 +439,109 @@
     }
     <span class="rs-kw">let</span> bytes = base.bytes.clone().unwrap_or_default();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> content = <span class="rs-type">String</span>::from_utf8(bytes)
-        .map_err(|err| <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(&quot;file is not utf-8 text: {err}&quot;)))?;
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(&quot;file is not utf-8 text: {err}&quot;)))?;
     <span class="rs-kw">for</span> edit <span class="rs-kw">in</span> &amp;request.edits {
         <span class="rs-kw">if</span> edit.old_text.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(
                 &quot;edit anchor old_text must be non-empty&quot;,
             ));
         }
-        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-520">apply_search_replace</a>(&amp;content, &amp;edit.old_text, &amp;edit.new_text, edit.replace_all) {
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-357">apply_search_replace</a>(&amp;content, &amp;edit.old_text, &amp;edit.new_text, edit.replace_all) {
             <span class="rs-type">Ok</span>(next) =&gt; content = next,
             <span class="rs-type">Err</span>(err) =&gt; {
                 <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-                <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
-                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-edit-conflict-473">edit_conflict</a>(
+                <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
                     backend,
+                    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
                     &amp;path.path,
                     &quot;aborted_overlap&quot;,
                     &quot;aborted_overlap&quot;,
-                    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-513">search_replace_message</a>(&amp;err),
+                    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-350">search_replace_message</a>(&amp;err),
                     timings,
                 ));
             }
         }
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a> {
-        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Edit</span>,
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a> {
+        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
         path,
         content: content.into_bytes(),
         base,
     })?;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;edit&quot;, total_start);
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-mutation-290">from_mutation</a>(
-        outcome,
-        i64::try_from(request.edits.len()).unwrap_or(i64::<span class="rs-type">MAX</span>),
-    ))
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;edit&quot;, total_start);
+    outcome.applied_edits = i64::try_from(request.edits.len()).unwrap_or(i64::<span class="rs-type">MAX</span>);
+    <span class="rs-type">Ok</span>(outcome)
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:388</p>
-</article><article id="item-fn-write-conflict-451" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_conflict private fn write_conflict &lt; B : FileBackend &gt; (backend : &amp; B , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; WriteFileOutcome crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:250</p>
+</article><article id="item-fn-conflict-outcome-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_outcome private fn conflict_outcome &lt; B : FileBackend &gt; (backend : &amp; B , kind : MutationKind , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; MutationOutcome crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>write_conflict</h3>
+    <h3>conflict_outcome</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-write-conflict-451">write_conflict</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> &gt; (backend : &amp; B , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> &gt; (backend : &amp; B , kind : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a> , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> write_conflict&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+  <pre><code><span class="rs-kw">fn</span> conflict_outcome&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
+    kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>,
     path: &amp;str,
     status: &amp;str,
     reason: &amp;str,
     message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
+    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
+    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
+        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>().to_owned(),
         success: <span class="rs-kw">false</span>,
         published: <span class="rs-kw">false</span>,
         status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason, path, message)),
+        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-31">path</a>(reason, path, message)),
         conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Write</span>).to_owned(),
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(),
+        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(),
+        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(kind).to_owned(),
         timings,
+        ..<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>::default()
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:451</p>
-</article><article id="item-fn-edit-conflict-473" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_conflict private fn edit_conflict &lt; B : FileBackend &gt; (backend : &amp; B , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : WorkspaceTimings ,) -&gt; EditFileOutcome crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:307</p>
+</article><article id="item-fn-is-zero-i64-331" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_zero_i64 private const fn is_zero_i64 (value : &amp; i64) -&gt; bool crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>edit_conflict</h3>
+    <h3>is_zero_i64</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-edit-conflict-473">edit_conflict</a> &lt; B : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> &gt; (backend : &amp; B , path : &amp; str , status : &amp; str , reason : &amp; str , message : &amp; str , timings : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> ,) -&gt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a></code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-is-zero-i64-331">is_zero_i64</a> (value : &amp; i64) -&gt; bool</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> edit_conflict&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
-    backend: &amp;<span class="rs-type">B</span>,
-    path: &amp;str,
-    status: &amp;str,
-    reason: &amp;str,
-    message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
-        success: <span class="rs-kw">false</span>,
-        published: <span class="rs-kw">false</span>,
-        status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason, path, message)),
-        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Edit</span>).to_owned(),
-        timings,
-        applied_edits: 0,
-    }
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-is-zero-i64-331">is_zero_i64</a>(value: &amp;i64) -&gt; bool {
+    *value == 0
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:473</p>
-</article><article id="item-fn-insert-total-496" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_total private fn insert_total (timings : &amp; mut WorkspaceTimings , verb : &amp; str , start : Instant) crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:331</p>
+</article><article id="item-fn-insert-total-335" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_total private fn insert_total (timings : &amp; mut WorkspaceTimings , verb : &amp; str , start : Instant) crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_total</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a> (timings : &amp; mut <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> , verb : &amp; str , start : Instant)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a> (timings : &amp; mut <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> , verb : &amp; str , start : Instant)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
     timings.insert(
         format!(&quot;api.{verb}.total_s&quot;),
         json!(start.elapsed().as_secs_f64()),
@@ -660,86 +550,70 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:496</p>
-</article><article id="item-fn-search-replace-message-513" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn search_replace_message private const fn search_replace_message (err : &amp; SearchReplaceError) -&gt; &amp; 'static str crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:335</p>
+</article><article id="item-fn-search-replace-message-350" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn search_replace_message private const fn search_replace_message (err : &amp; SearchReplaceError) -&gt; &amp; 'static str crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>search_replace_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-513">search_replace_message</a> (err : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>) -&gt; &amp; &#x27;static str</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-350">search_replace_message</a> (err : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-513">search_replace_message</a>(err: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-350">search_replace_message</a>(err: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> err {
-        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span> =&gt; &quot;anchor not found&quot;,
-        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span> =&gt; &quot;anchor occurrence count mismatch&quot;,
+        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span> =&gt; &quot;anchor not found&quot;,
+        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span> =&gt; &quot;anchor occurrence count mismatch&quot;,
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:513</p>
-</article><article id="item-fn-apply-search-replace-520" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_search_replace private fn apply_search_replace (text : &amp; str , old : &amp; str , new : &amp; str , replace_all : bool ,) -&gt; Result &lt; String , SearchReplaceError &gt; crates/eos-file-ops/src/lib.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:350</p>
+</article><article id="item-fn-apply-search-replace-357" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_search_replace private fn apply_search_replace (text : &amp; str , old : &amp; str , new : &amp; str , replace_all : bool ,) -&gt; Result &lt; String , SearchReplaceError &gt; crates/eos-operation/file-ops/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>apply_search_replace</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-520">apply_search_replace</a> (text : &amp; str , old : &amp; str , new : &amp; str , replace_all : bool ,) -&gt; Result &lt; String , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a> &gt;</code>
-  <p class="docstring">Apply one search/replace edit with Rust `str.count` semantics. The anchor is<br>non-empty: `edit_file` rejects empty anchors before calling this.</p>
+  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-357">apply_search_replace</a> (text : &amp; str , old : &amp; str , new : &amp; str , replace_all : bool ,) -&gt; Result &lt; String , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Apply one search/replace edit with Rust `str.count` semantics. The anchor is</span>
-<span class="rs-comment">/// non-empty: `edit_file` rejects empty anchors before calling this.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-520">apply_search_replace</a>(
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-357">apply_search_replace</a>(
     text: &amp;str,
     old: &amp;str,
     new: &amp;str,
     replace_all: bool,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>&gt; {
     <span class="rs-kw">let</span> count = text.matches(old).count();
     <span class="rs-kw">if</span> replace_all {
         <span class="rs-kw">if</span> count == 0 {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span>);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span>);
         }
         <span class="rs-type">Ok</span>(text.replace(old, new))
     } <span class="rs-kw">else</span> {
         <span class="rs-kw">match</span> count {
-            0 =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span>),
+            0 =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span>),
             1 =&gt; <span class="rs-type">Ok</span>(text.replacen(old, new, 1)),
-            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span>),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span>),
         }
     }
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/lib.rs:520</p>
+  <p class="source">crates/eos-operation/file-ops/src/lib.rs:357</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-file-ops/src/lib.rs</p>
+    <p class="path">crates/eos-operation/file-ops/src/lib.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! The file tool family: read / write / edit semantics over one backend.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! The semantics (size caps, create-only conflicts, exact search/replace with</span>
-<span class="rs-comment">//! occurrence checks, base-content pinning) live here once; a [`FileBackend`]</span>
-<span class="rs-comment">//! decides what a read resolves against and what an apply means durably:</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! - [`DirectBackend`] — the fast path: reads resolve against the latest</span>
-<span class="rs-comment">//!   merged state of the layer stack, applies commit through the per-root</span>
-<span class="rs-comment">//!   single writer gated by the base hash the read observed. No overlay is</span>
-<span class="rs-comment">//!   involved at any point.</span>
-<span class="rs-comment">//! - [`IsolatedBackend`] — reads resolve upperdir-first then through the</span>
-<span class="rs-comment">//!   frozen snapshot layers; applies write into the workspace's private</span>
-<span class="rs-comment">//!   upperdir and never publish.</span>
-#![forbid(unsafe_code)]
+  <pre class="file-source"><code>#![forbid(unsafe_code)]
 
 <span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
 
@@ -751,29 +625,26 @@
 <span class="rs-kw">mod</span> direct;
 <span class="rs-kw">mod</span> isolated;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> direct::<a class="symbol-link rs-type" href="eos-file-ops.html#item-struct-DirectBackend-22">DirectBackend</a>;
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> isolated::<a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> direct::<a class="symbol-link rs-type" href="eos-file-ops.html#item-struct-DirectBackend-15">DirectBackend</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> isolated::<a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a>;
 
 <span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
 
-<span class="rs-comment">/// Timing/telemetry map keyed by stable wire strings.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;;
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;;
 
-<span class="rs-comment">/// `path -&gt; kind` map for changed paths (wire-stable kind strings).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;;
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;;
 
-<span class="rs-comment">/// A per-path conflict surfaced on the response envelope.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a> {
     <span class="rs-kw">pub</span> reason: <span class="rs-type">String</span>,
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
     <span class="rs-kw">pub</span> conflict_file: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-31">path</a>(reason: &amp;str, conflict_file: &amp;str, message: &amp;str) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             reason: reason.to_owned(),
             conflict_file: <span class="rs-type">Some</span>(conflict_file.to_owned()),
@@ -782,65 +653,55 @@
     }
 }
 
-<span class="rs-comment">/// File-tier API error carrying a stable wire kind.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Error</span>)]
-#[error(&quot;{message}&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> {
-    <span class="rs-kw">pub</span> kind: <span class="rs-type">String</span>,
-    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
-}
+#[error(&quot;{0}&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>(<span class="rs-type">String</span>);
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            kind: kind.to_owned(),
-            message,
-        }
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(_kind: &amp;str, message: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(message)
     }
 
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(&quot;invalid_request&quot;, message.into())
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(message: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(&quot;invalid_request&quot;, message.into())
     }
 }
 
-<span class="rs-comment">/// A workspace-relative path after backend-specific root resolution.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a> {
     <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { path: path.into() }
     }
 }
 
-<span class="rs-comment">/// Bytes read from the backend's view.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a> {
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
     <span class="rs-kw">pub</span> bytes: <span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;,
     <span class="rs-kw">pub</span> exists: bool,
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
     <span class="rs-kw">pub</span> manifest_version: <span class="rs-type">Option</span>&lt;i64&gt;,
     #[serde(default)]
-    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
 }
 
-<span class="rs-comment">/// Mutation kind produced by a file operation.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
 #[serde(rename_all = &quot;snake_case&quot;)]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a> {
     <span class="rs-type">Write</span>,
     <span class="rs-type">Edit</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a> {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a> {
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-verb-114">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-verb-88">verb</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         <span class="rs-kw">match</span> <span class="rs-self">self</span> {
             <span class="rs-self">Self</span>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
             <span class="rs-self">Self</span>::<span class="rs-type">Edit</span> =&gt; &quot;edit&quot;,
@@ -848,208 +709,101 @@
     }
 }
 
-<span class="rs-comment">/// Mutation passed to the backend's apply.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a> {
-    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>,
-    <span class="rs-kw">pub</span> path: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>,
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a> {
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>,
+    <span class="rs-kw">pub</span> path: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>,
     <span class="rs-kw">pub</span> content: <span class="rs-type">Vec</span>&lt;u8&gt;,
-    <span class="rs-kw">pub</span> base: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>,
+    <span class="rs-kw">pub</span> base: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>,
 }
 
-<span class="rs-comment">/// Normalized mutation outcome before daemon JSON conversion.</span>
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> {
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
     <span class="rs-kw">pub</span> workspace_kind: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> success: bool,
-    <span class="rs-comment">/// True only when the mutation reached shared workspace truth.</span>
     <span class="rs-kw">pub</span> published: bool,
     <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>&gt;,
+    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a>&gt;,
     #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
     <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     #[serde(default)]
     <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
     #[serde(default)]
-    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>,
+    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a>,
     #[serde(default)]
     <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">String</span>,
     #[serde(default)]
-    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
+    #[serde(default, skip_serializing_if = &quot;is_zero_i64&quot;)]
+    <span class="rs-kw">pub</span> applied_edits: i64,
 }
 
-<span class="rs-comment">/// What a read resolves against and what an apply means durably.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// The two real implementations are [`DirectBackend`] (latest merged state +</span>
-<span class="rs-comment">/// gated single-writer commit) and [`IsolatedBackend`] (upperdir-first reads,</span>
-<span class="rs-comment">/// private upperdir writes, never published).</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
 
-    <span class="rs-comment">/// Stable `mutation_source` string for outcomes of `kind`.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(&amp;<span class="rs-self">self</span>, kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(&amp;<span class="rs-self">self</span>, kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str;
 
-    <span class="rs-comment">/// Normalize a request path into the backend's workspace-relative form.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the path is invalid for the workspace.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 
-    <span class="rs-comment">/// Read the path's current bytes in the backend's view.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the view cannot be read.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 
-    <span class="rs-comment">/// Make `mutation` durable per the backend's policy.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// Returns [`FileOpsError`] when the apply fails (a publish conflict is an</span>
-    <span class="rs-comment">/// `Ok` outcome carrying `conflict`, not an error).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt;;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt;;
 }
 
-<span class="rs-comment">/// Read one text file from a workspace.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-188">ReadFileRequest</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-139">ReadFileRequest</a> {
     <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> max_read_bytes: usize,
 }
 
-<span class="rs-comment">/// Write one file into a workspace.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-195">WriteFileRequest</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-145">WriteFileRequest</a> {
     <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> content: <span class="rs-type">Vec</span>&lt;u8&gt;,
     <span class="rs-kw">pub</span> overwrite: bool,
     <span class="rs-kw">pub</span> max_file_bytes: usize,
 }
 
-<span class="rs-comment">/// One exact-match replacement for edit_file.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-204">SearchReplaceEdit</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-153">SearchReplaceEdit</a> {
     <span class="rs-kw">pub</span> old_text: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> new_text: <span class="rs-type">String</span>,
     #[serde(default)]
     <span class="rs-kw">pub</span> replace_all: bool,
 }
 
-<span class="rs-comment">/// Apply search/replace edits to one file.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-213">EditFileRequest</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-161">EditFileRequest</a> {
     <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
-    <span class="rs-kw">pub</span> edits: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-204">SearchReplaceEdit</a>&gt;,
+    <span class="rs-kw">pub</span> edits: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-SearchReplaceEdit-153">SearchReplaceEdit</a>&gt;,
 }
 
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a> {
     <span class="rs-kw">pub</span> workspace_kind: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> success: bool,
     <span class="rs-kw">pub</span> content: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> exists: bool,
     <span class="rs-kw">pub</span> encoding: <span class="rs-type">String</span>,
     #[serde(default)]
-    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
 }
 
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-    <span class="rs-kw">pub</span> workspace_kind: <span class="rs-type">String</span>,
-    <span class="rs-kw">pub</span> success: bool,
-    <span class="rs-kw">pub</span> published: bool,
-    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
-    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>&gt;,
-    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">String</span>,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-}
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WriteFileOutcome-178">WriteFileOutcome</a> = <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-EditFileOutcome-179">EditFileOutcome</a> = <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>;
 
-<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>(outcome: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            workspace_kind: outcome.workspace_kind,
-            success: outcome.success,
-            published: outcome.published,
-            status: outcome.status,
-            conflict: outcome.conflict,
-            conflict_reason: outcome.conflict_reason,
-            changed_paths: outcome.changed_paths,
-            changed_path_kinds: outcome.changed_path_kinds,
-            mutation_source: outcome.mutation_source,
-            timings: outcome.timings,
-        }
-    }
-}
-
-#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-    <span class="rs-kw">pub</span> workspace_kind: <span class="rs-type">String</span>,
-    <span class="rs-kw">pub</span> success: bool,
-    <span class="rs-kw">pub</span> published: bool,
-    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
-    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>&gt;,
-    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
-    <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">String</span>,
-    #[serde(default)]
-    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-    <span class="rs-kw">pub</span> applied_edits: i64,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-mutation-290">from_mutation</a>(outcome: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, applied_edits: i64) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span> {
-            workspace_kind: outcome.workspace_kind,
-            success: outcome.success,
-            published: outcome.published,
-            status: outcome.status,
-            conflict: outcome.conflict,
-            conflict_reason: outcome.conflict_reason,
-            changed_paths: outcome.changed_paths,
-            changed_path_kinds: outcome.changed_path_kinds,
-            mutation_source: outcome.mutation_source,
-            timings: outcome.timings,
-            applied_edits,
-        }
-    }
-}
-
-<span class="rs-comment">/// Read one text file through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the file cannot</span>
-<span class="rs-comment">/// be read, or the read exceeds `max_read_bytes`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> read_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> read_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-188">ReadFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileRequest-139">ReadFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> read = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> read = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">let</span> content = <span class="rs-kw">if</span> read.exists {
         <span class="rs-kw">let</span> bytes = read.bytes.unwrap_or_default();
         <span class="rs-kw">if</span> bytes.len() &gt; request.max_read_bytes {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(
                 &quot;file too large: {} &gt; {} bytes&quot;,
                 bytes.len(),
                 request.max_read_bytes
@@ -1057,12 +811,12 @@
         }
         <span class="rs-type">String</span>::from_utf8_lossy(&amp;bytes).into_owned()
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>()
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>()
     };
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = read.timings;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;read&quot;, total_start);
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-220">ReadFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;read&quot;, total_start);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadFileOutcome-167">ReadFileOutcome</a> {
+        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>().to_owned(),
         success: <span class="rs-kw">true</span>,
         content,
         exists: read.exists,
@@ -1071,31 +825,26 @@
     })
 }
 
-<span class="rs-comment">/// Write one file through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the base cannot</span>
-<span class="rs-comment">/// be read, the request is too large, or the apply fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> write_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> write_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-195">WriteFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileRequest-145">WriteFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WriteFileOutcome-178">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
     <span class="rs-kw">if</span> request.content.len() &gt; request.max_file_bytes {
-        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(
             &quot;file too large: {} &gt; {} bytes&quot;,
             request.content.len(),
             request.max_file_bytes
         )));
     }
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !request.overwrite &amp;&amp; base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-write-conflict-451">write_conflict</a>(
+        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;write&quot;, total_start);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
             backend,
+            <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Write</span>,
             &amp;path.path,
             &quot;rejected&quot;,
             &quot;create_only_existing&quot;,
@@ -1103,34 +852,29 @@
             timings,
         ));
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a> {
-        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Write</span>,
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a> {
+        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Write</span>,
         path,
         content: request.content,
         base,
     })?;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;write&quot;, total_start);
-    <span class="rs-type">Ok</span>(outcome.into())
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;write&quot;, total_start);
+    <span class="rs-type">Ok</span>(outcome)
 }
 
-<span class="rs-comment">/// Apply exact search/replace edits through a backend.</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// # Errors</span>
-<span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`FileOpsError`] when the path cannot be resolved, the base cannot</span>
-<span class="rs-comment">/// be read, the file is not UTF-8, or the apply fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> edit_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> edit_file&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
-    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-213">EditFileRequest</a>,
-) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    request: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileRequest-161">EditFileRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-EditFileOutcome-179">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
     <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;request.path)?;
-    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;path)?;
+    <span class="rs-kw">let</span> path = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;request.path)?;
+    <span class="rs-kw">let</span> base = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;path)?;
     <span class="rs-kw">if</span> !base.exists {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-edit-conflict-473">edit_conflict</a>(
+        <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
             backend,
+            <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
             &amp;path.path,
             &quot;aborted_version&quot;,
             &quot;aborted_version&quot;,
@@ -1140,130 +884,108 @@
     }
     <span class="rs-kw">let</span> bytes = base.bytes.clone().unwrap_or_default();
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> content = <span class="rs-type">String</span>::from_utf8(bytes)
-        .map_err(|err| <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(format!(&quot;file is not utf-8 text: {err}&quot;)))?;
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(format!(&quot;file is not utf-8 text: {err}&quot;)))?;
     <span class="rs-kw">for</span> edit <span class="rs-kw">in</span> &amp;request.edits {
         <span class="rs-kw">if</span> edit.old_text.is_empty() {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-74">invalid_request</a>(
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-invalid-request-51">invalid_request</a>(
                 &quot;edit anchor old_text must be non-empty&quot;,
             ));
         }
-        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-520">apply_search_replace</a>(&amp;content, &amp;edit.old_text, &amp;edit.new_text, edit.replace_all) {
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-357">apply_search_replace</a>(&amp;content, &amp;edit.old_text, &amp;edit.new_text, edit.replace_all) {
             <span class="rs-type">Ok</span>(next) =&gt; content = next,
             <span class="rs-type">Err</span>(err) =&gt; {
                 <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = base.timings;
-                <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
-                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-edit-conflict-473">edit_conflict</a>(
+                <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> timings, &quot;edit&quot;, total_start);
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-conflict-outcome-307">conflict_outcome</a>(
                     backend,
+                    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
                     &amp;path.path,
                     &quot;aborted_overlap&quot;,
                     &quot;aborted_overlap&quot;,
-                    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-513">search_replace_message</a>(&amp;err),
+                    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-350">search_replace_message</a>(&amp;err),
                     timings,
                 ));
             }
         }
     }
-    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a> {
-        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Edit</span>,
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a> {
+        kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>::<span class="rs-type">Edit</span>,
         path,
         content: content.into_bytes(),
         base,
     })?;
-    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;edit&quot;, total_start);
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-mutation-290">from_mutation</a>(
-        outcome,
-        i64::try_from(request.edits.len()).unwrap_or(i64::<span class="rs-type">MAX</span>),
-    ))
+    <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(&amp;<span class="rs-kw">mut</span> outcome.timings, &quot;edit&quot;, total_start);
+    outcome.applied_edits = i64::try_from(request.edits.len()).unwrap_or(i64::<span class="rs-type">MAX</span>);
+    <span class="rs-type">Ok</span>(outcome)
 }
 
-<span class="rs-kw">fn</span> write_conflict&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
+<span class="rs-kw">fn</span> conflict_outcome&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>&gt;(
     backend: &amp;<span class="rs-type">B</span>,
+    kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>,
     path: &amp;str,
     status: &amp;str,
     reason: &amp;str,
     message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WriteFileOutcome-231">WriteFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
+    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
+    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
+        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>().to_owned(),
         success: <span class="rs-kw">false</span>,
         published: <span class="rs-kw">false</span>,
         status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason, path, message)),
+        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-22">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-31">path</a>(reason, path, message)),
         conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Write</span>).to_owned(),
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(),
+        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-20">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(),
+        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(kind).to_owned(),
         timings,
+        ..<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>::default()
     }
 }
 
-<span class="rs-kw">fn</span> edit_conflict&lt;<span class="rs-type">B</span>: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>&gt;(
-    backend: &amp;<span class="rs-type">B</span>,
-    path: &amp;str,
-    status: &amp;str,
-    reason: &amp;str,
-    message: &amp;str,
-    timings: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
-) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-EditFileOutcome-268">EditFileOutcome</a> {
-        workspace_kind: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>().to_owned(),
-        success: <span class="rs-kw">false</span>,
-        published: <span class="rs-kw">false</span>,
-        status: status.to_owned(),
-        conflict: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-WorkspaceConflict-37">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-path-47">path</a>(reason, path, message)),
-        conflict_reason: <span class="rs-type">Some</span>(reason.to_owned()),
-        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        changed_path_kinds: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-ChangedPathKinds-34">ChangedPathKinds</a>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(),
-        mutation_source: backend.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>::<span class="rs-type">Edit</span>).to_owned(),
-        timings,
-        applied_edits: 0,
-    }
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-is-zero-i64-331">is_zero_i64</a>(value: &amp;i64) -&gt; bool {
+    *value == 0
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-496">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-insert-total-335">insert_total</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>, verb: &amp;str, start: <span class="rs-type">Instant</span>) {
     timings.insert(
         format!(&quot;api.{verb}.total_s&quot;),
         json!(start.elapsed().as_secs_f64()),
     );
 }
 
-<span class="rs-comment">/// Search/replace failure. Message strings are part of the public conflict</span>
-<span class="rs-comment">/// contract.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Error</span>)]
-<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a> {
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a> {
     #[error(&quot;anchor not found&quot;)]
     <span class="rs-type">NotFound</span>,
     #[error(&quot;anchor occurrence count mismatch&quot;)]
     <span class="rs-type">CountMismatch</span>,
 }
 
-<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-513">search_replace_message</a>(err: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-search-replace-message-350">search_replace_message</a>(err: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
     <span class="rs-kw">match</span> err {
-        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span> =&gt; &quot;anchor not found&quot;,
-        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span> =&gt; &quot;anchor occurrence count mismatch&quot;,
+        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span> =&gt; &quot;anchor not found&quot;,
+        <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span> =&gt; &quot;anchor occurrence count mismatch&quot;,
     }
 }
 
-<span class="rs-comment">/// Apply one search/replace edit with Rust `str.count` semantics. The anchor is</span>
-<span class="rs-comment">/// non-empty: `edit_file` rejects empty anchors before calling this.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-520">apply_search_replace</a>(
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#item-fn-apply-search-replace-357">apply_search_replace</a>(
     text: &amp;str,
     old: &amp;str,
     new: &amp;str,
     replace_all: bool,
-) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>&gt; {
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>&gt; {
     <span class="rs-kw">let</span> count = text.matches(old).count();
     <span class="rs-kw">if</span> replace_all {
         <span class="rs-kw">if</span> count == 0 {
-            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span>);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span>);
         }
         <span class="rs-type">Ok</span>(text.replace(old, new))
     } <span class="rs-kw">else</span> {
         <span class="rs-kw">match</span> count {
-            0 =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">NotFound</span>),
+            0 =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">NotFound</span>),
             1 =&gt; <span class="rs-type">Ok</span>(text.replacen(old, new, 1)),
-            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-503">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span>),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-SearchReplaceError-342">SearchReplaceError</a>::<span class="rs-type">CountMismatch</span>),
         }
     }
 }

@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>5</b><span>modules</span></div>
-  <div><b>47</b><span>items</span></div>
-  <div><b>33</b><span>fields</span></div>
-  <div><b>6</b><span>methods</span></div>
+  <div><b>3</b><span>modules</span></div>
+  <div><b>37</b><span>items</span></div>
+  <div><b>18</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/12</small></a></li><li><a class="file-link active" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>2/15</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>kernel_mount.rs</span><small>4/9</small></a></li><li><a class="file-link active" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>0/16</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-overlay/src/lib.rs OverlayError Result OverlayWritableDirs overlay_writable_root allocate_overlay_writable_dirs">
   <div class="module-head">
     <div>
@@ -56,68 +56,69 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OverlayWritableDirs-86" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OverlayWritableDirs pub pub struct OverlayWritableDirs crates/eos-overlay/src/lib.rs run_dir PathBuf upperdir PathBuf workdir PathBuf ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OverlayWritableDirs-83" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OverlayWritableDirs pub pub struct OverlayWritableDirs crates/eos-overlay/src/lib.rs upperdir PathBuf workdir PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OverlayWritableDirs</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a></code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a></code>
   <p class="docstring">Per-overlay writable directories created beside each other under one run dir.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>run_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>PathBuf</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>PathBuf</code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-overlay/src/lib.rs:86</p>
-</article><article id="item-enum-OverlayError-46" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayError pub pub enum OverlayError crates/eos-overlay/src/lib.rs  ">
+  <p class="source">crates/eos-overlay/src/lib.rs:83</p>
+</article><article id="item-enum-OverlayError-43" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayError pub pub enum OverlayError crates/eos-overlay/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OverlayError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum <a class="symbol-link" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a></code>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a></code>
   <p class="docstring">Failures raised by the overlay kernel-mount and upper-dir capture paths.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>WritableRootUnavailable</td><td><code>0: String</code></td></tr><tr><td>InvalidMountInput</td><td><code>0: String</code></td></tr><tr><td>MountSyscall</td><td><code>context: &amp; &#x27;static str, source: io :: Error</code></td></tr><tr><td>Capture</td><td><code>0: io :: Error</code></td></tr><tr><td>Path</td><td><code>0: CasError</code></td></tr><tr><td>InvalidPathChange</td><td><code>0: String</code></td></tr><tr><td>Unsupported</td><td><code></code></td></tr></tbody></table>
 
-  <p class="source">crates/eos-overlay/src/lib.rs:46</p>
-</article><div class="group-label">Aliases</div><article id="item-type-Result-83" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = std :: result :: Result &lt; T , OverlayError &gt; crates/eos-overlay/src/lib.rs  ">
+  <p class="source">crates/eos-overlay/src/lib.rs:43</p>
+</article><div class="group-label">Aliases</div><article id="item-type-Result-80" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = std :: result :: Result &lt; T , OverlayError &gt; crates/eos-overlay/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>Result</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a>&lt; T &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , <a class="symbol-link" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a> &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt; T &gt; = std :: result :: <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a> &lt; T , <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a> &gt;</code>
   <p class="docstring">Crate result alias.</p>
   <div class="tags"></div>
 
-  <p class="source">crates/eos-overlay/src/lib.rs:83</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-overlay-writable-root-97" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_writable_root pub pub fn overlay_writable_root () -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/lib.rs  ">
+  <p class="source">crates/eos-overlay/src/lib.rs:80</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-overlay-writable-root-92" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn overlay_writable_root pub pub fn overlay_writable_root () -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>overlay_writable_root</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-97">overlay_writable_root</a> () -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; PathBuf &gt;</code>
-  <p class="docstring">Return the canonical writable root, creating it if its parent exists.<br># Errors<br>Returns [`OverlayError::Capture`] when directory creation fails, or<br>[`OverlayError::WritableRootUnavailable`] when the canonical root is not a<br>directory.</p>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-92">overlay_writable_root</a> () -&gt; <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a> &lt; PathBuf &gt;</code>
+  <p class="docstring">Return the canonical writable root (`/eos/scratch/overlay`), creating it<br>if its parent exists.<br># Errors<br>Returns [`OverlayError::Capture`] when directory creation fails, or<br>[`OverlayError::WritableRootUnavailable`] when the canonical root is not a<br>directory.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Return the canonical writable root, creating it if its parent exists.</span>
+  <pre><code><span class="rs-comment">/// Return the canonical writable root (`/eos/scratch/overlay`), creating it</span>
+<span class="rs-comment">/// if its parent exists.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`OverlayError::Capture`] when directory creation fails, or</span>
 <span class="rs-comment">/// [`OverlayError::WritableRootUnavailable`] when the canonical root is not a</span>
 <span class="rs-comment">/// directory.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-97">overlay_writable_root</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<span class="rs-type">OVERLAY_WRITABLE_ROOT</span>);
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-92">overlay_writable_root</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/overlay&quot;);
     <span class="rs-kw">if</span> root.parent().is_some_and(<span class="rs-type">Path</span>::is_dir) {
-        std::fs::create_dir_all(&amp;root).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+        std::fs::create_dir_all(&amp;root).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
     }
     <span class="rs-kw">if</span> root.is_dir() {
         <span class="rs-type">Ok</span>(root)
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">WritableRootUnavailable</span>(
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">WritableRootUnavailable</span>(
             root.display().to_string(),
         ))
     }
@@ -125,14 +126,14 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-overlay/src/lib.rs:97</p>
-</article><article id="item-fn-allocate-overlay-writable-dirs-118" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allocate_overlay_writable_dirs pub pub fn allocate_overlay_writable_dirs (run_dir : &amp; Path) -&gt; Result &lt; OverlayWritableDirs &gt; crates/eos-overlay/src/lib.rs  ">
+  <p class="source">crates/eos-overlay/src/lib.rs:92</p>
+</article><article id="item-fn-allocate-overlay-writable-dirs-114" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn allocate_overlay_writable_dirs pub pub fn allocate_overlay_writable_dirs (run_dir : &amp; Path) -&gt; Result &lt; OverlayWritableDirs &gt; crates/eos-overlay/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>allocate_overlay_writable_dirs</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-118">allocate_overlay_writable_dirs</a> (run_dir : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-114">allocate_overlay_writable_dirs</a> (run_dir : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a> &lt; <a class="symbol-link" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a> &gt;</code>
   <p class="docstring">Create and return the `upper`/`work` dirs for one overlay instance.<br># Errors<br>Returns [`OverlayError::Capture`] when either writable directory cannot be<br>created.</p>
   <div class="tags"></div>
   <details class="function-source">
@@ -143,21 +144,17 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`OverlayError::Capture`] when either writable directory cannot be</span>
 <span class="rs-comment">/// created.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-118">allocate_overlay_writable_dirs</a>(run_dir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-114">allocate_overlay_writable_dirs</a>(run_dir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a>&gt; {
     <span class="rs-kw">let</span> upperdir = run_dir.join(&quot;upper&quot;);
     <span class="rs-kw">let</span> workdir = run_dir.join(&quot;work&quot;);
-    std::fs::create_dir_all(&amp;upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
-    std::fs::create_dir_all(&amp;workdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a> {
-        run_dir: run_dir.to_path_buf(),
-        upperdir,
-        workdir,
-    })
+    std::fs::create_dir_all(&amp;upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    std::fs::create_dir_all(&amp;workdir).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a> { upperdir, workdir })
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-overlay/src/lib.rs:118</p>
+  <p class="source">crates/eos-overlay/src/lib.rs:114</p>
 </article></div>
 </section></div>
 </main>
@@ -183,14 +180,14 @@
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! # Build-time guarantee / platform</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! Syscall crate — `unsafe` is permitted for the raw mount API; every block</span>
-<span class="rs-comment">//! carries a `// SAFETY:` note and `unsafe_op_in_unsafe_fn` is denied. The</span>
-<span class="rs-comment">//! syscall surface is Linux-only: every mount/unmount body is gated behind</span>
-<span class="rs-comment">//! `#[cfg(target_os = "linux")]`, with a `#[cfg(not(target_os = "linux"))]` arm</span>
-<span class="rs-comment">//! returning [`OverlayError::Unsupported`] so `cargo check` is green on the</span>
-<span class="rs-comment">//! macOS dev host.</span>
+<span class="rs-comment">//! Syscall crate built entirely on safe `rustix` wrappers — `unsafe_code` is</span>
+<span class="rs-comment">//! forbidden. The syscall surface is Linux-only: every mount/unmount body is</span>
+<span class="rs-comment">//! gated behind `#[cfg(target_os = "linux")]`, with a</span>
+<span class="rs-comment">//! `#[cfg(not(target_os = "linux"))]` arm returning</span>
+<span class="rs-comment">//! [`OverlayError::Unsupported`] so `cargo check` is green on the macOS dev</span>
+<span class="rs-comment">//! host.</span>
 <span class="rs-comment">//!</span>
-#![deny(unsafe_op_in_unsafe_fn)]
+#![forbid(unsafe_code)]
 
 <span class="rs-kw">use</span> std::io;
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
@@ -205,16 +202,13 @@
 <span class="rs-comment">// crates) never import the storage engine directly.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_layerstack::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> kernel_mount::{mount_overlay, unmount_overlay, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a>, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayMount-50">OverlayMount</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> kernel_mount::{mount_overlay, unmount_overlay, <a class="symbol-link rs-type" href="eos-overlay.html#item-struct-OverlayHandle-36">OverlayHandle</a>, <a class="symbol-link rs-type" href="eos-overlay.html#item-struct-OverlayMount-50">OverlayMount</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> path_change::capture_upperdir;
-
-<span class="rs-comment">/// Canonical filesystem for overlay `upperdir`/`workdir`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">OVERLAY_WRITABLE_ROOT</span>: &amp;str = &quot;/eos/scratch/overlay&quot;;
 
 <span class="rs-comment">/// Failures raised by the overlay kernel-mount and upper-dir capture paths.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
 #[non_exhaustive]
-<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a> {
     <span class="rs-comment">/// The canonical writable root (`/eos/scratch/overlay`) is unavailable.</span>
     #[error(&quot;overlay writable root is missing: {0}&quot;)]
     <span class="rs-type">WritableRootUnavailable</span>(<span class="rs-type">String</span>),
@@ -239,7 +233,7 @@
     #[error(transparent)]
     <span class="rs-type">Path</span>(#[from] <span class="rs-type">CasError</span>),
 
-    <span class="rs-comment">/// A captured overlay path change violated the per-kind field contract.</span>
+    <span class="rs-comment">/// A captured overlay path could not be expressed as a layer path.</span>
     #[error(&quot;invalid overlay path change: {0}&quot;)]
     <span class="rs-type">InvalidPathChange</span>(<span class="rs-type">String</span>),
 
@@ -249,35 +243,34 @@
 }
 
 <span class="rs-comment">/// Crate result alias.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>&gt;;
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<span class="rs-type">T</span>&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>&gt;;
 
 <span class="rs-comment">/// Per-overlay writable directories created beside each other under one run dir.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a> {
-    <span class="rs-comment">/// The per-overlay run directory the upper/work dirs live under.</span>
-    <span class="rs-kw">pub</span> run_dir: <span class="rs-type">PathBuf</span>,
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a> {
     <span class="rs-comment">/// The overlay `upperdir` (`run_dir/upper`).</span>
     <span class="rs-kw">pub</span> upperdir: <span class="rs-type">PathBuf</span>,
     <span class="rs-comment">/// The overlay `workdir` (`run_dir/work`).</span>
     <span class="rs-kw">pub</span> workdir: <span class="rs-type">PathBuf</span>,
 }
 
-<span class="rs-comment">/// Return the canonical writable root, creating it if its parent exists.</span>
+<span class="rs-comment">/// Return the canonical writable root (`/eos/scratch/overlay`), creating it</span>
+<span class="rs-comment">/// if its parent exists.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`OverlayError::Capture`] when directory creation fails, or</span>
 <span class="rs-comment">/// [`OverlayError::WritableRootUnavailable`] when the canonical root is not a</span>
 <span class="rs-comment">/// directory.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-97">overlay_writable_root</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<span class="rs-type">OVERLAY_WRITABLE_ROOT</span>);
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-overlay-writable-root-92">overlay_writable_root</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/overlay&quot;);
     <span class="rs-kw">if</span> root.parent().is_some_and(<span class="rs-type">Path</span>::is_dir) {
-        std::fs::create_dir_all(&amp;root).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+        std::fs::create_dir_all(&amp;root).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
     }
     <span class="rs-kw">if</span> root.is_dir() {
         <span class="rs-type">Ok</span>(root)
     } <span class="rs-kw">else</span> {
-        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">WritableRootUnavailable</span>(
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">WritableRootUnavailable</span>(
             root.display().to_string(),
         ))
     }
@@ -289,16 +282,12 @@
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// Returns [`OverlayError::Capture`] when either writable directory cannot be</span>
 <span class="rs-comment">/// created.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-118">allocate_overlay_writable_dirs</a>(run_dir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-lib-rs.html#item-fn-allocate-overlay-writable-dirs-114">allocate_overlay_writable_dirs</a>(run_dir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-type-Result-80">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a>&gt; {
     <span class="rs-kw">let</span> upperdir = run_dir.join(&quot;upper&quot;);
     <span class="rs-kw">let</span> workdir = run_dir.join(&quot;work&quot;);
-    std::fs::create_dir_all(&amp;upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
-    std::fs::create_dir_all(&amp;workdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-86">OverlayWritableDirs</a> {
-        run_dir: run_dir.to_path_buf(),
-        upperdir,
-        workdir,
-    })
+    std::fs::create_dir_all(&amp;upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    std::fs::create_dir_all(&amp;workdir).map_err(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-enum-OverlayError-43">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-overlay--src-lib-rs.html#item-struct-OverlayWritableDirs-83">OverlayWritableDirs</a> { upperdir, workdir })
 }
 
 #[cfg(test)]

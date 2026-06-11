@@ -61,12 +61,8 @@ pub enum CommitStatus {
     Committed,
     #[serde(rename = "aborted_version")]
     AbortedVersion,
-    #[serde(rename = "aborted_overlap")]
-    AbortedOverlap,
     #[serde(rename = "dropped")]
     Dropped,
-    #[serde(rename = "rejected")]
-    Rejected,
     #[serde(rename = "failed")]
     Failed,
 }
@@ -78,9 +74,7 @@ impl CommitStatus {
             Self::Accepted => "accepted",
             Self::Committed => "committed",
             Self::AbortedVersion => "aborted_version",
-            Self::AbortedOverlap => "aborted_overlap",
             Self::Dropped => "dropped",
-            Self::Rejected => "rejected",
             Self::Failed => "failed",
         }
     }

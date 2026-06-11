@@ -46,7 +46,7 @@ export function resolveContextPath(
 }
 
 /** Direct child names (files and directories) of one resolved directory. */
-export function directChildren(context: WorkflowContext, dirPath: string): string[] {
+function directChildren(context: WorkflowContext, dirPath: string): string[] {
   const prefix = dirPath === "" ? "" : `${dirPath}/`;
   const names = new Set<string>();
   for (const candidate of [...context.files.keys(), ...context.directories.keys()]) {

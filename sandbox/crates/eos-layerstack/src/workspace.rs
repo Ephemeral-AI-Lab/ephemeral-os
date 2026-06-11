@@ -31,12 +31,7 @@ pub struct WorkspaceBinding {
 
 impl WorkspaceBinding {
     pub fn layer_path_from_relative(&self, path: &str) -> Result<String, LayerStackError> {
-        let raw = path.trim();
-        if raw.is_empty() {
-            return Err(LayerStackError::WorkspaceBinding(
-                "path is required".to_owned(),
-            ));
-        }
+        let raw = required_path(path)?;
         if raw.starts_with('/') {
             return Err(LayerStackError::WorkspaceBinding(format!(
                 "path must be relative: {raw}"
@@ -46,12 +41,7 @@ impl WorkspaceBinding {
     }
 
     pub fn layer_path_from_absolute(&self, path: &str) -> Result<String, LayerStackError> {
-        let raw = path.trim();
-        if raw.is_empty() {
-            return Err(LayerStackError::WorkspaceBinding(
-                "path is required".to_owned(),
-            ));
-        }
+        let raw = required_path(path)?;
         if !raw.starts_with('/') {
             return Err(LayerStackError::WorkspaceBinding(format!(
                 "path must be absolute: {raw}"
@@ -67,6 +57,16 @@ impl WorkspaceBinding {
         })?;
         normalize_layer_path(&relative.to_string_lossy())
     }
+}
+
+fn required_path(path: &str) -> Result<&str, LayerStackError> {
+    let raw = path.trim();
+    if raw.is_empty() {
+        return Err(LayerStackError::WorkspaceBinding(
+            "path is required".to_owned(),
+        ));
+    }
+    Ok(raw)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -188,7 +188,6 @@ pub fn build_workspace_base(
     let collect_start = Instant::now();
     let (entries, root_hash) = collect_base_entries(workspace)?;
     record_elapsed(&mut timings, "workspace_base.collect_s", collect_start);
-    record_inventory(&mut timings, &entries);
 
     let write_layer_start = Instant::now();
     let layer_ref = write_base_layer(stack, &entries)?;
@@ -309,9 +308,12 @@ fn collect_dir(
         };
         let file_type = meta.file_type();
         if file_type.is_symlink() {
-            match symlink_entry(&path, rel) {
-                Ok(entry) => entries.push(entry),
-                Err(rejected) => special.push(rejected),
+            match std::fs::read_link(&path) {
+                Ok(target) => entries.push(BaseEntry::Symlink {
+                    path: rel,
+                    link_target: target.to_string_lossy().into_owned(),
+                }),
+                Err(_) => special.push(rel),
             }
         } else if meta.is_dir() {
             entries.push(BaseEntry::Directory { path: rel });
@@ -339,15 +341,6 @@ fn collect_dir(
         }
     }
     Ok(())
-}
-
-fn symlink_entry(path: &Path, rel: String) -> Result<BaseEntry, String> {
-    let target = std::fs::read_link(path).map_err(|_| rel.clone())?;
-    let link_target = target.to_string_lossy().into_owned();
-    Ok(BaseEntry::Symlink {
-        path: rel,
-        link_target,
-    })
 }
 
 fn write_base_layer(stack: &Path, entries: &[BaseEntry]) -> Result<LayerRef, LayerStackError> {
@@ -510,42 +503,6 @@ fn update_root_hash(digest: &mut Sha256, entry: &BaseEntry) {
         BaseEntry::Directory { .. } => {}
     }
     digest.update(b"\0");
-}
-
-fn record_inventory(timings: &mut BTreeMap<String, f64>, entries: &[BaseEntry]) {
-    let (mut files, mut dirs, mut symlinks, mut bytes) = (0usize, 0usize, 0usize, 0u64);
-    for entry in entries {
-        match entry {
-            BaseEntry::File { size, .. } => {
-                files += 1;
-                bytes += *size;
-            }
-            BaseEntry::Directory { .. } => dirs += 1,
-            BaseEntry::Symlink { .. } => symlinks += 1,
-        }
-    }
-    for (key, value) in [
-        ("workspace_base.inventory.files", usize_to_f64_lossy(files)),
-        ("workspace_base.inventory.dirs", usize_to_f64_lossy(dirs)),
-        (
-            "workspace_base.inventory.symlinks",
-            usize_to_f64_lossy(symlinks),
-        ),
-        ("workspace_base.inventory.bytes", u64_to_f64_lossy(bytes)),
-    ] {
-        timings.insert(key.to_owned(), value);
-    }
-}
-
-fn usize_to_f64_lossy(value: usize) -> f64 {
-    u64_to_f64_lossy(u64::try_from(value).unwrap_or(u64::MAX))
-}
-
-fn u64_to_f64_lossy(value: u64) -> f64 {
-    const U32_FACTOR: f64 = 4_294_967_296.0;
-    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
-    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
-    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
 }
 
 fn relative_path(workspace: &Path, path: &Path) -> String {

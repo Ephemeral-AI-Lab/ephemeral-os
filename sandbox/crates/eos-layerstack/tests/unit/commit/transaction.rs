@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::commit::{
-    base_hashes_for_snapshot, hash_bytes, CommitStatus, PreparedChangeset, PublishDecision, Route,
+    base_hashes_for_snapshot, hash_current, CommitStatus, PreparedChangeset, PublishDecision, Route,
 };
 use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
@@ -13,6 +13,10 @@ fn transaction(fixture: &Fixture) -> CommitTransaction {
     CommitTransaction {
         root: fixture.root.clone(),
     }
+}
+
+fn readme_base_hash() -> TestResult<String> {
+    hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing readme hash".into())
 }
 
 fn publish_decision(
@@ -53,7 +57,7 @@ fn base_hashes_accept_opaque_dir_over_existing_directory() -> TestResult {
 #[test]
 fn gated_stale_base_aborts_without_publish() -> TestResult {
     let fixture = Fixture::new("gated_stale")?;
-    let old_hash = hash_bytes(b"# README\n");
+    let old_hash = readme_base_hash()?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp("README.md")?,
         content: b"# theirs\n".to_vec(),
@@ -61,7 +65,6 @@ fn gated_stale_base_aborts_without_publish() -> TestResult {
 
     let result = transaction(&fixture)
         .revalidate_and_publish(&PreparedChangeset {
-            snapshot_version: Some(1),
             path_groups: vec![publish_decision("README.md", Route::Gated, Some(old_hash))?],
             changes: vec![LayerChange::Write {
                 path: lp("README.md")?,
@@ -87,7 +90,6 @@ fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
 
     let result = transaction(&fixture)
         .revalidate_and_publish(&PreparedChangeset {
-            snapshot_version: Some(1),
             path_groups: vec![publish_decision(
                 "target/out.txt",
                 Route::Direct,
@@ -112,7 +114,6 @@ fn gated_symlink_change_validates_and_publishes() -> TestResult {
     let fixture = Fixture::new("gated_symlink")?;
     let result = transaction(&fixture)
         .revalidate_and_publish(&PreparedChangeset {
-            snapshot_version: Some(1),
             path_groups: vec![publish_decision("link.txt", Route::Gated, None)?],
             changes: vec![LayerChange::Symlink {
                 path: lp("link.txt")?,
@@ -137,7 +138,7 @@ fn gated_symlink_change_validates_and_publishes() -> TestResult {
 #[test]
 fn atomic_mixed_validation_failure_drops_accepted_paths() -> TestResult {
     let fixture = Fixture::new("atomic_mixed")?;
-    let old_hash = hash_bytes(b"# README\n");
+    let old_hash = readme_base_hash()?;
     LayerStack::open(fixture.root.clone())?.publish_layer(&[LayerChange::Write {
         path: lp("README.md")?,
         content: b"# theirs\n".to_vec(),
@@ -145,7 +146,6 @@ fn atomic_mixed_validation_failure_drops_accepted_paths() -> TestResult {
 
     let result = transaction(&fixture)
         .revalidate_and_publish(&PreparedChangeset {
-            snapshot_version: Some(1),
             path_groups: vec![
                 publish_decision("README.md", Route::Gated, Some(old_hash))?,
                 publish_decision("target/out.txt", Route::Direct, None)?,

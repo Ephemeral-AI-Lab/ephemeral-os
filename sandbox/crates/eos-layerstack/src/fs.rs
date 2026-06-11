@@ -8,7 +8,20 @@ use crate::error::LayerStackError;
 use crate::lock::STORAGE_WRITER_LOCK_FILE;
 use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use crate::{LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
+
+#[derive(Deserialize)]
+struct ManifestPayload {
+    version: i64,
+    #[serde(default = "default_manifest_schema_version")]
+    schema_version: i64,
+    layers: Vec<LayerRef>,
+}
+
+const fn default_manifest_schema_version() -> i64 {
+    MANIFEST_SCHEMA_VERSION
+}
 
 pub(crate) fn canonical_key(path: &Path) -> String {
     path.canonicalize()
@@ -230,46 +243,20 @@ pub(crate) fn read_manifest(path: impl AsRef<Path>) -> Result<Manifest, LayerSta
     if !path.exists() {
         return Manifest::new(0, vec![], MANIFEST_SCHEMA_VERSION).map_err(LayerStackError::from);
     }
-    let payload = std::fs::read_to_string(path)?;
-    let value: Value =
-        serde_json::from_str(&payload).map_err(|err| LayerStackError::Manifest(err.to_string()))?;
-    let obj = value.as_object().ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload must be an object".to_owned())
-    })?;
-    let version = obj.get("version").and_then(Value::as_i64).ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload missing required field: version".to_owned())
-    })?;
-    let schema_version = obj
-        .get("schema_version")
-        .and_then(Value::as_i64)
-        .unwrap_or(MANIFEST_SCHEMA_VERSION);
+    let payload: ManifestPayload = serde_json::from_str(&std::fs::read_to_string(path)?)
+        .map_err(|err| LayerStackError::Manifest(err.to_string()))?;
+    let ManifestPayload {
+        version,
+        schema_version,
+        layers,
+    } = payload;
     if schema_version > MANIFEST_SCHEMA_VERSION {
         return Err(LayerStackError::Manifest(format!(
             "manifest schema_version is newer than this runtime supports: {schema_version}"
         )));
     }
-    let raw_layers = obj.get("layers").and_then(Value::as_array).ok_or_else(|| {
-        LayerStackError::Manifest("manifest payload missing required field: layers".to_owned())
-    })?;
-    let mut layers = Vec::with_capacity(raw_layers.len());
-    for item in raw_layers {
-        let item = item.as_object().ok_or_else(|| {
-            LayerStackError::Manifest("manifest layer entries must be objects".to_owned())
-        })?;
-        let layer = LayerRef {
-            layer_id: item
-                .get("layer_id")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-            path: item
-                .get("path")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-        };
-        validate_layer_ref(&layer)?;
-        layers.push(layer);
+    for layer in &layers {
+        validate_layer_ref(layer)?;
     }
     Manifest::new(version, layers, schema_version).map_err(LayerStackError::from)
 }

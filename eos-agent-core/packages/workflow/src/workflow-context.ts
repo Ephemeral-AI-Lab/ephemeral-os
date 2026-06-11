@@ -1,10 +1,8 @@
-import type { ContextPage, WorkflowId } from "@eos/contracts";
-import type { WorkflowDbReader } from "@eos/db";
+import type { ContextPage } from "@eos/contracts";
 
 import { listContextSubtree, type ContextListingRow } from "./archive/listing.js";
-import { buildWorkflowContext, type WorkflowContext } from "./archive/paths.js";
+import type { WorkflowContext } from "./archive/paths.js";
 import { resolveContextPath } from "./archive/resolve.js";
-import { loadWorkflowTree } from "./workflow-tree.js";
 
 export const DEFAULT_CONTEXT_PAGE_BYTES = 16_384;
 
@@ -12,19 +10,6 @@ export type WorkflowContextRead =
   | { kind: "page"; page: ContextPage }
   | { kind: "listing"; path: string; rows: ContextListingRow[] }
   | { kind: "error"; message: string };
-
-/**
- * The context-path-universe load: derives the §9 universe from the latest
- * `WorkflowTree`. It never reads the disk mirror - the DB stays
- * authoritative and the mirror is a write-only cache.
- */
-export async function loadWorkflowContext(
-  db: WorkflowDbReader,
-  workflowId: WorkflowId,
-): Promise<WorkflowContext | null> {
-  const tree = await loadWorkflowTree(db, workflowId);
-  return tree ? buildWorkflowContext(tree) : null;
-}
 
 /**
  * The read surface the deferred `read_workflow_context` tool will bind: a

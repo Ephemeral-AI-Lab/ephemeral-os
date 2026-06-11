@@ -266,11 +266,6 @@ impl LayerStack {
         })
     }
 
-    #[must_use]
-    pub fn storage_root(&self) -> &Path {
-        &self.storage_root
-    }
-
     pub fn read_active_manifest(&self) -> Result<Manifest, LayerStackError> {
         read_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE))
     }
@@ -397,7 +392,7 @@ impl LayerStack {
     }
 
     pub fn storage_metrics(&self) -> Result<LayerStackStorageMetrics, LayerStackError> {
-        let root = self.storage_root();
+        let root = &self.storage_root;
         Ok(LayerStackStorageMetrics {
             layer_dirs: count_dirs(&root.join(LAYERS_DIR))?,
             staging_dirs: count_dirs(&root.join(STAGING_DIR))?,

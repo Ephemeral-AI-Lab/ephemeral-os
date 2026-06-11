@@ -240,7 +240,6 @@ name = "eos-ephemeral-workspace"
 version = "0.1.0"
 dependencies = [
  "eos-overlay",
- "serde",
  "thiserror 2.0.18",
 ]
 

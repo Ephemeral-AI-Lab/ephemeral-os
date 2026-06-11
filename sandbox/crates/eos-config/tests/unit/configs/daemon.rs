@@ -56,7 +56,7 @@ fn plugin_crates_do_not_own_config_rs() {
         .to_path_buf();
     for path in [
         "crates/eos-plugin/src/config.rs",
-        "crates/eos-plugin-ops/src/config.rs",
+        "crates/eos-operation/plugin-ops/src/config.rs",
     ] {
         assert!(
             !sandbox_dir.join(path).exists(),

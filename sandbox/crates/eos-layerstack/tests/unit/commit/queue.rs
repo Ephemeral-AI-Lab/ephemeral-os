@@ -7,7 +7,6 @@ type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 fn prepared(path: &str, atomic: bool) -> TestResult<PreparedChangeset> {
     let path = LayerPath::parse(path)?;
     Ok(PreparedChangeset {
-        snapshot_version: Some(1),
         path_groups: vec![PublishDecision {
             path: path.clone(),
             route: Route::Gated,
@@ -27,7 +26,6 @@ fn item(path: &str, atomic: bool) -> TestResult<WorkItem> {
     Ok(WorkItem {
         prepared: prepared(path, atomic)?,
         reply,
-        enqueued_at: Instant::now(),
     })
 }
 

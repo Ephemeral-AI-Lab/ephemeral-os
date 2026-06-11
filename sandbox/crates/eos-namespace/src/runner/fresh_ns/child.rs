@@ -1,24 +1,15 @@
-#[cfg(target_os = "linux")]
 use std::fs;
-#[cfg(target_os = "linux")]
 use std::io::Read;
-#[cfg(target_os = "linux")]
 use std::os::fd::BorrowedFd;
-#[cfg(target_os = "linux")]
 use std::thread;
-#[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
-#[cfg(target_os = "linux")]
 use rustix::process::{getpgrp, kill_process_group, Pid, Signal};
 
-#[cfg(target_os = "linux")]
 use crate::runner::RunnerError;
 
-#[cfg(target_os = "linux")]
 const CHILD_WAIT_POLL: Duration = Duration::from_millis(5);
 
-#[cfg(target_os = "linux")]
 pub(super) fn wait_for_child(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,
@@ -38,7 +29,6 @@ pub(super) fn wait_for_child(
     }
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn wait_for_command_execution_scope(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,
@@ -70,14 +60,12 @@ pub(super) fn wait_for_command_execution_scope(
     }
 }
 
-#[cfg(target_os = "linux")]
 fn timeout_deadline(timeout_seconds: Option<f64>) -> Option<Instant> {
     timeout_seconds
         .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
         .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds))
 }
 
-#[cfg(target_os = "linux")]
 fn exit_code(status: std::process::ExitStatus) -> i32 {
     use std::os::unix::process::ExitStatusExt;
 
@@ -87,7 +75,6 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
         .unwrap_or(128)
 }
 
-#[cfg(target_os = "linux")]
 fn process_group_has_other_live_members(
     pgid: i32,
     self_pid: i32,
@@ -121,7 +108,6 @@ fn process_group_has_other_live_members(
     false
 }
 
-#[cfg(target_os = "linux")]
 fn process_group_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> bool {
     let Ok(entries) = fs::read_dir("/proc") else {
         return false;
@@ -144,7 +130,6 @@ fn process_group_has_other_live_members_by_path(pgid: i32, self_pid: i32) -> boo
     })
 }
 
-#[cfg(target_os = "linux")]
 fn proc_stat_process_group_at(proc_dir: BorrowedFd, pid: i32) -> Option<(i32, char)> {
     let fd = rustix::fs::openat(
         proc_dir,
@@ -158,7 +143,6 @@ fn proc_stat_process_group_at(proc_dir: BorrowedFd, pid: i32) -> Option<(i32, ch
     parse_proc_stat(&stat)
 }
 
-#[cfg(target_os = "linux")]
 fn parse_proc_stat(stat: &str) -> Option<(i32, char)> {
     let close = stat.rfind(") ")?;
     let fields: Vec<&str> = stat[close + 2..].split_whitespace().collect();

@@ -42,21 +42,32 @@ fn service_cache_is_bounded_lru() -> TestResult {
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(&base)?;
 
+    let capacity = u64::try_from(SERVICE_CACHE_MAX)?;
     let first = base.join("root-000");
     for index in 0..=SERVICE_CACHE_MAX {
         let root = base.join(format!("root-{index:03}"));
         std::fs::create_dir_all(&root)?;
-        let lookup = cache.insert_or_get(normalize_root_key(&root), root_service(&root)?, 0.0);
-        assert!(lookup.cache_created);
+        let _ = cache.insert_or_get(normalize_root_key(&root), root_service(&root)?, 0.0);
     }
 
     assert_eq!(cache.entries.len(), SERVICE_CACHE_MAX);
-    assert_eq!(cache.stats.evictions_total, 1);
+    assert_eq!(cache.stats.creates_total, capacity + 1, "every root is new");
+    assert_eq!(cache.stats.evictions_total, 1, "oldest root evicted");
 
-    let recreated = cache.insert_or_get(normalize_root_key(&first), root_service(&first)?, 0.0);
-    assert!(!recreated.cache_hit);
-    assert!(recreated.cache_created);
-    assert_eq!(recreated.evicted_count, 1);
+    // root-000 was evicted, so re-inserting it creates again and evicts the
+    // next-oldest entry instead of hitting the cache.
+    let _ = cache.insert_or_get(normalize_root_key(&first), root_service(&first)?, 0.0);
+    assert_eq!(cache.stats.hits_total, 0, "no lookup ever hit");
+    assert_eq!(
+        cache.stats.creates_total,
+        capacity + 2,
+        "evicted root recreated"
+    );
+    assert_eq!(
+        cache.stats.evictions_total, 2,
+        "recreate evicts next oldest"
+    );
+    assert_eq!(cache.entries.len(), SERVICE_CACHE_MAX);
 
     let _ = std::fs::remove_dir_all(base);
     Ok(())

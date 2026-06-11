@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-plugin-ops · src/refresh.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin-ops File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>12</b><span>modules</span></div>
+  <div><b>149</b><span>items</span></div>
+  <div><b>173</b><span>fields</span></div>
+  <div><b>59</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin-ops.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-ensure-rs.html"><span>ensure.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-overlay-rs.html"><span>overlay.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link active" href="eos-plugin-ops--src-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><a class="file-link" href="eos-plugin-ops--src-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="refresh crates/eos-operation/plugin-ops/src/refresh.rs ServiceView ServiceHealthProbeTarget ServiceHealthReport service_health_probe_targets impl PluginRuntime probe_connected_service_health send_refresh_request">
+  <div class="module-head">
+    <div>
+      <h2>src/refresh.rs</h2>
+      <p class="path">module <code>refresh</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>1 impls</span>
+      <span>3 fns</span>
+      <span>12 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ServiceHealthReport-40" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ServiceHealthReport pub pub struct ServiceHealthReport crates/eos-operation/plugin-ops/src/refresh.rs success bool plugin String service_id String service_instance_id String manifest_key String accepted Option &lt; bool &gt; error Option &lt; String &gt; teardown_error Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ServiceHealthReport</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a></code>
+  <p class="docstring">One service health probe result (the wire view is shaped at the adapter:<br>the success branch carries `accepted`, the failure branch the errors).</p>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>plugin</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_instance_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest_key</td><td><code>String</code></td></tr><tr><td>pub</td><td>accepted</td><td><code>Option &lt; bool &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>teardown_error</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:40</p>
+</article><article id="item-struct-ServiceHealthProbeTarget-31" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ServiceHealthProbeTarget pub(super) pub(super) struct ServiceHealthProbeTarget crates/eos-operation/plugin-ops/src/refresh.rs plugin_id String service_id String service_instance_id String manifest_key String client SharedPpcClient ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ServiceHealthProbeTarget</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>private</td><td>service_id</td><td><code>String</code></td></tr><tr><td>private</td><td>service_instance_id</td><td><code>String</code></td></tr><tr><td>private</td><td>manifest_key</td><td><code>String</code></td></tr><tr><td>private</td><td>client</td><td><code><a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:31</p>
+</article><article id="item-struct-ServiceView-26" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ServiceView private struct ServiceView crates/eos-operation/plugin-ops/src/refresh.rs client Option &lt; SharedPpcClient &gt; started_before bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ServiceView</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>client</td><td><code>Option &lt; <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a> &gt;</code></td></tr><tr><td>private</td><td>started_before</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:26</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-service-health-probe-targets-53" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_health_probe_targets pub(super) pub(super) fn service_health_probe_targets (state : &amp; DaemonPluginState ,) -&gt; Vec &lt; ServiceHealthProbeTarget &gt; crates/eos-operation/plugin-ops/src/refresh.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>service_health_probe_targets</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-fn-service-health-probe-targets-53">service_health_probe_targets</a> (state : &amp; <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-struct-DaemonPluginState-24">DaemonPluginState</a> ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-service-health-probe-targets-53">service_health_probe_targets</a>(
+    state: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-struct-DaemonPluginState-24">DaemonPluginState</a>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>&gt; {
+    state
+        .loaded
+        .values()
+        .flat_map(|loaded| loaded.services.iter())
+        .filter_map(|status| {
+            <span class="rs-kw">let</span> service_instance_id = status.key.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-route-rs.html#method-service-instance-id-138">service_instance_id</a>();
+            <span class="rs-kw">let</span> client = state.service_ppc_clients.get(&amp;service_instance_id)?;
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.get(&amp;service_instance_id)?;
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> {
+                plugin_id: status.key.plugin_id.clone(),
+                service_id: status.key.service_id.clone(),
+                service_instance_id,
+                manifest_key: snapshot.manifest_key.clone(),
+                client: <span class="rs-type">Arc</span>::clone(client),
+            })
+        })
+        .collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:53</p>
+</article><article id="item-fn-probe-connected-service-health-435" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn probe_connected_service_health private fn probe_connected_service_health (target : &amp; ServiceHealthProbeTarget , index : usize , timeout : Duration ,) -&gt; Result &lt; bool , PluginRuntimeError &gt; crates/eos-operation/plugin-ops/src/refresh.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>probe_connected_service_health</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-fn-probe-connected-service-health-435">probe_connected_service_health</a> (target : &amp; <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> , index : usize , timeout : Duration ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-probe-connected-service-health-435">probe_connected_service_health</a>(
+    target: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>,
+    index: usize,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+    <span class="rs-kw">let</span> request = <span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
+        manifest_key: target.manifest_key.clone(),
+    };
+    <span class="rs-kw">let</span> message = <span class="rs-type">PpcMessage</span> {
+        message_id: format!(&quot;api.plugin.status:health:{index}&quot;),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: <span class="rs-type">WORKSPACE_SNAPSHOT_REFRESH_OP</span>.to_owned(),
+        body: serde_json::to_string(&amp;request).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = target.client.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-round-trip-52">round_trip</a>(&amp;message, timeout)?;
+    <span class="rs-kw">let</span> ack: <span class="rs-type">RefreshAck</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    ack.require_manifest(&amp;target.manifest_key)?;
+    <span class="rs-type">Ok</span>(ack.accepted)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:435</p>
+</article><article id="item-fn-send-refresh-request-456" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn send_refresh_request private fn send_refresh_request (client : &amp; super :: transport :: PpcClient , invocation_id : &amp; str , index : usize , request : &amp; RefreshRequest , snapshot : &amp; PluginServiceSnapshot , timeout : Duration ,) -&gt; Result &lt; () , PluginRuntimeError &gt; crates/eos-operation/plugin-ops/src/refresh.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>send_refresh_request</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a> (client : &amp; super :: transport :: <a class="symbol-link" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a> , invocation_id : &amp; str , index : usize , request : &amp; RefreshRequest , snapshot : &amp; <a class="symbol-link" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+    client: &amp;<span class="rs-kw">super</span>::transport::<a class="symbol-link rs-type" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a>,
+    invocation_id: &amp;str,
+    index: usize,
+    request: &amp;<span class="rs-type">RefreshRequest</span>,
+    snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+    <span class="rs-kw">let</span> message = <span class="rs-type">PpcMessage</span> {
+        message_id: format!(&quot;{invocation_id}:refresh:{index}&quot;),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: <span class="rs-type">WORKSPACE_SNAPSHOT_REFRESH_OP</span>.to_owned(),
+        body: serde_json::to_string(&amp;request).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = client.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-round-trip-52">round_trip</a>(&amp;message, timeout)?;
+    <span class="rs-kw">let</span> ack: <span class="rs-type">RefreshAck</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    ack.require_manifest(&amp;snapshot.manifest_key)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:456</p>
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-PluginRuntime-75" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl PluginRuntime private impl PluginRuntime crates/eos-operation/plugin-ops/src/refresh.rs  probe_service_health pub(super) fn probe_service_health (&amp; self , targets : Vec &lt; ServiceHealthProbeTarget &gt; , timeout : Duration ,) -&gt; Vec &lt; ServiceHealthReport &gt; ensure_connected_service_current pub(super) fn ensure_connected_service_current (&amp; self , route : &amp; PluginOperationRoute , invocation_id : &amp; str ,) -&gt; Result &lt; Option &lt; SharedPpcClient &gt; , PluginRuntimeError &gt; refresh_lock_for_service fn refresh_lock_for_service (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; Arc &lt; Mutex &lt; () &gt; &gt; , PluginRuntimeError &gt; service_view fn service_view (&amp; self , service_instance_id : &amp; str) -&gt; Result &lt; ServiceView , PluginRuntimeError &gt; service_is_ready_on_manifest fn service_is_ready_on_manifest (&amp; self , service_instance_id : &amp; str , target_manifest_key : &amp; str ,) -&gt; Result &lt; bool , PluginRuntimeError &gt; refresh_connected_service fn refresh_connected_service (&amp; self , route : &amp; PluginOperationRoute , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , client : &amp; SharedPpcClient , invocation_id : &amp; str ,) -&gt; Result &lt; () , PluginRuntimeError &gt; send_refresh_sequence fn send_refresh_sequence (&amp; self , client : &amp; super :: transport :: PpcClient , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , invocation_id : &amp; str , snapshot : &amp; PluginServiceSnapshot , timeout : Duration ,) -&gt; Result &lt; () , PluginRuntimeError &gt; remount_connected_service_workspace fn remount_connected_service_workspace (&amp; self , service_instance_id : &amp; str , service_key : &amp; PluginServiceKey , snapshot : &amp; PluginServiceSnapshot , timeout : Duration ,) -&gt; Result &lt; () , PluginRuntimeError &gt; service_process_pid fn service_process_pid (&amp; self , service_instance_id : &amp; str) -&gt; Result &lt; u32 , PluginRuntimeError &gt; restart_read_only_service fn restart_read_only_service (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; Option &lt; SharedPpcClient &gt; , PluginRuntimeError &gt; ensure_tracked_service_process_running fn ensure_tracked_service_process_running (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; () , PluginRuntimeError &gt; teardown_failed_connected_service pub(super) fn teardown_failed_connected_service (&amp; self , service_instance_id : &amp; str , reason : &amp; str ,) -&gt; Result &lt; () , PluginRuntimeError &gt;">
+  <div class="item-head">
+    <span class="kind">impl</span>
+    <h3>impl PluginRuntime</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">impl <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-struct-PluginRuntime-37">PluginRuntime</a></code>
+  <div class="tags"><span>impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-probe-service-health-76"><td>method</td><td>probe_service_health</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-probe-service-health-76">probe_service_health</a> (&amp; self , targets : Vec &lt; <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> &gt; , timeout : Duration ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-probe-service-health-76">probe_service_health</a>(
+        &amp;<span class="rs-self">self</span>,
+        targets: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>&gt;,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a>&gt; {
+        targets
+            .into_iter()
+            .enumerate()
+            .map(
+                |(index, target)| <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-probe-connected-service-health-435">probe_connected_service_health</a>(&amp;target, index, timeout) {
+                    <span class="rs-type">Ok</span>(accepted) =&gt; <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> {
+                        success: <span class="rs-kw">true</span>,
+                        plugin: target.plugin_id,
+                        service_id: target.service_id,
+                        service_instance_id: target.service_instance_id,
+                        manifest_key: target.manifest_key,
+                        accepted: <span class="rs-type">Some</span>(accepted),
+                        error: <span class="rs-type">None</span>,
+                        teardown_error: <span class="rs-type">None</span>,
+                    },
+                    <span class="rs-type">Err</span>(err) =&gt; {
+                        <span class="rs-kw">let</span> error = err.to_string();
+                        <span class="rs-kw">let</span> teardown_error = <span class="rs-self">self</span>
+                            .<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-teardown-failed-connected-service-408">teardown_failed_connected_service</a>(&amp;target.service_instance_id, &amp;error)
+                            .err()
+                            .map(|err| err.to_string());
+                        <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> {
+                            success: <span class="rs-kw">false</span>,
+                            plugin: target.plugin_id,
+                            service_id: target.service_id,
+                            service_instance_id: target.service_instance_id,
+                            manifest_key: target.manifest_key,
+                            accepted: <span class="rs-type">None</span>,
+                            error: <span class="rs-type">Some</span>(error),
+                            teardown_error,
+                        }
+                    }
+                },
+            )
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-ensure-connected-service-current-118"><td>method</td><td>ensure_connected_service_current</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-connected-service-current-118">ensure_connected_service_current</a> (&amp; self , route : &amp; <a class="symbol-link" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a> , invocation_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-connected-service-current-118">ensure_connected_service_current</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.as_deref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_key) = route.service_key.as_ref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?.client);
+        };
+        <span class="rs-kw">if</span> route.service_mode != <span class="rs-type">Some</span>(<span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?.client);
+        }
+
+        <span class="rs-kw">let</span> view = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = view.client {
+            <span class="rs-kw">let</span> target_manifest_key = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-active-manifest-key-125">active_manifest_key</a>(&amp;service_key.layer_stack_root)?;
+            <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(service_instance_id, &amp;target_manifest_key)? {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client));
+            }
+        } <span class="rs-kw">else</span> <span class="rs-kw">if</span> !view.started_before {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        }
+
+        <span class="rs-kw">let</span> refresh_lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-lock-for-service-174">refresh_lock_for_service</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> _refresh_guard = refresh_lock
+            .<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-lock-397">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin service refresh&quot;))?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> view = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = view.client <span class="rs-kw">else</span> {
+            <span class="rs-kw">if</span> view.started_before {
+                <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(service_instance_id);
+            }
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> target_manifest_key = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-active-manifest-key-125">active_manifest_key</a>(&amp;service_key.layer_stack_root)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(service_instance_id, &amp;target_manifest_key)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client));
+        }
+        <span class="rs-kw">if</span> service_key.refresh_strategy == <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RestartService</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(service_instance_id);
+        }
+
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-connected-service-212">refresh_connected_service</a>(
+            route,
+            service_key,
+            service_instance_id,
+            &amp;client,
+            invocation_id,
+        )?;
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client))
+    }
+</code></pre>
+</details></td></tr><tr id="method-refresh-lock-for-service-174"><td>method</td><td>refresh_lock_for_service</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-lock-for-service-174">refresh_lock_for_service</a> (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; Arc &lt; Mutex &lt; () &gt; &gt; , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-lock-for-service-174">refresh_lock_for_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(state
+            .service_refresh_locks
+            .entry(service_instance_id.to_owned())
+            .or_insert_with(|| <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(())))
+            .clone())
+    }
+</code></pre>
+</details></td></tr><tr id="method-service-view-186"><td>method</td><td>service_view</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a> (&amp; self , service_instance_id : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a> , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><p class="docstring">One locked read of the facts the freshness flow branches on: the<br>connected PPC client and whether the service was ever started.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// One locked read of the facts the freshness flow branches on: the</span>
+    <span class="rs-comment">/// connected PPC client and whether the service was ever started.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(&amp;<span class="rs-self">self</span>, service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a>, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a> {
+            client: state.service_ppc_clients.get(service_instance_id).cloned(),
+            started_before: <a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#item-fn-find-service-status-87">find_service_status</a>(&amp;state, service_instance_id)
+                .is_some_and(|status| status.manifest_key.is_some()),
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-service-is-ready-on-manifest-197"><td>method</td><td>service_is_ready_on_manifest</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a> (&amp; self , service_instance_id : &amp; str , target_manifest_key : &amp; str ,) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        target_manifest_key: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#item-fn-find-service-status-87">find_service_status</a>(&amp;state, service_instance_id).is_some_and(|status| {
+                status
+                    .require_ready_on_manifest(target_manifest_key)
+                    .is_ok()
+            }),
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-refresh-connected-service-212"><td>method</td><td>refresh_connected_service</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-connected-service-212">refresh_connected_service</a> (&amp; self , route : &amp; <a class="symbol-link" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a> , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , client : &amp; <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a> , invocation_id : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-connected-service-212">refresh_connected_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        service_instance_id: &amp;str,
+        client: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>,
+        invocation_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-acquire-service-snapshot-111">acquire_service_snapshot</a>(service_key, &quot;refresh&quot;)?;
+        <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(route.timeout_ms.unwrap_or(<span class="rs-self">self</span>.config.ppc_timeout_ms));
+        <span class="rs-kw">let</span> refresh_result = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-send-refresh-sequence-250">send_refresh_sequence</a>(
+            client,
+            service_key,
+            service_instance_id,
+            invocation_id,
+            &amp;snapshot,
+            timeout,
+        );
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = refresh_result {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-stale-167">mark_service_stale</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id, err.to_string());
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-kw">let</span> old_snapshot = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-ready-142">mark_service_ready</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id, &amp;snapshot, <span class="rs-kw">true</span>)?;
+            state
+                .service_snapshots
+                .insert(service_instance_id.to_owned(), snapshot)
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(old_snapshot) = old_snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;old_snapshot);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-send-refresh-sequence-250"><td>method</td><td>send_refresh_sequence</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-send-refresh-sequence-250">send_refresh_sequence</a> (&amp; self , client : &amp; super :: transport :: <a class="symbol-link" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a> , service_key : &amp; PluginServiceKey , service_instance_id : &amp; str , invocation_id : &amp; str , snapshot : &amp; <a class="symbol-link" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-send-refresh-sequence-250">send_refresh_sequence</a>(
+        &amp;<span class="rs-self">self</span>,
+        client: &amp;<span class="rs-kw">super</span>::transport::<a class="symbol-link rs-type" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a>,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        service_instance_id: &amp;str,
+        invocation_id: &amp;str,
+        snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> request_id = format!(&quot;{invocation_id}:refresh&quot;);
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+            client,
+            invocation_id,
+            0,
+            &amp;<span class="rs-type">RefreshRequest</span>::<span class="rs-type">PrepareRefresh</span> {
+                target_manifest_key: snapshot.manifest_key.clone(),
+            },
+            snapshot,
+            timeout,
+        )?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+            client,
+            invocation_id,
+            1,
+            &amp;<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Quiesce</span> {
+                request_id: request_id.clone(),
+            },
+            snapshot,
+            timeout,
+        )?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-remount-connected-service-workspace-309">remount_connected_service_workspace</a>(
+            service_instance_id,
+            service_key,
+            snapshot,
+            timeout,
+        )?;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> requests = vec![<span class="rs-type">RefreshRequest</span>::<span class="rs-type">SwapWorkspace</span> {
+            layer_paths: snapshot.layer_paths.clone(),
+            workspace_root: service_key.workspace_root.clone(),
+            manifest_key: snapshot.manifest_key.clone(),
+        }];
+        <span class="rs-kw">if</span> service_key.refresh_strategy == <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span> {
+            requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">NotifyRefresh</span> {
+                changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(),
+                full_resync: <span class="rs-kw">true</span>,
+            });
+        }
+        requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Resume</span> { request_id });
+        requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
+            manifest_key: snapshot.manifest_key.clone(),
+        });
+
+        <span class="rs-kw">for</span> (index, request) <span class="rs-kw">in</span> requests.iter().enumerate() {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(client, invocation_id, index + 2, request, snapshot, timeout)?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-remount-connected-service-workspace-309"><td>method</td><td>remount_connected_service_workspace</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-remount-connected-service-workspace-309">remount_connected_service_workspace</a> (&amp; self , service_instance_id : &amp; str , service_key : &amp; PluginServiceKey , snapshot : &amp; <a class="symbol-link" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a> , timeout : Duration ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-remount-connected-service-workspace-309">remount_connected_service_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = snapshot.overlay.as_ref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-kw">let</span> target_pid = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-process-pid-329">service_process_pid</a>(service_instance_id)?;
+        process::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#item-fn-remount-workspace-overlay-187">remount_workspace_overlay</a>(
+            &amp;*<span class="rs-self">self</span>.launcher,
+            target_pid,
+            &amp;service_key.workspace_root,
+            overlay,
+            timeout,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-service-process-pid-329"><td>method</td><td>service_process_pid</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-service-process-pid-329">service_process_pid</a> (&amp; self , service_instance_id : &amp; str) -&gt; Result &lt; u32 , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-process-pid-329">service_process_pid</a>(&amp;<span class="rs-self">self</span>, service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> pid = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> process = state
+                .service_processes
+                .get_mut(service_instance_id)
+                .ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                        &quot;service {service_instance_id} process is not running <span class="rs-kw">for</span> workspace remount&quot;
+                    )))
+                })?;
+            <span class="rs-kw">if</span> !process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-is-running-149">is_running</a>() {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                    &quot;service {service_instance_id} process exited before workspace remount&quot;
+                ))));
+            }
+            <span class="rs-kw">let</span> pid = process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-pid-145">pid</a>();
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            pid
+        };
+        <span class="rs-type">Ok</span>(pid)
+    }
+</code></pre>
+</details></td></tr><tr id="method-restart-read-only-service-352"><td>method</td><td>restart_read_only_service</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a> (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a> &gt; , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> (spec, old_snapshot) = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> spec = state
+                .loaded
+                .values()
+                .flat_map(|loaded| loaded.service_processes.iter())
+                .find(|spec| spec.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-route-rs.html#method-service-instance-id-138">service_instance_id</a>() == service_instance_id)
+                .cloned();
+            state.service_processes.remove(service_instance_id);
+            state.service_ppc_clients.remove(service_instance_id);
+            (spec, state.service_snapshots.remove(service_instance_id))
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(spec) = spec <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(old_snapshot) = old_snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;old_snapshot);
+        }
+        <span class="rs-kw">let</span> started = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#method-spawn-service-processes-47">spawn_service_processes</a>(&amp;[spec])?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-insert-started-service-processes-77">insert_started_service_processes</a>(&amp;<span class="rs-kw">mut</span> state, started)?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-restarted-158">mark_service_restarted</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id)?;
+        <span class="rs-type">Ok</span>(state.service_ppc_clients.get(service_instance_id).cloned())
+    }
+</code></pre>
+</details></td></tr><tr id="method-ensure-tracked-service-process-running-381"><td>method</td><td>ensure_tracked_service_process_running</td><td><code>fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a> (&amp; self , service_instance_id : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> snapshot_to_release = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process) = state.service_processes.get_mut(service_instance_id) <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            };
+            <span class="rs-kw">if</span> process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-is-running-149">is_running</a>() {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state.service_processes.remove(service_instance_id);
+            state.service_ppc_clients.remove(service_instance_id);
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.remove(service_instance_id);
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-stopped-178">mark_service_stopped</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id);
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            snapshot
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(snapshot) = snapshot_to_release {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+        }
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+            &quot;service {service_instance_id} process exited before plugin dispatch&quot;
+        ))))
+    }
+</code></pre>
+</details></td></tr><tr id="method-teardown-failed-connected-service-408"><td>method</td><td>teardown_failed_connected_service</td><td><code>pub(super) fn <a class="symbol-link" href="eos-plugin-ops--src-refresh-rs.html#method-teardown-failed-connected-service-408">teardown_failed_connected_service</a> (&amp; self , service_instance_id : &amp; str , reason : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-teardown-failed-connected-service-408">teardown_failed_connected_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> (process, snapshot) = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            state.service_ppc_clients.remove(service_instance_id);
+            <span class="rs-kw">let</span> process = state.service_processes.remove(service_instance_id);
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.remove(service_instance_id);
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-service-status-mut-185">service_status_mut</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id) {
+                status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Stopped</span>;
+                status.last_error = <span class="rs-type">Some</span>(reason.to_owned());
+            }
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            (process, snapshot)
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-kw">mut</span> process) = process {
+            process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-teardown-167">teardown</a>();
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(snapshot) = snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/plugin-ops/src/refresh.rs:75</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-operation/plugin-ops/src/refresh.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Connected plugin service freshness, refresh, and teardown.</span>
+
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> eos_plugin::{
+    <span class="rs-type">PluginError</span>, <span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginServiceState</span>, <span class="rs-type">PpcDirection</span>, <span class="rs-type">PpcMessage</span>, <span class="rs-type">RefreshAck</span>,
+    <span class="rs-type">RefreshRequest</span>, <span class="rs-type">RefreshStrategy</span>, <span class="rs-type">ServiceMode</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    process,
+    service::{
+        acquire_service_snapshot, active_manifest_key, insert_started_service_processes,
+        mark_service_ready, mark_service_restarted, mark_service_stale, mark_service_stopped,
+        release_service_snapshot, service_status_mut, <a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+    },
+    state::{find_service_status, <a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-struct-DaemonPluginState-24">DaemonPluginState</a>, <a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-struct-PluginRuntime-37">PluginRuntime</a>, <a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>},
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::route::<a class="symbol-link rs-type" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">WORKSPACE_SNAPSHOT_REFRESH_OP</span>: &amp;str = &quot;daemon.workspace_snapshot_refresh&quot;;
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a> {
+    client: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>&gt;,
+    started_before: bool,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> {
+    plugin_id: <span class="rs-type">String</span>,
+    service_id: <span class="rs-type">String</span>,
+    service_instance_id: <span class="rs-type">String</span>,
+    manifest_key: <span class="rs-type">String</span>,
+    client: <a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>,
+}
+
+<span class="rs-comment">/// One service health probe result (the wire view is shaped at the adapter:</span>
+<span class="rs-comment">/// the success branch carries `accepted`, the failure branch the errors).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> {
+    <span class="rs-kw">pub</span> success: bool,
+    <span class="rs-kw">pub</span> plugin: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_instance_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> manifest_key: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> accepted: <span class="rs-type">Option</span>&lt;bool&gt;,
+    <span class="rs-kw">pub</span> error: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> teardown_error: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-service-health-probe-targets-53">service_health_probe_targets</a>(
+    state: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-struct-DaemonPluginState-24">DaemonPluginState</a>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>&gt; {
+    state
+        .loaded
+        .values()
+        .flat_map(|loaded| loaded.services.iter())
+        .filter_map(|status| {
+            <span class="rs-kw">let</span> service_instance_id = status.key.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-route-rs.html#method-service-instance-id-138">service_instance_id</a>();
+            <span class="rs-kw">let</span> client = state.service_ppc_clients.get(&amp;service_instance_id)?;
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.get(&amp;service_instance_id)?;
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a> {
+                plugin_id: status.key.plugin_id.clone(),
+                service_id: status.key.service_id.clone(),
+                service_instance_id,
+                manifest_key: snapshot.manifest_key.clone(),
+                client: <span class="rs-type">Arc</span>::clone(client),
+            })
+        })
+        .collect()
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-struct-PluginRuntime-37">PluginRuntime</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-probe-service-health-76">probe_service_health</a>(
+        &amp;<span class="rs-self">self</span>,
+        targets: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>&gt;,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a>&gt; {
+        targets
+            .into_iter()
+            .enumerate()
+            .map(
+                |(index, target)| <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-probe-connected-service-health-435">probe_connected_service_health</a>(&amp;target, index, timeout) {
+                    <span class="rs-type">Ok</span>(accepted) =&gt; <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> {
+                        success: <span class="rs-kw">true</span>,
+                        plugin: target.plugin_id,
+                        service_id: target.service_id,
+                        service_instance_id: target.service_instance_id,
+                        manifest_key: target.manifest_key,
+                        accepted: <span class="rs-type">Some</span>(accepted),
+                        error: <span class="rs-type">None</span>,
+                        teardown_error: <span class="rs-type">None</span>,
+                    },
+                    <span class="rs-type">Err</span>(err) =&gt; {
+                        <span class="rs-kw">let</span> error = err.to_string();
+                        <span class="rs-kw">let</span> teardown_error = <span class="rs-self">self</span>
+                            .<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-teardown-failed-connected-service-408">teardown_failed_connected_service</a>(&amp;target.service_instance_id, &amp;error)
+                            .err()
+                            .map(|err| err.to_string());
+                        <a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthReport-40">ServiceHealthReport</a> {
+                            success: <span class="rs-kw">false</span>,
+                            plugin: target.plugin_id,
+                            service_id: target.service_id,
+                            service_instance_id: target.service_instance_id,
+                            manifest_key: target.manifest_key,
+                            accepted: <span class="rs-type">None</span>,
+                            error: <span class="rs-type">Some</span>(error),
+                            teardown_error,
+                        }
+                    }
+                },
+            )
+            .collect()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-connected-service-current-118">ensure_connected_service_current</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+        invocation_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.as_deref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_key) = route.service_key.as_ref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?.client);
+        };
+        <span class="rs-kw">if</span> route.service_mode != <span class="rs-type">Some</span>(<span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?.client);
+        }
+
+        <span class="rs-kw">let</span> view = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = view.client {
+            <span class="rs-kw">let</span> target_manifest_key = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-active-manifest-key-125">active_manifest_key</a>(&amp;service_key.layer_stack_root)?;
+            <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(service_instance_id, &amp;target_manifest_key)? {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client));
+            }
+        } <span class="rs-kw">else</span> <span class="rs-kw">if</span> !view.started_before {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        }
+
+        <span class="rs-kw">let</span> refresh_lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-lock-for-service-174">refresh_lock_for_service</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> _refresh_guard = refresh_lock
+            .<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-lock-397">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin service refresh&quot;))?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> view = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(service_instance_id)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = view.client <span class="rs-kw">else</span> {
+            <span class="rs-kw">if</span> view.started_before {
+                <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(service_instance_id);
+            }
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">let</span> target_manifest_key = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-active-manifest-key-125">active_manifest_key</a>(&amp;service_key.layer_stack_root)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(service_instance_id, &amp;target_manifest_key)? {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client));
+        }
+        <span class="rs-kw">if</span> service_key.refresh_strategy == <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RestartService</span> {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(service_instance_id);
+        }
+
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-connected-service-212">refresh_connected_service</a>(
+            route,
+            service_key,
+            service_instance_id,
+            &amp;client,
+            invocation_id,
+        )?;
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(client))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-lock-for-service-174">refresh_lock_for_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;()&gt;&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(state
+            .service_refresh_locks
+            .entry(service_instance_id.to_owned())
+            .or_insert_with(|| <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(())))
+            .clone())
+    }
+
+    <span class="rs-comment">/// One locked read of the facts the freshness flow branches on: the</span>
+    <span class="rs-comment">/// connected PPC client and whether the service was ever started.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-view-186">service_view</a>(&amp;<span class="rs-self">self</span>, service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a>, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceView-26">ServiceView</a> {
+            client: state.service_ppc_clients.get(service_instance_id).cloned(),
+            started_before: <a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#item-fn-find-service-status-87">find_service_status</a>(&amp;state, service_instance_id)
+                .is_some_and(|status| status.manifest_key.is_some()),
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-is-ready-on-manifest-197">service_is_ready_on_manifest</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        target_manifest_key: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <span class="rs-type">Ok</span>(
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#item-fn-find-service-status-87">find_service_status</a>(&amp;state, service_instance_id).is_some_and(|status| {
+                status
+                    .require_ready_on_manifest(target_manifest_key)
+                    .is_ok()
+            }),
+        )
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-refresh-connected-service-212">refresh_connected_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        route: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-route-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        service_instance_id: &amp;str,
+        client: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>,
+        invocation_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> snapshot = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-acquire-service-snapshot-111">acquire_service_snapshot</a>(service_key, &quot;refresh&quot;)?;
+        <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(route.timeout_ms.unwrap_or(<span class="rs-self">self</span>.config.ppc_timeout_ms));
+        <span class="rs-kw">let</span> refresh_result = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-send-refresh-sequence-250">send_refresh_sequence</a>(
+            client,
+            service_key,
+            service_instance_id,
+            invocation_id,
+            &amp;snapshot,
+            timeout,
+        );
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = refresh_result {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-stale-167">mark_service_stale</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id, err.to_string());
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-kw">let</span> old_snapshot = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-ready-142">mark_service_ready</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id, &amp;snapshot, <span class="rs-kw">true</span>)?;
+            state
+                .service_snapshots
+                .insert(service_instance_id.to_owned(), snapshot)
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(old_snapshot) = old_snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;old_snapshot);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-send-refresh-sequence-250">send_refresh_sequence</a>(
+        &amp;<span class="rs-self">self</span>,
+        client: &amp;<span class="rs-kw">super</span>::transport::<a class="symbol-link rs-type" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a>,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        service_instance_id: &amp;str,
+        invocation_id: &amp;str,
+        snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> request_id = format!(&quot;{invocation_id}:refresh&quot;);
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+            client,
+            invocation_id,
+            0,
+            &amp;<span class="rs-type">RefreshRequest</span>::<span class="rs-type">PrepareRefresh</span> {
+                target_manifest_key: snapshot.manifest_key.clone(),
+            },
+            snapshot,
+            timeout,
+        )?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+            client,
+            invocation_id,
+            1,
+            &amp;<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Quiesce</span> {
+                request_id: request_id.clone(),
+            },
+            snapshot,
+            timeout,
+        )?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-remount-connected-service-workspace-309">remount_connected_service_workspace</a>(
+            service_instance_id,
+            service_key,
+            snapshot,
+            timeout,
+        )?;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> requests = vec![<span class="rs-type">RefreshRequest</span>::<span class="rs-type">SwapWorkspace</span> {
+            layer_paths: snapshot.layer_paths.clone(),
+            workspace_root: service_key.workspace_root.clone(),
+            manifest_key: snapshot.manifest_key.clone(),
+        }];
+        <span class="rs-kw">if</span> service_key.refresh_strategy == <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span> {
+            requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">NotifyRefresh</span> {
+                changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-package-rs.html#method-new-127">new</a>(),
+                full_resync: <span class="rs-kw">true</span>,
+            });
+        }
+        requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Resume</span> { request_id });
+        requests.push(<span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
+            manifest_key: snapshot.manifest_key.clone(),
+        });
+
+        <span class="rs-kw">for</span> (index, request) <span class="rs-kw">in</span> requests.iter().enumerate() {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(client, invocation_id, index + 2, request, snapshot, timeout)?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-remount-connected-service-workspace-309">remount_connected_service_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        service_key: &amp;<span class="rs-type">PluginServiceKey</span>,
+        snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = snapshot.overlay.as_ref() <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-kw">let</span> target_pid = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-process-pid-329">service_process_pid</a>(service_instance_id)?;
+        process::<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#item-fn-remount-workspace-overlay-187">remount_workspace_overlay</a>(
+            &amp;*<span class="rs-self">self</span>.launcher,
+            target_pid,
+            &amp;service_key.workspace_root,
+            overlay,
+            timeout,
+        )
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-service-process-pid-329">service_process_pid</a>(&amp;<span class="rs-self">self</span>, service_instance_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> pid = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> process = state
+                .service_processes
+                .get_mut(service_instance_id)
+                .ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                        &quot;service {service_instance_id} process is not running <span class="rs-kw">for</span> workspace remount&quot;
+                    )))
+                })?;
+            <span class="rs-kw">if</span> !process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-is-running-149">is_running</a>() {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                    &quot;service {service_instance_id} process exited before workspace remount&quot;
+                ))));
+            }
+            <span class="rs-kw">let</span> pid = process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-pid-145">pid</a>();
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            pid
+        };
+        <span class="rs-type">Ok</span>(pid)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-restart-read-only-service-352">restart_read_only_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin-ops--src-state-rs.html#item-type-SharedPpcClient-13">SharedPpcClient</a>&gt;, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> (spec, old_snapshot) = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> spec = state
+                .loaded
+                .values()
+                .flat_map(|loaded| loaded.service_processes.iter())
+                .find(|spec| spec.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-route-rs.html#method-service-instance-id-138">service_instance_id</a>() == service_instance_id)
+                .cloned();
+            state.service_processes.remove(service_instance_id);
+            state.service_ppc_clients.remove(service_instance_id);
+            (spec, state.service_snapshots.remove(service_instance_id))
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(spec) = spec <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(old_snapshot) = old_snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;old_snapshot);
+        }
+        <span class="rs-kw">let</span> started = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#method-spawn-service-processes-47">spawn_service_processes</a>(&amp;[spec])?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-insert-started-service-processes-77">insert_started_service_processes</a>(&amp;<span class="rs-kw">mut</span> state, started)?;
+        <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-restarted-158">mark_service_restarted</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id)?;
+        <span class="rs-type">Ok</span>(state.service_ppc_clients.get(service_instance_id).cloned())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-ensure-tracked-service-process-running-381">ensure_tracked_service_process_running</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> snapshot_to_release = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process) = state.service_processes.get_mut(service_instance_id) <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            };
+            <span class="rs-kw">if</span> process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-is-running-149">is_running</a>() {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state.service_processes.remove(service_instance_id);
+            state.service_ppc_clients.remove(service_instance_id);
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.remove(service_instance_id);
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-mark-service-stopped-178">mark_service_stopped</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id);
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            snapshot
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(snapshot) = snapshot_to_release {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+        }
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+            &quot;service {service_instance_id} process exited before plugin dispatch&quot;
+        ))))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#method-teardown-failed-connected-service-408">teardown_failed_connected_service</a>(
+        &amp;<span class="rs-self">self</span>,
+        service_instance_id: &amp;str,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+        <span class="rs-kw">let</span> (process, snapshot) = {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-state-rs.html#method-lock-state-57">lock_state</a>()?;
+            state.service_ppc_clients.remove(service_instance_id);
+            <span class="rs-kw">let</span> process = state.service_processes.remove(service_instance_id);
+            <span class="rs-kw">let</span> snapshot = state.service_snapshots.remove(service_instance_id);
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-service-status-mut-185">service_status_mut</a>(&amp;<span class="rs-kw">mut</span> state, service_instance_id) {
+                status.state = <span class="rs-type">PluginServiceState</span>::<span class="rs-type">Stopped</span>;
+                status.last_error = <span class="rs-type">Some</span>(reason.to_owned());
+            }
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-drop-182">drop</a>(state);
+            (process, snapshot)
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-kw">mut</span> process) = process {
+            process.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-process-rs.html#method-teardown-167">teardown</a>();
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(snapshot) = snapshot {
+            <a class="symbol-link rs-fn" href="eos-plugin-ops--src-service-rs.html#item-fn-release-service-snapshot-133">release_service_snapshot</a>(&amp;snapshot);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-probe-connected-service-health-435">probe_connected_service_health</a>(
+    target: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-refresh-rs.html#item-struct-ServiceHealthProbeTarget-31">ServiceHealthProbeTarget</a>,
+    index: usize,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+    <span class="rs-kw">let</span> request = <span class="rs-type">RefreshRequest</span>::<span class="rs-type">Health</span> {
+        manifest_key: target.manifest_key.clone(),
+    };
+    <span class="rs-kw">let</span> message = <span class="rs-type">PpcMessage</span> {
+        message_id: format!(&quot;api.plugin.status:health:{index}&quot;),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: <span class="rs-type">WORKSPACE_SNAPSHOT_REFRESH_OP</span>.to_owned(),
+        body: serde_json::to_string(&amp;request).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = target.client.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-round-trip-52">round_trip</a>(&amp;message, timeout)?;
+    <span class="rs-kw">let</span> ack: <span class="rs-type">RefreshAck</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    ack.require_manifest(&amp;target.manifest_key)?;
+    <span class="rs-type">Ok</span>(ack.accepted)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin-ops--src-refresh-rs.html#item-fn-send-refresh-request-456">send_refresh_request</a>(
+    client: &amp;<span class="rs-kw">super</span>::transport::<a class="symbol-link rs-type" href="eos-plugin-ops--src-transport-rs.html#item-struct-PpcClient-29">PpcClient</a>,
+    invocation_id: &amp;str,
+    index: usize,
+    request: &amp;<span class="rs-type">RefreshRequest</span>,
+    snapshot: &amp;<a class="symbol-link rs-type" href="eos-plugin-ops--src-service-rs.html#item-struct-PluginServiceSnapshot-15">PluginServiceSnapshot</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-plugin-ops--src-lib-rs.html#item-enum-PluginRuntimeError-81">PluginRuntimeError</a>&gt; {
+    <span class="rs-kw">let</span> message = <span class="rs-type">PpcMessage</span> {
+        message_id: format!(&quot;{invocation_id}:refresh:{index}&quot;),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: <span class="rs-type">WORKSPACE_SNAPSHOT_REFRESH_OP</span>.to_owned(),
+        body: serde_json::to_string(&amp;request).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = client.<a class="symbol-link rs-fn" href="eos-plugin-ops--src-transport-rs.html#method-round-trip-52">round_trip</a>(&amp;message, timeout)?;
+    <span class="rs-kw">let</span> ack: <span class="rs-type">RefreshAck</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    ack.require_manifest(&amp;snapshot.manifest_key)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

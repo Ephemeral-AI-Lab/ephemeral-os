@@ -3,11 +3,15 @@ use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::LayerStack;
 
-use super::{route_for_path, route_metrics, Route};
+use super::{route_for_path, Route};
 
 fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
+    Ok(route_of(fixture, path)? == Route::Direct)
+}
+
+fn route_of(fixture: &Fixture, path: &str) -> TestResult<Route> {
     let stack = LayerStack::open(fixture.root.clone())?;
-    Ok(route_for_path(&stack, &lp(path)?)? == Route::Direct)
+    Ok(route_for_path(&stack, &lp(path)?)?)
 }
 
 #[test]
@@ -21,32 +25,13 @@ fn root_gitignore_routes_target_as_direct() -> TestResult {
 }
 
 #[test]
-fn route_metrics_count_gated_and_direct_paths() -> TestResult {
-    let fixture = Fixture::new_with_gitignore("route_metrics", "target/\n*.pyc\n")?;
-    let metrics = route_metrics(
-        &fixture.root,
-        &[
-            LayerChange::Write {
-                path: lp("src/main.rs")?,
-                content: b"tracked".to_vec(),
-            },
-            LayerChange::Write {
-                path: lp("target/out.txt")?,
-                content: b"direct".to_vec(),
-            },
-            LayerChange::Write {
-                path: lp("pkg/cache.pyc")?,
-                content: b"direct".to_vec(),
-            },
-            LayerChange::Write {
-                path: lp(".git/config")?,
-                content: b"drop".to_vec(),
-            },
-        ],
-    )?;
+fn routes_tracked_ignored_and_git_paths_distinctly() -> TestResult {
+    let fixture = Fixture::new_with_gitignore("route_kinds", "target/\n*.pyc\n")?;
 
-    assert_eq!(metrics.gated_path_count, 1);
-    assert_eq!(metrics.direct_path_count, 2);
+    assert_eq!(route_of(&fixture, "src/main.rs")?, Route::Gated);
+    assert_eq!(route_of(&fixture, "target/out.txt")?, Route::Direct);
+    assert_eq!(route_of(&fixture, "pkg/cache.pyc")?, Route::Direct);
+    assert_eq!(route_of(&fixture, ".git/config")?, Route::Drop);
     Ok(())
 }
 
@@ -111,51 +96,27 @@ fn excluded_dir_seals_against_deeper_reinclude() -> TestResult {
     Ok(())
 }
 
-// Telemetry shares the one routine, so counts equal the route decision for
-// the same inputs (including the N2/N3/nested/seal cases above).
+// Composite ruleset: the N2/N3/nested/seal behaviors above hold together on
+// one fixture, including the `.git` drop.
 #[test]
-fn route_metrics_match_route_decision() -> TestResult {
+fn composite_ruleset_routes_each_path_as_expected() -> TestResult {
     let fixture = Fixture::new_with_gitignores(
-        "metrics_parity",
+        "composite_routes",
         &[
             ("", "node_modules/\nlogs/*.log\nbuild/\n"),
             ("build", "!keep.txt\n"),
         ],
     )?;
-    let paths = [
-        "frontend/node_modules/index.js", // DIRECT (N2 dir-only any depth)
-        "logs/sub/x.log",                 // GATED  (N3 star not crossing /)
-        "logs/app.log",                   // DIRECT
-        "build/keep.txt",                 // DIRECT (seal beats deeper !)
-        "src/main.rs",                    // GATED
-        ".git/config",                    // skipped by metrics
-    ];
-    let mut expected_direct = 0;
-    let mut expected_gated = 0;
-    for path in paths {
-        if path == ".git/config" {
-            continue;
-        }
-        if is_ignored(&fixture, path)? {
-            expected_direct += 1;
-        } else {
-            expected_gated += 1;
-        }
+    for (path, expected) in [
+        ("frontend/node_modules/index.js", Route::Direct), // N2 dir-only any depth
+        ("logs/sub/x.log", Route::Gated),                  // N3 star not crossing /
+        ("logs/app.log", Route::Direct),
+        ("build/keep.txt", Route::Direct), // seal beats deeper !
+        ("src/main.rs", Route::Gated),
+        (".git/config", Route::Drop),
+    ] {
+        assert_eq!(route_of(&fixture, path)?, expected, "route for {path}");
     }
-    let changes: Vec<LayerChange> = paths
-        .iter()
-        .map(|path| {
-            Ok(LayerChange::Write {
-                path: lp(path)?,
-                content: b"x".to_vec(),
-            })
-        })
-        .collect::<TestResult<_>>()?;
-    let metrics = route_metrics(&fixture.root, &changes)?;
-    assert_eq!(metrics.direct_path_count, expected_direct);
-    assert_eq!(metrics.gated_path_count, expected_gated);
-    assert_eq!(expected_direct, 3);
-    assert_eq!(expected_gated, 2);
     Ok(())
 }
 

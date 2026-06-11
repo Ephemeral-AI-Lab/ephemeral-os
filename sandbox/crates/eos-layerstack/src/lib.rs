@@ -20,7 +20,7 @@ pub use model::{
 
 pub use commit::{
     configure_auto_squash_max_depth, hash_current, ChangesetResult, CommitError, CommitStatus,
-    FileResult, Route,
+    FileResult,
 };
 pub use error::LayerStackError;
 pub use stack::{LayerStack, Lease, MergedView};

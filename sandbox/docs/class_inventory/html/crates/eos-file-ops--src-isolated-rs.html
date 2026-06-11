@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>44</b><span>items</span></div>
-  <div><b>69</b><span>fields</span></div>
-  <div><b>26</b><span>methods</span></div>
+  <div><b>42</b><span>items</span></div>
+  <div><b>48</b><span>fields</span></div>
+  <div><b>24</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-file-ops.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link active" href="eos-file-ops--src-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-file-ops--src-lib-rs.html"><span>lib.rs</span><small>16/8</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated crates/eos-file-ops/src/isolated.rs IsolatedBackend impl FileBackend for IsolatedBackend impl IsolatedBackend relative_layer_path">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-file-ops.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link active" href="eos-file-ops--src-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-file-ops--src-lib-rs.html"><span>lib.rs</span><small>14/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="isolated crates/eos-operation/file-ops/src/isolated.rs IsolatedBackend impl FileBackend for IsolatedBackend impl IsolatedBackend relative_layer_path">
   <div class="module-head">
     <div>
       <h2>src/isolated.rs</h2>
@@ -56,19 +56,17 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-IsolatedBackend-20" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct IsolatedBackend pub pub struct IsolatedBackend crates/eos-file-ops/src/isolated.rs layer_stack_root PathBuf workspace_root PathBuf upperdir PathBuf layer_paths Vec &lt; PathBuf &gt; manifest_version i64 manifest_root_hash String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-IsolatedBackend-13" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct IsolatedBackend pub pub struct IsolatedBackend crates/eos-operation/file-ops/src/isolated.rs layer_stack_root PathBuf workspace_root PathBuf upperdir PathBuf layer_paths Vec &lt; PathBuf &gt; manifest_version i64 manifest_root_hash String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>IsolatedBackend</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a></code>
-  <p class="docstring">One open isolated workspace's file view (plain fields — constructed by the<br>daemon from its session state).</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>manifest_root_hash</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-read-current-97"><td>method</td><td>read_current</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-read-current-97">read_current</a> (&amp; self , layer_path : &amp; str) -&gt; Result &lt; (Option &lt; Vec &lt; u8 &gt; &gt; , bool) , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><p class="docstring">Upperdir-first read, falling back to the frozen snapshot layers.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>manifest_version</td><td><code>i64</code></td></tr><tr><td>pub</td><td>manifest_root_hash</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-read-current-89"><td>method</td><td>read_current</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-read-current-89">read_current</a> (&amp; self , layer_path : &amp; str) -&gt; Result &lt; (Option &lt; Vec &lt; u8 &gt; &gt; , bool) , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Upperdir-first read, falling back to the frozen snapshot layers.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-97">read_current</a>(&amp;<span class="rs-self">self</span>, layer_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-89">read_current</a>(&amp;<span class="rs-self">self</span>, layer_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> upper_path = <span class="rs-self">self</span>.upperdir.join(layer_path);
         <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;upper_path) {
             <span class="rs-type">Ok</span>(metadata) <span class="rs-kw">if</span> metadata.is_file() =&gt; {
@@ -88,17 +86,16 @@
             }
             <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">None</span>, <span class="rs-kw">false</span>)),
             <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
-            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-api-error-159">api_error</a>(error)),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-api-error-152">api_error</a>(error)),
         }
-        <span class="rs-type">MergedView</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(<span class="rs-self">self</span>.layer_stack_root.clone())
-            .<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(layer_path, &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-125">snapshot_manifest</a>())
+        <span class="rs-type">MergedView</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(<span class="rs-self">self</span>.layer_stack_root.clone())
+            .<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(layer_path, &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-116">snapshot_manifest</a>())
             .map_err(api_error)
     }
 </code></pre>
-</details></td></tr><tr id="method-snapshot-manifest-125"><td>method</td><td>snapshot_manifest</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-125">snapshot_manifest</a> (&amp; self) -&gt; Manifest</code><p class="docstring">The frozen base manifest the binding's `layer_paths` describe.</p><details class="function-source">
+</details></td></tr><tr id="method-snapshot-manifest-116"><td>method</td><td>snapshot_manifest</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-116">snapshot_manifest</a> (&amp; self) -&gt; Manifest</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// The frozen base manifest the binding's `layer_paths` describe.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-125">snapshot_manifest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Manifest</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-116">snapshot_manifest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Manifest</span> {
         <span class="rs-type">Manifest</span> {
             version: <span class="rs-self">self</span>.manifest_version,
             schema_version: <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>,
@@ -108,36 +105,36 @@
                 .enumerate()
                 .map(|(index, path)| <span class="rs-type">LayerRef</span> {
                     layer_id: format!(&quot;isolated-{index}&quot;),
-                    path: <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-150">relative_layer_path</a>(&amp;<span class="rs-self">self</span>.layer_stack_root, path),
+                    path: <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-140">relative_layer_path</a>(&amp;<span class="rs-self">self</span>.layer_stack_root, path),
                 })
                 .collect(),
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-timings-142"><td>method</td><td>timings</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a> (&amp; self , changed_path_count : usize) -&gt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a></code><details class="function-source">
+</details></td></tr><tr id="method-timings-132"><td>method</td><td>timings</td><td><code>fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a> (&amp; self , changed_path_count : usize) -&gt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a></code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(&amp;<span class="rs-self">self</span>, changed_path_count: usize) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> {
-        <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>([(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(&amp;<span class="rs-self">self</span>, changed_path_count: usize) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> {
+        <span class="rs-type">BTreeMap</span>::from([(
             &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
-            json!(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-usize-to-f64-saturating-163">usize_to_f64_saturating</a>(changed_path_count)),
+            json!(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-usize-to-f64-saturating-156">usize_to_f64_saturating</a>(changed_path_count)),
         )])
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> for <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a></code></summary><table><tbody><tr id="method-workspace-kind-33"><td>method</td><td>workspace_kind</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> for <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a></code></summary><table><tbody><tr id="method-workspace-kind-24"><td>method</td><td>workspace_kind</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         &quot;isolated&quot;
     }
 </code></pre>
-</details></td></tr><tr id="method-mutation-source-37"><td>method</td><td>mutation_source</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a> (&amp; self , _kind : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp; &#x27;static str</code><details class="function-source">
+</details></td></tr><tr id="method-mutation-source-28"><td>method</td><td>mutation_source</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a> (&amp; self , _kind : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp; &#x27;static str</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(&amp;<span class="rs-self">self</span>, _kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(&amp;<span class="rs-self">self</span>, _kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         &quot;isolated_workspace&quot;
     }
 </code></pre>
-</details></td></tr><tr id="method-resolve-path-41"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-resolve-path-32"><td>method</td><td>resolve_path</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a> (&amp; self , request_path : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> binding = <span class="rs-type">WorkspaceBinding</span> {
             workspace_root: <span class="rs-self">self</span>.workspace_root.to_string_lossy().into_owned(),
             layer_stack_root: <span class="rs-self">self</span>.layer_stack_root.to_string_lossy().into_owned(),
@@ -146,21 +143,21 @@
             base_manifest_version: <span class="rs-self">self</span>.manifest_version,
             base_root_hash: <span class="rs-self">self</span>.manifest_root_hash.clone(),
         };
-        <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-resolve-layer-path-137">resolve_layer_path</a>(&amp;binding, request_path)
+        <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-resolve-layer-path-130">resolve_layer_path</a>(&amp;binding, request_path)
     }
 </code></pre>
-</details></td></tr><tr id="method-read-bytes-53"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-read-bytes-44"><td>method</td><td>read_bytes</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> read_start = std::time::<span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-153">parse_layer_path</a>(&amp;path.path)?;
-        <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-97">read_current</a>(layer_path.as_str())?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(0);
+        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-146">parse_layer_path</a>(&amp;path.path)?;
+        <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-89">read_current</a>(layer_path.as_str())?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(0);
         timings.insert(
             &quot;api.read.layer_stack_read_s&quot;.to_owned(),
             json!(read_start.elapsed().as_secs_f64()),
         );
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a> {
             bytes,
             exists,
             manifest_version: <span class="rs-type">Some</span>(<span class="rs-self">self</span>.manifest_version),
@@ -168,47 +165,48 @@
         })
     }
 </code></pre>
-</details></td></tr><tr id="method-apply-70"><td>method</td><td>apply</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-apply-70">apply</a> (&amp; self , mutation : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a> &gt;</code><details class="function-source">
+</details></td></tr><tr id="method-apply-61"><td>method</td><td>apply</td><td><code>fn <a class="symbol-link" href="eos-file-ops.html#method-apply-62">apply</a> (&amp; self , mutation : <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> , <a class="symbol-link" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
-        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-153">parse_layer_path</a>(&amp;mutation.path.path)?;
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
+        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-146">parse_layer_path</a>(&amp;mutation.path.path)?;
         <span class="rs-kw">let</span> target = <span class="rs-self">self</span>.upperdir.join(layer_path.as_str());
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
             std::fs::create_dir_all(parent).map_err(api_error)?;
         }
         std::fs::write(target, &amp;mutation.content).map_err(api_error)?;
         <span class="rs-kw">let</span> changed_paths = vec![layer_path.as_str().to_owned()];
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
             workspace_kind: &quot;isolated&quot;.to_owned(),
             success: <span class="rs-kw">true</span>,
             published: <span class="rs-kw">false</span>,
             status: &quot;committed&quot;.to_owned(),
             conflict: <span class="rs-type">None</span>,
             conflict_reason: <span class="rs-type">None</span>,
-            changed_path_kinds: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>([(
+            changed_path_kinds: <span class="rs-type">BTreeMap</span>::from([(
                 layer_path.as_str().to_owned(),
                 &quot;write&quot;.to_owned(),
             )]),
             changed_paths,
-            mutation_source: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(mutation.kind).to_owned(),
-            timings: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(1),
+            mutation_source: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(mutation.kind).to_owned(),
+            timings: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(1),
+            ..<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>::default()
         })
     }
 </code></pre>
 </details></td></tr></tbody></table></details></div>
 
-  <p class="source">crates/eos-file-ops/src/isolated.rs:20</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-relative-layer-path-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_layer_path private fn relative_layer_path (layer_stack_root : &amp; Path , path : &amp; Path) -&gt; String crates/eos-file-ops/src/isolated.rs  ">
+  <p class="source">crates/eos-operation/file-ops/src/isolated.rs:13</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-relative-layer-path-140" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_layer_path private fn relative_layer_path (layer_stack_root : &amp; Path , path : &amp; Path) -&gt; String crates/eos-operation/file-ops/src/isolated.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>relative_layer_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-150">relative_layer_path</a> (layer_stack_root : &amp; Path , path : &amp; Path) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-140">relative_layer_path</a> (layer_stack_root : &amp; Path , path : &amp; Path) -&gt; String</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-150">relative_layer_path</a>(layer_stack_root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-140">relative_layer_path</a>(layer_stack_root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
     path.strip_prefix(layer_stack_root)
         .unwrap_or(path)
         .to_string_lossy()
@@ -217,23 +215,16 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-file-ops/src/isolated.rs:150</p>
+  <p class="source">crates/eos-operation/file-ops/src/isolated.rs:140</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-file-ops/src/isolated.rs</p>
+    <p class="path">crates/eos-operation/file-ops/src/isolated.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Isolated-workspace file backend: upperdir-first reads, private writes.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! The workspace crate stays storage-free; this backend composes the merged</span>
-<span class="rs-comment">//! fallback itself from the binding's frozen `layer_paths` (a synthetic</span>
-<span class="rs-comment">//! manifest over the leased layers), so an isolated read sees</span>
-<span class="rs-comment">//! upperdir-then-snapshot exactly like the overlay mount does.</span>
-
-<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
 <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
 
 <span class="rs-kw">use</span> eos_layerstack::{<span class="rs-type">LayerRef</span>, <span class="rs-type">Manifest</span>, <span class="rs-type">MergedView</span>, <span class="rs-type">WorkspaceBinding</span>, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>};
@@ -241,14 +232,12 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::direct::{api_error, parse_layer_path, resolve_layer_path, usize_to_f64_saturating};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>,
-    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a>,
+    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>,
+    <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a>,
 };
 
-<span class="rs-comment">/// One open isolated workspace's file view (plain fields — constructed by the</span>
-<span class="rs-comment">/// daemon from its session state).</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a> {
     <span class="rs-kw">pub</span> layer_stack_root: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> workspace_root: <span class="rs-type">PathBuf</span>,
     <span class="rs-kw">pub</span> upperdir: <span class="rs-type">PathBuf</span>,
@@ -257,16 +246,16 @@
     <span class="rs-kw">pub</span> manifest_root_hash: <span class="rs-type">String</span>,
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-154">FileBackend</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-36">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-trait-FileBackend-127">FileBackend</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-workspace-kind-28">workspace_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         &quot;isolated&quot;
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(&amp;<span class="rs-self">self</span>, _kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-105">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(&amp;<span class="rs-self">self</span>, _kind: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-enum-MutationKind-80">MutationKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
         &quot;isolated_workspace&quot;
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-47">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-resolve-path-39">resolve_path</a>(&amp;<span class="rs-self">self</span>, request_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> binding = <span class="rs-type">WorkspaceBinding</span> {
             workspace_root: <span class="rs-self">self</span>.workspace_root.to_string_lossy().into_owned(),
             layer_stack_root: <span class="rs-self">self</span>.layer_stack_root.to_string_lossy().into_owned(),
@@ -275,19 +264,19 @@
             base_manifest_version: <span class="rs-self">self</span>.manifest_version,
             base_root_hash: <span class="rs-self">self</span>.manifest_root_hash.clone(),
         };
-        <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-resolve-layer-path-137">resolve_layer_path</a>(&amp;binding, request_path)
+        <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-resolve-layer-path-130">resolve_layer_path</a>(&amp;binding, request_path)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-80">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ResolvedWorkspacePath-57">ResolvedWorkspacePath</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> read_start = std::time::<span class="rs-type">Instant</span>::now();
-        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-153">parse_layer_path</a>(&amp;path.path)?;
-        <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-97">read_current</a>(layer_path.as_str())?;
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(0);
+        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-146">parse_layer_path</a>(&amp;path.path)?;
+        <span class="rs-kw">let</span> (bytes, exists) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-89">read_current</a>(layer_path.as_str())?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(0);
         timings.insert(
             &quot;api.read.layer_stack_read_s&quot;.to_owned(),
             json!(read_start.elapsed().as_secs_f64()),
         );
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-93">ReadBytes</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-ReadBytes-69">ReadBytes</a> {
             bytes,
             exists,
             manifest_version: <span class="rs-type">Some</span>(<span class="rs-self">self</span>.manifest_version),
@@ -295,35 +284,35 @@
         })
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-70">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-123">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
-        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-153">parse_layer_path</a>(&amp;mutation.path.path)?;
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops.html#method-apply-62">apply</a>(&amp;<span class="rs-self">self</span>, mutation: <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-Mutation-97">Mutation</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>, <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
+        <span class="rs-kw">let</span> layer_path = <a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-parse-layer-path-146">parse_layer_path</a>(&amp;mutation.path.path)?;
         <span class="rs-kw">let</span> target = <span class="rs-self">self</span>.upperdir.join(layer_path.as_str());
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
             std::fs::create_dir_all(parent).map_err(api_error)?;
         }
         std::fs::write(target, &amp;mutation.content).map_err(api_error)?;
         <span class="rs-kw">let</span> changed_paths = vec![layer_path.as_str().to_owned()];
-        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-132">MutationOutcome</a> {
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a> {
             workspace_kind: &quot;isolated&quot;.to_owned(),
             success: <span class="rs-kw">true</span>,
             published: <span class="rs-kw">false</span>,
             status: &quot;committed&quot;.to_owned(),
             conflict: <span class="rs-type">None</span>,
             conflict_reason: <span class="rs-type">None</span>,
-            changed_path_kinds: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>([(
+            changed_path_kinds: <span class="rs-type">BTreeMap</span>::from([(
                 layer_path.as_str().to_owned(),
                 &quot;write&quot;.to_owned(),
             )]),
             changed_paths,
-            mutation_source: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-40">mutation_source</a>(mutation.kind).to_owned(),
-            timings: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(1),
+            mutation_source: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops.html#method-mutation-source-32">mutation_source</a>(mutation.kind).to_owned(),
+            timings: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(1),
+            ..<a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-MutationOutcome-105">MutationOutcome</a>::default()
         })
     }
 }
 
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-20">IsolatedBackend</a> {
-    <span class="rs-comment">/// Upperdir-first read, falling back to the frozen snapshot layers.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-97">read_current</a>(&amp;<span class="rs-self">self</span>, layer_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-57">FileOpsError</a>&gt; {
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-file-ops--src-isolated-rs.html#item-struct-IsolatedBackend-13">IsolatedBackend</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-read-current-89">read_current</a>(&amp;<span class="rs-self">self</span>, layer_path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;, bool), <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-struct-FileOpsError-41">FileOpsError</a>&gt; {
         <span class="rs-kw">let</span> upper_path = <span class="rs-self">self</span>.upperdir.join(layer_path);
         <span class="rs-kw">match</span> std::fs::symlink_metadata(&amp;upper_path) {
             <span class="rs-type">Ok</span>(metadata) <span class="rs-kw">if</span> metadata.is_file() =&gt; {
@@ -343,15 +332,14 @@
             }
             <span class="rs-type">Ok</span>(_) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>((<span class="rs-type">None</span>, <span class="rs-kw">false</span>)),
             <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
-            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-api-error-159">api_error</a>(error)),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-api-error-152">api_error</a>(error)),
         }
-        <span class="rs-type">MergedView</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-29">new</a>(<span class="rs-self">self</span>.layer_stack_root.clone())
-            .<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-52">read_bytes</a>(layer_path, &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-125">snapshot_manifest</a>())
+        <span class="rs-type">MergedView</span>::<a class="symbol-link rs-fn" href="eos-file-ops.html#method-new-21">new</a>(<span class="rs-self">self</span>.layer_stack_root.clone())
+            .<a class="symbol-link rs-fn" href="eos-file-ops.html#method-read-bytes-44">read_bytes</a>(layer_path, &amp;<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-116">snapshot_manifest</a>())
             .map_err(api_error)
     }
 
-    <span class="rs-comment">/// The frozen base manifest the binding's `layer_paths` describe.</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-125">snapshot_manifest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Manifest</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-snapshot-manifest-116">snapshot_manifest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Manifest</span> {
         <span class="rs-type">Manifest</span> {
             version: <span class="rs-self">self</span>.manifest_version,
             schema_version: <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>,
@@ -361,21 +349,21 @@
                 .enumerate()
                 .map(|(index, path)| <span class="rs-type">LayerRef</span> {
                     layer_id: format!(&quot;isolated-{index}&quot;),
-                    path: <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-150">relative_layer_path</a>(&amp;<span class="rs-self">self</span>.layer_stack_root, path),
+                    path: <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-140">relative_layer_path</a>(&amp;<span class="rs-self">self</span>.layer_stack_root, path),
                 })
                 .collect(),
         }
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-142">timings</a>(&amp;<span class="rs-self">self</span>, changed_path_count: usize) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-31">WorkspaceTimings</a> {
-        <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-file-ops--src-lib-rs.html#method-from-252">from</a>([(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#method-timings-132">timings</a>(&amp;<span class="rs-self">self</span>, changed_path_count: usize) -&gt; <a class="symbol-link rs-type" href="eos-file-ops--src-lib-rs.html#item-type-WorkspaceTimings-18">WorkspaceTimings</a> {
+        <span class="rs-type">BTreeMap</span>::from([(
             &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
-            json!(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-usize-to-f64-saturating-163">usize_to_f64_saturating</a>(changed_path_count)),
+            json!(<a class="symbol-link rs-fn" href="eos-file-ops.html#item-fn-usize-to-f64-saturating-156">usize_to_f64_saturating</a>(changed_path_count)),
         )])
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-150">relative_layer_path</a>(layer_stack_root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-file-ops--src-isolated-rs.html#item-fn-relative-layer-path-140">relative_layer_path</a>(layer_stack_root: &amp;<span class="rs-type">Path</span>, path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
     path.strip_prefix(layer_stack_root)
         .unwrap_or(path)
         .to_string_lossy()

@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>16</b><span>modules</span></div>
-  <div><b>116</b><span>items</span></div>
-  <div><b>72</b><span>fields</span></div>
-  <div><b>17</b><span>methods</span></div>
+  <div><b>10</b><span>modules</span></div>
+  <div><b>114</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>14</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">holder</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace.html"><span>handshake.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-namespace-rs.html"><span>namespace.rs</span><small>2/14</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-network-rs.html"><span>network.rs</span><small>6/25</small></a></li></ul></li><li><a class="file-link active" href="eos-namespace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">protocol</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-protocol-intent-rs.html"><span>intent.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-namespace--src-protocol-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-namespace--src-protocol-runner-rs.html"><span>runner.rs</span><small>8/0</small></a></li></ul></li><li><span class="folder">runner</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-runner-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-child-rs.html"><span>child.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-command-rs.html"><span>command.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/8</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-mount-mask-rs.html"><span>mount_mask.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-path-rs.html"><span>path.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-setns-rs.html"><span>setns.rs</span><small>0/17</small></a></li></ul></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">holder</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace.html"><span>mod.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-namespace-rs.html"><span>namespace.rs</span><small>2/14</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-network-rs.html"><span>network.rs</span><small>6/22</small></a></li></ul></li><li><a class="file-link active" href="eos-namespace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">protocol</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-protocol-mod-rs.html"><span>mod.rs</span><small>9/0</small></a></li></ul></li><li><span class="folder">runner</span><ul class="file-tree"><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-child-rs.html"><span>child.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-command-rs.html"><span>command.rs</span><small>0/5</small></a></li></ul></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/9</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-mod-rs.html"><span>mod.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-setns-rs.html"><span>setns.rs</span><small>0/18</small></a></li></ul></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-namespace/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -64,39 +64,12 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-namespace/src/lib.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! The two single-threaded namespace children: [`holder`] and [`runner`].</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Single-threaded namespace child bodies for `eosd ns-holder` and</span>
+<span class="rs-comment">//! `eosd ns-runner`.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! # Invariant this crate owns</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! Everything here runs as a dedicated single-threaded child process of the</span>
-<span class="rs-comment">//! daemon, and the crate is **single-threaded and syscall-only — NO tokio**.</span>
-<span class="rs-comment">//! That is a *kernel requirement, not a style choice*: `unshare(CLONE_NEWUSER)`</span>
-<span class="rs-comment">//! and `setns()` into a user namespace both require the calling task to be the</span>
-<span class="rs-comment">//! only thread in the process, or the syscall fails with `EINVAL`. The</span>
-<span class="rs-comment">//! multithreaded tokio daemon NEVER crosses that boundary itself; it execs</span>
-<span class="rs-comment">//! `eosd ns-holder` / `eosd ns-runner`, whose bodies live here. The build-time</span>
-<span class="rs-comment">//! enforcement is this crate's `Cargo.toml` deliberately omitting tokio.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! # The two children</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! - [`holder`]: created once per isolated workspace. Unshares the full</span>
-<span class="rs-comment">//!   namespace stack, holds the namespace FDs open for the daemon to wire</span>
-<span class="rs-comment">//!   into, runs the readiness handshake, then `pause()`s until `SIGTERM`.</span>
-<span class="rs-comment">//! - [`runner`]: created once per tool call. Either unshares a fresh</span>
-<span class="rs-comment">//!   user+mount namespace and mounts the workspace overlay, or `setns`es into</span>
-<span class="rs-comment">//!   the holder's pinned namespaces, then execs the tool and reports a</span>
-<span class="rs-comment">//!   [`RunResult`](crate::protocol::RunResult).</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! The two children share this charter but no code: the holder produces the</span>
-<span class="rs-comment">//! pinned namespaces, the daemon brokers the FDs, and the runner consumes</span>
-<span class="rs-comment">//! them. The daemon↔runner wire DTOs live in [`protocol`] so the daemon does not</span>
-<span class="rs-comment">//! depend on this syscall crate.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! Linux-only syscall bodies are gated behind `#[cfg(target_os = "linux")]`;</span>
-<span class="rs-comment">//! non-Linux arms keep the workspace compiling on the macOS dev host. Raw</span>
-<span class="rs-comment">//! syscall sites carry focused `// SAFETY:` notes, and</span>
-<span class="rs-comment">//! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline</span>
-<span class="rs-comment">//! enforced.</span>
+<span class="rs-comment">//! `unshare(CLONE_NEWUSER)` and `setns()` into a user namespace require a</span>
+<span class="rs-comment">//! single-threaded caller. The daemon stays multithreaded and delegates those</span>
+<span class="rs-comment">//! syscalls to this no-tokio crate.</span>
 #![deny(unsafe_op_in_unsafe_fn)]
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> holder;

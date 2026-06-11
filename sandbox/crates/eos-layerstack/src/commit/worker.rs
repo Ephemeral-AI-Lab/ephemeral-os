@@ -4,12 +4,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
 
+use crate::fs::resolve_layer_path;
 use crate::model::{LayerChange, LayerPath, Manifest};
 use crate::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 
 use super::{
-    hash_current, i64_to_f64_saturating, usize_to_f64_saturating, ChangesetResult, CommitError,
-    CommitStatus, FileResult, PublishDecision, Route,
+    hash_current, ChangesetResult, CommitError, CommitStatus, FileResult, PublishDecision, Route,
 };
 
 pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
@@ -22,7 +22,6 @@ pub(crate) const MAX_OCC_CAS_RETRIES: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct PreparedChangeset {
-    pub(super) snapshot_version: Option<u64>,
     pub(super) path_groups: Vec<PublishDecision>,
     pub(super) changes: Vec<LayerChange>,
     pub(super) atomic: bool,
@@ -36,7 +35,6 @@ pub(super) struct PublishConflict {
 struct WorkItem {
     prepared: PreparedChangeset,
     reply: mpsc::Sender<Result<ChangesetResult, CommitError>>,
-    enqueued_at: Instant,
 }
 
 enum QueueItem {
@@ -49,45 +47,22 @@ pub(super) struct CommitQueue {
     receiver: Mutex<Option<mpsc::Receiver<QueueItem>>>,
     transaction: Mutex<Option<CommitTransaction>>,
     handle: Option<std::thread::JoinHandle<()>>,
-    max_batch_size: usize,
-    batch_window_s: f64,
-    max_cas_retries: u32,
     closed: bool,
 }
 
 struct CommitWorker {
     receiver: mpsc::Receiver<QueueItem>,
     transaction: CommitTransaction,
-    max_batch_size: usize,
-    batch_window_s: f64,
-    max_cas_retries: u32,
 }
 
 impl CommitQueue {
     pub(super) fn new(transaction: CommitTransaction) -> Self {
-        Self::with_config(
-            transaction,
-            MAX_BATCH_SIZE,
-            BATCH_WINDOW_S,
-            MAX_OCC_CAS_RETRIES,
-        )
-    }
-
-    fn with_config(
-        transaction: CommitTransaction,
-        max_batch_size: usize,
-        batch_window_s: f64,
-        max_cas_retries: u32,
-    ) -> Self {
         let (sender, receiver) = mpsc::channel();
         Self {
             sender,
             receiver: Mutex::new(Some(receiver)),
             transaction: Mutex::new(Some(transaction)),
             handle: None,
-            max_batch_size: max_batch_size.max(1),
-            batch_window_s: batch_window_s.max(0.0),
-            max_cas_retries: max_cas_retries.max(1),
             closed: false,
         }
     }
@@ -118,9 +93,6 @@ impl CommitQueue {
         let worker = CommitWorker {
             receiver,
             transaction,
-            max_batch_size: self.max_batch_size,
-            batch_window_s: self.batch_window_s,
-            max_cas_retries: self.max_cas_retries,
         };
         let handle = std::thread::Builder::new()
             .name(COMMIT_QUEUE_THREAD_NAME.to_owned())
@@ -162,53 +134,9 @@ impl CommitQueue {
         }
         let (reply, receiver) = mpsc::channel();
         self.sender
-            .send(QueueItem::Work(WorkItem {
-                prepared,
-                reply,
-                enqueued_at: Instant::now(),
-            }))
+            .send(QueueItem::Work(WorkItem { prepared, reply }))
             .map_err(|_| CommitError::QueueClosed)?;
         Ok(receiver)
-    }
-
-    fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>, max_cas_retries: u32) {
-        let commit_start = Instant::now();
-        let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
-            return;
-        };
-        let mut attempts = 0;
-        let result = loop {
-            match transaction.revalidate_and_publish(&combined) {
-                Ok(result) => break result,
-                Err(conflict) => {
-                    attempts += 1;
-                    if attempts >= max_cas_retries {
-                        break cas_exhaustion_result(&combined, &conflict, max_cas_retries);
-                    }
-                }
-            }
-        };
-        let commit_elapsed_s = commit_start.elapsed().as_secs_f64();
-        let batch_size = usize_to_f64_saturating(batch.len());
-        for item in batch {
-            let files = result_files_for_item(&result, &item.prepared);
-            let mut timings = result.timings.clone();
-            timings.insert(
-                "occ.serial.queue_wait_s".to_owned(),
-                commit_start.duration_since(item.enqueued_at).as_secs_f64(),
-            );
-            timings.insert("occ.serial.batch_size".to_owned(), batch_size);
-            timings.insert("occ.serial.commit_s".to_owned(), commit_elapsed_s);
-            timings.insert(
-                "occ.serial.cas_attempts".to_owned(),
-                f64::from(attempts + 1),
-            );
-            let _ = item.reply.send(Ok(ChangesetResult {
-                files,
-                published_manifest_version: result.published_manifest_version,
-                timings,
-            }));
-        }
     }
 }
 
@@ -219,18 +147,44 @@ impl CommitWorker {
                 return;
             };
             let mut items = vec![first];
-            let mut stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
-            if !stop_seen && self.batch_window_s > 0.0 && items.len() < self.max_batch_size {
-                std::thread::sleep(Duration::from_secs_f64(self.batch_window_s));
-                stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
+            let mut stop_seen = drain_ready(&self.receiver, &mut items, MAX_BATCH_SIZE);
+            if !stop_seen && items.len() < MAX_BATCH_SIZE {
+                std::thread::sleep(Duration::from_secs_f64(BATCH_WINDOW_S));
+                stop_seen = drain_ready(&self.receiver, &mut items, MAX_BATCH_SIZE);
             }
             for batch in disjoint_batches(items) {
-                CommitQueue::commit_batch(&self.transaction, batch, self.max_cas_retries);
+                commit_batch(&self.transaction, batch);
             }
             if stop_seen {
                 return;
             }
         }
+    }
+}
+
+fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
+    let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
+        return;
+    };
+    let mut attempts = 0;
+    let result = loop {
+        match transaction.revalidate_and_publish(&combined) {
+            Ok(result) => break result,
+            Err(conflict) => {
+                attempts += 1;
+                if attempts >= MAX_OCC_CAS_RETRIES {
+                    break cas_exhaustion_result(&combined, &conflict, MAX_OCC_CAS_RETRIES);
+                }
+            }
+        }
+    };
+    for item in batch {
+        let files = result_files_for_item(&result, &item.prepared);
+        let _ = item.reply.send(Ok(ChangesetResult {
+            files,
+            published_manifest_version: result.published_manifest_version,
+            timings: result.timings.clone(),
+        }));
     }
 }
 
@@ -292,7 +246,6 @@ fn combine_prepared<'a>(
     let first = items.first()?;
     debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
     Some(PreparedChangeset {
-        snapshot_version: first.snapshot_version,
         path_groups: items
             .iter()
             .flat_map(|prepared| prepared.path_groups.iter().cloned())
@@ -340,10 +293,6 @@ fn cas_exhaustion_result(
                     CommitStatus::Dropped,
                     group.message.clone().unwrap_or_default(),
                 ),
-                Route::Reject => (
-                    CommitStatus::Rejected,
-                    group.message.clone().unwrap_or_default(),
-                ),
                 Route::Direct | Route::Gated => (CommitStatus::AbortedVersion, message.clone()),
             };
             FileResult {
@@ -356,7 +305,7 @@ fn cas_exhaustion_result(
     ChangesetResult {
         files,
         published_manifest_version: None,
-        timings: std::collections::BTreeMap::new(),
+        timings: commit_timings(prepared, 0.0, 0.0, 0.0),
     }
 }
 
@@ -423,12 +372,10 @@ impl CommitTransaction {
                     combined,
                     validations,
                     manifest_version_u64_optional(manifest.version),
-                    PublishedCommitTimings {
-                        validate_s,
-                        publish_s,
-                        auto_squash_timings,
-                        total_start,
-                    },
+                    validate_s,
+                    publish_s,
+                    auto_squash_timings,
+                    total_start,
                 ))
             }
             Err(crate::LayerStackError::ManifestConflict { found, .. }) => Err(PublishConflict {
@@ -534,10 +481,9 @@ fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
         return timings;
     };
     let max_depth = auto_squash_max_depth();
-    if active.depth() <= max_depth
-        || !stack
-            .can_squash(max_depth)
-            .is_ok_and(|can_squash| can_squash)
+    if !stack
+        .can_squash(max_depth)
+        .is_ok_and(|can_squash| can_squash)
     {
         return timings;
     }
@@ -579,15 +525,18 @@ fn committed_changeset_result(
     combined: &PreparedChangeset,
     validations: Vec<FileResult>,
     published_manifest_version: Option<u64>,
-    phases: PublishedCommitTimings,
+    validate_s: f64,
+    publish_s: f64,
+    auto_squash_timings: BTreeMap<String, f64>,
+    total_start: Instant,
 ) -> ChangesetResult {
     let mut timings = commit_timings(
         combined,
-        phases.validate_s,
-        phases.publish_s,
-        phases.total_start.elapsed().as_secs_f64(),
+        validate_s,
+        publish_s,
+        total_start.elapsed().as_secs_f64(),
     );
-    timings.extend(phases.auto_squash_timings);
+    timings.extend(auto_squash_timings);
     ChangesetResult {
         files: validations
             .into_iter()
@@ -605,13 +554,6 @@ fn committed_changeset_result(
         published_manifest_version,
         timings,
     }
-}
-
-struct PublishedCommitTimings {
-    validate_s: f64,
-    publish_s: f64,
-    auto_squash_timings: BTreeMap<String, f64>,
-    total_start: Instant,
 }
 
 fn validate_prepared(
@@ -633,15 +575,7 @@ fn validate_prepared(
                     .clone()
                     .unwrap_or_else(|| "change dropped".to_owned()),
             },
-            Route::Reject => FileResult {
-                path: group.path.clone(),
-                status: CommitStatus::Rejected,
-                message: group
-                    .message
-                    .clone()
-                    .unwrap_or_else(|| "change rejected".to_owned()),
-            },
-            Route::Direct => validate_direct_group(&group.path),
+            Route::Direct => accepted_file(&group.path),
             Route::Gated => validate_gated_group(
                 root,
                 view,
@@ -654,7 +588,7 @@ fn validate_prepared(
         .collect()
 }
 
-fn validate_direct_group(path: &LayerPath) -> FileResult {
+fn accepted_file(path: &LayerPath) -> FileResult {
     FileResult {
         path: path.clone(),
         status: CommitStatus::Accepted,
@@ -677,21 +611,13 @@ fn validate_gated_group(
                 .entry(parent.to_owned())
                 .or_insert_with(|| parent_absent_from_manifest(root, manifest, parent));
             if parent_absent {
-                return FileResult {
-                    path: path.clone(),
-                    status: CommitStatus::Accepted,
-                    message: String::new(),
-                };
+                return accepted_file(path);
             }
         }
     }
     match view.read_bytes(path_str, manifest) {
         Ok((bytes, exists)) if hash_current(bytes.as_deref(), exists).as_deref() == base_hash => {
-            FileResult {
-                path: path.clone(),
-                status: CommitStatus::Accepted,
-                message: String::new(),
-            }
+            accepted_file(path)
         }
         Ok(_) => FileResult {
             path: path.clone(),
@@ -714,12 +640,7 @@ fn parent_dir(path: &str) -> Option<&str> {
 
 fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -> bool {
     manifest.layers.iter().all(|layer| {
-        let path = PathBuf::from(&layer.path);
-        let layer_dir = if path.is_absolute() {
-            path
-        } else {
-            root.join(path)
-        };
+        let layer_dir = resolve_layer_path(root, &layer.path);
         matches!(
             std::fs::symlink_metadata(layer_dir.join(parent)),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound
@@ -728,13 +649,7 @@ fn parent_absent_from_manifest(root: &Path, manifest: &Manifest, parent: &str) -
 }
 
 const fn is_validation_failure(status: CommitStatus) -> bool {
-    matches!(
-        status,
-        CommitStatus::AbortedOverlap
-            | CommitStatus::AbortedVersion
-            | CommitStatus::Failed
-            | CommitStatus::Rejected
-    )
+    !status.is_success()
 }
 
 fn failed_changeset_with_timings(
@@ -764,15 +679,9 @@ fn commit_timings(
     total_s: f64,
 ) -> BTreeMap<String, f64> {
     let mut timings = BTreeMap::new();
-    timings.insert("occ.apply.total_s".to_owned(), total_s);
     timings.insert("occ.commit.total_s".to_owned(), total_s);
     timings.insert("occ.commit.validate_groups_s".to_owned(), validate_s);
     timings.insert("occ.commit.publish_layer_s".to_owned(), publish_s);
-    timings.insert(
-        "occ.commit.stager_write_count".to_owned(),
-        usize_to_f64_saturating(prepared.changes.len()),
-    );
-    timings.insert("occ.commit.stager_write_total_s".to_owned(), publish_s);
     timings.insert(
         "occ.commit.gated_path_count".to_owned(),
         usize_to_f64_saturating(
@@ -793,21 +702,21 @@ fn commit_timings(
                 .count(),
         ),
     );
-    for key in [
-        "occ.commit.gated_read_current_total_s",
-        "occ.commit.gated_apply_changes_total_s",
-        "occ.commit.gated_stage_delta_total_s",
-        "occ.commit.direct_read_current_total_s",
-        "occ.commit.direct_apply_changes_total_s",
-        "occ.commit.direct_stage_delta_total_s",
-    ] {
-        timings.insert(key.to_owned(), 0.0);
-    }
     timings
 }
 
 fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
+}
+
+fn usize_to_f64_saturating(value: usize) -> f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+}
+
+fn i64_to_f64_saturating(value: i64) -> f64 {
+    u64::try_from(value).map_or(0.0, |value| {
+        u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
+    })
 }
 
 #[cfg(test)]
