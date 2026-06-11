@@ -9,15 +9,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::model::{LayerChange, LayerPath};
+use crate::model::{CasError, LayerChange, LayerPath};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
 mod worker;
 
-pub(crate) use worker::{
-    configure_auto_squash_max_depth, CommitQueue, CommitTransaction, CommitTransactionPort,
-    PreparedChangeset, PublishConflict,
-};
+pub use worker::configure_auto_squash_max_depth;
+pub(crate) use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum CommitError {
@@ -40,9 +38,7 @@ pub enum CommitError {
     ReplyDisconnected,
 
     #[error("cas mismatch retry budget exhausted after {attempts} attempts")]
-    CasRetryExhausted {
-        attempts: u32,
-    },
+    CasRetryExhausted { attempts: u32 },
 
     #[error("occ route preparation failed: {0}")]
     RoutePreparation(String),
@@ -177,14 +173,14 @@ pub trait RouteProvider: Send + Sync {
     fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, CommitError>;
 }
 
-pub struct CommitService<T: CommitTransactionPort + 'static> {
-    commit_queue: CommitQueue<T>,
+pub struct CommitService {
+    commit_queue: CommitQueue,
     route_provider: Arc<dyn RouteProvider>,
 }
 
-impl<T: CommitTransactionPort + 'static> CommitService<T> {
+impl CommitService {
     pub fn with_route_provider(
-        mut commit_queue: CommitQueue<T>,
+        mut commit_queue: CommitQueue,
         route_provider: Arc<dyn RouteProvider>,
     ) -> Result<Self, CommitError> {
         commit_queue.start()?;
@@ -318,7 +314,7 @@ fn timing_or_default(timings: &std::collections::BTreeMap<String, f64>, key: &st
     timings.get(key).copied().unwrap_or(0.0)
 }
 
-impl<T: CommitTransactionPort + 'static> Drop for CommitService<T> {
+impl Drop for CommitService {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
     }
@@ -336,9 +332,6 @@ pub struct StackRouteProvider {
 
 impl RouteProvider for StackRouteProvider {
     fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, CommitError> {
-        // Per-call re-read of the active merged manifest: opening a fresh
-        // `LayerStack` here is load-bearing, so a `.gitignore` edit committed
-        // between ops is observed by the next route decision.
         let stack = LayerStack::open(self.root.clone())
             .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
         path_is_ignored(&stack, path.as_str())
@@ -419,8 +412,6 @@ fn path_is_ignored(stack: &LayerStack, path: &str) -> Result<bool, LayerStackErr
     if rel.is_empty() {
         return Ok(false);
     }
-    // Directory-exclusion seal: if any ancestor directory of `path` is excluded
-    // as a directory, `path` is ignored regardless of any deeper re-include.
     let parts: Vec<&str> = rel.split('/').collect();
     let mut accum = String::new();
     for part in &parts[..parts.len() - 1] {
@@ -454,9 +445,6 @@ fn match_with_inheritance(
     let mut accum = String::new();
     for part in &parts {
         if let Some(matcher) = matcher_for(stack, &accum)? {
-            // Pass `path` relative to `accum`. The matcher is rooted at `.`
-            // (see `matcher_for`), so the crate performs no further stripping and
-            // per-dir pattern anchoring (`/build`, `src/*.rs`) is preserved.
             let sub = if accum.is_empty() {
                 path
             } else {
@@ -490,15 +478,8 @@ fn matcher_for(
     let Ok(text) = String::from_utf8(bytes) else {
         return Ok(None);
     };
-    // Root `.` (not `dir_rel`): the caller in `match_with_inheritance` already
-    // makes the candidate relative to this directory, and the `ignore` crate's
-    // `Gitignore::matched` re-strips its root by raw byte prefix — rooting at
-    // `dir_rel` would strip it a second time whenever a child component repeats
-    // the directory name (e.g. `a/.gitignore` `/x` vs `a/a/x`). Root `.` disables
-    // that strip; per-pattern anchoring comes from the pattern text, not the root.
     let mut builder = GitignoreBuilder::new(".");
     for line in text.lines() {
-        // `add_line` skips comments/blanks itself; ignore malformed patterns.
         let _ = builder.add_line(None, line);
     }
     Ok(builder.build().ok())
@@ -567,7 +548,6 @@ pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
         u32::try_from(value).map_or_else(|_| f64::from(u32::MAX), f64::from)
     })
 }
-
 
 #[cfg(test)]
 #[path = "../../tests/unit/commit/prepare.rs"]

@@ -1,6 +1,3 @@
-//! Workspace binding and base-layer construction for a layer stack.
-//!
-
 use std::collections::BTreeMap;
 use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
@@ -17,13 +14,10 @@ use crate::fs::{
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
-/// Binding filename under a layer-stack storage root.
 pub const WORKSPACE_BINDING_FILE: &str = "workspace.json";
 
-/// The immutable base-layer id used by the Rust implementation.
 pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
 
-/// Durable binding from a real workspace root to the layer-stack storage root.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WorkspaceBinding {
     pub workspace_root: String,
@@ -35,7 +29,6 @@ pub struct WorkspaceBinding {
 }
 
 impl WorkspaceBinding {
-    /// Translate a repo-relative path into the normalized layer path.
     pub fn layer_path_from_relative(&self, path: &str) -> Result<String, LayerStackError> {
         let raw = path.trim();
         if raw.is_empty() {
@@ -51,7 +44,6 @@ impl WorkspaceBinding {
         normalize_layer_path(raw)
     }
 
-    /// Translate a workspace-absolute path into the normalized layer path.
     pub fn layer_path_from_absolute(&self, path: &str) -> Result<String, LayerStackError> {
         let raw = path.trim();
         if raw.is_empty() {
@@ -76,7 +68,6 @@ impl WorkspaceBinding {
     }
 }
 
-/// Build result: binding plus phase timings.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceBaseBuild {
     pub binding: WorkspaceBinding,
@@ -116,13 +107,6 @@ impl BaseEntry {
     }
 }
 
-/// Return the existing workspace base, or build it if the stack is unbound.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when the binding cannot be read, does not match
-/// the requested workspace root, or base construction fails.
-///
 pub fn ensure_workspace_base(
     layer_stack_root: impl AsRef<Path>,
     workspace_root: impl AsRef<Path>,
@@ -144,7 +128,6 @@ pub fn ensure_workspace_base(
     Ok((built.binding, true))
 }
 
-/// Read the optional workspace binding.
 pub fn read_workspace_binding(
     layer_stack_root: impl AsRef<Path>,
 ) -> Result<Option<WorkspaceBinding>, LayerStackError> {
@@ -158,7 +141,6 @@ pub fn read_workspace_binding(
     Ok(Some(binding))
 }
 
-/// Read the required workspace binding.
 pub fn require_workspace_binding(
     layer_stack_root: impl AsRef<Path>,
 ) -> Result<WorkspaceBinding, LayerStackError> {
@@ -173,14 +155,6 @@ pub fn require_workspace_binding(
     })
 }
 
-/// Build or rebuild the workspace base for one layer-stack root.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when workspace/stack paths are invalid, base
-/// state already exists, source inventory cannot be collected, or base
-/// manifest/layer files cannot be written.
-///
 pub fn build_workspace_base(
     layer_stack_root: impl AsRef<Path>,
     workspace_root: impl AsRef<Path>,

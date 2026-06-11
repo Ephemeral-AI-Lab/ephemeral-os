@@ -1,29 +1,3 @@
-//! Process-local advisory writer lock for a layer-stack storage root.
-//!
-//! # The DUAL-LAYER lease (both layers MUST be reproduced)
-//!
-//! 1. **Cross-process advisory lease** — `flock(fd, LOCK_EX | LOCK_NB)` on the
-//!    `.storage-writer.lock` file (`O_RDWR | O_CREAT, 0o644`). Prevents a second
-//!    daemon *process* from owning the same root; a contended acquire returns
-//!    [`crate::LayerStackError::StorageRootOwned`] rather than blocking. Released
-//!    with `LOCK_UN` + `close` once the in-process refcount hits zero.
-//! 2. **In-process shared/exclusive lock + refcount** — a per-root registry keyed
-//!    by the canonical absolute path coordinates multiple in-process
-//!    `LayerStack` managers that may coexist after cache drops / overlay resets.
-//!    Snapshot reads can share the lock; storage mutations take the reentrant
-//!    exclusive side.
-//!
-//! # ⚠ THE REENTRANT WRITE-GUARD requirement (non-reentrant Mutex DEADLOCKS)
-//!
-//! The exclusive write guard is REENTRANT: a single thread re-acquires it while
-//! it already holds it — e.g. `LayerStack::squash` holds the storage-write guard
-//! and then takes the lease lock, and `release_lease` runs *inside* `squash`
-//! while the write guard is still held. A non-reentrant `std::sync::Mutex` would
-//! **DEADLOCK** on that second same-thread acquire.
-//!
-//! So this module uses a small reentrant read/write guard type that preserves
-//! same-thread write re-entry without holding an async lock across awaits.
-
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::marker::PhantomData;
@@ -35,29 +9,14 @@ use rustix::fs::{flock, FlockOperation};
 
 use crate::error::LayerStackError;
 
-/// Lock-file name placed at the root of every storage root.
 pub(crate) const STORAGE_WRITER_LOCK_FILE: &str = ".storage-writer.lock";
 
-/// A held cross-process + in-process writer lease for one storage root.
-///
-/// RAII: dropping the last lease for a root releases the `flock` and closes the
-/// fd (refcount-gated). `shared()` returns the in-process read guard;
-/// `exclusive()` returns the reentrant in-process write guard.
 #[derive(Debug)]
 pub(crate) struct StorageWriterLockLease {
     key: String,
 }
 
 impl StorageWriterLockLease {
-    /// Acquire (or refcount-bump) the dual-layer writer lease for `storage_root`.
-    ///
-    /// Fails with [`LayerStackError::StorageRootOwned`] if another process holds
-    /// the `flock`. The registry key is the canonicalized absolute path.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the storage root cannot be created,
-    /// canonicalized/locked, or when the process-local registry is poisoned.
     pub fn acquire(storage_root: &Path) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root)?;
         let key = storage_root
@@ -100,16 +59,6 @@ impl StorageWriterLockLease {
         Ok(Self { key })
     }
 
-    /// Enter the in-process shared read guard for this root.
-    ///
-    /// Multiple shared guards can coexist. An active writer excludes new readers,
-    /// and pending writers block new readers so write-side maintenance is not
-    /// starved by a stream of snapshots.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the registry or lock state is poisoned, or
-    /// when this lease has already been closed.
     pub fn shared(&self) -> Result<SharedGuard<'_>, LayerStackError> {
         let lock = self.lock()?;
         lock.read()?;
@@ -119,20 +68,6 @@ impl StorageWriterLockLease {
         })
     }
 
-    /// Enter the in-process exclusive (reentrant) write guard for this root.
-    ///
-    /// See the module-level DEADLOCK TRAP: the returned guard must tolerate
-    /// same-thread re-entry (a reentrant write lock).
-    ///
-    /// CAUTION: re-entry is write-over-write only. Calling `exclusive()` while
-    /// the same thread still holds a [`SharedGuard`] for this root self-deadlocks
-    /// (the writer waits for `readers == 0`, which includes its own read). Drop
-    /// the shared guard before acquiring the exclusive one.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the registry or reentrant lock state is
-    /// poisoned, or when this lease has already been closed.
     pub fn exclusive(&self) -> Result<ExclusiveGuard<'_>, LayerStackError> {
         let lock = self.lock()?;
         lock.write()?;
@@ -169,7 +104,6 @@ impl Drop for StorageWriterLockLease {
     }
 }
 
-/// In-process shared read guard.
 #[derive(Debug)]
 pub struct SharedGuard<'lease> {
     lock: Arc<ReentrantRwLock>,
@@ -182,7 +116,6 @@ impl Drop for SharedGuard<'_> {
     }
 }
 
-/// In-process exclusive write guard. Reentrant on the same thread (see TRAP).
 #[derive(Debug)]
 pub struct ExclusiveGuard<'lease> {
     lock: Arc<ReentrantRwLock>,

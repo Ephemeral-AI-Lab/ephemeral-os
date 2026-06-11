@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
+use crate::commit::{
+    base_hashes_for_snapshot, hash_bytes, CommitStatus, PreparedChangeset, PublishDecision, Route,
+};
 use crate::model::LayerChange;
-
-use crate::commit::outcome::{CommitStatus, PublishDecision, Route};
-use crate::commit::queue::{CommitTransactionPort, PreparedChangeset};
-use crate::commit::{base_hashes_for_snapshot, hash_bytes};
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::LayerStack;
 

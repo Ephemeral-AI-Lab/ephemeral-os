@@ -1,9 +1,8 @@
-use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::model::{LayerChange, LayerPath};
+use crate::test_fixture::Fixture;
 
-use super::super::outcome::{CommitStatus, FileResult};
-use super::super::queue::PublishConflict;
 use super::*;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -20,34 +19,17 @@ impl RouteProvider for AllGatedRouteProvider {
     }
 }
 
-struct RecordingTransaction;
-
-impl CommitTransactionPort for RecordingTransaction {
-    fn revalidate_and_publish(
-        &self,
-        combined: &PreparedChangeset,
-    ) -> Result<ChangesetResult, PublishConflict> {
-        let mut timings = BTreeMap::new();
-        timings.insert("occ.commit.total_s".to_owned(), 0.123);
-        Ok(ChangesetResult {
-            files: combined
-                .path_groups
-                .iter()
-                .map(|group| FileResult {
-                    path: group.path.clone(),
-                    status: CommitStatus::Committed,
-                    message: String::new(),
-                })
-                .collect(),
-            published_manifest_version: Some(3),
-            timings,
-        })
-    }
-}
-
 #[test]
 fn apply_changeset_adds_public_apply_timing_envelope() -> TestResult {
-    let queue = CommitQueue::with_config(RecordingTransaction, 64, 0.0, 3);
+    let fixture = Fixture::new("commit_prepare_timing")?;
+    let queue = CommitQueue::with_config(
+        CommitTransaction {
+            root: fixture.root.clone(),
+        },
+        64,
+        0.0,
+        3,
+    );
     let service = CommitService::with_route_provider(queue, Arc::new(AllGatedRouteProvider))?;
     let path = LayerPath::parse("timed.txt")?;
     let result = service.apply_changeset_with_base_hashes(
@@ -69,19 +51,12 @@ fn apply_changeset_adds_public_apply_timing_envelope() -> TestResult {
             .copied(),
         Some(0.0)
     );
-    assert!(
-        result
-            .timings
-            .get("occ.apply.commit_worker_s")
-            .copied()
-            .unwrap_or_default()
-            >= 0.123
-    );
+    assert!(result.timings.contains_key("occ.apply.commit_worker_s"));
     assert!(result.timings.contains_key("occ.apply.commit_s"));
     assert!(result.timings.contains_key("occ.apply.total_s"));
     assert_eq!(
         result.timings.get("occ.apply.manifest_lag").copied(),
-        Some(1.0)
+        Some(0.0)
     );
     Ok(())
 }

@@ -170,8 +170,6 @@ fn ignore_unsupported(
         Err(error) if is_error_text(&error, &["operation not supported", "not supported"]) => {
             Ok(())
         }
-        // Bridge-port hardening is best-effort. Some kernels report ENODEV
-        // briefly after enslaving the veth before the bridge-port view exists.
         Err(error) if is_error_text(&error, &["no such device", "-19"]) => Ok(()),
         Err(error) => Err(network_error_at(step, error)),
     }

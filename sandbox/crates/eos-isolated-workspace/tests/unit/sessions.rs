@@ -5,8 +5,8 @@ use super::capacity::{
     check_host_capacity_against_budget, host_capacity_budget_bytes_from_memavailable_kib,
     parse_memavailable_kib, required_host_capacity_bytes,
 };
-use super::resources::next_handle_id;
-use super::{IsolatedSessions, IsolatedSnapshot};
+use super::lifecycle::next_handle_id;
+use super::{IsolatedManager, IsolatedSnapshot};
 use crate::caps::ResourceCaps;
 use crate::error::IsolatedError;
 
@@ -80,7 +80,7 @@ fn enabled_caps() -> ResourceCaps {
 fn isolated_exit_discards_upperdir_and_returns_lease_for_release(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let scratch_root = unique_temp_dir("isolated-no-publish");
-    let mut sessions = IsolatedSessions::stubbed(enabled_caps(), scratch_root.clone());
+    let mut sessions = IsolatedManager::stubbed(enabled_caps(), scratch_root.clone());
     let caller = "caller-1";
 
     let handle = sessions.enter(caller, snapshot())?;
@@ -110,7 +110,7 @@ fn ttl_sweep_skips_callers_with_active_command_sessions() -> Result<(), Box<dyn 
         ttl_s: 0.000_001,
         ..enabled_caps()
     };
-    let mut sessions = IsolatedSessions::stubbed(caps, scratch_root.clone());
+    let mut sessions = IsolatedManager::stubbed(caps, scratch_root.clone());
     sessions.enter("busy", snapshot())?;
     sessions.enter(
         "idle",

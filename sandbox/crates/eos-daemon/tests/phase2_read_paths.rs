@@ -5,8 +5,10 @@ use std::sync::Mutex;
 // Integration test crates receive every normal `eos-daemon` dependency even
 // when the test only drives public daemon APIs. These imports keep
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
+use eos_config::configs::daemon::PluginRuntimeConfig;
+use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_daemon::wire::{decode, encode, Envelope, Request, DAEMON_AUTH_FIELD};
-use eos_daemon::{DaemonServer, ServerConfig};
+use eos_daemon::{DaemonServer, ServerConfig, Services};
 use eos_daemon::{DispatchContext, InFlightRegistry, OpTable};
 use eos_layerstack as _;
 use eos_overlay as _;
@@ -22,6 +24,41 @@ use tokio_util as _;
 static ISOLATED_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+/// One daemon under test: the builtin op table plus its own `Services`.
+struct TestDaemon {
+    table: OpTable,
+    services: Services,
+}
+
+impl TestDaemon {
+    fn new() -> Self {
+        Self::with_services(Services::default())
+    }
+
+    fn with_isolated_workspace(scratch_root: &Path) -> Self {
+        Self::with_services(Services::new(
+            PluginRuntimeConfig::default(),
+            IsolatedWorkspaceConfig {
+                enabled: true,
+                scratch_root: scratch_root.to_path_buf(),
+                ..IsolatedWorkspaceConfig::default()
+            },
+        ))
+    }
+
+    fn with_services(services: Services) -> Self {
+        Self {
+            table: OpTable::with_builtins(),
+            services,
+        }
+    }
+
+    fn dispatch(&self, request: &Request) -> Value {
+        self.table
+            .dispatch_with_context(request, DispatchContext::with_services(&self.services))
+    }
+}
 
 #[test]
 fn dispatches_layerstack_read_file() -> TestResult {
@@ -72,10 +109,10 @@ fn dispatches_runtime_ready_probe() -> TestResult {
 #[test]
 fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     let (root, workspace, outside_target) = seed_workspace_base_fixture()?;
-    let table = OpTable::with_builtins();
+    let daemon = TestDaemon::new();
 
     let ensure = dispatch_request(
-        &table,
+        &daemon,
         "sandbox.checkpoint.ensure_base",
         "ensure",
         json!({
@@ -87,7 +124,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     assert_workspace_base_symlinks(&root, &outside_target)?;
 
     let binding = dispatch_request(
-        &table,
+        &daemon,
         "sandbox.checkpoint.binding",
         "binding",
         json!({"layer_stack_root": &root}),
@@ -97,15 +134,15 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
         ensure["binding"]["base_root_hash"]
     );
     assert_read_content(
-        &table,
+        &daemon,
         &root,
         &json!(workspace.join("README.md")),
         "# base\n",
     );
-    assert_workspace_base_idempotent(&table, &root, &workspace);
+    assert_workspace_base_idempotent(&daemon, &root, &workspace);
 
-    rebuild_workspace_base(&table, &root, &workspace, &ensure)?;
-    assert_read_content(&table, &root, &json!("README.md"), "# reset\n");
+    rebuild_workspace_base(&daemon, &root, &workspace, &ensure)?;
+    assert_read_content(&daemon, &root, &json!("README.md"), "# reset\n");
     Ok(())
 }
 
@@ -135,17 +172,16 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    configure_isolated_workspace_for_test(false, None)?;
+    let daemon = TestDaemon::new();
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-    let _ = OpTable::with_builtins().dispatch(&Request {
+    let _ = daemon.dispatch(&Request {
         op: "sandbox.isolation.test_reset".to_owned(),
         invocation_id: "iws-reset".to_owned(),
         args: json!({}),
     });
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
-    let table = OpTable::with_builtins();
 
-    let enter = table.dispatch(&Request {
+    let enter = daemon.dispatch(&Request {
         op: "sandbox.isolation.enter".to_owned(),
         invocation_id: "iws-enter".to_owned(),
         args: json!({
@@ -159,7 +195,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         Value::String("feature_disabled".to_owned())
     );
 
-    let status = table.dispatch(&Request {
+    let status = daemon.dispatch(&Request {
         op: "sandbox.isolation.status".to_owned(),
         invocation_id: "iws-status".to_owned(),
         args: json!({"caller_id": "caller-a"}),
@@ -170,7 +206,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         Value::String("feature_disabled".to_owned())
     );
 
-    let open = table.dispatch(&Request {
+    let open = daemon.dispatch(&Request {
         op: "sandbox.isolation.list_open".to_owned(),
         invocation_id: "iws-list".to_owned(),
         args: json!({}),
@@ -186,11 +222,11 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
     let env = IsolatedLifecycleEnv::new()?;
-    let table = OpTable::with_builtins();
-    assert_isolated_test_reset(&table, "iws-reset");
+    let daemon = TestDaemon::with_isolated_workspace(&env.scratch);
+    assert_isolated_test_reset(&daemon, "iws-reset");
 
     let enter = dispatch_request(
-        &table,
+        &daemon,
         "sandbox.isolation.enter",
         "iws-enter",
         json!({
@@ -212,16 +248,16 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     let private_file = handle_scratch.join("upper").join("private.txt");
     std::fs::write(&private_file, "private scratch\n")?;
 
-    assert_isolated_open_state(&table, &env.root);
+    assert_isolated_open_state(&daemon, &env.root);
     let exit = dispatch_request(
-        &table,
+        &daemon,
         "sandbox.isolation.exit",
         "iws-exit",
         json!({"caller_id": "caller-enabled"}),
     );
     assert_isolated_exit(&exit, &handle_scratch)?;
-    assert_isolated_status_closed(&table);
-    assert_isolated_test_reset(&table, "iws-reset-end");
+    assert_isolated_status_closed(&daemon);
+    assert_isolated_test_reset(&daemon, "iws-reset-end");
     Ok(())
 }
 
@@ -230,8 +266,8 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    configure_isolated_workspace_for_test(false, None)?;
-    let response = OpTable::with_builtins().dispatch(&Request {
+    let daemon = TestDaemon::new();
+    let response = daemon.dispatch(&Request {
         op: "sandbox.isolation.enter".to_owned(),
         invocation_id: "iws-enter-missing-agent".to_owned(),
         args: json!({"layer_stack_root": "/tmp/layer-stack"}),
@@ -422,8 +458,8 @@ async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
     Ok(())
 }
 
-fn dispatch_request(table: &OpTable, op: &str, invocation_id: &str, args: Value) -> Value {
-    table.dispatch(&Request {
+fn dispatch_request(daemon: &TestDaemon, op: &str, invocation_id: &str, args: Value) -> Value {
+    daemon.dispatch(&Request {
         op: op.to_owned(),
         invocation_id: invocation_id.to_owned(),
         args,
@@ -489,9 +525,9 @@ fn assert_workspace_base_symlinks(root: &Path, outside_target: &Path) -> TestRes
     Ok(())
 }
 
-fn assert_read_content(table: &OpTable, root: &Path, path: &Value, content: &str) {
+fn assert_read_content(daemon: &TestDaemon, root: &Path, path: &Value, content: &str) {
     let read = dispatch_request(
-        table,
+        daemon,
         "sandbox.file.read",
         "read",
         json!({
@@ -503,9 +539,9 @@ fn assert_read_content(table: &OpTable, root: &Path, path: &Value, content: &str
     assert_eq!(read["content"], Value::String(content.to_owned()));
 }
 
-fn assert_workspace_base_idempotent(table: &OpTable, root: &Path, workspace: &Path) {
+fn assert_workspace_base_idempotent(daemon: &TestDaemon, root: &Path, workspace: &Path) {
     let ensure_again = dispatch_request(
-        table,
+        daemon,
         "sandbox.checkpoint.ensure_base",
         "ensure-again",
         json!({
@@ -518,14 +554,14 @@ fn assert_workspace_base_idempotent(table: &OpTable, root: &Path, workspace: &Pa
 }
 
 fn rebuild_workspace_base(
-    table: &OpTable,
+    daemon: &TestDaemon,
     root: &Path,
     workspace: &Path,
     original_ensure: &Value,
 ) -> TestResult {
     std::fs::write(workspace.join("README.md"), "# reset\n")?;
     let rebuilt = dispatch_request(
-        table,
+        daemon,
         "sandbox.checkpoint.build_base",
         "rebuild",
         json!({
@@ -553,7 +589,6 @@ impl IsolatedLifecycleEnv {
         let (root, _workspace) = seed_layer_stack("isolated_lifecycle")?;
         let base = root.parent().ok_or("layer root parent")?;
         let scratch = base.join("isolated-scratch");
-        configure_isolated_workspace_for_test(true, Some(&scratch))?;
         std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
         Ok(Self { root, scratch })
     }
@@ -568,33 +603,9 @@ impl Drop for IsolatedLifecycleEnv {
     }
 }
 
-fn configure_isolated_workspace_for_test(enabled: bool, scratch_root: Option<&Path>) -> TestResult {
-    let doc = eos_config::load_prd()?;
-    let daemon = doc.section::<eos_config::configs::daemon::DaemonConfig>("daemon")?;
-    daemon.validate()?;
-    let mut isolated = doc
-        .section::<eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig>(
-            "isolated_workspace",
-        )?;
-    isolated.enabled = enabled;
-    if let Some(scratch_root) = scratch_root {
-        isolated.scratch_root = scratch_root.to_path_buf();
-    }
-    isolated.validate()?;
-    let server_config = ServerConfig {
-        socket_path: std::env::temp_dir().join("eos-daemon-test.sock"),
-        pid_path: std::env::temp_dir().join("eos-daemon-test.pid"),
-        tcp_host: None,
-        tcp_port: None,
-        auth_token: None,
-    };
-    let _server = DaemonServer::with_daemon_config(server_config, &daemon, &isolated);
-    Ok(())
-}
-
-fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {
+fn assert_isolated_test_reset(daemon: &TestDaemon, invocation_id: &str) {
     let reset = dispatch_request(
-        table,
+        daemon,
         "sandbox.isolation.test_reset",
         invocation_id,
         json!({}),
@@ -602,9 +613,9 @@ fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {
     assert_eq!(reset["success"], Value::Bool(true));
 }
 
-fn assert_isolated_open_state(table: &OpTable, root: &Path) {
+fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
     let status = dispatch_request(
-        table,
+        daemon,
         "sandbox.isolation.status",
         "iws-status",
         json!({"caller_id": "caller-enabled"}),
@@ -614,7 +625,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
     assert_eq!(status["manifest_version"], json!(1));
 
     let duplicate = dispatch_request(
-        table,
+        daemon,
         "sandbox.isolation.enter",
         "iws-enter-again",
         json!({
@@ -625,7 +636,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
     assert_eq!(duplicate["success"], Value::Bool(false));
     assert_eq!(duplicate["error"]["kind"], "already_open");
 
-    let open = dispatch_request(table, "sandbox.isolation.list_open", "iws-list", json!({}));
+    let open = dispatch_request(daemon, "sandbox.isolation.list_open", "iws-list", json!({}));
     assert_eq!(open["success"], Value::Bool(true));
     assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }
@@ -647,9 +658,9 @@ fn assert_isolated_exit(exit: &Value, handle_scratch: &Path) -> TestResult {
     Ok(())
 }
 
-fn assert_isolated_status_closed(table: &OpTable) {
+fn assert_isolated_status_closed(daemon: &TestDaemon) {
     let status = dispatch_request(
-        table,
+        daemon,
         "sandbox.isolation.status",
         "iws-status-closed",
         json!({"caller_id": "caller-enabled"}),

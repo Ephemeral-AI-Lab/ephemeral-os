@@ -385,7 +385,7 @@ fn new_spec_for_test(
     command: Vec<String>,
     ppc_protocol_version: u32,
 ) -> Result<PluginProcessSpec, PluginError> {
-    let socket_root = super::plugin_runtime_config().ppc_root;
+    let socket_root = eos_config::configs::daemon::PluginRuntimeConfig::default().ppc_root;
     new_spec_with_socket_root(key, command, ppc_protocol_version, socket_root)
 }
 

@@ -1,12 +1,3 @@
-//! The per-root storage facade: durable-state entry point for everything
-//! above this crate.
-//!
-//! Owns the MF-1 single-writer registry — exactly one [`CommitService`] (one
-//! `occ-commit-queue` thread) per `layer_stack_root`, process-wide, behind a
-//! bounded LRU. Every commit entry point (direct file writes, captured-overlay
-//! publishes, plugin PPC callbacks) MUST route through this module so a root
-//! never gains a second writer.
-
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
@@ -19,15 +10,13 @@ use crate::commit::{
     base_hashes_for_snapshot, usize_to_f64_saturating, ChangesetResult, CommitError, CommitQueue,
     CommitService, CommitTransaction,
 };
-use crate::route::{insert_route_timings, route_metrics, StackRouteProvider};
+use crate::commit::{insert_route_timings, route_metrics, StackRouteProvider};
 use crate::{LayerStack, LayerStackError};
 
-type RootService = Arc<CommitService<CommitTransaction>>;
+type RootService = Arc<CommitService>;
 
 pub(crate) const SERVICE_CACHE_MAX: usize = 256;
 
-/// One cache resolution: the per-root writer plus lookup telemetry spliced
-/// onto the resulting changeset timings (`occ.runtime_service.*` keys).
 pub(crate) struct ServiceLookup {
     pub(crate) service: RootService,
     pub(crate) lock_wait_s: f64,
@@ -113,11 +102,6 @@ impl ServiceCache {
         })
     }
 
-    /// Insert `service` for `key`, or return the already-cached service when a
-    /// concurrent caller won the race. On a hit the passed-in `service` is handed
-    /// back as the second tuple element so the caller can drop it AFTER releasing
-    /// the cache lock: its `Drop` closes a commit queue and joins the worker
-    /// thread, which must not block the process-wide cache mutex.
     pub(crate) fn insert_or_get(
         &mut self,
         key: String,
@@ -216,9 +200,6 @@ fn service_for_root(root: &Path) -> Result<ServiceLookup, CommitError> {
     let lock_start = Instant::now();
     let mut cache = lock_services()?;
     let (lookup, rejected) = cache.insert_or_get(key, service, lock_start.elapsed().as_secs_f64());
-    // Release the global cache lock BEFORE dropping the rejected loser: its
-    // `CommitService::drop` closes the commit queue and joins the worker
-    // thread, which must not run while the process-wide cache mutex is held.
     drop(cache);
     drop(rejected);
     Ok(lookup)
@@ -231,9 +212,6 @@ pub(crate) fn normalize_root_key(root: &Path) -> String {
         .into_owned()
 }
 
-/// A leased snapshot of one root: the frozen layer paths plus the lease that
-/// pins them. Lease custody stays with whoever acquired it — workspaces only
-/// ever see the plain fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Snapshot {
     pub lease_id: String,
@@ -242,11 +220,6 @@ pub struct Snapshot {
     pub layer_paths: Vec<PathBuf>,
 }
 
-/// Acquire a snapshot lease on `root` for `request_id`.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when the stack cannot be opened or leased.
 pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, LayerStackError> {
     let lease = LayerStack::open(root.to_path_buf())?.acquire_snapshot(request_id)?;
     Ok(Snapshot {
@@ -257,34 +230,14 @@ pub fn acquire_snapshot(root: &Path, request_id: &str) -> Result<Snapshot, Layer
     })
 }
 
-/// Best-effort lease release on `root`; returns whether the lease was held.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when the stack cannot be opened.
 pub fn release_lease(root: &Path, lease_id: &str) -> Result<bool, LayerStackError> {
     LayerStack::open(root.to_path_buf())?.release_lease(lease_id)
 }
 
-/// Read the active manifest of `root` (latest-state resource telemetry input).
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when the stack or manifest cannot be read.
 pub fn active_manifest(root: &Path) -> Result<Manifest, LayerStackError> {
     LayerStack::open(root.to_path_buf())?.read_active_manifest()
 }
 
-/// Commit `changes` against the latest state of `root` through the per-root
-/// single writer, gated by the caller-observed `base_hashes`.
-///
-/// This is the direct fast path: no overlay, route decisions (gated / direct /
-/// drop) resolved from the active merged manifest.
-///
-/// # Errors
-///
-/// Returns [`CommitError`] when routing, queue submission, or the commit
-/// worker reply fails.
 pub fn commit_direct(
     root: &Path,
     snapshot_version: Option<u64>,
@@ -302,16 +255,6 @@ pub fn commit_direct(
     Ok(result)
 }
 
-/// Publish a captured overlay delta against the snapshot it was captured on.
-///
-/// Computes route telemetry and per-path base hashes from the snapshot's
-/// frozen `layer_paths`, then commits through the same per-root single writer
-/// as [`commit_direct`].
-///
-/// # Errors
-///
-/// Returns [`CommitError`] when the snapshot layer paths are invalid or the
-/// commit fails.
 pub fn publish_capture(
     root: &Path,
     snapshot_manifest_version: i64,
@@ -341,7 +284,6 @@ pub fn publish_capture(
     Ok(result)
 }
 
-/// Build the frozen base manifest a snapshot's `layer_paths` describe.
 fn snapshot_manifest(
     root: &Path,
     version: i64,
@@ -371,18 +313,12 @@ fn snapshot_manifest(
     Ok(Manifest::new(version, layers, MANIFEST_SCHEMA_VERSION)?)
 }
 
-/// Manifest versions cross the wire as `i64`; the commit gate pins `u64`.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError::Manifest`] for a negative version.
 pub fn manifest_version_u64(version: i64) -> Result<u64, LayerStackError> {
     u64::try_from(version).map_err(|_| {
         LayerStackError::Manifest(format!("manifest version must be non-negative: {version}"))
     })
 }
 
-/// Diagnostic snapshot of the per-root writer cache.
 #[must_use]
 pub fn cache_snapshot() -> Value {
     let lock_start = Instant::now();

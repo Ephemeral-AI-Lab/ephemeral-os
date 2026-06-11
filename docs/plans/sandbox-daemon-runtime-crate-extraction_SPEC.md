@@ -333,7 +333,8 @@ command-session registry, never across the existing blocking teardown calls.
   `runtime/response.rs` parameterized by the (small) field differences;
   contract tests pin byte-stability.
 - `Serialize` derives with `#[serde(rename = ...)]` are added to
-  `PluginOperationRoute` / `PluginProcessSpec` in `eos-plugin` **only if**
+  `PluginOperationRoute` / `PluginProcessSpec` in `eos-plugin-runtime`
+  **only if**
   the derive output is byte-identical to today's `route_to_json` /
   `process_spec_to_json` (including the computed `dispatch_mode`, which can
   be a `serialize_with` or a small wrapper). If exact parity is awkward, the
@@ -353,6 +354,7 @@ command-session registry, never across the existing blocking teardown calls.
 | `services/plugin/callbacks.rs` (200) | -> `eos-plugin-runtime/src/callbacks.rs` (depends on `eos_layerstack::service::commit_direct`, an ordinary dependency). |
 | `services/plugin/connected.rs` (105), `dispatch.rs` (92) | -> `eos-plugin-runtime/src/{connected,dispatch}.rs`; the caller-family gate moves out per §6.4. |
 | `services/plugin/setup.rs` (114) | Config cell deleted (constructor input + `eos-config` `Default`); `ensure_plugin_family_allowed` split per §6.4; remainder -> `eos-plugin-runtime`. |
+| `eos-plugin/src/host/{package,ensure_args,route,ppc_client*}` (1,556) | -> `eos-plugin-runtime/src/{package,ensure,route,transport}.rs`; `validate_plugin_caller_fields` stays at the contract/adapter boundary per §6.4, while `PpcEnvelope` and byte-stable framing stay in `eos-plugin`. |
 | `services/workspace.rs` (196) | -> `eos-workspace-runtime/src/state.rs`; config cell deleted. |
 | `ops/isolation.rs` (351) | Lifecycle half -> `eos-workspace-runtime`; adapter half (~160 LOC: `op_enter/exit/status/list_open/test_reset`, `error_payload`) stays. |
 | `ops/cancel.rs` (99) | Coordinator -> `eos-workspace-runtime`; two `op_*` adapters (~55 LOC) stay. |
@@ -370,17 +372,19 @@ command-session registry, never across the existing blocking teardown calls.
 ```toml
 # eos-plugin-runtime
 [dependencies]
-eos-plugin.workspace = true        # contracts + host PPC client
+eos-plugin.workspace = true        # contracts + PPC envelope/framing
 eos-layerstack.workspace = true    # leases, commit_direct, publish_capture
 eos-ephemeral-workspace.workspace = true  # overlay run dirs, capture
 eos-namespace.workspace = true     # RunRequest/RunResult protocol
 eos-config.workspace = true        # PluginRuntimeConfig
 serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
+sha2.workspace = true              # service socket path + package digest checks
 thiserror.workspace = true
+uuid.workspace = true              # package temp-root names
 
-[dev-dependencies]
-eos-plugin = { workspace = true, features = ["test-root-override"] }
+[features]
+test-root-override = []            # package-root override for runtime tests only
 
 # eos-workspace-runtime
 [dependencies]
@@ -417,11 +421,12 @@ Budgets are ceilings measured by `find <crate>/src -name '*.rs' | xargs wc -l`.
 | Unit | Before | Budget after | Driver |
 | --- | --- | --- | --- |
 | `eos-daemon/src` | 6,952 | **≤ 3,700** | `services/` (−3,192) and ops lifecycle (−235) leave; adapter growth (+~210), launcher impl (+~70), helper dedup (−~100) |
-| `eos-plugin-runtime/src` | — | **≤ 2,100** | 2,520 in, minus adapter extraction (~150), test scaffolding (~330), dedup items §3.6 (~165) |
+| `eos-plugin/src` | 2,558 | **≤ 1,000** | Companion `eos-plugin` source consolidation: `host/**` leaves, contracts/PPC collapse, storage edge removed |
+| `eos-plugin-runtime/src` | — | **≤ 3,300** | 2,520 daemon plugin LOC + 1,556 `eos-plugin/src/host/**` LOC in, minus adapter extraction (~150), test scaffolding (~330), dedup items §3.6 (~165), and host merge/error-wrapper cleanup (~100) |
 | `eos-workspace-runtime/src` | — | **≤ 450** | ~430 of policy in, minus global plumbing and config defaults |
 | `eos-checkpoint/src` | — | **≤ 490** | 471 mostly as-is |
-| `eos-config` + `eos-plugin` additions | — | **≤ +80** | `Default` impls; optional serde derives |
-| **Workspace total (these units)** | **6,952** | **≤ 6,420 (net ≥ −530)** | |
+| `eos-config` additions | — | **≤ +40** | `Default` impls |
+| **Workspace total (these units)** | **9,510** | **≤ 8,980 (net ≥ −530)** | |
 
 Test LOC moves with its code; the ~330 LOC of in-src test scaffolding is a
 hard deletion, replaced by a fake `NsRunnerLauncher` (~60 LOC, in the new

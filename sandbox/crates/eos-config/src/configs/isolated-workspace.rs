@@ -36,6 +36,27 @@ pub enum Rfc1918Egress {
     Deny,
 }
 
+impl Default for IsolatedWorkspaceConfig {
+    /// Disabled-by-default fallbacks used when no `isolated_workspace` section
+    /// is injected (matches `sandbox/config/prd.yml`).
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            scratch_root: PathBuf::from("/eos/scratch/isolated"),
+            ttl_s: 1800.0,
+            total_cap: 5,
+            upperdir_bytes: 1_073_741_824,
+            memavail_fraction: 0.5,
+            setup_timeout_s: 30.0,
+            exit_grace_s: 0.25,
+            rfc1918_egress: Rfc1918Egress::Allow,
+            fallback_dns: "1.1.1.1".to_owned(),
+            workspace_root: PathBuf::from("/testbed"),
+            sample_interval_s: 0.5,
+        }
+    }
+}
+
 impl IsolatedWorkspaceConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///

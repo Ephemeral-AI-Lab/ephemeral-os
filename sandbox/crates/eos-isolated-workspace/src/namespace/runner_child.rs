@@ -1,8 +1,3 @@
-//! Low-level `ns-holder` / `ns-runner` child-spawn and fd plumbing under
-//! [`super::NamespaceRuntime`]: the holder-child registry, raw-fd helpers, and
-//! the `eosd ns-runner` re-exec for setns overlay-mount / DNS configuration.
-//! Linux-only by module gate.
-
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::Write;

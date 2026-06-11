@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::commit::StackRouteProvider;
 use crate::commit::{CommitQueue, CommitService, CommitTransaction};
-use crate::route::StackRouteProvider;
 use crate::test_fixture::{unique_suffix, TestResult};
 
 use super::{normalize_root_key, snapshot_manifest, RootService, ServiceCache, SERVICE_CACHE_MAX};

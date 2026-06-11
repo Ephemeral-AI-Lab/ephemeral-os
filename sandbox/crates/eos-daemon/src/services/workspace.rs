@@ -3,10 +3,11 @@
 //! The daemon is the composition root: it owns the layer stack (lease
 //! acquire/release) and the isolated manager, which never touches storage
 //! itself. Snapshots go in as plain fields and `lease_id`s come back out at
-//! exit for release here.
+//! exit for release here. State lives on a [`WorkspaceRuntime`] instance owned
+//! by the server's `Services`, never in process globals.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
@@ -57,93 +58,101 @@ impl DaemonIsolatedState {
     }
 }
 
-pub(crate) fn configure_isolated_workspace(config: &IsolatedWorkspaceConfig) {
-    let mut guard = isolated_workspace_config_cell()
-        .write()
-        .unwrap_or_else(PoisonError::into_inner);
-    *guard = config.clone();
+/// Instance-owned isolated-workspace service state: the typed config plus the
+/// lazily bound layer-stack + manager pair.
+pub(crate) struct WorkspaceRuntime {
+    config: IsolatedWorkspaceConfig,
+    state: Mutex<Option<DaemonIsolatedState>>,
 }
 
-pub(crate) fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
-    let root = normalized_root(root);
-    {
-        let mut guard = lock_state_cell();
-        if let Some(state) = guard.as_mut() {
-            if state.layer_stack_root != root {
-                // Block rebinding to a new root only while an isolated workspace
-                // is open: those handles pin leases/namespaces on the old root.
-                // (Isolated command sessions belong to an open caller, so this
-                // already covers them; ephemeral command sessions are unrelated
-                // to the isolated manager's binding and must not block a rebind.)
-                let open_callers = state.manager.list_open_callers();
-                if !open_callers.is_empty() {
-                    return Err(IsolatedError::SetupFailed {
-                        step: format!(
-                            "isolated workspace manager is bound to {} with active callers",
-                            state.layer_stack_root.display()
-                        ),
-                    });
-                }
-                state.manager.reap_orphan_resources();
-                *guard = None;
-            }
-        }
-        if guard.is_none() {
-            let config = isolated_workspace_config();
-            let mut caps = resource_caps_from_config(&config);
-            if !caps.enabled {
-                return Err(IsolatedError::FeatureDisabled);
-            }
-            if let Some(binding) = read_workspace_binding(&root).map_err(setup_error)? {
-                caps.eos_workspace_root = binding.workspace_root;
-            }
-            let mut stack = LayerStack::open(root.clone()).map_err(setup_error)?;
-            let mut manager = IsolatedManager::with_scratch_root(caps, config.scratch_root);
-            let orphan_lease_ids = manager.initialize()?;
-            for lease_id in orphan_lease_ids {
-                let _ = stack.release_lease(&lease_id);
-            }
-            *guard = Some(DaemonIsolatedState {
-                layer_stack_root: root,
-                stack,
-                manager,
-            });
+impl WorkspaceRuntime {
+    pub(crate) fn new(config: IsolatedWorkspaceConfig) -> Self {
+        Self {
+            config,
+            state: Mutex::new(None),
         }
     }
-    Ok(())
+
+    /// Bind (or rebind) the isolated manager to `root`, initializing caps from
+    /// the runtime config and releasing leases orphaned by a prior daemon.
+    pub(crate) fn ensure_state(&self, root: &Path) -> Result<(), IsolatedError> {
+        let root = normalized_root(root);
+        {
+            let mut guard = self.lock_state_cell();
+            if let Some(state) = guard.as_mut() {
+                if state.layer_stack_root != root {
+                    // Block rebinding to a new root only while an isolated workspace
+                    // is open: those handles pin leases/namespaces on the old root.
+                    // (Isolated command sessions belong to an open caller, so this
+                    // already covers them; ephemeral command sessions are unrelated
+                    // to the isolated manager's binding and must not block a rebind.)
+                    let open_callers = state.manager.list_open_callers();
+                    if !open_callers.is_empty() {
+                        return Err(IsolatedError::SetupFailed {
+                            step: format!(
+                                "isolated workspace manager is bound to {} with active callers",
+                                state.layer_stack_root.display()
+                            ),
+                        });
+                    }
+                    state.manager.reap_orphan_resources();
+                    *guard = None;
+                }
+            }
+            if guard.is_none() {
+                let mut caps = resource_caps_from_config(&self.config);
+                if !caps.enabled {
+                    return Err(IsolatedError::FeatureDisabled);
+                }
+                if let Some(binding) = read_workspace_binding(&root).map_err(setup_error)? {
+                    caps.eos_workspace_root = binding.workspace_root;
+                }
+                let mut stack = LayerStack::open(root.clone()).map_err(setup_error)?;
+                let mut manager =
+                    IsolatedManager::with_scratch_root(caps, self.config.scratch_root.clone());
+                let orphan_lease_ids = manager.initialize()?;
+                for lease_id in orphan_lease_ids {
+                    let _ = stack.release_lease(&lease_id);
+                }
+                *guard = Some(DaemonIsolatedState {
+                    layer_stack_root: root,
+                    stack,
+                    manager,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn with_state<T>(
+        &self,
+        f: impl FnOnce(&mut DaemonIsolatedState) -> Result<T, IsolatedError>,
+    ) -> Result<T, IsolatedError> {
+        self.lock_state_cell()
+            .as_mut()
+            .ok_or(IsolatedError::FeatureDisabled)
+            .and_then(f)
+    }
+
+    pub(crate) fn lock_state_cell(&self) -> MutexGuard<'_, Option<DaemonIsolatedState>> {
+        self.state.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn reset_test_manager_file(&self) {
+        let session_root = &self.config.scratch_root;
+        let _ = std::fs::remove_dir_all(session_root);
+        if std::fs::create_dir_all(session_root).is_err() {
+            return;
+        }
+        let _ = std::fs::write(
+            session_root.join("manager.json"),
+            br#"{"schema_version":1,"handles":[]}"#,
+        );
+    }
 }
 
 fn normalized_root(root: &Path) -> PathBuf {
     root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
-}
-
-pub(crate) fn isolated_workspace_config() -> IsolatedWorkspaceConfig {
-    isolated_workspace_config_cell()
-        .read()
-        .unwrap_or_else(PoisonError::into_inner)
-        .clone()
-}
-
-fn isolated_workspace_config_cell() -> &'static std::sync::RwLock<IsolatedWorkspaceConfig> {
-    static CONFIG: OnceLock<std::sync::RwLock<IsolatedWorkspaceConfig>> = OnceLock::new();
-    CONFIG.get_or_init(|| std::sync::RwLock::new(default_isolated_workspace_config()))
-}
-
-pub(crate) fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
-    IsolatedWorkspaceConfig {
-        enabled: false,
-        scratch_root: PathBuf::from("/eos/scratch/isolated"),
-        ttl_s: 1800.0,
-        total_cap: 5,
-        upperdir_bytes: 1_073_741_824,
-        memavail_fraction: 0.5,
-        setup_timeout_s: 30.0,
-        exit_grace_s: 0.25,
-        rfc1918_egress: ConfigRfc1918Egress::Allow,
-        fallback_dns: "1.1.1.1".to_owned(),
-        workspace_root: PathBuf::from("/testbed"),
-        sample_interval_s: 0.5,
-    }
 }
 
 fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {
@@ -161,36 +170,5 @@ fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {
         },
         fallback_dns: config.fallback_dns.clone(),
         eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
-        sample_interval_s: config.sample_interval_s,
     }
-}
-
-pub(crate) fn with_state<T>(
-    f: impl FnOnce(&mut DaemonIsolatedState) -> Result<T, IsolatedError>,
-) -> Result<T, IsolatedError> {
-    lock_state_cell()
-        .as_mut()
-        .ok_or(IsolatedError::FeatureDisabled)
-        .and_then(f)
-}
-
-fn state_cell() -> &'static Mutex<Option<DaemonIsolatedState>> {
-    static STATE: OnceLock<Mutex<Option<DaemonIsolatedState>>> = OnceLock::new();
-    STATE.get_or_init(|| Mutex::new(None))
-}
-
-pub(crate) fn lock_state_cell() -> MutexGuard<'static, Option<DaemonIsolatedState>> {
-    state_cell().lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-pub(crate) fn reset_test_manager_file() {
-    let session_root = isolated_workspace_config().scratch_root;
-    let _ = std::fs::remove_dir_all(&session_root);
-    if std::fs::create_dir_all(&session_root).is_err() {
-        return;
-    }
-    let _ = std::fs::write(
-        session_root.join("manager.json"),
-        br#"{"schema_version":1,"handles":[]}"#,
-    );
 }

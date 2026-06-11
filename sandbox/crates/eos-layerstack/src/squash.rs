@@ -1,11 +1,3 @@
-//! Checkpoint-based depth control for sandbox layer stacks.
-//!
-//! Squash is NON-DESTRUCTIVE until the retaining lease releases: it segments
-//! the active manifest around the [`crate::lease::LeaseRegistry::lease_head_layers`]
-//! barrier set, projects each foldable run into a single checkpoint layer, and
-//! pointer-swaps a shorter manifest. Layers below a lease head stay on disk for
-//! that lease's frozen reads (see the DUAL-SET note in [`crate::lease`]).
-
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -15,30 +7,14 @@ use crate::error::LayerStackError;
 use crate::fs::{check_layer_path, fsync_dir, resolve_layer_path};
 use crate::{MergedView, LAYERS_DIR, STAGING_DIR};
 
-/// Leading discriminator for a built checkpoint layer id, distinguishing a
-/// squash checkpoint (`B…`) from a normal published layer (`L…`).
-///
-/// The full id is `B{version:06}-{unique:08x}` (see `allocate_checkpoint_paths`).
-/// The 8-hex suffix is a process-unique counter rather than a random UUID: the
-/// suffix is intentionally non-deterministic, so cross-runtime byte-identity of
-/// a squash id is impossible by construction — only the `B`-prefix + version +
-/// uniqueness contract is load-bearing.
 pub const CHECKPOINT_ID_PREFIX: char = 'B';
 
-/// A foldable run of >=2 contiguous layers that collapse into one checkpoint.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheckpointSegment {
     pub layers: Vec<LayerRef>,
 }
 
 impl CheckpointSegment {
-    /// Construct a segment, enforcing the >=2-layer invariant.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError::InvalidSquashPlan`] when fewer than two
-    /// layers are provided.
-    ///
     pub(crate) fn new(layers: Vec<LayerRef>) -> Result<Self, LayerStackError> {
         if layers.len() <= 1 {
             return Err(LayerStackError::InvalidSquashPlan(
@@ -49,18 +25,12 @@ impl CheckpointSegment {
     }
 }
 
-/// One entry of a squash plan: either a kept single layer or a foldable segment.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SquashPlanEntry {
-    /// A layer kept as-is (a lease-head barrier or a singleton run).
     Keep(LayerRef),
-    /// A run of layers that fold into one checkpoint.
     Segment(CheckpointSegment),
 }
 
-/// A computed squash plan: the active manifest snapshot + the per-run entries.
-///
-/// Requires >=1 checkpoint segment (else there is nothing to fold).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SquashPlan {
     pub active_version: i64,
@@ -69,14 +39,6 @@ pub struct SquashPlan {
 }
 
 impl SquashPlan {
-    /// Construct + validate (non-empty active layers, non-empty entries, >=1
-    /// checkpoint segment).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError::InvalidSquashPlan`] when the plan has no
-    /// active layers, no entries, or no foldable checkpoint segment.
-    ///
     pub(crate) fn new(
         active_version: i64,
         active_layers: Vec<LayerRef>,
@@ -107,7 +69,6 @@ impl SquashPlan {
         })
     }
 
-    /// The checkpoint segments of this plan, in order.
     #[must_use]
     pub fn checkpoint_segments(&self) -> Vec<&CheckpointSegment> {
         self.entries
@@ -120,7 +81,6 @@ impl SquashPlan {
     }
 }
 
-/// Plans runs between lease heads and projects each run into a checkpoint layer.
 #[derive(Debug)]
 pub struct LayerCheckpointSquasher {
     storage_root: PathBuf,
@@ -128,7 +88,6 @@ pub struct LayerCheckpointSquasher {
 }
 
 impl LayerCheckpointSquasher {
-    /// Bind a squasher to a storage root (owns its own [`crate::MergedView`]).
     #[must_use]
     pub fn new(storage_root: PathBuf) -> Self {
         Self {
@@ -137,15 +96,6 @@ impl LayerCheckpointSquasher {
         }
     }
 
-    /// Compute a squash plan, or `None` when the manifest is already within
-    /// `max_depth` or no run yields >= `min_reduction` folds. Segments around
-    /// the `lease_head_layers` barrier set (those layers stay visible).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the depth/reduction inputs are invalid
-    /// or a candidate segment violates squash-plan invariants.
-    ///
     pub fn plan(
         &self,
         active_manifest: &Manifest,
@@ -197,15 +147,6 @@ impl LayerCheckpointSquasher {
         .map(Some)
     }
 
-    /// Project a segment's layers into a fresh checkpoint layer directory and
-    /// return its `LayerRef` (id format `B{active_version+1:06}-{uuid8}`).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when checkpoint paths cannot be allocated,
-    /// the segment cannot be projected, or the staging directory cannot be
-    /// persisted as a layer.
-    ///
     pub(crate) fn build_checkpoint(
         &self,
         segment: &CheckpointSegment,
@@ -236,14 +177,6 @@ impl LayerCheckpointSquasher {
         })
     }
 
-    /// Rename a prebuilt checkpoint so its id matches the publishing manifest
-    /// version (the `B{manifest_version:06}-…` prefix invariant).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the checkpoint path is invalid, missing,
-    /// or cannot be renamed into its final layer id.
-    ///
     pub(crate) fn relabel_checkpoint(
         &self,
         checkpoint: &LayerRef,
@@ -262,9 +195,6 @@ impl LayerCheckpointSquasher {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::rename(current, &layer_dir)?;
-        // Persist the renamed checkpoint dir entry before the manifest that
-        // publishes it is written — else a crash can leave the fsynced
-        // manifest pointing at a non-durable layer dir entry.
         if let Some(parent) = layer_dir.parent() {
             fsync_dir(parent)?;
         }
@@ -274,13 +204,6 @@ impl LayerCheckpointSquasher {
         })
     }
 
-    /// Best-effort removal of an uncommitted checkpoint (rollback path).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the checkpoint path is invalid or
-    /// removal fails for a reason other than the path already being absent.
-    ///
     pub(crate) fn discard_checkpoint(&self, checkpoint: &LayerRef) -> Result<(), LayerStackError> {
         let path = self.layer_path(checkpoint)?;
         match std::fs::remove_dir_all(path) {
@@ -317,9 +240,6 @@ impl LayerCheckpointSquasher {
     }
 }
 
-/// If the active manifest's tail still equals the plan's snapshotted active
-/// layers, return the live prefix above them; else `None` (CAS lost).
-///
 #[must_use]
 pub(crate) fn manifest_prefix_before_plan<'m>(
     manifest: &'m Manifest,
@@ -394,25 +314,8 @@ mod tests {
             .collect()
     }
 
-    #[test]
-    fn squash_keeps_each_lease_head_and_folds_every_gap() -> TestResult {
-        let layers: Vec<LayerRef> = (0..9).map(|index| layer(&format!("L{index}"))).collect();
-        let manifest = Manifest::new(9, layers.clone(), MANIFEST_SCHEMA_VERSION)?;
-        let lease_heads = vec![layers[3].clone(), layers[6].clone()];
-
-        let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));
-        let plan = squasher
-            .plan(&manifest, 5, &lease_heads, 1)?
-            .expect("a 9-layer manifest over depth 5 must yield a squash plan");
-
-        assert_eq!(plan.entries.len(), 5, "result == n_leased + n_gaps");
-        assert_eq!(
-            kept_ids(&plan.entries),
-            ["L3", "L6"],
-            "each leased head is preserved as a barrier, in order"
-        );
-        let folded: Vec<Vec<&str>> = plan
-            .checkpoint_segments()
+    fn folded_ids(plan: &SquashPlan) -> Vec<Vec<&str>> {
+        plan.checkpoint_segments()
             .iter()
             .map(|segment| {
                 segment
@@ -421,43 +324,36 @@ mod tests {
                     .map(|layer| layer.layer_id.as_str())
                     .collect()
             })
-            .collect();
-        assert_eq!(
-            folded,
-            vec![vec!["L0", "L1", "L2"], vec!["L4", "L5"], vec!["L7", "L8"],],
-            "exactly the three unleased gap runs fold into checkpoints"
-        );
-        Ok(())
+            .collect()
     }
 
     #[test]
-    fn squash_without_leases_folds_to_a_single_checkpoint() -> TestResult {
-        let layers: Vec<LayerRef> = (0..9).map(|index| layer(&format!("L{index}"))).collect();
-        let manifest = Manifest::new(9, layers, MANIFEST_SCHEMA_VERSION)?;
-
-        let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));
-        let plan = squasher
-            .plan(&manifest, 5, &[], 1)?
-            .expect("an unleased manifest over depth must yield a plan");
-
-        assert_eq!(plan.entries.len(), 1);
-        assert!(kept_ids(&plan.entries).is_empty());
-        assert_eq!(plan.checkpoint_segments().len(), 1);
-        Ok(())
-    }
-
-    #[test]
-    fn squash_keeps_an_adjacent_lease_pair_without_folding_between_them() -> TestResult {
+    fn squash_segments_around_lease_heads() -> TestResult {
         let layers: Vec<LayerRef> = (0..9).map(|index| layer(&format!("L{index}"))).collect();
         let manifest = Manifest::new(9, layers.clone(), MANIFEST_SCHEMA_VERSION)?;
-        let lease_heads = vec![layers[4].clone(), layers[5].clone()];
-
         let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));
-        let plan = squasher.plan(&manifest, 5, &lease_heads, 1)?.expect("plan");
 
-        assert_eq!(plan.entries.len(), 4, "2 adjacent leases + 2 outer gaps");
-        assert_eq!(kept_ids(&plan.entries), ["L4", "L5"]);
-        assert_eq!(plan.checkpoint_segments().len(), 2);
+        let leased = squasher
+            .plan(&manifest, 5, &[layers[3].clone(), layers[6].clone()], 1)?
+            .expect("plan");
+        assert_eq!(leased.entries.len(), 5);
+        assert_eq!(kept_ids(&leased.entries), ["L3", "L6"]);
+        assert_eq!(
+            folded_ids(&leased),
+            vec![vec!["L0", "L1", "L2"], vec!["L4", "L5"], vec!["L7", "L8"]]
+        );
+
+        let unleased = squasher.plan(&manifest, 5, &[], 1)?.expect("plan");
+        assert_eq!(unleased.entries.len(), 1);
+        assert!(kept_ids(&unleased.entries).is_empty());
+        assert_eq!(unleased.checkpoint_segments().len(), 1);
+
+        let adjacent = squasher
+            .plan(&manifest, 5, &[layers[4].clone(), layers[5].clone()], 1)?
+            .expect("plan");
+        assert_eq!(adjacent.entries.len(), 4);
+        assert_eq!(kept_ids(&adjacent.entries), ["L4", "L5"]);
+        assert_eq!(adjacent.checkpoint_segments().len(), 2);
         Ok(())
     }
 }

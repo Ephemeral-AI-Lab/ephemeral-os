@@ -137,9 +137,6 @@ importers:
       '@eos/engine':
         specifier: workspace:*
         version: link:../engine
-      '@eos/notification':
-        specifier: workspace:*
-        version: link:../notification
       '@eos/scripts':
         specifier: workspace:*
         version: link:../scripts
@@ -147,6 +144,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@eos/notification':
+        specifier: workspace:*
+        version: link:../notification
       '@eos/testkit':
         specifier: workspace:*
         version: link:../testkit

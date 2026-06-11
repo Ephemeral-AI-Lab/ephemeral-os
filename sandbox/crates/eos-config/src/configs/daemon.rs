@@ -56,6 +56,19 @@ pub struct PluginRuntimeConfig {
     pub max_response_bytes: usize,
 }
 
+impl Default for PluginRuntimeConfig {
+    /// Production fallbacks used when no `daemon.plugin` section is injected
+    /// (matches `sandbox/config/prd.yml`).
+    fn default() -> Self {
+        Self {
+            ppc_root: PathBuf::from("/eos/plugin/ppc"),
+            ppc_timeout_ms: 5_000,
+            service_probe_timeout_ms: 5_000,
+            max_response_bytes: 8 * 1024 * 1024,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LayerStackConfig {

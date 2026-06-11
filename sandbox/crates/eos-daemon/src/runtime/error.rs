@@ -44,6 +44,11 @@ pub enum DaemonError {
     #[error("daemon state lock poisoned: {0}")]
     StateLockPoisoned(&'static str),
 
+    /// A handler that requires the daemon services ran on a dispatch context
+    /// without them (reachable only through direct `OpTable` dispatch).
+    #[error("daemon services are not available in this dispatch context")]
+    ServicesUnavailable,
+
     /// The layer-stack storage / publish layer failed.
     #[error(transparent)]
     LayerStack(#[from] eos_layerstack::LayerStackError),

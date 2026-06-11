@@ -1,18 +1,14 @@
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
+use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::{json, Value};
 
 use crate::error::IsolatedError;
 
-use super::resources::{
-    close_handle_fds, directory_file_bytes, monotonic_seconds, mountinfo_reference_count,
-    next_handle_id,
-};
-use super::{IsolatedSessions, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle};
+use super::{IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle};
 
-/// A settled exit: everything torn down except the lease, whose `lease_id` the
-/// caller releases against the layer stack it acquired from.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
     pub workspace_id: IsolatedWorkspaceId,
@@ -25,7 +21,7 @@ pub struct ExitOutcome {
     pub inspection: Value,
 }
 
-impl IsolatedSessions {
+impl IsolatedManager {
     pub(super) fn wire_handle(
         &mut self,
         handle: &mut WorkspaceHandle,
@@ -70,10 +66,6 @@ impl IsolatedSessions {
             "configure_dns".to_owned(),
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
-        // signal_net_ready runs UNTIMED between the configure_dns and
-        // create_cgroup phase measures (it is deliberately called outside any
-        // phase-timer block) so the configure_dns phase budget is not inflated
-        // by the net-ready wait.
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;
         phase_start = Instant::now();
@@ -144,8 +136,6 @@ impl IsolatedSessions {
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
-        // The lease fields ("lease_released", "active_leases_after") are
-        // spliced in by the caller after it releases the returned lease_id.
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_id),
             "agent_registered_after": self.by_caller.contains_key(&handle.caller_id),
@@ -176,17 +166,6 @@ impl IsolatedSessions {
         (inspection, phases_ms)
     }
 
-    /// Enter (or reject) the isolated workspace for `caller_id` against an
-    /// already-acquired `snapshot`.
-    ///
-    /// Allocates scratch, wires the namespace, and registers the handle. Rolls
-    /// back partial state on any wiring failure — the caller releases its
-    /// lease when this returns an error.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IsolatedError`] when the feature is disabled, `caller_id` is
-    /// invalid, capacity is exhausted, or namespace wiring fails.
     pub fn enter(
         &mut self,
         caller_id: &str,
@@ -282,16 +261,6 @@ impl IsolatedSessions {
         Ok(workspace_root.to_owned())
     }
 
-    /// Exit the isolated workspace for `caller_id`.
-    ///
-    /// Tears down namespace/network/cgroup and DISCARDS the upperdir (no
-    /// publish). The returned outcome carries the `lease_id` for the caller to
-    /// release.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`IsolatedError`] when `caller_id` is invalid or no isolated
-    /// workspace is open for the agent.
     pub fn exit(
         &mut self,
         caller_id: &str,
@@ -326,11 +295,6 @@ impl IsolatedSessions {
         })
     }
 
-    /// Evict idle handles whose last activity exceeds the configured TTL,
-    /// returning each eviction's outcome (the caller releases the leases).
-    ///
-    /// Callers listed in `active_callers` are skipped because the daemon still
-    /// owns at least one live command session for them.
     pub fn ttl_sweep(&mut self, active_callers: &HashSet<String>) -> Vec<ExitOutcome> {
         if self.caps.ttl_s <= 0.0 {
             return Vec::new();
@@ -348,4 +312,65 @@ impl IsolatedSessions {
             .filter_map(|caller_id| self.exit(&caller_id, None).ok())
             .collect()
     }
+}
+
+fn close_handle_fds(handle: &WorkspaceHandle) {
+    for fd in handle.ns_fds.values().copied() {
+        if fd >= 0 {
+            let _ = nix::unistd::close(fd);
+        }
+    }
+    for fd in [handle.readiness_fd, handle.control_fd] {
+        if fd >= 0 {
+            let _ = nix::unistd::close(fd);
+        }
+    }
+}
+
+pub(super) fn next_handle_id() -> String {
+    static COUNTER: AtomicU64 = AtomicU64::new(1);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_nanos());
+    let counter = COUNTER.fetch_add(1, Ordering::Relaxed) & 0x00ff_ffff;
+    format!("{counter:06x}{nanos:016x}")
+}
+
+pub(super) fn monotonic_seconds() -> f64 {
+    static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    START.get_or_init(Instant::now).elapsed().as_secs_f64()
+}
+
+fn directory_file_bytes(path: &Path) -> u64 {
+    let mut total = 0_u64;
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return 0;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        if metadata.is_file() {
+            total = total.saturating_add(metadata.len());
+        } else if metadata.is_dir() {
+            total = total.saturating_add(directory_file_bytes(&path));
+        }
+    }
+    total
+}
+
+fn mountinfo_reference_count(paths: &[&Path]) -> Option<usize> {
+    let mountinfo = std::fs::read_to_string("/proc/self/mountinfo").ok()?;
+    let needles = paths
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .filter(|path| !path.is_empty())
+        .collect::<Vec<_>>();
+    Some(
+        mountinfo
+            .lines()
+            .filter(|line| needles.iter().any(|needle| line.contains(needle)))
+            .count(),
+    )
 }

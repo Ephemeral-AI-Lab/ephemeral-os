@@ -11,10 +11,7 @@ use crate::error::DaemonError;
 use eos_ephemeral_workspace::overlay_run_dirs;
 
 use super::process::PluginServiceOverlay;
-use super::{
-    plugin_runtime_config,
-    state::{DaemonPluginState, SharedPpcClient},
-};
+use super::state::{DaemonPluginState, PluginRuntime, SharedPpcClient};
 use eos_plugin::host::route::PluginProcessSpec;
 
 #[derive(Debug, Clone)]
@@ -48,31 +45,34 @@ pub(super) fn service_specs_to_start(
         .collect()
 }
 
-pub(super) fn spawn_service_processes(
-    specs: &[PluginProcessSpec],
-) -> Result<Vec<StartedPluginService>, DaemonError> {
-    let mut started = Vec::with_capacity(specs.len());
-    for spec in specs {
-        let snapshot = acquire_service_snapshot(&spec.key, "start")?;
-        let (process, client) = match super::process::spawn_connected_with_overlay(
-            spec,
-            snapshot.overlay.as_ref(),
-            Duration::from_millis(plugin_runtime_config().service_probe_timeout_ms),
-        ) {
-            Ok(started) => started,
-            Err(err) => {
-                release_service_snapshot(&snapshot);
-                return Err(err);
-            }
-        };
-        started.push(StartedPluginService {
-            service_instance_id: spec.service_instance_id(),
-            process,
-            client: Arc::new(client),
-            snapshot,
-        });
+impl PluginRuntime {
+    pub(super) fn spawn_service_processes(
+        &self,
+        specs: &[PluginProcessSpec],
+    ) -> Result<Vec<StartedPluginService>, DaemonError> {
+        let mut started = Vec::with_capacity(specs.len());
+        for spec in specs {
+            let snapshot = acquire_service_snapshot(&spec.key, "start")?;
+            let (process, client) = match super::process::spawn_connected_with_overlay(
+                spec,
+                snapshot.overlay.as_ref(),
+                Duration::from_millis(self.config.service_probe_timeout_ms),
+            ) {
+                Ok(started) => started,
+                Err(err) => {
+                    release_service_snapshot(&snapshot);
+                    return Err(err);
+                }
+            };
+            started.push(StartedPluginService {
+                service_instance_id: spec.service_instance_id(),
+                process,
+                client: Arc::new(client),
+                snapshot,
+            });
+        }
+        Ok(started)
     }
-    Ok(started)
 }
 
 pub(super) fn insert_started_service_processes(

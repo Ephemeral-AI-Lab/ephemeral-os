@@ -19,6 +19,7 @@ use serde_json::{json, Value};
 use super::{isolation as isolated, require_arg};
 use crate::error::DaemonError;
 use crate::runtime::context::DispatchContext;
+use crate::services::workspace::WorkspaceRuntime;
 
 /// Outcome of tearing down one caller's workspace runs.
 pub(crate) struct CallerCancel {
@@ -34,12 +35,13 @@ pub(crate) struct CallerCancel {
 /// session(s), then exit its isolated workspace if open. The order matters —
 /// sessions are cancelled before the isolated namespace/lease teardown.
 pub(crate) fn cancel_workspace_runs_by_caller_id(
+    workspace: &WorkspaceRuntime,
     caller_id: &str,
     grace_s: Option<f64>,
 ) -> CallerCancel {
     let cancelled_sessions =
         eos_command_ops::cleanup_command_sessions_for_caller(caller_id, grace_s);
-    let isolated = isolated::exit_isolated(caller_id, grace_s);
+    let isolated = isolated::exit_isolated(workspace, caller_id, grace_s);
     CallerCancel {
         cancelled_sessions,
         isolated,
@@ -49,29 +51,26 @@ pub(crate) fn cancel_workspace_runs_by_caller_id(
 /// Cancel every workspace run in the sandbox: discard all command sessions,
 /// exit every isolated caller, then reap orphaned namespace/cgroup/scratch
 /// resources. Returns the per-substrate counts.
-fn cancel_all_workspace_runs(grace_s: Option<f64>) -> (usize, usize) {
+fn cancel_all_workspace_runs(workspace: &WorkspaceRuntime, grace_s: Option<f64>) -> (usize, usize) {
     let cancelled_sessions = eos_command_ops::cancel_all_command_sessions(grace_s);
-    let isolated_exited = isolated::exit_all_and_reap(grace_s);
+    let isolated_exited = isolated::exit_all_and_reap(workspace, grace_s);
     (cancelled_sessions, isolated_exited)
 }
 
 /// `api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC per-run
 /// teardown. Best-effort: a not-open isolated workspace is normal (the caller
 /// was ephemeral) and not surfaced as an error.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
 pub(crate) fn op_cancel_workspace_runs_by_caller_id(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let caller_id = match require_arg(args, "caller_id") {
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
     };
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
-    let outcome = cancel_workspace_runs_by_caller_id(&caller_id, grace_s);
+    let workspace = &context.require_services()?.workspace;
+    let outcome = cancel_workspace_runs_by_caller_id(workspace, &caller_id, grace_s);
     Ok(json!({
         "success": true,
         "caller_id": caller_id,
@@ -81,16 +80,13 @@ pub(crate) fn op_cancel_workspace_runs_by_caller_id(
 }
 
 /// `api.v1.cancel_workspace_runs` — whole-sandbox cancel sweep backstop.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
 pub(crate) fn op_cancel_workspace_runs(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
-    let (cancelled_sessions, isolated_exited) = cancel_all_workspace_runs(grace_s);
+    let workspace = &context.require_services()?.workspace;
+    let (cancelled_sessions, isolated_exited) = cancel_all_workspace_runs(workspace, grace_s);
     Ok(json!({
         "success": true,
         "cancelled_command_sessions": cancelled_sessions,

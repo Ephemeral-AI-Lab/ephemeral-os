@@ -1,6 +1,6 @@
 use crate::model::LayerChange;
 
-use crate::commit::prepare::RouteProvider;
+use crate::commit::RouteProvider;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::LayerStack;
 

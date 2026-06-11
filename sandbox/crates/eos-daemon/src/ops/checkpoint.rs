@@ -50,13 +50,19 @@ pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
     }))
 }
 
-pub(crate) fn build_workspace_base(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn build_workspace_base(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
     let reset = args.get("reset").and_then(Value::as_bool).unwrap_or(false);
     if reset {
-        crate::services::plugin::stop_services_for_layer_stack_root(&root.to_string_lossy())?;
+        context
+            .require_services()?
+            .plugin
+            .stop_services_for_layer_stack_root(&root.to_string_lossy())?;
     }
     let built = build_layer_stack_workspace_base(&root, &workspace_root, reset)?;
     let mut timings = timings_to_value_map(&built.timings);
@@ -179,9 +185,9 @@ pub(crate) fn op_layer_metrics(
 
 pub(crate) fn op_build_workspace_base(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    build_workspace_base(args)
+    build_workspace_base(args, context)
 }
 
 pub(crate) fn op_ensure_workspace_base(

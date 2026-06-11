@@ -13,11 +13,11 @@
     "@eos/background": "workspace:*",
     "@eos/contracts": "workspace:*",
     "@eos/engine": "workspace:*",
-    "@eos/notification": "workspace:*",
     "@eos/scripts": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eos/notification": "workspace:*",
     "@eos/testkit": "workspace:*"
   }
 }

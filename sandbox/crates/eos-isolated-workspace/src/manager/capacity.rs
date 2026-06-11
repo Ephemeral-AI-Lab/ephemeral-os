@@ -1,11 +1,11 @@
 use crate::error::IsolatedError;
 
-use super::IsolatedSessions;
+use super::IsolatedManager;
 
 const HOST_BUDGET_FALLBACK_BYTES: u64 = 1_u64 << 62;
 const KIB_BYTES: u64 = 1_024;
 
-impl IsolatedSessions {
+impl IsolatedManager {
     pub(super) fn check_host_capacity(&self) -> Result<(), IsolatedError> {
         check_host_capacity_against_budget(
             self.handles.len(),

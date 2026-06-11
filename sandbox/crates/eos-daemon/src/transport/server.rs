@@ -41,6 +41,7 @@ use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 use crate::runtime::context::DispatchContext;
+use crate::runtime::services::Services;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -67,6 +68,7 @@ pub struct ServerConfig {
 pub struct DaemonServer {
     config: ServerConfig,
     op_table: Arc<OpTable>,
+    services: Arc<Services>,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
     isolated_sweeper_interval_ms: u64,
@@ -74,13 +76,14 @@ pub struct DaemonServer {
 }
 
 impl DaemonServer {
-    /// Assemble a daemon over `config`, wiring the op table, the invocation
-    /// registry, and the shutdown token.
+    /// Assemble a daemon over `config`, wiring the op table, the owned
+    /// services, the invocation registry, and the shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
+            services: Arc::new(Services::default()),
             file_limits: default_file_limits(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
@@ -100,14 +103,16 @@ impl DaemonServer {
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
         eos_command_ops::configure_command_sessions(&daemon_config.command_sessions);
-        crate::services::workspace::configure_isolated_workspace(isolated_config);
-        crate::services::plugin::configure_plugin_runtime(&daemon_config.plugin);
         eos_layerstack::configure_auto_squash_max_depth(
             daemon_config.layer_stack.auto_squash_max_depth,
         );
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
+            services: Arc::new(Services::new(
+                daemon_config.plugin.clone(),
+                isolated_config.clone(),
+            )),
             file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
@@ -153,12 +158,17 @@ impl DaemonServer {
         let _isolated_ttl_task = {
             let shutdown = server.shutdown.clone();
             let sweep_interval_ms = server.isolated_sweeper_interval_ms;
+            let services = Arc::clone(&server.services);
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
-                            let _ = tokio::task::spawn_blocking(crate::ops::isolation::ttl_sweep).await;
+                            let services = Arc::clone(&services);
+                            let _ = tokio::task::spawn_blocking(move || {
+                                crate::ops::isolation::ttl_sweep(&services.workspace)
+                            })
+                            .await;
                         }
                     }
                 }
@@ -350,13 +360,19 @@ impl DaemonServer {
         let table = Arc::clone(&self.op_table);
         let registry = Arc::clone(&self.invocation_registry);
         let task_registry = Arc::clone(&registry);
+        let task_services = Arc::clone(&self.services);
         let file_limits = self.file_limits;
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
             table.dispatch_with_context(
                 &request,
-                DispatchContext::with_runtime_config(&task_registry, file_limits, read_request_s),
+                DispatchContext::with_runtime_config(
+                    &task_services,
+                    &task_registry,
+                    file_limits,
+                    read_request_s,
+                ),
             )
         });
         registry.register(&invocation_id, task.abort_handle(), &caller_id, background);

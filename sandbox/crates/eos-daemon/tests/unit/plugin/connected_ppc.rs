@@ -1,7 +1,5 @@
-use super::super::*;
 use super::support::*;
 
-use crate::dispatcher::OpTable;
 use crate::wire::Request;
 use eos_plugin::{PpcDirection, PpcEnvelope};
 use serde_json::{json, Value};
@@ -11,10 +9,9 @@ use std::time::Duration;
 
 #[test]
 fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
+    let daemon = TestDaemon::new();
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-ppc")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
@@ -26,7 +23,9 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read ppc request")?;
         assert_eq!(request.message_id, "plugin-hover-test");
@@ -42,7 +41,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
         Ok(())
     });
 
-    let routed = table.dispatch(&Request {
+    let routed = daemon.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-test".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
@@ -56,10 +55,9 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
 
 #[test]
 fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = Arc::new(OpTable::with_builtins());
+    let daemon = Arc::new(TestDaemon::new());
     let (layer_stack_root, workspace_root) = test_bound_workspace("concurrent-read-only")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
@@ -71,7 +69,9 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (first_seen_tx, first_seen_rx) = mpsc::channel();
     let (second_seen_tx, second_seen_rx) = mpsc::channel();
     let (reply_first_tx, reply_first_rx) = mpsc::channel();
@@ -94,9 +94,9 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
         Ok(())
     });
 
-    let first_table = Arc::clone(&table);
+    let first_daemon = Arc::clone(&daemon);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(first_table.dispatch(&Request {
+        Ok(first_daemon.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
             args: json!({"caller_id": "caller-plugin", "request": "a"}),
@@ -108,10 +108,10 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     );
 
     let (second_started_tx, second_started_rx) = mpsc::channel();
-    let second_table = Arc::clone(&table);
+    let second_daemon = Arc::clone(&daemon);
     let second = std::thread::spawn(move || -> Result<Value, TestError> {
         second_started_tx.send(())?;
-        Ok(second_table.dispatch(&Request {
+        Ok(second_daemon.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
             args: json!({"caller_id": "caller-plugin", "request": "b"}),
@@ -137,11 +137,10 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
 
 #[test]
 fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = Arc::new(OpTable::with_builtins());
+    let daemon = Arc::new(TestDaemon::new());
     let (layer_stack_root, workspace_root) =
         test_bound_workspace("concurrent-read-only-out-of-order")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
@@ -153,7 +152,9 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (both_seen_tx, both_seen_rx) = mpsc::channel();
     let server = std::thread::spawn(move || -> TestResult {
         let first = read_ppc_request(&mut server_stream, "read first ppc request")?;
@@ -182,17 +183,17 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
         Ok(())
     });
 
-    let first_table = Arc::clone(&table);
+    let first_daemon = Arc::clone(&daemon);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(first_table.dispatch(&Request {
+        Ok(first_daemon.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
             args: json!({"caller_id": "caller-plugin", "request": "a"}),
         }))
     });
-    let second_table = Arc::clone(&table);
+    let second_daemon = Arc::clone(&daemon);
     let second = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(second_table.dispatch(&Request {
+        Ok(second_daemon.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
             args: json!({"caller_id": "caller-plugin", "request": "b"}),
@@ -220,10 +221,9 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
 
 #[test]
 fn read_only_ppc_failure_drops_connected_route() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
+    let daemon = TestDaemon::new();
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-broken-ppc")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
@@ -235,17 +235,19 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     drop(server_stream);
 
-    let routed = table.dispatch(&Request {
+    let routed = daemon.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-ppc".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["error"]["kind"], "internal_error");
 
-    let status = table.dispatch(&Request {
+    let status = daemon.dispatch(&Request {
         op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-broken-ppc".to_owned(),
         args: json!({}),
@@ -258,40 +260,40 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
 
 #[test]
 fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
     let socket_root = test_socket_root("recover-after-ppc-failure");
+    let daemon = TestDaemon::with_ppc_root(&socket_root);
     let (layer_stack_root, workspace_root) = test_bound_workspace("recover-after-ppc-failure")?;
     let command = vec![
         "/bin/sh",
         "-c",
         "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-recover-after-ppc-failure".to_owned(),
         args: json!({
             "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "ppc_socket_root": socket_root.to_string_lossy().into_owned()
+            "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
     });
     assert_eq!(ensure["success"], true);
 
     let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
-    attach_service_snapshot_for_tests("plugin.generic.hover")?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    attach_service_snapshot_for_tests(daemon.plugin(), "plugin.generic.hover")?;
     drop(server_stream);
 
-    let failed = table.dispatch(&Request {
+    let failed = daemon.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-before-recovery".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(failed["error"]["kind"], "internal_error");
 
-    let after_failure = table.dispatch(&Request {
+    let after_failure = daemon.dispatch(&Request {
         op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-recoverable-failure".to_owned(),
         args: json!({}),
@@ -306,7 +308,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
         socket_root.clone(),
         r#"{"success":true,"from_recovered_service":true}"#,
     );
-    let recovered = table.dispatch(&Request {
+    let recovered = daemon.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-recovery".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
@@ -317,7 +319,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     );
     assert_eq!(recovered["from_recovered_service"], true);
 
-    let status = table.dispatch(&Request {
+    let status = daemon.dispatch(&Request {
         op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-recovery".to_owned(),
         args: json!({}),

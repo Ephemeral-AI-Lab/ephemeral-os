@@ -20,14 +20,17 @@ use crate::runtime::context::DispatchContext;
 /// `api.v1.exec_command` — command-session start contract.
 pub(crate) fn op_exec_command(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let cmd = require_command_string(args, "cmd")?;
     let command_config = command_session_config();
     let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
     let yield_time_ms =
         optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
-    if let Some(binding) = crate::ops::isolation::command_handle_for_args(args) {
+    let isolated_binding = context.services().and_then(|services| {
+        crate::ops::isolation::command_handle_for_args(&services.workspace, args)
+    });
+    if let Some(binding) = isolated_binding {
         return start_manager_command_session(
             args,
             &cmd,

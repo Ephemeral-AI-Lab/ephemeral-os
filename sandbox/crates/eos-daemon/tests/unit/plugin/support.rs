@@ -1,39 +1,78 @@
-use super::super::*;
-
-use eos_config::configs::isolated_workspace::{
-    IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
+use super::super::service::{
+    acquire_service_snapshot, mark_service_ready, release_service_snapshot,
 };
+use super::super::PluginRuntime;
+
+use crate::dispatcher::OpTable;
+use crate::runtime::context::DispatchContext;
+use crate::runtime::services::Services;
+use crate::wire::Request;
+use eos_config::configs::daemon::PluginRuntimeConfig;
+use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
 use eos_layerstack::LayerStack;
+use eos_plugin::{PpcDirection, PpcEnvelope};
 use serde_json::{json, Value};
 use std::error::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{mpsc, Mutex};
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
-
-static TEST_LOCK: Mutex<()> = Mutex::new(());
 
 pub(super) type TestError = Box<dyn Error + Send + Sync + 'static>;
 pub(super) type TestResult = Result<(), TestError>;
 
-pub(super) struct PluginTestGuard {
-    _guard: std::sync::MutexGuard<'static, ()>,
+/// One isolated daemon under test: an op table plus its own `Services`
+/// instance (no process-global state survives between tests).
+pub(super) struct TestDaemon {
+    table: OpTable,
+    pub(super) services: Services,
 }
 
-impl PluginTestGuard {
-    pub(super) fn new() -> Result<Self, TestError> {
-        let guard = TEST_LOCK
-            .lock()
-            .map_err(|_| std::io::Error::other("plugin test lock poisoned"))?;
-        reset_for_tests();
-        Ok(Self { _guard: guard })
+impl TestDaemon {
+    pub(super) fn new() -> Self {
+        Self::with_services(Services::default())
     }
-}
 
-impl Drop for PluginTestGuard {
-    fn drop(&mut self) {
-        reset_for_tests();
+    pub(super) fn with_ppc_root(ppc_root: &Path) -> Self {
+        Self::with_services(Services::new(
+            PluginRuntimeConfig {
+                ppc_root: ppc_root.to_path_buf(),
+                ..PluginRuntimeConfig::default()
+            },
+            IsolatedWorkspaceConfig::default(),
+        ))
+    }
+
+    pub(super) fn with_isolated_workspace(scratch_root: &Path, workspace_root: &Path) -> Self {
+        Self::with_services(Services::new(
+            PluginRuntimeConfig::default(),
+            IsolatedWorkspaceConfig {
+                enabled: true,
+                scratch_root: scratch_root.to_path_buf(),
+                workspace_root: workspace_root.to_path_buf(),
+                ..IsolatedWorkspaceConfig::default()
+            },
+        ))
+    }
+
+    fn with_services(services: Services) -> Self {
+        Self {
+            table: OpTable::with_builtins(),
+            services,
+        }
+    }
+
+    pub(super) fn plugin(&self) -> &PluginRuntime {
+        &self.services.plugin
+    }
+
+    pub(super) fn context(&self) -> DispatchContext<'_> {
+        DispatchContext::with_services(&self.services)
+    }
+
+    pub(super) fn dispatch(&self, request: &Request) -> Value {
+        self.table.dispatch_with_context(request, self.context())
     }
 }
 
@@ -57,47 +96,6 @@ impl Drop for TestEnvVar {
         } else {
             std::env::remove_var(self.key);
         }
-    }
-}
-
-pub(super) struct TestIsolatedWorkspaceConfig {
-    _guard: std::sync::MutexGuard<'static, ()>,
-}
-
-impl TestIsolatedWorkspaceConfig {
-    pub(super) fn enabled(scratch_root: &Path, workspace_root: &Path) -> Self {
-        let guard = crate::ops::isolation::lock_isolated_test_state();
-        let mut config = default_isolated_workspace_config();
-        config.enabled = true;
-        config.scratch_root = scratch_root.to_path_buf();
-        config.workspace_root = workspace_root.to_path_buf();
-        crate::services::workspace::configure_isolated_workspace(&config);
-        Self { _guard: guard }
-    }
-}
-
-impl Drop for TestIsolatedWorkspaceConfig {
-    fn drop(&mut self) {
-        crate::services::workspace::configure_isolated_workspace(
-            &default_isolated_workspace_config(),
-        );
-    }
-}
-
-fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
-    IsolatedWorkspaceConfig {
-        enabled: false,
-        scratch_root: PathBuf::from("/eos/scratch/isolated"),
-        ttl_s: 1800.0,
-        total_cap: 5,
-        upperdir_bytes: 1_073_741_824,
-        memavail_fraction: 0.5,
-        setup_timeout_s: 30.0,
-        exit_grace_s: 0.25,
-        rfc1918_egress: ConfigRfc1918Egress::Allow,
-        fallback_dns: "1.1.1.1".to_owned(),
-        workspace_root: PathBuf::from("/testbed"),
-        sample_interval_s: 0.5,
     }
 }
 
@@ -282,14 +280,17 @@ pub(super) fn test_bound_workspace(name: &str) -> Result<(PathBuf, PathBuf), Tes
     Ok((layer_stack_root, workspace_root))
 }
 
-pub(super) fn attach_service_snapshot_for_tests(op: &str) -> Result<(String, String), TestError> {
-    let route = some_value(route_for_op(op)?, "registered plugin route missing")?;
+pub(super) fn attach_service_snapshot_for_tests(
+    plugin: &PluginRuntime,
+    op: &str,
+) -> Result<(String, String), TestError> {
+    let route = some_value(plugin.route_for_op(op)?, "registered plugin route missing")?;
     let service_key = some_value(route.service_key, "service key missing")?;
     let service_instance_id = some_value(route.service_instance_id, "service instance id missing")?;
     let snapshot = acquire_service_snapshot(&service_key, "test-health")?;
     let manifest_key = snapshot.manifest_key.clone();
     let old_snapshot = {
-        let mut state = lock_state()?;
+        let mut state = plugin.lock_state()?;
         mark_service_ready(&mut state, &service_instance_id, &snapshot, false)?;
         state
             .service_snapshots

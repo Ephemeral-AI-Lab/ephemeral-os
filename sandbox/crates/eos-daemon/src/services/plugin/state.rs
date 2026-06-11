@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard};
 
+use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_plugin::host::ensure_args::ParsedEnsure;
 use eos_plugin::host::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_plugin::PluginServiceStatus;
@@ -52,34 +53,26 @@ pub(super) struct DaemonPluginState {
     pub(super) setup_failures: BTreeMap<String, Value>,
 }
 
-fn state_cell() -> &'static Mutex<DaemonPluginState> {
-    static STATE: OnceLock<Mutex<DaemonPluginState>> = OnceLock::new();
-    STATE.get_or_init(|| Mutex::new(DaemonPluginState::default()))
+/// Instance-owned plugin service runtime: the typed config plus the registry
+/// of loaded plugins, service processes, PPC clients, and snapshots.
+pub(crate) struct PluginRuntime {
+    pub(super) config: PluginRuntimeConfig,
+    state: Mutex<DaemonPluginState>,
 }
 
-pub(super) fn lock_state() -> Result<MutexGuard<'static, DaemonPluginState>, DaemonError> {
-    state_cell()
-        .lock()
-        .map_err(|_| DaemonError::StateLockPoisoned("plugin registry"))
-}
+impl PluginRuntime {
+    pub(crate) fn new(config: PluginRuntimeConfig) -> Self {
+        Self {
+            config,
+            state: Mutex::new(DaemonPluginState::default()),
+        }
+    }
 
-#[cfg(test)]
-pub(super) fn reset_state_for_tests() -> Vec<PluginServiceSnapshot> {
-    let Ok(mut state) = state_cell().lock() else {
-        return Vec::new();
-    };
-    let snapshots = state
-        .service_snapshots
-        .values()
-        .cloned()
-        .collect::<Vec<_>>();
-    state.loaded.clear();
-    state.service_ppc_clients.clear();
-    state.service_processes.clear();
-    state.service_snapshots.clear();
-    state.service_refresh_locks.clear();
-    state.setup_failures.clear();
-    snapshots
+    pub(super) fn lock_state(&self) -> Result<MutexGuard<'_, DaemonPluginState>, DaemonError> {
+        self.state
+            .lock()
+            .map_err(|_| DaemonError::StateLockPoisoned("plugin registry"))
+    }
 }
 
 pub(super) fn route_values(routes: &BTreeMap<String, PluginOperationRoute>) -> Vec<Value> {

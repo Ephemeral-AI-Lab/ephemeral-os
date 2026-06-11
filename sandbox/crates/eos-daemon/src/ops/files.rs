@@ -21,9 +21,9 @@ pub(crate) fn op_read_file(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = read_request(args, context)?;
-    if let Some(binding) = crate::ops::isolation::command_handle_for_args(args) {
+    if let Some((workspace, binding)) = isolated_route(args, context) {
         let outcome = read_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        crate::ops::isolation::touch_isolated(&binding.caller_id);
+        crate::ops::isolation::touch_isolated(workspace, &binding.caller_id);
         return Ok(read_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
@@ -39,9 +39,9 @@ pub(crate) fn op_write_file(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = write_request(args, context)?;
-    if let Some(binding) = crate::ops::isolation::command_handle_for_args(args) {
+    if let Some((workspace, binding)) = isolated_route(args, context) {
         let outcome = write_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        crate::ops::isolation::touch_isolated(&binding.caller_id);
+        crate::ops::isolation::touch_isolated(workspace, &binding.caller_id);
         return Ok(write_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
@@ -54,12 +54,12 @@ pub(crate) fn op_write_file(
 /// `api.v1.edit_file` — shared public edit op, routed by active workspace mode.
 pub(crate) fn op_edit_file(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = edit_request(args)?;
-    if let Some(binding) = crate::ops::isolation::command_handle_for_args(args) {
+    if let Some((workspace, binding)) = isolated_route(args, context) {
         let outcome = edit_file(&isolated_backend(&binding), request).map_err(workspace_error)?;
-        crate::ops::isolation::touch_isolated(&binding.caller_id);
+        crate::ops::isolation::touch_isolated(workspace, &binding.caller_id);
         return Ok(edit_response(outcome));
     }
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
@@ -67,6 +67,20 @@ pub(crate) fn op_edit_file(
         edit_file(&DirectBackend::new(root.clone()), request).map_err(workspace_error)?;
     enrich_direct_timings(&root, &mut outcome.timings, outcome.changed_paths.len());
     Ok(edit_response(outcome))
+}
+
+/// The caller's open isolated binding, when services are threaded and the
+/// caller has one. `None` routes to the ephemeral (direct layer-stack) path.
+fn isolated_route<'ctx>(
+    args: &Value,
+    context: DispatchContext<'ctx>,
+) -> Option<(
+    &'ctx crate::services::workspace::WorkspaceRuntime,
+    eos_command_ops::CommandBinding,
+)> {
+    let workspace = &context.services()?.workspace;
+    let binding = crate::ops::isolation::command_handle_for_args(workspace, args)?;
+    Some((workspace, binding))
 }
 
 fn read_request(

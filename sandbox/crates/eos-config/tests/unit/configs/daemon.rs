@@ -8,6 +8,14 @@ fn config_prd_daemon_section_deserializes_and_validates() {
 }
 
 #[test]
+fn config_default_plugin_runtime_validates_inside_daemon_config() {
+    let mut cfg = prd_config();
+    cfg.plugin = PluginRuntimeConfig::default();
+    cfg.validate()
+        .expect("default plugin runtime config is valid");
+}
+
+#[test]
 fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.server.max_worker_threads = 0;

@@ -1,5 +1,9 @@
 use super::*;
 
+use crate::runtime::services::Services;
+use eos_config::configs::daemon::PluginRuntimeConfig;
+use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
+
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
@@ -13,9 +17,10 @@ fn exit_tears_down_caller_handle() -> TestResult {
         std::process::id()
     ));
     let scratch = root.join("scratch");
-    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
+    let services = isolated_test_services(&scratch, Path::new("/testbed"));
+    let context = DispatchContext::with_services(&services);
     set_env(TEST_HARNESS_ENV, "true");
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(root.join("layers"))?;
     std::fs::create_dir_all(root.join("staging"))?;
@@ -26,22 +31,18 @@ fn exit_tears_down_caller_handle() -> TestResult {
 
     let entered = op_enter(
         &json!({"caller_id": "caller-command-session", "layer_stack_root": root}),
-        DispatchContext::empty(),
+        context,
     )?;
     assert_eq!(entered["success"], true);
 
-    let exited = op_exit(
-        &json!({"caller_id": "caller-command-session"}),
-        DispatchContext::empty(),
-    )?;
+    let exited = op_exit(&json!({"caller_id": "caller-command-session"}), context)?;
     assert_eq!(exited["success"], true);
     assert_eq!(
         exited["inspection"]["handle_registered_after"],
         json!(false)
     );
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
     clear_env(TEST_HARNESS_ENV);
-    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -60,13 +61,14 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
     std::fs::create_dir_all(&workspace_root)?;
     std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
     eos_layerstack::build_workspace_base(&stack_root, &workspace_root, true)?;
-    configure_test_isolated_workspace(&scratch, Path::new("/configured-fallback"));
+    let services = isolated_test_services(&scratch, Path::new("/configured-fallback"));
+    let context = DispatchContext::with_services(&services);
     set_env(TEST_HARNESS_ENV, "true");
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
 
     let entered = op_enter(
         &json!({"caller_id": "caller-bound-root", "layer_stack_root": stack_root}),
-        DispatchContext::empty(),
+        context,
     )?;
 
     assert_eq!(entered["success"], true);
@@ -75,10 +77,7 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
         entered["workspace_root"],
         json!(expected_workspace_root.clone())
     );
-    let status = op_status(
-        &json!({"caller_id": "caller-bound-root"}),
-        DispatchContext::empty(),
-    )?;
+    let status = op_status(&json!({"caller_id": "caller-bound-root"}), context)?;
     assert_eq!(status["success"], true);
     assert_eq!(status["open"], true);
     assert_eq!(
@@ -86,14 +85,10 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
         json!(expected_workspace_root.clone())
     );
 
-    let exited = op_exit(
-        &json!({"caller_id": "caller-bound-root"}),
-        DispatchContext::empty(),
-    )?;
+    let exited = op_exit(&json!({"caller_id": "caller-bound-root"}), context)?;
     assert_eq!(exited["success"], true);
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
     clear_env(TEST_HARNESS_ENV);
-    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -106,16 +101,17 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
     let scratch = root.join("scratch");
     let stack_a = root.join("stack-a");
     let stack_b = root.join("stack-b");
-    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
+    let services = isolated_test_services(&scratch, Path::new("/testbed"));
+    let context = DispatchContext::with_services(&services);
     set_env(TEST_HARNESS_ENV, "true");
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
     let _ = std::fs::remove_dir_all(&root);
     seed_empty_stack(&stack_a)?;
     seed_empty_stack(&stack_b)?;
 
     let entered_a = op_enter(
         &json!({"caller_id": "caller-root-a", "layer_stack_root": stack_a}),
-        DispatchContext::empty(),
+        context,
     )?;
     assert_eq!(entered_a["success"], true);
     assert_eq!(
@@ -126,15 +122,12 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
         eos_layerstack::LayerStack::open(stack_b.clone())?.active_lease_count(),
         0
     );
-    let exited_a = op_exit(
-        &json!({"caller_id": "caller-root-a"}),
-        DispatchContext::empty(),
-    )?;
+    let exited_a = op_exit(&json!({"caller_id": "caller-root-a"}), context)?;
     assert_eq!(exited_a["success"], true);
 
     let entered_b = op_enter(
         &json!({"caller_id": "caller-root-b", "layer_stack_root": stack_b}),
-        DispatchContext::empty(),
+        context,
     )?;
     assert_eq!(entered_b["success"], true);
     assert_eq!(
@@ -146,14 +139,10 @@ fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
         1
     );
 
-    let exited_b = op_exit(
-        &json!({"caller_id": "caller-root-b"}),
-        DispatchContext::empty(),
-    )?;
+    let exited_b = op_exit(&json!({"caller_id": "caller-root-b"}), context)?;
     assert_eq!(exited_b["success"], true);
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = op_test_reset(&json!({}), context);
     clear_env(TEST_HARNESS_ENV);
-    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -173,10 +162,11 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
         manager_root.join("manager.json"),
         r#"{"schema_version":999,"handles":[{"workspace_handle_id":"ghost"}]}"#,
     )?;
-    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
+    let services = isolated_test_services(&scratch, Path::new("/testbed"));
+    let context = DispatchContext::with_services(&services);
     set_env(TEST_HARNESS_ENV, "true");
 
-    let reset = op_test_reset(&json!({}), DispatchContext::empty())?;
+    let reset = op_test_reset(&json!({}), context)?;
 
     assert_eq!(reset["success"], true);
     let rewritten = std::fs::read_to_string(manager_root.join("manager.json"))?;
@@ -185,7 +175,6 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
         json!({"schema_version": 1, "handles": []})
     );
     clear_env(TEST_HARNESS_ENV);
-    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -210,16 +199,16 @@ fn clear_env(key: &str) {
     std::env::remove_var(key);
 }
 
-fn configure_test_isolated_workspace(scratch_root: &Path, workspace_root: &Path) {
-    let mut config = default_isolated_workspace_config();
-    config.enabled = true;
-    config.scratch_root = scratch_root.to_path_buf();
-    config.workspace_root = workspace_root.to_path_buf();
-    configure_isolated_workspace(&config);
-}
-
-fn reset_isolated_workspace_config() {
-    configure_isolated_workspace(&default_isolated_workspace_config());
+fn isolated_test_services(scratch_root: &Path, workspace_root: &Path) -> Services {
+    Services::new(
+        PluginRuntimeConfig::default(),
+        IsolatedWorkspaceConfig {
+            enabled: true,
+            scratch_root: scratch_root.to_path_buf(),
+            workspace_root: workspace_root.to_path_buf(),
+            ..IsolatedWorkspaceConfig::default()
+        },
+    )
 }
 
 fn seed_empty_stack(root: &Path) -> TestResult {

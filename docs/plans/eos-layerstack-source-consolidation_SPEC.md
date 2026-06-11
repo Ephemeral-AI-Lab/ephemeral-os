@@ -1,6 +1,6 @@
 # eos-layerstack Source Consolidation SPEC
 
-Status: Proposed
+Status: Implemented
 Date: 2026-06-11
 Owner: sandbox/crates
 Scope: `sandbox/crates/eos-layerstack/src` and the crate-local
@@ -18,6 +18,9 @@ should make the crate easier to scan by collapsing test-shaped and
 public-surface-shaped splits into real ownership files, deleting junk files, and
 removing duplicate helper code. The LOC budget in Section 6 and the final tree
 in Section 7 are acceptance criteria.
+
+Implemented on 2026-06-11 with 13 Rust source files and 4,637 Rust source LOC
+under `sandbox/crates/eos-layerstack/src`.
 
 ## 2. Baseline
 

@@ -8,6 +8,13 @@ fn config_prd_isolated_workspace_section_deserializes_and_validates() {
 }
 
 #[test]
+fn config_default_isolated_workspace_is_disabled_and_valid() {
+    let config = IsolatedWorkspaceConfig::default();
+    assert!(!config.enabled);
+    config.validate().expect("default config is valid");
+}
+
+#[test]
 fn config_validation_rejects_invalid_isolated_values() {
     let mut cfg = prd_config();
     cfg.scratch_root = PathBuf::from("relative");

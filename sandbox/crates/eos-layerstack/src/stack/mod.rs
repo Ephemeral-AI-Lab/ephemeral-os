@@ -1,12 +1,3 @@
-//! The `LayerStack` storage facade, its merged read view, and the snapshot
-//! lease value type.
-//!
-//! `LayerStack` coordinates the SINGLE linearization point: one mutable
-//! `manifest.json` over immutable content-addressed layer directories, swapped
-//! atomically. A snapshot is O(1) — it acquires a lease and returns the
-//! EXISTING `layer_paths`, NEVER a rendered tree (rendering is the caller's
-//! overlay/projection concern).
-
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsString;
 use std::io::ErrorKind;
@@ -26,8 +17,8 @@ use crate::fs::{
     read_manifest, record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
     validate_layer_ref, write_atomic, write_manifest,
 };
-use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
 use crate::lock::StorageWriterLockLease;
+use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
 use crate::workspace::build_workspace_base;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
@@ -36,19 +27,13 @@ mod whiteout;
 
 use whiteout::{is_kernel_whiteout, write_kernel_whiteout, LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 
-/// Immutable result of an O(1) snapshot: a lease id + the pinned manifest's
-/// existing on-disk layer paths. NEVER a rendered tree.
-///
-// No `Eq`: `timings` holds `f64` (no total ordering).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
     pub lease_id: String,
     pub manifest_version: i64,
     pub root_hash: String,
     pub manifest: Manifest,
-    /// POSIX paths of the manifest's layer directories, in manifest order.
     pub layer_paths: Vec<String>,
-    /// Phase timings keyed `layer_stack.acquire_snapshot.*`.
     pub timings: BTreeMap<String, f64>,
 }
 
@@ -190,29 +175,17 @@ fn shared_registries() -> &'static Mutex<HashMap<String, SharedLeaseRegistry>> {
     REGISTRIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Layered read view over a storage root's manifest (lowest→highest precedence).
-///
-/// Reads resolve through the manifest's layer directories without materializing
-/// a tree; this is the pure-read sibling of the overlay mount.
 #[derive(Debug)]
 pub struct MergedView {
     storage_root: PathBuf,
 }
 
 impl MergedView {
-    /// Bind a merged view to a storage root.
     #[must_use]
     pub const fn new(storage_root: PathBuf) -> Self {
         Self { storage_root }
     }
 
-    /// Read a path's raw bytes through `manifest`. Returns `(bytes, found)`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when `path` is invalid, a manifest layer is
-    /// missing, or a referenced file cannot be read.
-    ///
     pub fn read_bytes(
         &self,
         path: &str,
@@ -247,13 +220,6 @@ impl MergedView {
         Ok((None, false))
     }
 
-    /// Project the merged view of `manifest` into `destination` (full render).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when destination reset, directory creation,
-    /// source layer reads, or file/symlink projection fails.
-    ///
     pub fn project(&self, destination: &Path, manifest: &Manifest) -> Result<(), LayerStackError> {
         remove_path(destination)?;
         std::fs::create_dir_all(destination)?;
@@ -319,7 +285,6 @@ impl MergedView {
     }
 }
 
-/// Filesystem storage metrics for a [`LayerStack`] root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LayerStackStorageMetrics {
     pub layer_dirs: usize,
@@ -327,11 +292,6 @@ pub struct LayerStackStorageMetrics {
     pub storage_bytes: u64,
 }
 
-/// Durable storage facade for one layer-stack root.
-///
-/// Owns the manifest pointer, the lease registry, the merged read view, the
-/// publisher, and the squasher. Holds the dual-layer storage-writer lease for
-/// its lifetime (acquired in [`LayerStack::open`]).
 #[derive(Debug)]
 pub struct LayerStack {
     storage_root: PathBuf,
@@ -341,14 +301,6 @@ pub struct LayerStack {
 }
 
 impl LayerStack {
-    /// Open (creating dirs as needed) a layer stack at `storage_root`, acquiring
-    /// the cross-process writer lease and seeding an empty manifest if absent.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when storage directories, the writer lock, or
-    /// the initial manifest cannot be prepared.
-    ///
     pub fn open(storage_root: PathBuf) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root.join(LAYERS_DIR))?;
         std::fs::create_dir_all(storage_root.join(STAGING_DIR))?;
@@ -363,31 +315,15 @@ impl LayerStack {
         })
     }
 
-    /// The storage root this stack manages.
     #[must_use]
     pub fn storage_root(&self) -> &Path {
         &self.storage_root
     }
 
-    /// Read the current active manifest from `manifest.json`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when `manifest.json` cannot be read or
-    /// decoded.
-    ///
     pub fn read_active_manifest(&self) -> Result<Manifest, LayerStackError> {
         read_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE))
     }
 
-    /// O(1) snapshot: acquire a lease over the active manifest and return its
-    /// existing layer paths. NEVER renders a tree.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the storage lock, active manifest, or
-    /// lease registry cannot be acquired.
-    ///
     pub fn acquire_snapshot(&self, owner_request_id: &str) -> Result<Lease, LayerStackError> {
         let _guard = self.writer_lock.shared()?;
         let manifest = self.read_active_manifest()?;
@@ -411,26 +347,12 @@ impl LayerStack {
         })
     }
 
-    /// Release a snapshot lease by id and GC any now-unreferenced layers.
-    /// Returns `false` if the lease id was unknown.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the writer lock cannot be acquired or
-    /// unreferenced layer cleanup fails.
-    ///
     pub fn release_lease(&mut self, lease_id: &str) -> Result<bool, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let mut leases = lock_shared_registry(&self.leases)?;
         release_lease_locked(&self.storage_root, &mut leases, lease_id)
     }
 
-    /// Whether a squash would reduce manifest depth below `max_depth`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when manifest reads or squash planning fail.
-    ///
     pub fn can_squash(&self, max_depth: usize) -> Result<bool, LayerStackError> {
         let active = self.read_active_manifest()?;
         let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
@@ -440,14 +362,6 @@ impl LayerStack {
             .is_some())
     }
 
-    /// Non-destructively squash foldable runs, swapping a shorter manifest.
-    /// Returns the new manifest, or `None` if nothing was foldable.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when locking, planning, checkpoint creation,
-    /// manifest swapping, lease release, or rollback cleanup fails.
-    ///
     pub fn squash(&mut self, max_depth: usize) -> Result<Option<Manifest>, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
@@ -517,10 +431,6 @@ impl LayerStack {
             (Ok(manifest), Ok(_)) => Ok(manifest),
             (Ok(manifest), Err(release_err)) => {
                 if committed {
-                    // The manifest swap already succeeded, so a lease-release/GC
-                    // failure on this path must not invert the success signal:
-                    // report the committed squash and let the now-unreferenced
-                    // squash lease be reclaimed by the next release/squash.
                     Ok(manifest)
                 } else {
                     Err(release_err)
@@ -529,25 +439,21 @@ impl LayerStack {
         }
     }
 
-    /// Full retention keep-set (GC). DISTINCT from squash barriers.
     #[must_use]
     pub fn leased_layers(&self) -> Vec<LayerRef> {
         lock_shared_registry_recover(&self.leases).leased_layers()
     }
 
-    /// Squash-keep barrier set. DISTINCT from the GC retention set.
     #[must_use]
     pub fn lease_head_layers(&self) -> Vec<LayerRef> {
         lock_shared_registry_recover(&self.leases).lease_head_layers()
     }
 
-    /// Number of active snapshot leases.
     #[must_use]
     pub fn active_lease_count(&self) -> usize {
         lock_shared_registry_recover(&self.leases).active_count()
     }
 
-    /// Walk this stack's storage layout for directory counts and total bytes.
     pub fn storage_metrics(&self) -> Result<LayerStackStorageMetrics, LayerStackError> {
         let root = self.storage_root();
         Ok(LayerStackStorageMetrics {
@@ -557,17 +463,6 @@ impl LayerStack {
         })
     }
 
-    /// Collapse the active manifest back into the bound workspace base.
-    ///
-    /// Refuses to run while any snapshot lease is active. The projection
-    /// materializes the current merged view into `workspace_root`, resets
-    /// layer-stack storage, and rebuilds a fresh base layer from those bytes.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the workspace is invalid, active leases
-    /// exist, projection/replacement fails, or base rebuild fails.
-    ///
     pub fn commit_to_workspace(
         &mut self,
         workspace_root: &Path,
@@ -628,24 +523,10 @@ impl LayerStack {
         outcome.map(|manifest| (manifest, timings))
     }
 
-    /// Read raw bytes through the active manifest.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when the active manifest cannot be read or
-    /// the merged read fails.
-    ///
     pub fn read_bytes(&self, path: &str) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
         self.view.read_bytes(path, &self.read_active_manifest()?)
     }
 
-    /// Read UTF-8 text through the active manifest.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when bytes cannot be read or decoded as
-    /// UTF-8.
-    ///
     pub fn read_text(&self, path: &str) -> Result<(String, bool), LayerStackError> {
         let (bytes, exists) = self.read_bytes(path)?;
         if !exists {
@@ -657,19 +538,6 @@ impl LayerStack {
         Ok((text, true))
     }
 
-    /// Publish accepted changes as one immutable layer under the storage-writer
-    /// guard, returning the active manifest after publish.
-    ///
-    /// This is the policy-blind `LayerStack` half of Phase 3: callers are
-    /// responsible for OCC route/conflict decisions before they hand changes
-    /// here. The CAS byte-identity pieces are implemented in this crate and
-    /// checked against `contract/fixtures/cas/cases.json`.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`LayerStackError`] when locking, staging, layer persistence,
-    /// digest persistence, CAS validation, or manifest writes fail.
-    ///
     pub fn publish_layer(&mut self, changes: &[LayerChange]) -> Result<Manifest, LayerStackError> {
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest()?;
@@ -685,8 +553,6 @@ impl LayerStack {
         let next_version = active.version + 1;
         let (layer_id, staging_dir, layer_dir) = self.allocate_layer_paths(next_version)?;
         std::fs::create_dir_all(&staging_dir)?;
-        // Persist the staged layer (files, then the staging dir) BEFORE the
-        // rename so the renamed layer dir never references unflushed contents.
         if let Err(err) = write_layer_changes(&staging_dir, changes)
             .and_then(|()| fsync_tree_files(&staging_dir))
             .and_then(|()| fsync_dir(&staging_dir))
@@ -699,7 +565,6 @@ impl LayerStack {
             let _ = std::fs::remove_dir_all(&staging_dir);
             return Err(err.into());
         }
-        // fsync the layers/ parent so the renamed layer dir entry is durable.
         if let Some(parent) = layer_dir.parent() {
             fsync_dir(parent)?;
         }

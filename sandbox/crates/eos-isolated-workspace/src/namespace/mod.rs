@@ -1,12 +1,3 @@
-//! The concrete namespace envelope: ns-holder spawn, ns FDs, in-namespace
-//! overlay mount, DNS, the net-ready handshake, cgroups, and holder teardown.
-//!
-//! One concrete runtime with a `stub` switch (the e2e harness env var or unit
-//! tests) — not a port: this crate owns the envelope end to end. The kernel
-//! work happens in dedicated single-threaded children (`eosd ns-holder`,
-//! `eosd ns-runner`) spawned from the current executable; the multithreaded
-//! caller never enters a namespace itself.
-
 use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd};
@@ -30,18 +21,17 @@ use nix::unistd::{close, pipe2, Pid};
 use serde_json::json;
 
 use crate::error::IsolatedError;
-use crate::sessions::WorkspaceHandle;
+use crate::manager::WorkspaceHandle;
 
 #[cfg(target_os = "linux")]
-mod ns_runner;
+mod runner_child;
 #[cfg(target_os = "linux")]
-use ns_runner::{
+use runner_child::{
     clear_cloexec, expect_line, lock_holder_children, ns_fds_from_map, open_inheritable_fd,
     run_ns_runner_configure_dns_child, run_ns_runner_mount_overlay_child, set_nonblocking,
     write_all_fd,
 };
 
-/// Harness switch: when `true`, every kernel-touching step no-ops.
 pub(crate) const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
 pub(crate) fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
@@ -57,7 +47,6 @@ fn env_true(key: &str) -> bool {
         .eq_ignore_ascii_case("true")
 }
 
-/// Kernel-touching namespace operations, stubbed for harness/unit-test runs.
 pub(crate) struct NamespaceRuntime {
     stub: bool,
 }
@@ -73,8 +62,6 @@ impl NamespaceRuntime {
         Self { stub: true }
     }
 
-    /// Spawn `eosd ns-holder`, wait for the `ns-up` handshake token, and
-    /// return its PID.
     pub(crate) fn spawn_ns_holder(
         &self,
         handle: &mut WorkspaceHandle,
@@ -135,7 +122,6 @@ impl NamespaceRuntime {
         }
     }
 
-    /// Open `/proc/<pid>/ns/{user,mnt,pid,net}` FDs for `holder_pid`.
     pub(crate) fn open_ns_fds(
         &self,
         holder_pid: i32,
@@ -163,7 +149,6 @@ impl NamespaceRuntime {
         }
     }
 
-    /// Mount the overlay inside the namespace (via `eosd ns-runner` setns).
     pub(crate) fn mount_overlay(
         &self,
         handle: &WorkspaceHandle,
@@ -201,7 +186,6 @@ impl NamespaceRuntime {
         Ok(())
     }
 
-    /// Configure DNS inside the namespace; returns whether the fallback applied.
     pub(crate) fn configure_dns(
         &self,
         handle: &WorkspaceHandle,
@@ -239,7 +223,6 @@ impl NamespaceRuntime {
         }
     }
 
-    /// Send `net-ready` and await the `ready` token (handshake steps 2-3).
     pub(crate) fn signal_net_ready(
         &self,
         handle: &WorkspaceHandle,
@@ -272,7 +255,6 @@ impl NamespaceRuntime {
         Ok(())
     }
 
-    /// Create the per-workspace cgroup and return its path.
     pub(crate) fn create_cgroup(&self, handle: &WorkspaceHandle) -> Result<PathBuf, IsolatedError> {
         if self.stub {
             return Ok(PathBuf::new());
@@ -286,7 +268,6 @@ impl NamespaceRuntime {
         Ok(path)
     }
 
-    /// SIGTERM (then SIGKILL after `grace_s`) the ns-holder and reap children.
     pub(crate) fn kill_holder(&self, holder_pid: i32, grace_s: f64) -> Result<(), IsolatedError> {
         if self.stub || holder_pid <= 0 {
             return Ok(());

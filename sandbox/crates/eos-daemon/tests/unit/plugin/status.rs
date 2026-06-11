@@ -1,16 +1,14 @@
-use super::super::*;
+use super::super::refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use super::support::*;
 
-use crate::dispatcher::OpTable;
 use crate::wire::Request;
 use serde_json::{json, Value};
 
 #[test]
 fn status_probe_services_sends_health_request() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
+    let daemon = TestDaemon::new();
     let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-ok")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-ok".to_owned(),
         args: json!({
@@ -22,9 +20,11 @@ fn status_probe_services_sends_health_request() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (_service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.generic.hover")?;
+        attach_service_snapshot_for_tests(daemon.plugin(), "plugin.generic.hover")?;
     let expected_manifest_key = manifest_key.clone();
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read health request")?;
@@ -40,7 +40,7 @@ fn status_probe_services_sends_health_request() -> TestResult {
         Ok(())
     });
 
-    let status = table.dispatch(&Request {
+    let status = daemon.dispatch(&Request {
         op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-health-ok".to_owned(),
         args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
@@ -61,10 +61,9 @@ fn status_probe_services_sends_health_request() -> TestResult {
 
 #[test]
 fn status_probe_failure_drops_connected_service() -> TestResult {
-    let _guard = PluginTestGuard::new()?;
-    let table = OpTable::with_builtins();
+    let daemon = TestDaemon::new();
     let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-fail")?;
-    let ensure = table.dispatch(&Request {
+    let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-fail".to_owned(),
         args: json!({
@@ -76,9 +75,11 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    daemon
+        .plugin()
+        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.generic.hover")?;
+        attach_service_snapshot_for_tests(daemon.plugin(), "plugin.generic.hover")?;
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read health request")?;
         assert_eq!(request.op, WORKSPACE_SNAPSHOT_REFRESH_OP);
@@ -90,7 +91,7 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
         Ok(())
     });
 
-    let status = table.dispatch(&Request {
+    let status = daemon.dispatch(&Request {
         op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-health-fail".to_owned(),
         args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
@@ -112,7 +113,7 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
         "stopped"
     );
     {
-        let state = lock_state()?;
+        let state = daemon.plugin().lock_state()?;
         assert!(
             !state.service_snapshots.contains_key(&service_instance_id),
             "failed health probe should release retained snapshot"

@@ -28,13 +28,6 @@ pub struct PreparedChangeset {
     pub atomic: bool,
 }
 
-pub trait CommitTransactionPort: Send {
-    fn revalidate_and_publish(
-        &self,
-        combined: &PreparedChangeset,
-    ) -> Result<ChangesetResult, PublishConflict>;
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublishConflict {
     pub observed_version: Option<u64>,
@@ -51,10 +44,10 @@ enum QueueItem {
     Stop,
 }
 
-pub struct CommitQueue<T: CommitTransactionPort + 'static> {
+pub struct CommitQueue {
     sender: mpsc::Sender<QueueItem>,
     receiver: Mutex<Option<mpsc::Receiver<QueueItem>>>,
-    transaction: Mutex<Option<T>>,
+    transaction: Mutex<Option<CommitTransaction>>,
     handle: Option<std::thread::JoinHandle<()>>,
     max_batch_size: usize,
     batch_window_s: f64,
@@ -62,16 +55,16 @@ pub struct CommitQueue<T: CommitTransactionPort + 'static> {
     closed: bool,
 }
 
-struct CommitWorker<T: CommitTransactionPort + 'static> {
+struct CommitWorker {
     receiver: mpsc::Receiver<QueueItem>,
-    transaction: T,
+    transaction: CommitTransaction,
     max_batch_size: usize,
     batch_window_s: f64,
     max_cas_retries: u32,
 }
 
-impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
-    pub fn new(transaction: T) -> Self {
+impl CommitQueue {
+    pub fn new(transaction: CommitTransaction) -> Self {
         Self::with_config(
             transaction,
             MAX_BATCH_SIZE,
@@ -81,7 +74,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     }
 
     pub fn with_config(
-        transaction: T,
+        transaction: CommitTransaction,
         max_batch_size: usize,
         batch_window_s: f64,
         max_cas_retries: u32,
@@ -178,7 +171,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
         Ok(receiver)
     }
 
-    fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
+    fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>, max_cas_retries: u32) {
         let commit_start = Instant::now();
         let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
             return;
@@ -219,7 +212,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
     }
 }
 
-impl<T: CommitTransactionPort + 'static> CommitWorker<T> {
+impl CommitWorker {
     fn run(self) {
         while let Ok(first) = self.receiver.recv() {
             let QueueItem::Work(first) = first else {
@@ -232,7 +225,7 @@ impl<T: CommitTransactionPort + 'static> CommitWorker<T> {
                 stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
             }
             for batch in disjoint_batches(items) {
-                CommitQueue::<T>::commit_batch(&self.transaction, batch, self.max_cas_retries);
+                CommitQueue::commit_batch(&self.transaction, batch, self.max_cas_retries);
             }
             if stop_seen {
                 return;
@@ -382,8 +375,8 @@ pub struct CommitTransaction {
     pub root: PathBuf,
 }
 
-impl CommitTransactionPort for CommitTransaction {
-    fn revalidate_and_publish(
+impl CommitTransaction {
+    pub fn revalidate_and_publish(
         &self,
         combined: &PreparedChangeset,
     ) -> std::result::Result<ChangesetResult, PublishConflict> {
@@ -816,7 +809,6 @@ fn commit_timings(
 fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
 }
-
 
 #[cfg(test)]
 #[path = "../../tests/unit/commit/queue.rs"]

@@ -18,25 +18,13 @@ use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::runtime::context::DispatchContext;
+use crate::services::workspace::{DaemonIsolatedState, WorkspaceRuntime};
 
 use super::{error_json, require_arg};
-#[cfg(test)]
-pub(crate) use crate::services::workspace::configure_isolated_workspace;
-#[cfg(test)]
-use crate::services::workspace::default_isolated_workspace_config;
-use crate::services::workspace::{
-    ensure_state, lock_state_cell, reset_test_manager_file, with_state, DaemonIsolatedState,
-};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
 
-// Dispatcher op handlers share the `Result<Value, DaemonError>` ABI even when
-// isolated-workspace failures are represented as structured JSON responses.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
-pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+pub(crate) fn op_enter(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let caller_id = match require_arg(args, "caller_id") {
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
@@ -45,6 +33,7 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
         Ok(root) => PathBuf::from(root),
         Err(error) => return Ok(error),
     };
+    let workspace = &context.require_services()?.workspace;
     let active_command_sessions = eos_command_ops::active_command_sessions_for_caller(&caller_id);
     if active_command_sessions > 0 {
         return Ok(error_json(
@@ -53,8 +42,8 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
             json!({"active_command_sessions": active_command_sessions}),
         ));
     }
-    match ensure_state(&root).and_then(|()| {
-        with_state(|state| {
+    match workspace.ensure_state(&root).and_then(|()| {
+        workspace.with_state(|state| {
             let snapshot = state.acquire_snapshot(&caller_id)?;
             let lease_id = snapshot.lease_id.clone();
             match state.manager.enter(&caller_id, snapshot) {
@@ -77,32 +66,28 @@ pub(crate) fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Va
     }
 }
 
-pub(crate) fn op_exit(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+pub(crate) fn op_exit(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let caller_id = match require_arg(args, "caller_id") {
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
     };
     let grace_s = args.get("grace_s").and_then(Value::as_f64);
+    let workspace = &context.require_services()?.workspace;
     // Exit is the per-caller workspace-run teardown: discard the caller's
     // isolated command sessions, then tear down its namespace + lease. The
     // isolated exit result carries this op's response shape.
-    crate::ops::cancel::cancel_workspace_runs_by_caller_id(&caller_id, grace_s)
+    crate::ops::cancel::cancel_workspace_runs_by_caller_id(workspace, &caller_id, grace_s)
         .isolated
         .map_or_else(|error| Ok(error_payload(&error)), Ok)
 }
 
-// Dispatcher op handlers share the fallible ABI even though status misses are
-// represented as `{success: true, open: false}`.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
-pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
+pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let caller_id = match require_arg(args, "caller_id") {
         Ok(caller_id) => caller_id,
         Err(error) => return Ok(error),
     };
-    match with_state(|state| Ok(state.manager.get_handle(&caller_id))) {
+    let workspace = &context.require_services()?.workspace;
+    match workspace.with_state(|state| Ok(state.manager.get_handle(&caller_id))) {
         Ok(Some(handle)) => Ok(json!({
             "success": true,
             "open": true,
@@ -117,32 +102,21 @@ pub(crate) fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<V
     }
 }
 
-// Dispatcher op handlers share the fallible ABI even though disabled state is
-// represented as an empty open-caller list.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
 pub(crate) fn op_list_open(
     _args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    match with_state(|state| Ok(state.manager.list_open_callers())) {
+    let workspace = &context.require_services()?.workspace;
+    match workspace.with_state(|state| Ok(state.manager.list_open_callers())) {
         Ok(open_caller_ids) => Ok(json!({"success": true, "open_caller_ids": open_caller_ids})),
         Err(IsolatedError::FeatureDisabled) => Ok(json!({"success": true, "open_caller_ids": []})),
         Err(error) => Ok(error_payload(&error)),
     }
 }
 
-// Dispatcher op handlers share the fallible ABI even though harness gating is
-// represented as a structured JSON error.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
 pub(crate) fn op_test_reset(
     _args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     if !env_true(TEST_HARNESS_ENV) {
         return Ok(error_json(
@@ -151,8 +125,9 @@ pub(crate) fn op_test_reset(
             json!({}),
         ));
     }
+    let workspace = &context.require_services()?.workspace;
     let exited_callers = {
-        let mut guard = lock_state_cell();
+        let mut guard = workspace.lock_state_cell();
         let exited_callers = if let Some(state) = guard.as_mut() {
             let callers = state.manager.list_open_callers();
             for caller_id in &callers {
@@ -168,11 +143,14 @@ pub(crate) fn op_test_reset(
         *guard = None;
         exited_callers
     };
-    reset_test_manager_file();
+    workspace.reset_test_manager_file();
     Ok(json!({"success": true, "reset": true, "exited_callers": exited_callers}))
 }
 
-pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandBinding> {
+pub(crate) fn command_handle_for_args(
+    workspace: &WorkspaceRuntime,
+    args: &Value,
+) -> Option<CommandBinding> {
     let caller_id = args
         .get("caller_id")
         .and_then(Value::as_str)
@@ -183,7 +161,7 @@ pub(crate) fn command_handle_for_args(args: &Value) -> Option<CommandBinding> {
         return None;
     }
     let (layer_stack_root, handle) = {
-        let guard = lock_state_cell();
+        let guard = workspace.lock_state_cell();
         guard.as_ref().and_then(|state| {
             state
                 .manager
@@ -211,12 +189,12 @@ fn command_handle_from(layer_stack_root: &Path, handle: WorkspaceHandle) -> Comm
     }
 }
 
-pub(crate) fn caller_has_active_handle(caller_id: &str) -> bool {
+pub(crate) fn caller_has_active_handle(workspace: &WorkspaceRuntime, caller_id: &str) -> bool {
     let caller_id = caller_id.trim();
     if caller_id.is_empty() {
         return false;
     }
-    let guard = lock_state_cell();
+    let guard = workspace.lock_state_cell();
     guard
         .as_ref()
         .and_then(|state| state.manager.get_handle(caller_id))
@@ -228,8 +206,12 @@ pub(crate) fn caller_has_active_handle(caller_id: &str) -> bool {
 /// isolated-teardown primitive shared by `op_exit` and the workspace-run cancel
 /// surface. Returns `Err(IsolatedError::NotOpen)` when the caller is not
 /// isolated (the cancel surface treats that as a no-op).
-pub(crate) fn exit_isolated(caller_id: &str, grace_s: Option<f64>) -> Result<Value, IsolatedError> {
-    with_state(|state| {
+pub(crate) fn exit_isolated(
+    workspace: &WorkspaceRuntime,
+    caller_id: &str,
+    grace_s: Option<f64>,
+) -> Result<Value, IsolatedError> {
+    workspace.with_state(|state| {
         let outcome = state.manager.exit(caller_id, grace_s)?;
         Ok(exit_response(state, outcome))
     })
@@ -257,8 +239,8 @@ fn exit_response(state: &mut DaemonIsolatedState, outcome: ExitOutcome) -> Value
 
 /// Exit every open isolated workspace and reap orphaned resources (the
 /// whole-sandbox cancel sweep). Returns the number of callers exited.
-pub(crate) fn exit_all_and_reap(grace_s: Option<f64>) -> usize {
-    let mut guard = lock_state_cell();
+pub(crate) fn exit_all_and_reap(workspace: &WorkspaceRuntime, grace_s: Option<f64>) -> usize {
+    let mut guard = workspace.lock_state_cell();
     let Some(state) = guard.as_mut() else {
         return 0;
     };
@@ -272,8 +254,8 @@ pub(crate) fn exit_all_and_reap(grace_s: Option<f64>) -> usize {
     callers.len()
 }
 
-pub(crate) fn ttl_sweep() -> usize {
-    let mut guard = lock_state_cell();
+pub(crate) fn ttl_sweep(workspace: &WorkspaceRuntime) -> usize {
+    let mut guard = workspace.lock_state_cell();
     let Some(state) = guard.as_mut() else {
         return 0;
     };
@@ -295,13 +277,15 @@ pub(crate) fn ttl_sweep() -> usize {
 }
 
 /// Bump the caller's isolated-workspace TTL liveness (file/command activity).
-pub(crate) fn touch_isolated(caller_id: &str) {
-    let mut guard = lock_state_cell();
+pub(crate) fn touch_isolated(workspace: &WorkspaceRuntime, caller_id: &str) {
+    let mut guard = workspace.lock_state_cell();
     if let Some(state) = guard.as_mut() {
         state.manager.touch(caller_id);
     }
 }
 
+/// Serialize tests that toggle the process-wide
+/// `EOS_ISOLATED_WORKSPACE_TEST_HARNESS` environment variable.
 #[cfg(test)]
 pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
