@@ -1,7 +1,4 @@
-//! Per-tool namespace runner for fresh namespace and setns execution.
-//!
-//! The daemon execs this single-threaded child for namespace syscalls, then the
-//! runner spawns the requested tool in a cancellable process group.
+//! Per-tool namespace runner.
 
 use crate::protocol::{RunMode, RunRequest, RunResult};
 #[cfg(target_os = "linux")]
@@ -19,7 +16,6 @@ pub mod config {
     pub use eos_config::configs::runner::*;
 }
 
-/// Failures returned by the namespace runner.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum RunnerError {
@@ -49,19 +45,6 @@ impl From<eos_overlay::OverlayError> for RunnerError {
     }
 }
 
-/// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].
-///
-/// This is the runner's single entry point: the daemon hands a fully-resolved
-/// [`RunRequest`] (already knowing whether it wants a fresh namespace or a setns
-/// into an existing one) and the runner performs the syscalls on this
-/// single-threaded caller.
-///
-/// Fresh-ns mode mounts the workspace overlay after `unshare`.
-///
-/// # Errors
-///
-/// Returns [`RunnerError`] when the request is invalid for the selected mode,
-/// namespace setup fails, overlay mounting fails, or child execution fails.
 pub fn run(request: &RunRequest, config: &config::RunnerConfig) -> Result<RunResult, RunnerError> {
     match request.mode {
         RunMode::FreshNs => fresh_ns::run_fresh_ns(request, config),

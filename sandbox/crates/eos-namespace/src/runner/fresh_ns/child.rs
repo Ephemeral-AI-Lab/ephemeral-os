@@ -1,5 +1,3 @@
-//! Child-process wait loops and process-group liveness probes for fresh-ns mode.
-
 #[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(target_os = "linux")]
@@ -89,10 +87,6 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
         .unwrap_or(128)
 }
 
-/// True when a process other than the runner (`self_pid`) shares `pgid` and is
-/// not a zombie. When `proc_dir` is set it enumerates through that pre-opened
-/// `/proc` handle so the model-shell `/proc` mount mask cannot hide live
-/// background members from the scope-wait; otherwise it reads `/proc` by path.
 #[cfg(target_os = "linux")]
 fn process_group_has_other_live_members(
     pgid: i32,
