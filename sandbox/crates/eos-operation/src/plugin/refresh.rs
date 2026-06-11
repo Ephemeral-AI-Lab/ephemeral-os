@@ -441,7 +441,7 @@ fn probe_connected_service_health(
         manifest_key: target.manifest_key.clone(),
     };
     let message = PpcMessage {
-        message_id: format!("api.plugin.status:health:{index}"),
+        message_id: format!("sandbox.plugin.status:health:{index}"),
         direction: PpcDirection::Request,
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,

@@ -1,4 +1,4 @@
-//! Host-neutral `api.plugin.ensure` argument parsing: a manifest + caller args
+//! Host-neutral `sandbox.plugin.ensure` argument parsing: a manifest + caller args
 //! become a [`ParsedEnsure`] (operation routes + service process specs). Reading
 //! the PPC socket root from the daemon runtime config stays daemon-side and is
 //! threaded in as `ppc_socket_root`; everything here is pure on its inputs.
@@ -24,7 +24,7 @@ pub fn validate_plugin_caller_fields(args: &Value) -> Result<(), PluginError> {
         .map_err(|err| PluginError::Ppc(err.message()))
 }
 
-/// Result of parsing one `api.plugin.ensure` call: routes + service specs the
+/// Result of parsing one `sandbox.plugin.ensure` call: routes + service specs the
 /// daemon registers into its live `LoadedPluginRuntime`.
 pub struct ParsedEnsure {
     pub plugin_id: String,
@@ -332,5 +332,5 @@ fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginErro
 }
 
 #[cfg(test)]
-#[path = "tests/ensure_args.rs"]
+#[path = "../../tests/plugin/ensure_args.rs"]
 mod tests;

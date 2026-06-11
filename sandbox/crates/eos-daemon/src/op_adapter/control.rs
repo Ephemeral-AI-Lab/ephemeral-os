@@ -15,7 +15,7 @@ use crate::DispatchContext;
 
 use super::to_wire_value;
 
-/// `api.runtime.ready` — binary readiness plus the three plane probes
+/// `sandbox.runtime.ready` — binary readiness plus the three plane probes
 /// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.
 pub(crate) fn op_runtime_ready(
     input: RuntimeReadyInput,
@@ -65,7 +65,7 @@ pub(crate) fn op_runtime_ready(
     }))
 }
 
-/// `api.v1.cancel` — cancel one in-flight invocation id.
+/// `sandbox.call.cancel` — cancel one in-flight invocation id.
 pub(crate) fn op_cancel(input: CancelInvocationInput, context: DispatchContext<'_>) -> Value {
     let invocation_id = input.invocation_id.to_string();
     let (cancelled, cleanup_done) =
@@ -86,7 +86,7 @@ pub(crate) fn op_cancel(input: CancelInvocationInput, context: DispatchContext<'
     })
 }
 
-/// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.
+/// `sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.
 pub(crate) fn op_heartbeat(input: HeartbeatInput, context: DispatchContext<'_>) -> Value {
     let invocation_ids: Vec<String> = input
         .invocation_ids
@@ -102,7 +102,7 @@ pub(crate) fn op_heartbeat(input: HeartbeatInput, context: DispatchContext<'_>) 
     })
 }
 
-/// `api.v1.inflight_count` — count background daemon invocations for one agent.
+/// `sandbox.call.count` — count background daemon invocations for one agent.
 pub(crate) fn op_inflight_count(input: CallerCountInput, context: DispatchContext<'_>) -> Value {
     let caller_id = input.caller.to_string();
     let count = context

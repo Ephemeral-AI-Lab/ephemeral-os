@@ -119,7 +119,7 @@ impl InFlightRegistry {
     }
 
     /// Touch `last_seen` for every known id; returns how many were touched.
-    /// Backs `api.v1.heartbeat`.
+    /// Backs `sandbox.call.heartbeat`.
     pub fn heartbeat(&self, invocation_ids: &[String]) -> usize {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
@@ -134,7 +134,7 @@ impl InFlightRegistry {
     }
 
     /// Count live background invocations for `caller_id`. Backs
-    /// `api.v1.inflight_count`.
+    /// `sandbox.call.count`.
     pub fn count_by_caller(&self, caller_id: &str) -> usize {
         self.lock_state()
             .values()

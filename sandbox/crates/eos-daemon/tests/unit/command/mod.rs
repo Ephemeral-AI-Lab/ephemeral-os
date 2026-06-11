@@ -60,19 +60,24 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
     };
 
     assert_eq!(
-        exec_timeout_seconds(&parse_exec_input(json!({"cmd": "true"})).unwrap(), &config),
+        exec_timeout_seconds(
+            &parse_exec_input(json!({"cmd": "true"})).expect("valid command input"),
+            &config
+        ),
         600.0
     );
     assert_eq!(
         exec_timeout_seconds(
-            &parse_exec_input(json!({"cmd": "true", "timeout": 12})).unwrap(),
+            &parse_exec_input(json!({"cmd": "true", "timeout": 12}))
+                .expect("valid command input with timeout"),
             &config
         ),
         12.0
     );
     assert_eq!(
         exec_timeout_seconds(
-            &parse_exec_input(json!({"cmd": "true", "timeout_seconds": 34})).unwrap(),
+            &parse_exec_input(json!({"cmd": "true", "timeout_seconds": 34}))
+                .expect("valid command input with timeout_seconds"),
             &config
         ),
         34.0
@@ -80,7 +85,7 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
     assert_eq!(
         exec_timeout_seconds(
             &parse_exec_input(json!({"cmd": "true", "timeout": 12, "timeout_seconds": 34}))
-                .unwrap(),
+                .expect("valid command input with both timeout spellings"),
             &config
         ),
         12.0

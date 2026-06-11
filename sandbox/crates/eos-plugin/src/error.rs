@@ -21,7 +21,7 @@ pub enum PluginError {
     #[error("plugin op {0} already has a different handler registered")]
     Conflict(String),
 
-    /// `api.plugin.ensure` failed to load or warm a plugin runtime, or the
+    /// `sandbox.plugin.ensure` failed to load or warm a plugin runtime, or the
     /// `layer_stack_root` was missing / mismatched against the workspace binding.
     #[error("plugin ensure failed: {0}")]
     Ensure(String),

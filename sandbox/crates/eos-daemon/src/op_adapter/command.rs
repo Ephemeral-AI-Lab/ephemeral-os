@@ -43,7 +43,7 @@ enum CommandOpError {
     Command(#[from] CommandSessionError),
 }
 
-/// `api.v1.exec_command` — command-session start contract.
+/// `sandbox.command.exec` — command-session start contract.
 pub(crate) fn op_exec_command(
     input: ExecCommandInput,
     context: DispatchContext<'_>,

@@ -63,11 +63,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-18">op_runtime_ready</a> (input : RuntimeReadyInput , _context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
-  <p class="docstring">`api.runtime.ready` — binary readiness plus the three plane probes<br>(`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</p>
+  <p class="docstring">`sandbox.runtime.ready` — binary readiness plus the three plane probes<br>(`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.runtime.ready` — binary readiness plus the three plane probes</span>
+  <pre><code><span class="rs-comment">/// `sandbox.runtime.ready` — binary readiness plus the three plane probes</span>
 <span class="rs-comment">/// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-18">op_runtime_ready</a>(
     input: <span class="rs-type">RuntimeReadyInput</span>,
@@ -127,11 +127,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-68">op_cancel</a> (input : CancelInvocationInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
-  <p class="docstring">`api.v1.cancel` — cancel one in-flight invocation id.</p>
+  <p class="docstring">`sandbox.call.cancel` — cancel one in-flight invocation id.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.cancel` — cancel one in-flight invocation id.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.call.cancel` — cancel one in-flight invocation id.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-68">op_cancel</a>(input: <span class="rs-type">CancelInvocationInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> invocation_id = input.invocation_id.to_string();
     <span class="rs-kw">let</span> (cancelled, cleanup_done) =
@@ -162,11 +162,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-89">op_heartbeat</a> (input : HeartbeatInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
-  <p class="docstring">`api.v1.heartbeat` — touch `last_seen` for the given invocation ids.</p>
+  <p class="docstring">`sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-89">op_heartbeat</a>(input: <span class="rs-type">HeartbeatInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> invocation_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = input
         .invocation_ids
@@ -192,11 +192,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-105">op_inflight_count</a> (input : CallerCountInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code>
-  <p class="docstring">`api.v1.inflight_count` — count background daemon invocations for one agent.</p>
+  <p class="docstring">`sandbox.call.count` — count background daemon invocations for one agent.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.inflight_count` — count background daemon invocations for one agent.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.call.count` — count background daemon invocations for one agent.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-105">op_inflight_count</a>(input: <span class="rs-type">CallerCountInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> caller_id = input.caller.to_string();
     <span class="rs-kw">let</span> count = context
@@ -321,7 +321,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::to_wire_value;
 
-<span class="rs-comment">/// `api.runtime.ready` — binary readiness plus the three plane probes</span>
+<span class="rs-comment">/// `sandbox.runtime.ready` — binary readiness plus the three plane probes</span>
 <span class="rs-comment">/// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-runtime-ready-18">op_runtime_ready</a>(
     input: <span class="rs-type">RuntimeReadyInput</span>,
@@ -371,7 +371,7 @@
     }))
 }
 
-<span class="rs-comment">/// `api.v1.cancel` — cancel one in-flight invocation id.</span>
+<span class="rs-comment">/// `sandbox.call.cancel` — cancel one in-flight invocation id.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-cancel-68">op_cancel</a>(input: <span class="rs-type">CancelInvocationInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> invocation_id = input.invocation_id.to_string();
     <span class="rs-kw">let</span> (cancelled, cleanup_done) =
@@ -392,7 +392,7 @@
     })
 }
 
-<span class="rs-comment">/// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.</span>
+<span class="rs-comment">/// `sandbox.call.heartbeat` — touch `last_seen` for the given invocation ids.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-heartbeat-89">op_heartbeat</a>(input: <span class="rs-type">HeartbeatInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> invocation_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = input
         .invocation_ids
@@ -408,7 +408,7 @@
     })
 }
 
-<span class="rs-comment">/// `api.v1.inflight_count` — count background daemon invocations for one agent.</span>
+<span class="rs-comment">/// `sandbox.call.count` — count background daemon invocations for one agent.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-control-rs.html#item-fn-op-inflight-count-105">op_inflight_count</a>(input: <span class="rs-type">CallerCountInput</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
     <span class="rs-kw">let</span> caller_id = input.caller.to_string();
     <span class="rs-kw">let</span> count = context

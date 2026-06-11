@@ -185,7 +185,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
 #[test]
 fn unknown_op_uses_structured_contract() {
     let request = Request {
-        op: "api.v1.does_not_exist".to_owned(),
+        op: "sandbox.does_not_exist".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({}),
     };
@@ -199,7 +199,7 @@ fn unknown_op_uses_structured_contract() {
     );
     assert_eq!(
         response["error"]["details"]["op"],
-        Value::String("api.v1.does_not_exist".to_owned())
+        Value::String("sandbox.does_not_exist".to_owned())
     );
 }
 

@@ -17,7 +17,7 @@ pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     Ok(Some(pool))
 }
 
-/// Poll `api.layer_metrics` until `active_leases` settles at `expected`,
+/// Poll `sandbox.checkpoint.layer_metrics` until `active_leases` settles at `expected`,
 /// returning the metrics payload. Layer-lease accounting is asynchronous on the
 /// release path, so callers must poll rather than read it instantaneously.
 ///
@@ -67,7 +67,7 @@ pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
     }
 }
 
-/// Poll `api.v1.command_session_count` until `count` settles at `expected`.
+/// Poll `sandbox.command.count` until `count` settles at `expected`.
 ///
 /// # Errors
 /// Returns an error if the count op fails or never reaches `expected` within

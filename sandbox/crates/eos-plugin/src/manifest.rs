@@ -16,7 +16,7 @@ pub const PACKAGE_SHA256_MARKER: &str = ".package-sha256";
 /// Digest marker written after setup completes successfully.
 pub const SETUP_SHA256_MARKER: &str = ".setup-sha256";
 
-/// Top-level plugin manifest consumed by `api.plugin.ensure`.
+/// Top-level plugin manifest consumed by `sandbox.plugin.ensure`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PluginManifest {

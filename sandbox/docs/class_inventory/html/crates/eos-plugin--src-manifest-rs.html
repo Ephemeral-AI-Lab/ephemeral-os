@@ -63,7 +63,7 @@
     <span class="visibility">pub</span>
   </div>
   <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a></code>
-  <p class="docstring">Top-level plugin manifest consumed by `api.plugin.ensure`.</p>
+  <p class="docstring">Top-level plugin manifest consumed by `sandbox.plugin.ensure`.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_version</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>package</td><td><code><a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a></code></td></tr><tr><td>pub</td><td>setup</td><td><code>Option &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> &gt;</code></td></tr><tr><td>pub</td><td>services</td><td><code>Vec &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> &gt;</code></td></tr><tr><td>pub</td><td>operations</td><td><code>Vec &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-37"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><p class="docstring">Validate manifest identity, service uniqueness, and operation references.<br># Errors<br>Returns [`PluginError::Manifest`] when identifiers are malformed, required<br>fields are empty, services or operations are duplicated, or an operation<br>references an unknown service.</p><details class="function-source">
   <summary>code</summary>
@@ -408,7 +408,7 @@
 <span class="rs-comment">/// Digest marker written after setup completes successfully.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">SETUP_SHA256_MARKER</span>: &amp;str = &quot;.setup-sha256&quot;;
 
-<span class="rs-comment">/// Top-level plugin manifest consumed by `api.plugin.ensure`.</span>
+<span class="rs-comment">/// Top-level plugin manifest consumed by `sandbox.plugin.ensure`.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
 #[serde(deny_unknown_fields)]
 <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {

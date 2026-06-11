@@ -158,10 +158,10 @@
         <span class="rs-kw">true</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-heartbeat-121"><td>method</td><td>heartbeat</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-121">heartbeat</a> (&amp; self , invocation_ids : &amp; [String]) -&gt; usize</code><p class="docstring">Touch `last_seen` for every known id; returns how many were touched.<br>Backs `api.v1.heartbeat`.</p><details class="function-source">
+</details></td></tr><tr id="method-heartbeat-121"><td>method</td><td>heartbeat</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-121">heartbeat</a> (&amp; self , invocation_ids : &amp; [String]) -&gt; usize</code><p class="docstring">Touch `last_seen` for every known id; returns how many were touched.<br>Backs `sandbox.call.heartbeat`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Touch `last_seen` for every known id; returns how many were touched.</span>
-    <span class="rs-comment">/// Backs `api.v1.heartbeat`.</span>
+    <span class="rs-comment">/// Backs `sandbox.call.heartbeat`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-121">heartbeat</a>(&amp;<span class="rs-self">self</span>, invocation_ids: &amp;[<span class="rs-type">String</span>]) -&gt; usize {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-59">lock_state</a>();
         <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-171">monotonic_seconds</a>();
@@ -175,10 +175,10 @@
         touched
     }
 </code></pre>
-</details></td></tr><tr id="method-count-by-caller-136"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-136">count_by_caller</a> (&amp; self , caller_id : &amp; str) -&gt; usize</code><p class="docstring">Count live background invocations for `caller_id`. Backs<br>`api.v1.inflight_count`.</p><details class="function-source">
+</details></td></tr><tr id="method-count-by-caller-136"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-136">count_by_caller</a> (&amp; self , caller_id : &amp; str) -&gt; usize</code><p class="docstring">Count live background invocations for `caller_id`. Backs<br>`sandbox.call.count`.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Count live background invocations for `caller_id`. Backs</span>
-    <span class="rs-comment">/// `api.v1.inflight_count`.</span>
+    <span class="rs-comment">/// `sandbox.call.count`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-136">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; usize {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-59">lock_state</a>()
             .values()
@@ -388,7 +388,7 @@
     }
 
     <span class="rs-comment">/// Touch `last_seen` for every known id; returns how many were touched.</span>
-    <span class="rs-comment">/// Backs `api.v1.heartbeat`.</span>
+    <span class="rs-comment">/// Backs `sandbox.call.heartbeat`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-121">heartbeat</a>(&amp;<span class="rs-self">self</span>, invocation_ids: &amp;[<span class="rs-type">String</span>]) -&gt; usize {
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-59">lock_state</a>();
         <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-171">monotonic_seconds</a>();
@@ -403,7 +403,7 @@
     }
 
     <span class="rs-comment">/// Count live background invocations for `caller_id`. Backs</span>
-    <span class="rs-comment">/// `api.v1.inflight_count`.</span>
+    <span class="rs-comment">/// `sandbox.call.count`.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-136">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; usize {
         <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-59">lock_state</a>()
             .values()

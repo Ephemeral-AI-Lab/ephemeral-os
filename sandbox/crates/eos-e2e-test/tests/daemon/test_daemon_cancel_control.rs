@@ -1,4 +1,4 @@
-//! `api.v1.cancel` response: unknown-id done response + live in-flight cancel.
+//! `sandbox.call.cancel` response: unknown-id done response + live in-flight cancel.
 
 use std::time::{Duration, Instant};
 

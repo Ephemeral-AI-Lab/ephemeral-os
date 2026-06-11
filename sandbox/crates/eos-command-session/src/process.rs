@@ -372,7 +372,7 @@ fn open_pty_pair() -> io::Result<(File, File)> {
     unlockpt(&master).map_err(io::Error::from)?;
 
     #[cfg(target_os = "linux")]
-    let slave = ioctl_tiocgptpeer(&master, flags).map_err(io::Error::from)?;
+    let slave = File::from(ioctl_tiocgptpeer(&master, flags).map_err(io::Error::from)?);
     #[cfg(not(target_os = "linux"))]
     let slave = {
         let slave_name = ptsname(&master, Vec::new()).map_err(io::Error::from)?;

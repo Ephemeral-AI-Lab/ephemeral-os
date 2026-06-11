@@ -44,7 +44,7 @@ enum FileOpError {
     File(#[from] FileOpsError),
 }
 
-/// `api.v1.read_file` — shared public read op, routed by active workspace mode.
+/// `sandbox.file.read` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(
     input: ReadFileInput,
     context: DispatchContext<'_>,
@@ -68,7 +68,7 @@ pub(crate) fn op_read_file(
     Ok(read_response(outcome))
 }
 
-/// `api.v1.write_file` — shared public write op, routed by active workspace mode.
+/// `sandbox.file.write` — shared public write op, routed by active workspace mode.
 pub(crate) fn op_write_file(
     input: WriteFileInput,
     context: DispatchContext<'_>,
@@ -98,7 +98,7 @@ pub(crate) fn op_write_file(
     Ok(to_wire_value(outcome))
 }
 
-/// `api.v1.edit_file` — shared public edit op, routed by active workspace mode.
+/// `sandbox.file.edit` — shared public edit op, routed by active workspace mode.
 pub(crate) fn op_edit_file(
     input: EditFileInput,
     context: DispatchContext<'_>,

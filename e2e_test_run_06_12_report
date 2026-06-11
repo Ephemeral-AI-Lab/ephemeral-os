@@ -1,0 +1,22 @@
+# e2e test run report - 2026-06-12
+
+## Run 1
+- Command: `cargo test -p eos-e2e-test -- --list`
+- Result: FAIL
+- Issue: Compile failed before listing tests. `sandbox/crates/eos-e2e-test/tests/eos-layerstack/test_eos_layerstack_lease_and_squash_pinning.rs:221` referenced `std::catalog::Range<usize>`, but `std::catalog` does not exist.
+- Finding: The failure is a local typo in the layerstack test helper signature, not a live Docker/runtime issue.
+- Fix for next iteration: Replace the type path with `std::ops::Range<usize>`.
+
+## Run 2
+- Command: `cargo test -p eos-e2e-test -- --list`
+- Result: PASS
+- Issue: None in the compile/list gate after the `std::ops::Range<usize>` fix.
+- Finding: Cargo listed the `eos-e2e-test` crate unit test plus all nine integration test binaries: `core`, `daemon`, `eos-layerstack`, `ephemeral_workspace`, `plugin`, `pressure`, `workspace-publish-gate`, `workspace-runtime-command-session`, and `workspace-runtime-isolated`.
+- Fix for next iteration: Proceed to the serial Docker-backed live run with `--features e2e`.
+
+## Run 3
+- Command: `EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_E2E_PLATFORM=linux/amd64 cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture`
+- Result: FAIL
+- Issue: The live run stopped in `--test core`. `test_core_direct_file_contracts::read_max_bytes_guard` and `test_core_direct_file_contracts::write_max_file_bytes_guard` failed because the daemon returned `error.code = "invalid_envelope"` while the tests expected `"invalid_request"`.
+- Finding: The failure is deterministic and limited to oversize guard expectations in the core direct-file contract tests; 29 other core tests passed before Cargo stopped.
+- Fix for next iteration: Trace the envelope and request-size guards to determine whether the live contract changed at the wire layer or the tests are constructing requests larger than the envelope limit.

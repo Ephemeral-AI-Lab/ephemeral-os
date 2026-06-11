@@ -1,4 +1,4 @@
-//! Isolated-workspace op adapters behind `api.isolated_workspace.*`: wire arg
+//! Isolated-workspace op adapters behind `sandbox.isolation.*`: wire arg
 //! parsing and response/error shaping over [`crate::WorkspaceRuntime`].
 
 #[cfg(test)]

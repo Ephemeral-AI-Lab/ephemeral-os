@@ -87,11 +87,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-command-rs.html#item-fn-op-exec-command-46">op_exec_command</a> (input : ExecCommandInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
-  <p class="docstring">`api.v1.exec_command` — command-session start contract.</p>
+  <p class="docstring">`sandbox.command.exec` — command-session start contract.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.exec_command` — command-session start contract.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.command.exec` — command-session start contract.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-command-rs.html#item-fn-op-exec-command-46">op_exec_command</a>(
     input: <span class="rs-type">ExecCommandInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -548,7 +548,7 @@
     <span class="rs-type">Command</span>(#[from] <span class="rs-type">CommandSessionError</span>),
 }
 
-<span class="rs-comment">/// `api.v1.exec_command` — command-session start contract.</span>
+<span class="rs-comment">/// `sandbox.command.exec` — command-session start contract.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-command-rs.html#item-fn-op-exec-command-46">op_exec_command</a>(
     input: <span class="rs-type">ExecCommandInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,

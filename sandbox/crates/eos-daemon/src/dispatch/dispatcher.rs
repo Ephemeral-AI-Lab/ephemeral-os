@@ -109,7 +109,7 @@ fn dispatch_builtin(request: OpRequest, args: &Value, context: DispatchContext<'
         OpRequest::ReadFile(input) => daemon_result(files::op_read_file(input, context)),
         OpRequest::WriteFile(input) => daemon_result(files::op_write_file(input, context)),
         OpRequest::EditFile(input) => daemon_result(files::op_edit_file(input, context)),
-        OpRequest::PluginEnsure(input) => daemon_result(plugin::op_ensure(input, context)),
+        OpRequest::PluginEnsure(input) => daemon_result(plugin::op_ensure(*input, context)),
         OpRequest::PluginStatus(input) => daemon_result(plugin::op_status(input, context)),
         OpRequest::IsolatedWorkspaceEnter(input) => {
             daemon_response_result(isolation::op_enter(input, context))

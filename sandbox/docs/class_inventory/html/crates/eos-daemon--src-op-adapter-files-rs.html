@@ -107,11 +107,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-read-file-47">op_read_file</a> (input : ReadFileInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
-  <p class="docstring">`api.v1.read_file` — shared public read op, routed by active workspace mode.</p>
+  <p class="docstring">`sandbox.file.read` — shared public read op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.read_file` — shared public read op, routed by active workspace mode.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.file.read` — shared public read op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-read-file-47">op_read_file</a>(
     input: <span class="rs-type">ReadFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -145,11 +145,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-write-file-71">op_write_file</a> (input : WriteFileInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
-  <p class="docstring">`api.v1.write_file` — shared public write op, routed by active workspace mode.</p>
+  <p class="docstring">`sandbox.file.write` — shared public write op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.write_file` — shared public write op, routed by active workspace mode.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.file.write` — shared public write op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-write-file-71">op_write_file</a>(
     input: <span class="rs-type">WriteFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -189,11 +189,11 @@
     <span class="visibility">pub(crate)</span>
   </div>
   <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-edit-file-101">op_edit_file</a> (input : EditFileInput , context : <a class="symbol-link" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-5">DaemonError</a> &gt;</code>
-  <p class="docstring">`api.v1.edit_file` — shared public edit op, routed by active workspace mode.</p>
+  <p class="docstring">`sandbox.file.edit` — shared public edit op, routed by active workspace mode.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// `api.v1.edit_file` — shared public edit op, routed by active workspace mode.</span>
+  <pre><code><span class="rs-comment">/// `sandbox.file.edit` — shared public edit op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-edit-file-101">op_edit_file</a>(
     input: <span class="rs-type">EditFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -515,7 +515,7 @@
     <span class="rs-type">File</span>(#[from] <span class="rs-type">FileOpsError</span>),
 }
 
-<span class="rs-comment">/// `api.v1.read_file` — shared public read op, routed by active workspace mode.</span>
+<span class="rs-comment">/// `sandbox.file.read` — shared public read op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-read-file-47">op_read_file</a>(
     input: <span class="rs-type">ReadFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -539,7 +539,7 @@
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-read-response-213">read_response</a>(outcome))
 }
 
-<span class="rs-comment">/// `api.v1.write_file` — shared public write op, routed by active workspace mode.</span>
+<span class="rs-comment">/// `sandbox.file.write` — shared public write op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-write-file-71">op_write_file</a>(
     input: <span class="rs-type">WriteFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,
@@ -569,7 +569,7 @@
     <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-mod-rs.html#item-fn-to-wire-value-17">to_wire_value</a>(outcome))
 }
 
-<span class="rs-comment">/// `api.v1.edit_file` — shared public edit op, routed by active workspace mode.</span>
+<span class="rs-comment">/// `sandbox.file.edit` — shared public edit op, routed by active workspace mode.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-op-adapter-files-rs.html#item-fn-op-edit-file-101">op_edit_file</a>(
     input: <span class="rs-type">EditFileInput</span>,
     context: <a class="symbol-link rs-type" href="eos-daemon--src-runtime-context-rs.html#item-struct-DispatchContext-7">DispatchContext</a>&lt;&#x27;_&gt;,

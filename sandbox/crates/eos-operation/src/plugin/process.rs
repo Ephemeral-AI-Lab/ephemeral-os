@@ -277,5 +277,5 @@ fn accept_ppc_client(
 }
 
 #[cfg(test)]
-#[path = "tests/process.rs"]
+#[path = "../../tests/plugin/process.rs"]
 mod tests;

@@ -196,5 +196,5 @@ fn empty_string_as_none(value: Option<String>) -> Option<String> {
 }
 
 #[cfg(test)]
-#[path = "tests/occ_callbacks.rs"]
+#[path = "../../tests/plugin/occ_callbacks.rs"]
 mod tests;

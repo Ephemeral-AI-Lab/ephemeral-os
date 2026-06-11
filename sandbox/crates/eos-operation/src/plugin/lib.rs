@@ -1,7 +1,7 @@
 //! Host-neutral plugin operation runtime.
 //!
 //! This crate owns service process lifetime, PPC transport and dispatch,
-//! manifest refresh, package publish/setup, `api.plugin.ensure` parsing, and
+//! manifest refresh, package publish/setup, `sandbox.plugin.ensure` parsing, and
 //! oneshot overlay execution. Wire parsing and response shaping stay in the
 //! daemon's `ops/plugin` adapter.
 //!
@@ -121,7 +121,7 @@ pub enum PluginRuntimeError {
     Commit(#[from] eos_layerstack::CommitError),
 }
 
-/// Typed result of one `api.plugin.ensure` call.
+/// Typed result of one `sandbox.plugin.ensure` call.
 pub enum EnsureOutcome {
     /// The package content for this digest is not published yet; the caller
     /// must upload before services can start.
@@ -152,7 +152,7 @@ pub struct EnsureReady {
     pub package: PackageEnsureReport,
 }
 
-/// One loaded plugin's registry view for `api.plugin.status`.
+/// One loaded plugin's registry view for `sandbox.plugin.status`.
 pub struct LoadedPluginStatus {
     pub name: String,
     pub digest: String,
@@ -163,7 +163,7 @@ pub struct LoadedPluginStatus {
     pub runtime_loaded: bool,
 }
 
-/// Typed result of one `api.plugin.status` call.
+/// Typed result of one `sandbox.plugin.status` call.
 pub struct StatusOutcome {
     pub loaded_plugins: Vec<LoadedPluginStatus>,
     pub running_service_processes: Vec<ServiceProcessStatus>,

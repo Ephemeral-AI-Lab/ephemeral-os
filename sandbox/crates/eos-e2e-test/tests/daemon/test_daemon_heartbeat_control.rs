@@ -1,4 +1,4 @@
-//! `api.v1.heartbeat` `touched` count distinguishes live ids from bogus ones.
+//! `sandbox.call.heartbeat` `touched` count distinguishes live ids from bogus ones.
 
 use std::time::{Duration, Instant};
 

@@ -134,7 +134,7 @@ pub struct MutationCore {
     pub timings: WorkspaceTimings,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceMutationOutcome {
     #[serde(flatten)]
     pub core: MutationCore,
@@ -146,19 +146,6 @@ pub struct WorkspaceMutationOutcome {
     pub error: (),
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applied_edits: Option<i64>,
-}
-
-impl Default for WorkspaceMutationOutcome {
-    fn default() -> Self {
-        Self {
-            core: MutationCore::default(),
-            workspace_kind: WorkspaceKind::default(),
-            published: false,
-            status: MutationStatus::default(),
-            error: (),
-            applied_edits: None,
-        }
-    }
 }
 
 fn serialize_mutation_source<S>(

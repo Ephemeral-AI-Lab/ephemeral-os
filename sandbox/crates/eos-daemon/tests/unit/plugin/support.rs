@@ -61,7 +61,7 @@ impl TestDaemon {
         crate::dispatcher::dispatch_with_context(request, self.context())
     }
 
-    /// `api.plugin.ensure` through the adapter (arg parsing + response shaping
+    /// `sandbox.plugin.ensure` through the adapter (arg parsing + response shaping
     /// + caller gate), without the dispatcher error-response decoration.
     pub(super) fn op_ensure(&self, args: &Value) -> Result<Value, DaemonError> {
         let OpRequest::PluginEnsure(input) =
@@ -69,10 +69,10 @@ impl TestDaemon {
         else {
             unreachable!("plugin ensure op must parse into plugin ensure input");
         };
-        crate::op_adapter::plugin::op_ensure(input, self.context())
+        crate::op_adapter::plugin::op_ensure(*input, self.context())
     }
 
-    /// `api.plugin.status` through the adapter.
+    /// `sandbox.plugin.status` through the adapter.
     pub(super) fn op_status(&self, args: &Value) -> Result<Value, DaemonError> {
         let OpRequest::PluginStatus(input) =
             OpRequest::parse(BuiltinOp::PluginStatus, args).expect("valid plugin status args")

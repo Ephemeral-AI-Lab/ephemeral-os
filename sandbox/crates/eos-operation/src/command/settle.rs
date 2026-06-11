@@ -68,14 +68,16 @@ pub(crate) fn settle_ephemeral(
     Ok(command_response(
         WorkspaceKind::Ephemeral,
         request,
-        command_success && publish_success,
-        changeset.published_paths(),
-        changed_path_kinds,
-        Some(MutationSource::OverlayCapture),
-        first_conflict.map(conflict_from_file),
-        first_conflict.map(|file| conflict_message(file).to_owned()),
-        timings,
-        Map::new(),
+        CommandSettlement {
+            success: command_success && publish_success,
+            changed_paths: changeset.published_paths(),
+            changed_path_kinds,
+            mutation_source: Some(MutationSource::OverlayCapture),
+            conflict: first_conflict.map(conflict_from_file),
+            conflict_reason: first_conflict.map(|file| conflict_message(file).to_owned()),
+            timings,
+            extras: Map::new(),
+        },
     ))
 }
 
@@ -113,14 +115,16 @@ pub(crate) fn settle_isolated(
     let mut response = command_response(
         WorkspaceKind::Isolated,
         request,
-        command_success,
-        changed_paths,
-        changed_path_kinds,
-        Some(MutationSource::IsolatedWorkspace),
-        None,
-        None,
-        timings,
-        extras,
+        CommandSettlement {
+            success: command_success,
+            changed_paths,
+            changed_path_kinds,
+            mutation_source: Some(MutationSource::IsolatedWorkspace),
+            conflict: None,
+            conflict_reason: None,
+            timings,
+            extras,
+        },
     );
     response.exit_code = Some(response.exit_code.unwrap_or(1));
     Ok(response)
@@ -133,20 +137,20 @@ pub(crate) fn discarded_response(
     command_response(
         workspace_kind,
         request,
-        false,
-        Vec::new(),
-        ChangedPathKinds::default(),
-        None,
-        None,
-        None,
-        WorkspaceTimings::default(),
-        Map::new(),
+        CommandSettlement {
+            success: false,
+            changed_paths: Vec::new(),
+            changed_path_kinds: ChangedPathKinds::default(),
+            mutation_source: None,
+            conflict: None,
+            conflict_reason: None,
+            timings: WorkspaceTimings::default(),
+            extras: Map::new(),
+        },
     )
 }
 
-fn command_response(
-    workspace_kind: WorkspaceKind,
-    request: FinalizeCommandRequest,
+struct CommandSettlement {
     success: bool,
     changed_paths: Vec<String>,
     changed_path_kinds: ChangedPathKinds,
@@ -155,6 +159,12 @@ fn command_response(
     conflict_reason: Option<String>,
     timings: WorkspaceTimings,
     extras: Map<String, Value>,
+}
+
+fn command_response(
+    workspace_kind: WorkspaceKind,
+    request: FinalizeCommandRequest,
+    settlement: CommandSettlement,
 ) -> CommandResponse {
     CommandResponse {
         status: request.status,
@@ -164,16 +174,16 @@ fn command_response(
         command_session_id: request.command_session_id.map(CommandSessionId::new),
         settled: Some(CommandMetadata {
             core: MutationCore {
-                success,
-                changed_paths,
-                changed_path_kinds,
-                mutation_source,
-                conflict,
-                conflict_reason,
-                timings,
+                success: settlement.success,
+                changed_paths: settlement.changed_paths,
+                changed_path_kinds: settlement.changed_path_kinds,
+                mutation_source: settlement.mutation_source,
+                conflict: settlement.conflict,
+                conflict_reason: settlement.conflict_reason,
+                timings: settlement.timings,
             },
             workspace: workspace_kind,
-            extras,
+            extras: settlement.extras,
         }),
     }
 }

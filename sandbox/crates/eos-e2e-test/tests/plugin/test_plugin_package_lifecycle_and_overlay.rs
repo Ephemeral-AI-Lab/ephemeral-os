@@ -528,7 +528,7 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
 /// `package_reload_reaps_old_service_and_routes` and
 /// `concurrent_plugin_refresh_singleflight` cover reload and concurrent refresh
 /// SEPARATELY. This races them: N `plugin.generic.query` dispatches run while a
-/// package reload (`api.plugin.ensure` with a new staged package) swaps the
+/// package reload (`sandbox.plugin.ensure` with a new staged package) swaps the
 /// worker underneath them. Whatever the swap window does, the invariants must
 /// hold — the reload succeeds, every concurrent dispatch returns a structured
 /// payload (a success, or a structured error during the reap window; never a

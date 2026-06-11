@@ -110,7 +110,7 @@
     #[error(&quot;plugin op {0} already has a different handler registered&quot;)]
     <span class="rs-type">Conflict</span>(<span class="rs-type">String</span>),
 
-    <span class="rs-comment">/// `api.plugin.ensure` failed to load or warm a plugin runtime, or the</span>
+    <span class="rs-comment">/// `sandbox.plugin.ensure` failed to load or warm a plugin runtime, or the</span>
     <span class="rs-comment">/// `layer_stack_root` was missing / mismatched against the workspace binding.</span>
     #[error(&quot;plugin ensure failed: {0}&quot;)]
     <span class="rs-type">Ensure</span>(<span class="rs-type">String</span>),

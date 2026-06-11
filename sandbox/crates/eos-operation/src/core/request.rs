@@ -68,7 +68,7 @@ pub enum OpRequest {
     ReadFile(ReadFileInput),
     WriteFile(WriteFileInput),
     EditFile(EditFileInput),
-    PluginEnsure(PluginEnsureInput),
+    PluginEnsure(Box<PluginEnsureInput>),
     PluginStatus(PluginStatusInput),
     IsolatedWorkspaceEnter(IsolationEnterInput),
     IsolatedWorkspaceExit(IsolationExitInput),
@@ -113,7 +113,9 @@ impl OpRequest {
             BuiltinOp::ReadFile => Self::ReadFile(ReadFileInput::parse(args)?),
             BuiltinOp::WriteFile => Self::WriteFile(WriteFileInput::parse(args)?),
             BuiltinOp::EditFile => Self::EditFile(EditFileInput::parse(args)?),
-            BuiltinOp::PluginEnsure => Self::PluginEnsure(PluginEnsureInput::parse(args)?),
+            BuiltinOp::PluginEnsure => {
+                Self::PluginEnsure(Box::new(PluginEnsureInput::parse(args)?))
+            }
             BuiltinOp::PluginStatus => Self::PluginStatus(PluginStatusInput::parse(args)?),
             BuiltinOp::IsolatedWorkspaceEnter => {
                 Self::IsolatedWorkspaceEnter(IsolationEnterInput::parse(args)?)
@@ -254,7 +256,8 @@ mod tests {
 
     #[test]
     fn edit_parse_checks_edits_before_path() {
-        let error = OpRequest::parse(BuiltinOp::EditFile, &json!({})).unwrap_err();
+        let error = OpRequest::parse(BuiltinOp::EditFile, &json!({}))
+            .expect_err("edit parse should reject missing edits before path");
         let RequestError::Args(error) = error else {
             panic!("expected args error");
         };
@@ -267,7 +270,7 @@ mod tests {
             BuiltinOp::CommandReadProgress,
             &json!({"last_n_lines": u64::MAX}),
         )
-        .unwrap_err();
+        .expect_err("command poll parse should require session id before line conversion");
         let RequestError::Args(error) = error else {
             panic!("expected args error");
         };
@@ -276,7 +279,8 @@ mod tests {
 
     #[test]
     fn host_ops_are_not_daemon_served() {
-        let error = OpRequest::parse(BuiltinOp::SandboxAcquire, &json!({})).unwrap_err();
+        let error = OpRequest::parse(BuiltinOp::SandboxAcquire, &json!({}))
+            .expect_err("host sandbox ops are not served by the daemon");
         assert!(matches!(
             error,
             RequestError::NotDaemonServed(BuiltinOp::SandboxAcquire)

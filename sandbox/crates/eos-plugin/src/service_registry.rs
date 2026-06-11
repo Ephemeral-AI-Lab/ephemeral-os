@@ -22,7 +22,7 @@ pub enum PluginServiceState {
     Failed,
 }
 
-/// Serializable status for `api.plugin.status`.
+/// Serializable status for `sandbox.plugin.status`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PluginServiceStatus {
     pub key: PluginServiceKey,

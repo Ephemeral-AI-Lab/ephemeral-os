@@ -218,7 +218,7 @@ fn assert_pinned_status(
 
 fn write_public_versions(
     lease: &eos_e2e_test::NodeLease<'_>,
-    versions: std::catalog::Range<usize>,
+    versions: std::ops::Range<usize>,
 ) -> Result<()> {
     for version in versions {
         lease.call_ok(

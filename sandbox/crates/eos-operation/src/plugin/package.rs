@@ -513,5 +513,5 @@ fn collect_files(
 }
 
 #[cfg(test)]
-#[path = "tests/package.rs"]
+#[path = "../../tests/plugin/package.rs"]
 mod tests;

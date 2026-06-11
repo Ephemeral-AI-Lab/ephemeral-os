@@ -1,4 +1,4 @@
-//! `api.v1.inflight_count` observes real background invocations on one daemon.
+//! `sandbox.call.count` observes real background invocations on one daemon.
 
 use std::time::{Duration, Instant};
 
