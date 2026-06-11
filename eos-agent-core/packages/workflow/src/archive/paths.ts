@@ -8,16 +8,15 @@ import { archivedDeclarationFiles, attemptFieldFiles } from "../attempt/context.
 import type { AttemptState } from "../attempt/state.js";
 import { iterationFieldFiles } from "../iteration/context.js";
 import type { IterationState } from "../iteration/state.js";
-import { planFieldFiles } from "../plan/context.js";
 import { workItemFieldFiles } from "../work-item/context.js";
 import { workflowFieldFiles } from "../workflow/context.js";
 import type { WorkflowTree } from "../workflow-tree.js";
 
+/** Plans are execution state, not rendered context entities (§2.1). */
 export type ContextEntityKind =
   | "workflow"
   | "iteration"
   | "attempt"
-  | "plan"
   | "work_item";
 
 /** The owning entity behind a path: status and summary ride the DTO layer. */
@@ -114,7 +113,7 @@ export function buildWorkflowContext(tree: WorkflowTree): WorkflowContext {
         kind: "attempt",
         id: attempt.id,
         status: attempt.status,
-        summaryFirstLine: null,
+        summaryFirstLine: firstLine(attempt.plan.summary),
       };
       if (archived) {
         directories.set(`${iterationDir}/archived`, {
@@ -138,21 +137,6 @@ export function buildWorkflowContext(tree: WorkflowTree): WorkflowContext {
             content: file.content,
           });
         }
-      }
-
-      const planRef: ContextEntityRef = {
-        kind: "plan",
-        id: attempt.plan.id,
-        status: attempt.plan.status,
-        summaryFirstLine: firstLine(attempt.plan.summary),
-      };
-      const planDir = `${attemptDir}/plan_${attempt.plan.id}`;
-      directories.set(planDir, { owner: planRef, archived });
-      for (const file of planFieldFiles(attempt.plan)) {
-        files.set(`${planDir}/${file.name}`, {
-          owner: planRef,
-          content: file.content,
-        });
       }
 
       for (const item of attempt.workItems) {

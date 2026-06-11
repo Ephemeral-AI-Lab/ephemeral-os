@@ -1,8 +1,6 @@
 //! Command-session dispatcher handlers, driving the caller-keyed
 //! command runtime in `eos-command-ops`.
 
-use std::path::PathBuf;
-
 use eos_command_ops::{command_ops, command_session_config};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CommandResponse, CommandSessionCompletion,
@@ -12,7 +10,9 @@ use eos_runtime::routing::command_op::{self, CommandOpError, ExecCommandRequest}
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-use crate::request_args::{require_command_string, require_nonempty_string};
+use crate::request_args::{
+    optional_path, optional_u64, require_command_string, require_nonempty_string,
+};
 use crate::response::u64_to_f64_saturating;
 use crate::runtime::context::DispatchContext;
 
@@ -36,7 +36,7 @@ pub(crate) fn op_exec_command(
                 .to_owned(),
             caller_id: super::caller_id_or_default(args),
             cmd,
-            layer_stack_root: optional_layer_stack_root(args),
+            layer_stack_root: optional_path(args, "layer_stack_root"),
             timeout_seconds,
             yield_time_ms,
         },
@@ -154,22 +154,6 @@ fn command_session_response_to_wire(
         Err(CommandSessionError::NotFound(_)) => Ok(command_session_not_found()),
         Err(error) => Err(command_session_error(error)),
     }
-}
-
-fn optional_u64(args: &Value, key: &str) -> Option<u64> {
-    args.get(key).and_then(|value| {
-        value
-            .as_u64()
-            .or_else(|| value.as_i64().and_then(|value| u64::try_from(value).ok()))
-    })
-}
-
-fn optional_layer_stack_root(args: &Value) -> Option<PathBuf> {
-    args.get("layer_stack_root")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|root| !root.is_empty())
-        .map(PathBuf::from)
 }
 
 fn command_result(

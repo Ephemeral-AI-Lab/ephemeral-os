@@ -1,8 +1,12 @@
-import { isWorkflowEntityTerminal } from "@eos/contracts";
-
+import { composeAttemptOutcome } from "../attempt/context.js";
 import type { EntityFieldFile } from "../work-item/context.js";
 import { closingAttempt, type IterationState } from "./state.js";
 
+/**
+ * Iteration field files: the latest declaration pair plus `outcome.md`
+ * once the iteration closes `Success` or `Failed`. Cancelled iterations
+ * carry no business outcome (§2.6).
+ */
 export function iterationFieldFiles(iteration: IterationState): EntityFieldFile[] {
   const files: EntityFieldFile[] = [];
   if (iteration.focus !== null) {
@@ -11,26 +15,14 @@ export function iterationFieldFiles(iteration: IterationState): EntityFieldFile[
   if (iteration.deferredGoal !== null) {
     files.push({ name: "deferred_goal.md", content: iteration.deferredGoal });
   }
-  if (isWorkflowEntityTerminal(iteration.status)) {
+  if (iteration.status === "Success" || iteration.status === "Failed") {
     files.push({ name: "outcome.md", content: composeIterationOutcome(iteration) });
   }
   return files;
 }
 
-/**
- * §2.16: the iteration outcome is composed at render time from its closing
- * attempt's plan summary and work-item summaries/outcomes - never stored.
- */
+/** §5.2: the iteration outcome IS the closing attempt's derived outcome. */
 export function composeIterationOutcome(iteration: IterationState): string {
   const attempt = closingAttempt(iteration);
-  if (!attempt) return "(no attempts)";
-  const lines: string[] = [attempt.plan.summary ?? "(no plan summary)"];
-  for (const item of attempt.workItems) {
-    lines.push("", `- work_item_${item.id} (${item.status}): ${item.summary ?? "(no summary)"}`);
-    if (item.outcome !== null) lines.push(`  ${item.outcome}`);
-  }
-  if (attempt.failReason !== null) {
-    lines.push("", `fail_reason: ${attempt.failReason}`);
-  }
-  return lines.join("\n");
+  return attempt ? composeAttemptOutcome(attempt) : "(no attempts)";
 }

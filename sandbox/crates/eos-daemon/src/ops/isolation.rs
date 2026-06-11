@@ -7,7 +7,7 @@ use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use eos_isolated_workspace::{IsolatedError, WorkspaceHandle};
 use eos_runtime::{ExitOutcome, WorkspaceEnterError};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::runtime::context::DispatchContext;

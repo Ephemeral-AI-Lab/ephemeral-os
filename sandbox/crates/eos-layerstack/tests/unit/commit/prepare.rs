@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::model::{LayerChange, LayerPath};
 use crate::test_fixture::Fixture;
 
@@ -7,30 +5,10 @@ use super::*;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-struct AllGatedRouteProvider;
-
-impl RouteProvider for AllGatedRouteProvider {
-    fn is_ignored(&self, _path: &LayerPath) -> Result<bool, CommitError> {
-        Ok(false)
-    }
-
-    fn base_hash(&self, _path: &LayerPath) -> Result<Option<String>, CommitError> {
-        Ok(None)
-    }
-}
-
 #[test]
 fn apply_changeset_adds_public_apply_timing_envelope() -> TestResult {
     let fixture = Fixture::new("commit_prepare_timing")?;
-    let queue = CommitQueue::with_config(
-        CommitTransaction {
-            root: fixture.root.clone(),
-        },
-        64,
-        0.0,
-        3,
-    );
-    let service = CommitService::with_route_provider(queue, Arc::new(AllGatedRouteProvider))?;
+    let service = CommitWriter::new(fixture.root.clone())?;
     let path = LayerPath::parse("timed.txt")?;
     let result = service.apply_changeset_with_base_hashes(
         &[LayerChange::Write {

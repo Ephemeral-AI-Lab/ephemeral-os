@@ -165,6 +165,73 @@ describe("context-script inputs", () => {
     ).toBe(false);
   });
 
+  it("keeps plan metadata in the snapshot but rejects a plan context_path", () => {
+    const plan = {
+      id: "pl-1",
+      status: "Success",
+      declared_focus: "the parser slice",
+      declared_deferred_goal: null,
+      summary: "planned",
+      agent_run_id: "run-1",
+    };
+    const attempt = {
+      id: "at-1",
+      sequence: 1,
+      status: "Running",
+      fail_reason: null,
+      is_consistent_with_iteration_focus: true,
+      context_path: "workflow_wf-1/iteration_it-1/attempt_at-1",
+      plan,
+      work_items: [],
+    };
+    const iteration = {
+      id: "it-1",
+      sequence: 1,
+      origin: "initial",
+      status: "Running",
+      focus: "the parser slice",
+      deferred_goal: null,
+      max_attempts: 2,
+      context_path: "workflow_wf-1/iteration_it-1",
+      attempts: [attempt],
+    };
+    const input = {
+      kind: "planner",
+      workflow_context: {
+        workflow: { ...snapshot().workflow, iterations: [iteration] },
+      },
+      current: {
+        workflow_id: "wf-1",
+        iteration_id: "it-1",
+        attempt_id: "at-1",
+        plan_id: "pl-1",
+      },
+    };
+    expect(PlannerContextInputSchema.parse(input)).toEqual(input);
+    expect(
+      PlannerContextInputSchema.safeParse({
+        ...input,
+        workflow_context: {
+          workflow: {
+            ...input.workflow_context.workflow,
+            iterations: [
+              {
+                ...iteration,
+                attempts: [
+                  {
+                    ...attempt,
+                    plan: { ...plan, context_path: `${attempt.context_path}/plan_pl-1` },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }).success,
+      "plans no longer carry a rendered context path",
+    ).toBe(false);
+  });
+
   it("carries only workflow_context plus current for the worker", () => {
     const input = {
       kind: "worker",

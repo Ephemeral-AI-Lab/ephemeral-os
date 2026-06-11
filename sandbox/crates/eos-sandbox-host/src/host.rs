@@ -1,5 +1,3 @@
-//! Host engine facade, registry, endpoint cache, forwarding, and recovery.
-
 use std::collections::HashMap;
 use std::fs;
 use std::net::SocketAddr;
@@ -19,7 +17,6 @@ use crate::runtime::{
     ContainerSpec, DaemonContainer, DaemonSpec,
 };
 
-/// Engine configuration (one fleet, one image).
 #[derive(Debug, Clone)]
 pub struct HostConfig {
     pub image: String,
@@ -52,7 +49,6 @@ impl HostConfig {
     }
 }
 
-/// Host view of one sandbox (the `sandbox.status` payload source).
 #[derive(Debug)]
 pub struct SandboxStatus {
     pub sandbox_id: String,
@@ -62,7 +58,6 @@ pub struct SandboxStatus {
     pub daemon: Value,
 }
 
-/// The host engine: owns and reaches sandboxes.
 pub struct SandboxHost {
     config: HostConfig,
     config_yaml: String,
@@ -108,8 +103,7 @@ impl SandboxHost {
         let started = match DaemonContainer::start(&container, &daemon, token.clone()) {
             Ok(started) => started,
             Err(err) => {
-                // Keep-lifetime containers survive drop; reap the failed one.
-                let _ = docker(&["rm".to_owned(), "-f".to_owned(), sandbox_id.clone()]);
+                let _ = docker(["rm", "-f", sandbox_id.as_str()]);
                 return Err(err);
             }
         };
@@ -129,11 +123,9 @@ impl SandboxHost {
         let Some(record) = self.registry.remove(sandbox_id) else {
             return false;
         };
-        let _ = docker(&["rm".to_owned(), "-f".to_owned(), record.container.clone()]);
+        let _ = docker(["rm", "-f", record.container.as_str()]);
         true
     }
-
-    #[must_use]
     pub fn status(&self, sandbox_id: &str) -> Option<SandboxStatus> {
         let record = self.registry.get(sandbox_id)?;
         let daemon = self.probe_readiness(&record);
@@ -145,8 +137,6 @@ impl SandboxHost {
             daemon,
         })
     }
-
-    #[must_use]
     pub fn list(&self) -> Vec<SandboxStatus> {
         self.registry
             .list()
@@ -244,8 +234,6 @@ impl SandboxRecord {
             endpoint: Mutex::new(endpoint),
         }
     }
-
-    #[must_use]
     fn cached_endpoint(&self) -> Option<SocketAddr> {
         *self.endpoint.lock().unwrap_or_else(PoisonError::into_inner)
     }
@@ -282,7 +270,7 @@ impl SandboxRegistry {
     }
 
     fn rebuild_from_docker(&self) -> usize {
-        let ids = running_container_ids(&[SANDBOX_ID_LABEL.to_owned()]);
+        let ids = running_container_ids(&[SANDBOX_ID_LABEL]);
         let Ok(label_maps) = container_labels(&ids) else {
             return 0;
         };
@@ -300,8 +288,6 @@ impl SandboxRegistry {
                 continue;
             };
             let created_by = label(CREATED_BY_LABEL).unwrap_or("unknown").to_owned();
-            // Container NAME is the docker handle the engine commands use; the
-            // provision flow names containers after their sandbox id.
             let record = SandboxRecord::new(
                 sandbox_id.to_owned(),
                 sandbox_id.to_owned(),
@@ -316,15 +302,12 @@ impl SandboxRegistry {
         adopted
     }
 
-    fn insert(&self, record: SandboxRecord) -> Result<Arc<SandboxRecord>> {
+    fn insert(&self, record: SandboxRecord) -> Result<()> {
         self.persist_token(&record.sandbox_id, &record.token)?;
-        let record = Arc::new(record);
         self.lock()
-            .insert(record.sandbox_id.clone(), Arc::clone(&record));
-        Ok(record)
+            .insert(record.sandbox_id.clone(), Arc::new(record));
+        Ok(())
     }
-
-    #[must_use]
     fn get(&self, sandbox_id: &str) -> Option<Arc<SandboxRecord>> {
         self.lock().get(sandbox_id).cloned()
     }
@@ -336,8 +319,6 @@ impl SandboxRegistry {
         }
         removed
     }
-
-    #[must_use]
     fn list(&self) -> Vec<Arc<SandboxRecord>> {
         let mut records: Vec<_> = self.lock().values().cloned().collect();
         records.sort_by(|a, b| a.sandbox_id.cmp(&b.sandbox_id));
@@ -416,13 +397,10 @@ fn forward_request(
     run_recovery(&attempt)
 }
 
-/// Terminal failure of a forwarded request after recovery.
 #[derive(Debug, thiserror::Error)]
 pub enum ForwardError {
-    /// Recovery exhausted: the sandbox cannot be reached or respawned.
     #[error("sandbox unavailable: {0}")]
     SandboxUnavailable(String),
-    /// A mutating op was sent but its outcome is unknowable; NOT retried.
     #[error("uncertain outcome: {0}")]
     UncertainOutcome(String),
 }
@@ -451,23 +429,14 @@ fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, ForwardError> {
     };
     match tcp_with_connect_backoff(attempt, endpoint) {
         Ok(value) => Ok(value),
-        Err(err) if err.is_connect_failure() => {
-            // Invalidate, re-resolve, retry once.
-            match resolve_endpoint(attempt.record) {
-                Ok(addr) => match tcp_once(attempt, addr) {
-                    Ok(value) => Ok(value),
-                    Err(err) => {
-                        fallback_chain(attempt, &unavailable("retry after re-resolve", &err))
-                    }
-                },
-                Err(err) => fallback_chain(attempt, &unavailable("re-resolve endpoint", &err)),
-            }
-        }
+        Err(err) if err.is_connect_failure() => match resolve_endpoint(attempt.record) {
+            Ok(addr) => match tcp_once(attempt, addr) {
+                Ok(value) => Ok(value),
+                Err(err) => fallback_chain(attempt, &unavailable("retry after re-resolve", &err)),
+            },
+            Err(err) => fallback_chain(attempt, &unavailable("re-resolve endpoint", &err)),
+        },
         Err(err) => {
-            // The request may have been delivered: fail closed for writes.
-            // The op is never replayed, but the sandbox is still restored
-            // (probe, respawn only when dead) so the NEXT call finds a live
-            // daemon instead of an eternally failing one.
             if attempt.mutates_state {
                 restore_if_unreachable(attempt);
                 return Err(ForwardError::UncertainOutcome(format!(
@@ -480,9 +449,6 @@ fn run_recovery(attempt: &ForwardAttempt<'_>) -> Result<Value, ForwardError> {
     }
 }
 
-/// Best-effort sandbox restoration after an ambiguous mutating-op failure:
-/// one short liveness probe, then an in-place respawn only when the daemon is
-/// actually unreachable (a healthy-but-slow daemon is never killed).
 fn restore_if_unreachable(attempt: &ForwardAttempt<'_>) {
     let probe = resolve_endpoint(attempt.record).ok().and_then(|endpoint| {
         let client = ProtocolClient::new(endpoint, None, Duration::from_secs(2));
@@ -552,10 +518,6 @@ fn fallback_chain(
         .map_err(|err| ForwardError::SandboxUnavailable(format!("replay after respawn: {err}")))
 }
 
-/// `docker exec <container> eosd daemon --client <socket> <payload>` — the
-/// daemon binary as its own thin client over its in-container AF_UNIX socket.
-/// The payload is the stamped envelope WITHOUT the auth token (AF_UNIX carries
-/// no auth), built here so the happy path never pays for it.
 fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
     let container = handle(attempt);
     let socket = attempt

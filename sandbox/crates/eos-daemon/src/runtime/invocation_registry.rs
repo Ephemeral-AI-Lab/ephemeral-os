@@ -2,8 +2,9 @@
 //!
 //! This is the INVOCATION-keyed registry: id -> task handle, heartbeat ->
 //! `last_seen`, cancel-by-id, and the TTL reaper loop. It is DISTINCT from the
-//! per-caller isolated-workspace lifecycle state and active command-session records — do not
-//! fuse those with this invocation-keyed background-control registry.
+//! per-caller isolated-workspace lifecycle state and active command-session
+//! records — do not fuse those with this invocation-keyed background-control
+//! registry.
 //!
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
@@ -11,8 +12,6 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
-use nix::sys::signal::{killpg, Signal};
-use nix::unistd::Pid;
 use tokio::task::AbortHandle;
 
 /// Default TTL before an idle background invocation is reaped (seconds).
@@ -32,10 +31,6 @@ pub(crate) struct InFlightInvocation {
     pub last_seen: f64,
     /// Whether this is a background invocation (only background entries reap).
     pub background: bool,
-    /// Process group for the namespace runner child, when the invocation owns
-    /// one. Cancelling the tokio task alone cannot interrupt a blocking
-    /// `wait_with_output`, so cancellation also terminates this group.
-    pub process_group_id: Option<i32>,
     /// Set once the reaper has cancelled this entry (idempotent guard).
     pub ttl_reaped: bool,
 }
@@ -96,24 +91,9 @@ impl InFlightRegistry {
                 caller_id: caller_id.to_owned(),
                 last_seen: monotonic_seconds(),
                 background,
-                process_group_id: None,
                 ttl_reaped: false,
             },
         );
-    }
-
-    /// Attach a process group id to a registered invocation.
-    pub fn register_process_group(&self, invocation_id: &str, pgid: i32) {
-        if let Some(entry) = self.lock_state().by_invocation.get_mut(invocation_id) {
-            entry.process_group_id = Some(pgid);
-        }
-    }
-
-    /// Clear any process group id attached to a registered invocation.
-    pub fn clear_process_group(&self, invocation_id: &str) {
-        if let Some(entry) = self.lock_state().by_invocation.get_mut(invocation_id) {
-            entry.process_group_id = None;
-        }
     }
 
     /// Remove the entry for `invocation_id` (the dispatch `finally` path).
@@ -128,18 +108,15 @@ impl InFlightRegistry {
 
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
     pub fn cancel(&self, invocation_id: &str) -> bool {
-        let Some((abort, process_group_id)) = ({
+        let Some(abort) = ({
             let state = self.lock_state();
-            state.by_invocation.get(invocation_id).map(|entry| {
-                (
-                    entry.abort.clone(),
-                    entry.process_group_id.filter(|pgid| *pgid > 0),
-                )
-            })
+            state
+                .by_invocation
+                .get(invocation_id)
+                .map(|entry| entry.abort.clone())
         }) else {
             return false;
         };
-        terminate_process_group(process_group_id);
         abort.abort();
         true
     }
@@ -193,7 +170,6 @@ impl InFlightRegistry {
         let mut reaped = 0;
         for entry in state.by_invocation.values_mut() {
             if entry.background && !entry.ttl_reaped && now - entry.last_seen > self.ttl_s {
-                terminate_process_group(entry.process_group_id.filter(|pgid| *pgid > 0));
                 entry.abort.abort();
                 entry.ttl_reaped = true;
                 reaped += 1;
@@ -220,19 +196,6 @@ fn positive_f64(value: f64, default: f64) -> f64 {
 fn monotonic_seconds() -> f64 {
     static START: OnceLock<Instant> = OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
-}
-
-/// SIGTERM the process group, give it a brief grace window, then SIGKILL.
-/// Shared by invocation cancel/TTL reaping and plugin service teardown.
-pub(crate) fn terminate_process_group(process_group_id: Option<i32>) {
-    let Some(pgid) = process_group_id else {
-        return;
-    };
-    let pid = Pid::from_raw(pgid);
-    if killpg(pid, Signal::SIGTERM).is_ok() {
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-    let _ = killpg(pid, Signal::SIGKILL);
 }
 
 #[cfg(test)]

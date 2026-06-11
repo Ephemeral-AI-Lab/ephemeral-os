@@ -1,7 +1,5 @@
 //! Workspace file op router.
 
-use std::path::PathBuf;
-
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
@@ -11,7 +9,7 @@ use eos_runtime::routing::file_op::{self, FileOpContext, FileOpError, FileRoute}
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-use crate::request_args::{require_raw_string, require_string};
+use crate::request_args::{optional_path, require_raw_string, require_string};
 use crate::response::GuardedResponse;
 use crate::runtime::context::DispatchContext;
 
@@ -79,7 +77,7 @@ fn file_context<'a, 'ctx: 'a>(
     FileOpContext {
         workspace: context.services().map(|services| &services.workspace),
         caller_id,
-        layer_stack_root: optional_layer_stack_root(args),
+        layer_stack_root: optional_path(args, "layer_stack_root"),
     }
 }
 
@@ -93,14 +91,6 @@ fn read_request(
             .file_limits()
             .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
     })
-}
-
-fn optional_layer_stack_root(args: &Value) -> Option<PathBuf> {
-    args.get("layer_stack_root")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|root| !root.is_empty())
-        .map(PathBuf::from)
 }
 
 fn write_request(

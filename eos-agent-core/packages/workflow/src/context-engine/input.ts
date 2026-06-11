@@ -113,6 +113,8 @@ function snapshotAttempt(
     fail_reason: attempt.failReason,
     is_consistent_with_iteration_focus: attempt.isConsistentWithIterationFocus,
     context_path: attemptPath,
+    // No plan context_path: the rendered planner summary is the
+    // attempt-owned `${attemptPath}/plan_summary.md` (§2.7).
     plan: {
       id: attempt.plan.id,
       status: attempt.plan.status,
@@ -120,7 +122,6 @@ function snapshotAttempt(
       declared_deferred_goal: attempt.plan.declaredDeferredGoal,
       summary: attempt.plan.summary,
       agent_run_id: attempt.plan.agentRunId,
-      context_path: `${attemptPath}/plan_${attempt.plan.id}`,
     },
     work_items: attempt.workItems.map((item) => ({
       id: item.id,

@@ -13,7 +13,8 @@ fn registry_round_trips_records_and_tokens() -> Result<()> {
         "test".into(),
         None,
     );
-    let record = registry.insert(record)?;
+    registry.insert(record)?;
+    let record = registry.get("sb-1").expect("inserted record");
     assert_eq!(registry.load_token("sb-1")?, "tok");
     assert!(registry.get("sb-1").is_some());
     assert_eq!(registry.list().len(), 1);

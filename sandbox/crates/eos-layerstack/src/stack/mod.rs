@@ -14,13 +14,13 @@ use crate::model::{
 use crate::error::LayerStackError;
 use crate::fs::{
     clear_storage_root_preserving_lock, fsync_dir, fsync_tree_files, join_layer_path,
-    read_manifest, record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
-    validate_layer_ref, write_atomic, write_manifest,
+    layer_digest_path, read_manifest, record_elapsed, remove_path, replace_workspace_contents,
+    resolve_layer_path, validate_layer_ref, write_layer_digest, write_manifest,
 };
 use crate::lock::StorageWriterLockLease;
 use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
 use crate::workspace::build_workspace_base;
-use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
+use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
 mod projection;
 mod whiteout;
@@ -569,7 +569,7 @@ impl LayerStack {
             fsync_dir(parent)?;
         }
 
-        if let Err(err) = self.write_layer_digest(&layer_id, &digest) {
+        if let Err(err) = write_layer_digest(&self.storage_root, &layer_id, &digest) {
             let _ = remove_path(&layer_dir);
             return Err(err);
         }
@@ -577,7 +577,7 @@ impl LayerStack {
         let latest = self.read_active_manifest()?;
         if latest != active {
             let _ = remove_path(&layer_dir);
-            let _ = std::fs::remove_file(self.layer_digest_path(&layer_id));
+            let _ = std::fs::remove_file(layer_digest_path(&self.storage_root, &layer_id));
             return Err(LayerStackError::ManifestConflict {
                 expected: active.version,
                 found: latest.version,
@@ -594,7 +594,7 @@ impl LayerStack {
             .map_err(LayerStackError::from)?;
         if let Err(err) = write_manifest(self.storage_root.join(ACTIVE_MANIFEST_FILE), &manifest) {
             let _ = remove_path(&layer_dir);
-            let _ = std::fs::remove_file(self.layer_digest_path(&layer_id));
+            let _ = std::fs::remove_file(layer_digest_path(&self.storage_root, &layer_id));
             return Err(err);
         }
         Ok(manifest)
@@ -619,25 +619,16 @@ impl LayerStack {
         Err(LayerStackError::LayerIdAllocation)
     }
 
-    fn layer_digest_path(&self, layer_id: &str) -> PathBuf {
-        layer_digest_path_at(&self.storage_root, layer_id)
-    }
-
     fn head_layer_digest(&self, manifest: &Manifest) -> Result<Option<String>, LayerStackError> {
         let Some(head) = manifest.layers.first() else {
             return Ok(None);
         };
-        let path = self.layer_digest_path(&head.layer_id);
+        let path = layer_digest_path(&self.storage_root, &head.layer_id);
         match std::fs::read_to_string(path) {
             Ok(value) => Ok(Some(value)),
             Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
             Err(err) => Err(err.into()),
         }
-    }
-
-    fn write_layer_digest(&self, layer_id: &str, digest: &str) -> Result<(), LayerStackError> {
-        let path = self.layer_digest_path(layer_id);
-        write_atomic(path, digest.as_bytes())
     }
 
     fn commit_projection_dir(&self) -> Result<PathBuf, LayerStackError> {
@@ -692,19 +683,13 @@ fn remove_layers(storage_root: &Path, layers: &[LayerRef]) -> Result<(), LayerSt
     for layer in layers {
         validate_layer_ref(layer)?;
         remove_path(&storage_root.join(&layer.path))?;
-        match std::fs::remove_file(layer_digest_path_at(storage_root, &layer.layer_id)) {
+        match std::fs::remove_file(layer_digest_path(storage_root, &layer.layer_id)) {
             Ok(()) => {}
             Err(err) if err.kind() == ErrorKind::NotFound => {}
             Err(err) => return Err(err.into()),
         }
     }
     Ok(())
-}
-
-fn layer_digest_path_at(storage_root: &Path, layer_id: &str) -> PathBuf {
-    storage_root
-        .join(LAYER_METADATA_DIR)
-        .join(format!("{layer_id}.digest"))
 }
 
 fn count_dirs(path: &Path) -> Result<usize, LayerStackError> {

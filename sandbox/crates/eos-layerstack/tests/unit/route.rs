@@ -1,25 +1,22 @@
 use crate::model::LayerChange;
 
-use crate::commit::RouteProvider;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::LayerStack;
 
-use super::{route_metrics, StackRouteProvider};
+use super::{route_for_path, route_metrics, Route};
 
-fn route_provider(fixture: &Fixture) -> StackRouteProvider {
-    StackRouteProvider {
-        root: fixture.root.clone(),
-    }
+fn is_ignored(fixture: &Fixture, path: &str) -> TestResult<bool> {
+    let stack = LayerStack::open(fixture.root.clone())?;
+    Ok(route_for_path(&stack, &lp(path)?)? == Route::Direct)
 }
 
 #[test]
 fn root_gitignore_routes_target_as_direct() -> TestResult {
     let fixture = Fixture::new_with_gitignore("gitignore_direct", "target/\n*.pyc\n")?;
-    let provider = route_provider(&fixture);
 
-    assert!(provider.is_ignored(&lp("target/out.txt")?)?);
-    assert!(provider.is_ignored(&lp("pkg/cache.pyc")?)?);
-    assert!(!provider.is_ignored(&lp("src/main.rs")?)?);
+    assert!(is_ignored(&fixture, "target/out.txt")?);
+    assert!(is_ignored(&fixture, "pkg/cache.pyc")?);
+    assert!(!is_ignored(&fixture, "src/main.rs")?);
     Ok(())
 }
 
@@ -59,10 +56,9 @@ fn route_metrics_count_gated_and_direct_paths() -> TestResult {
 #[test]
 fn dir_only_pattern_matches_at_any_depth() -> TestResult {
     let fixture = Fixture::new_with_gitignore("n2_dir_only", "node_modules/\n")?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("frontend/node_modules/index.js")?)?);
-    assert!(provider.is_ignored(&lp("node_modules/index.js")?)?);
-    assert!(!provider.is_ignored(&lp("frontend/src/index.js")?)?);
+    assert!(is_ignored(&fixture, "frontend/node_modules/index.js")?);
+    assert!(is_ignored(&fixture, "node_modules/index.js")?);
+    assert!(!is_ignored(&fixture, "frontend/src/index.js")?);
     Ok(())
 }
 
@@ -72,9 +68,8 @@ fn dir_only_pattern_matches_at_any_depth() -> TestResult {
 #[test]
 fn star_does_not_cross_slash() -> TestResult {
     let fixture = Fixture::new_with_gitignore("n3_star_slash", "logs/*.log\n")?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("logs/app.log")?)?);
-    assert!(!provider.is_ignored(&lp("logs/sub/x.log")?)?);
+    assert!(is_ignored(&fixture, "logs/app.log")?);
+    assert!(!is_ignored(&fixture, "logs/sub/x.log")?);
     Ok(())
 }
 
@@ -82,9 +77,8 @@ fn star_does_not_cross_slash() -> TestResult {
 #[test]
 fn nested_gitignore_is_scoped_to_its_subtree() -> TestResult {
     let fixture = Fixture::new_with_gitignores("nested", &[("frontend", "dist/\n")])?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("frontend/dist/bundle.js")?)?);
-    assert!(!provider.is_ignored(&lp("dist/bundle.js")?)?);
+    assert!(is_ignored(&fixture, "frontend/dist/bundle.js")?);
+    assert!(!is_ignored(&fixture, "dist/bundle.js")?);
     Ok(())
 }
 
@@ -92,10 +86,9 @@ fn nested_gitignore_is_scoped_to_its_subtree() -> TestResult {
 #[test]
 fn double_star_matches_across_segments() -> TestResult {
     let fixture = Fixture::new_with_gitignore("double_star", "**/build/\n")?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("a/b/build/out.o")?)?);
-    assert!(provider.is_ignored(&lp("build/out.o")?)?);
-    assert!(!provider.is_ignored(&lp("a/b/builder.rs")?)?);
+    assert!(is_ignored(&fixture, "a/b/build/out.o")?);
+    assert!(is_ignored(&fixture, "build/out.o")?);
+    assert!(!is_ignored(&fixture, "a/b/builder.rs")?);
     Ok(())
 }
 
@@ -103,9 +96,8 @@ fn double_star_matches_across_segments() -> TestResult {
 #[test]
 fn bang_re_includes_in_unsealed_dir() -> TestResult {
     let fixture = Fixture::new_with_gitignore("bang", "*.log\n!keep.log\n")?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("other.log")?)?);
-    assert!(!provider.is_ignored(&lp("keep.log")?)?);
+    assert!(is_ignored(&fixture, "other.log")?);
+    assert!(!is_ignored(&fixture, "keep.log")?);
     Ok(())
 }
 
@@ -115,8 +107,7 @@ fn bang_re_includes_in_unsealed_dir() -> TestResult {
 fn excluded_dir_seals_against_deeper_reinclude() -> TestResult {
     let fixture =
         Fixture::new_with_gitignores("seal", &[("", "build/\n"), ("build", "!keep.txt\n")])?;
-    let provider = route_provider(&fixture);
-    assert!(provider.is_ignored(&lp("build/keep.txt")?)?);
+    assert!(is_ignored(&fixture, "build/keep.txt")?);
     Ok(())
 }
 
@@ -131,7 +122,6 @@ fn route_metrics_match_route_decision() -> TestResult {
             ("build", "!keep.txt\n"),
         ],
     )?;
-    let provider = route_provider(&fixture);
     let paths = [
         "frontend/node_modules/index.js", // DIRECT (N2 dir-only any depth)
         "logs/sub/x.log",                 // GATED  (N3 star not crossing /)
@@ -146,7 +136,7 @@ fn route_metrics_match_route_decision() -> TestResult {
         if path == ".git/config" {
             continue;
         }
-        if provider.is_ignored(&lp(path)?)? {
+        if is_ignored(&fixture, path)? {
             expected_direct += 1;
         } else {
             expected_gated += 1;
@@ -187,12 +177,11 @@ fn gitignore_resolves_through_published_upper_layer() -> TestResult {
             content: b"dist/\n".to_vec(),
         },
     ])?;
-    let provider = route_provider(&fixture);
     // Root rule from the upper layer, matched at depth via the seal.
-    assert!(provider.is_ignored(&lp("frontend/node_modules/index.js")?)?);
+    assert!(is_ignored(&fixture, "frontend/node_modules/index.js")?);
     // Nested rule, also published into the upper layer.
-    assert!(provider.is_ignored(&lp("frontend/dist/bundle.js")?)?);
-    assert!(!provider.is_ignored(&lp("src/main.rs")?)?);
+    assert!(is_ignored(&fixture, "frontend/dist/bundle.js")?);
+    assert!(!is_ignored(&fixture, "src/main.rs")?);
     Ok(())
 }
 
@@ -208,18 +197,17 @@ fn nested_anchored_pattern_not_double_stripped_on_prefix_replay() -> TestResult 
         "prefix_replay",
         &[("a", "/x\n/b\n"), ("build", "/build/x\n")],
     )?;
-    let provider = route_provider(&fixture);
     // `/x` anchored at `a/` matches `a/x` (DIRECT) but NOT `a/a/x` — routing
     // the tracked `a/a/x` DIRECT would bypass the gate and silently clobber.
-    assert!(provider.is_ignored(&lp("a/x")?)?);
-    assert!(!provider.is_ignored(&lp("a/a/x")?)?);
+    assert!(is_ignored(&fixture, "a/x")?);
+    assert!(!is_ignored(&fixture, "a/a/x")?);
     // Seal variant: `/b` seals `a/b`'s subtree, but `a/a/b` is not the
     // anchored `a/b`, so its whole subtree must stay GATED.
-    assert!(provider.is_ignored(&lp("a/b/file.txt")?)?);
-    assert!(!provider.is_ignored(&lp("a/a/b/file.txt")?)?);
+    assert!(is_ignored(&fixture, "a/b/file.txt")?);
+    assert!(!is_ignored(&fixture, "a/a/b/file.txt")?);
     // Opposite (false-GATED) direction: `/build/x` anchored at `build/` DOES
     // match `build/build/x`; the old double-strip dropped it to `x` and missed.
-    assert!(provider.is_ignored(&lp("build/build/x")?)?);
-    assert!(!provider.is_ignored(&lp("build/x")?)?);
+    assert!(is_ignored(&fixture, "build/build/x")?);
+    assert!(!is_ignored(&fixture, "build/x")?);
     Ok(())
 }

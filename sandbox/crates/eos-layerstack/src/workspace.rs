@@ -3,16 +3,17 @@ use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use crate::model::{hex_lower, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::error::LayerStackError;
 use crate::fs::{
-    join_layer_path, read_manifest, record_elapsed, remove_path, write_atomic, write_manifest,
+    join_layer_path, read_manifest, record_elapsed, remove_path, write_atomic, write_layer_digest,
+    write_manifest,
 };
 use crate::stack::LayerStack;
-use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
+use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
 pub const WORKSPACE_BINDING_FILE: &str = "workspace.json";
 
@@ -276,7 +277,7 @@ fn collect_base_entries(workspace: &Path) -> Result<(Vec<BaseEntry>, String), La
     for entry in &entries {
         update_root_hash(&mut digest, entry);
     }
-    Ok((entries, hex_digest(digest.finalize())))
+    Ok((entries, hex_lower(digest.finalize())))
 }
 
 fn collect_dir(
@@ -476,15 +477,6 @@ fn normalize_layer_path(path: &str) -> Result<String, LayerStackError> {
         .map_err(LayerStackError::from)
 }
 
-fn write_layer_digest(stack: &Path, layer_id: &str, digest: &str) -> Result<(), LayerStackError> {
-    write_atomic(
-        stack
-            .join(LAYER_METADATA_DIR)
-            .join(format!("{layer_id}.digest")),
-        digest.as_bytes(),
-    )
-}
-
 fn file_hash(path: &Path) -> Result<String, std::io::Error> {
     let mut file = std::fs::File::open(path)?;
     let mut digest = Sha256::new();
@@ -496,7 +488,7 @@ fn file_hash(path: &Path) -> Result<String, std::io::Error> {
         }
         digest.update(&buffer[..count]);
     }
-    Ok(hex_digest(digest.finalize()))
+    Ok(hex_lower(digest.finalize()))
 }
 
 fn update_root_hash(digest: &mut Sha256, entry: &BaseEntry) {
@@ -595,15 +587,4 @@ fn format_path_sample(paths: &[String]) -> String {
         sample.push(format!("+{} more", paths.len() - LIMIT));
     }
     sample.join(", ")
-}
-
-fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let bytes = bytes.as_ref();
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        out.push(char::from(HEX[usize::from(byte >> 4)]));
-        out.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
-    out
 }

@@ -9,6 +9,7 @@ import {
   allMessageText,
   harness,
   plannerPayload,
+  until,
   workerPayload,
   type Harness,
 } from "./support.js";
@@ -97,6 +98,17 @@ describe("loadWorkflowTree derived views (§16 case 2)", () => {
     expect(snapshot.workflow.iterations[0].attempts[0].context_path).toContain(
       `workflow_${wf.workflowId}/iteration_`,
     );
+
+    const plan = snapshot.workflow.iterations[0].attempts[0].plan;
+    expect(plan.status).toBe("Success");
+    expect(plan.declared_focus).toBe("first half");
+    expect(plan.declared_deferred_goal).toBe("second half");
+    expect(plan.summary).toBe("planned the slice");
+    expect(plan.agent_run_id).not.toBeNull();
+    expect(
+      "context_path" in plan,
+      "plans no longer carry a rendered context path",
+    ).toBe(false);
   });
 });
 
@@ -173,8 +185,11 @@ describe("context path universe (§16 case 3)", () => {
 
     const byPath = new Map(read.rows.map((row) => [row.path, row]));
     expect(byPath.get("goal.md")?.status).toBe("Running");
-    const planRow = read.rows.find((row) => row.path.includes("/plan_"));
-    expect(planRow?.summary, "summary first line only").toBe("first line of plan");
+    const attemptRow = read.rows.find((row) => /attempt_[^/]+$/.test(row.path));
+    expect(
+      attemptRow?.summary,
+      "the attempt row carries the planner summary first line",
+    ).toBe("first line of plan");
   });
 
   it("derives the iteration outcome from the closing attempt without archiving the iteration goal on promotion", async () => {
@@ -193,11 +208,23 @@ describe("context path universe (§16 case 3)", () => {
     const tree = await h.tree(wf.workflowId);
     const context = buildWorkflowContext(tree);
     const first = tree.iterations[0];
+    const closing = first.attempts.at(-1);
+    if (!closing) throw new Error("expected a closing attempt");
 
     const outcome = context.files.get(`iteration_${first.id}/outcome.md`);
-    expect(outcome?.content).toContain("the plan summary");
+    expect(outcome?.content, "iteration outcome = closing attempt outcome").toBe(
+      context.files.get(`iteration_${first.id}/attempt_${closing.id}/outcome.md`)
+        ?.content,
+    );
     expect(outcome?.content).toContain("worker summary");
-    expect(outcome?.content).toContain("worker outcome");
+    expect(
+      outcome?.content,
+      "the planner summary stays an attempt-owned fact",
+    ).not.toContain("the plan summary");
+    expect(
+      outcome?.content,
+      "work-item outcome content stays a work-item fact",
+    ).not.toContain("worker outcome");
 
     expect(
       context.directories.has(`archived/iteration_${first.id}`),
@@ -217,12 +244,275 @@ describe("context path universe (§16 case 3)", () => {
     const wf = await h.delegate("only goal");
     await h.launches[0].submitPlanner(plannerPayload());
     await h.launches[1].submitWorker(workerPayload());
-    const context = buildWorkflowContext(await h.tree(wf.workflowId));
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
     expect(context.files.get("goal.md")?.content).toBe("only goal");
     expect(context.files.has("archived"), "nothing archived without a successor").toBe(
       false,
     );
-    expect(context.files.get("outcome.md")?.content).toContain("planned the slice");
+    const outcome = context.files.get("outcome.md")?.content;
+    expect(outcome).toContain(`## iteration_${tree.iterations[0].id} [Success]`);
+    expect(outcome, "iteration outcomes carry worker summaries").toContain(
+      "did the work",
+    );
+    expect(outcome, "planner summaries stay out of outcomes").not.toContain(
+      "planned the slice",
+    );
+  });
+});
+
+describe("derived outcome files (Phase 05.2 §5-§6)", () => {
+  it("flattens the plan: planner summary at attempt_<id>/plan_summary.md, no plan entity anywhere", async () => {
+    const h = harness();
+    const wf = await h.delegate("the goal");
+    await h.launches[0].submitPlanner(plannerPayload({ summary: "planned the slice" }));
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const iteration = tree.iterations[0];
+    const attemptDir = `iteration_${iteration.id}/attempt_${iteration.attempts[0].id}`;
+
+    expect(context.files.get(`${attemptDir}/plan_summary.md`)?.content).toBe(
+      "planned the slice",
+    );
+    expect(
+      [...context.directories.keys()].filter((path) =>
+        path.split("/").some((segment) => segment.startsWith("plan_")),
+      ),
+      "no plan_<id>/ directory exists",
+    ).toEqual([]);
+
+    const read = readWorkflowContext(context, {});
+    if (read.kind !== "listing") throw new Error("expected a listing");
+    const planSegments = read.rows.flatMap((row) =>
+      row.path.split("/").filter((segment) => segment.startsWith("plan_")),
+    );
+    expect(
+      planSegments.every((segment) => segment === "plan_summary.md"),
+      "no plan-owned listing rows",
+    ).toBe(true);
+  });
+
+  it("creates the attempt outcome only at close, listing work-item summaries in planner order (T2/T3)", async () => {
+    const h = harness();
+    const wf = await h.delegate("two items");
+    await h.launches[0].submitPlanner(
+      plannerPayload({
+        work_items: [
+          {
+            id: "w1",
+            agent_name: "worker",
+            description: "first item",
+            work_item_spec: "do the first",
+            needs: [],
+          },
+          {
+            id: "w2",
+            agent_name: "worker",
+            description: "second item",
+            work_item_spec: "do the second",
+            needs: [],
+          },
+        ],
+      }),
+    );
+    const workerFor = (description: string) => {
+      const launch = h.launches.find((candidate) =>
+        allMessageText(candidate.messages).includes(description),
+      );
+      if (!launch) throw new Error(`no worker launch saw "${description}"`);
+      return launch;
+    };
+    const tree = await h.tree(wf.workflowId);
+    const iteration = tree.iterations[0];
+    const attemptDir = `iteration_${iteration.id}/attempt_${iteration.attempts[0].id}`;
+
+    await workerFor("first item").submitWorker(
+      workerPayload({ summary: "first summary" }),
+    );
+    const midway = buildWorkflowContext(await h.tree(wf.workflowId));
+    expect(
+      midway.files.has(`${attemptDir}/outcome.md`),
+      "no attempt outcome before all work items finish",
+    ).toBe(false);
+
+    await workerFor("second item").submitWorker(
+      workerPayload({ summary: "second summary" }),
+    );
+    const closed = await h.tree(wf.workflowId);
+    const attempt = closed.iterations[0].attempts[0];
+    expect(
+      attempt.workItems.map((item) => item.description),
+      "work items stay in planner order",
+    ).toEqual(["first item", "second item"]);
+    const context = buildWorkflowContext(closed);
+    expect(context.files.get(`${attemptDir}/outcome.md`)?.content).toBe(
+      [
+        "# Attempt outcome",
+        `- work_item_${attempt.workItems[0].id} [Success]: first summary`,
+        `- work_item_${attempt.workItems[1].id} [Success]: second summary`,
+      ].join("\n"),
+    );
+  });
+
+  it("a failed attempt with budget left gets fail_reason.md and outcome.md but closes nothing (T4/T5)", async () => {
+    const h = harness();
+    const wf = await h.delegate("retry goal", 2);
+    await h.launches[0].submitPlanner(plannerPayload());
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "worker failed" }),
+    );
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const iteration = tree.iterations[0];
+    const failed = iteration.attempts[0];
+    const failedDir = `iteration_${iteration.id}/attempt_${failed.id}`;
+
+    expect(context.files.get(`${failedDir}/fail_reason.md`)?.content).toContain(
+      "worker failed",
+    );
+    expect(context.files.get(`${failedDir}/outcome.md`)?.content).toBe(
+      `# Attempt outcome\n- work_item_${failed.workItems[0].id} [Failed]: worker failed`,
+    );
+    expect(iteration.attempts, "the retry attempt appears").toHaveLength(2);
+    expect(
+      context.directories.has(
+        `iteration_${iteration.id}/attempt_${iteration.attempts[1].id}`,
+      ),
+      "the retry attempt directory is live",
+    ).toBe(true);
+    expect(
+      context.files.has(`iteration_${iteration.id}/outcome.md`),
+      "no iteration outcome while budget remains",
+    ).toBe(false);
+    expect(context.files.has("outcome.md"), "no workflow outcome yet").toBe(false);
+  });
+
+  it("exhausting the retry budget creates attempt, iteration, and workflow outcomes (T6)", async () => {
+    const h = harness();
+    const wf = await h.delegate("doomed goal", 1);
+    await h.launches[0].submitPlanner(plannerPayload());
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "could not do it" }),
+    );
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const iteration = tree.iterations[0];
+    const attempt = iteration.attempts[0];
+    const attemptOutcome = `# Attempt outcome\n- work_item_${attempt.workItems[0].id} [Failed]: could not do it`;
+
+    expect(tree.workflow.status).toBe("Failed");
+    expect(
+      context.files.get(`iteration_${iteration.id}/attempt_${attempt.id}/outcome.md`)
+        ?.content,
+    ).toBe(attemptOutcome);
+    expect(
+      context.files.get(`iteration_${iteration.id}/outcome.md`)?.content,
+      "the failed closing attempt outcome becomes the iteration outcome",
+    ).toBe(attemptOutcome);
+    expect(
+      context.files.get("outcome.md")?.content,
+      "the workflow outcome includes the failed iteration outcome",
+    ).toBe(`# Workflow outcome\n\n## iteration_${iteration.id} [Failed]\n${attemptOutcome}`);
+  });
+
+  it("a planner death renders (no work items) with no plan_summary.md (T1F)", async () => {
+    const h = harness();
+    const wf = await h.delegate("goal", 2);
+    h.launches[0].settle({ status: "failed" });
+    await until(() => h.launches.length === 2, "the retry planner launched");
+
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const iteration = tree.iterations[0];
+    const dead = iteration.attempts[0];
+    const deadDir = `iteration_${iteration.id}/attempt_${dead.id}`;
+
+    expect(
+      context.files.has(`${deadDir}/plan_summary.md`),
+      "a dead planner leaves no summary",
+    ).toBe(false);
+    expect(context.files.get(`${deadDir}/outcome.md`)?.content).toBe(
+      "# Attempt outcome\n(no work items)",
+    );
+    expect(context.files.get(`${deadDir}/fail_reason.md`)?.content).toContain(
+      "without a submission",
+    );
+  });
+
+  it("a multi-iteration success renders every iteration outcome in sequence order (T7/T8)", async () => {
+    const h = harness();
+    const wf = await h.delegate("whole goal");
+    await h.launches[0].submitPlanner(
+      plannerPayload({ iteration_focus: "first half", deferred_goal: "second half" }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "first half done" }));
+
+    const midTree = await h.tree(wf.workflowId);
+    const midway = buildWorkflowContext(midTree);
+    expect(
+      midway.files.has(`iteration_${midTree.iterations[0].id}/outcome.md`),
+      "the promoted-from iteration closes with an outcome at T7",
+    ).toBe(true);
+    expect(midway.files.has("outcome.md"), "the workflow is still running at T7").toBe(
+      false,
+    );
+
+    await h.launches[2].submitPlanner(
+      plannerPayload({ iteration_focus: "second half focus" }),
+    );
+    await h.launches[3].submitWorker(workerPayload({ summary: "second half done" }));
+
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const section = (iteration: (typeof tree.iterations)[number]): string => {
+      const attempt = iteration.attempts.at(-1);
+      const item = attempt?.workItems[0];
+      if (!attempt || !item) throw new Error("expected a closing attempt");
+      return `## iteration_${iteration.id} [Success]\n# Attempt outcome\n- work_item_${item.id} [Success]: ${item.summary ?? ""}`;
+    };
+    expect(tree.workflow.status).toBe("Success");
+    expect(
+      context.files.get("outcome.md")?.content,
+      "the workflow outcome is the ordered iteration ledger",
+    ).toBe(
+      `# Workflow outcome\n\n${section(tree.iterations[0])}\n\n${section(tree.iterations[1])}`,
+    );
+  });
+
+  it("cancellation renders a marker, never business outcomes for cancelled entities (T10)", async () => {
+    const h = harness();
+    const wf = await h.delegate("whole goal");
+    await h.launches[0].submitPlanner(
+      plannerPayload({ iteration_focus: "first half", deferred_goal: "second half" }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "first half done" }));
+    await wf.cancel("changed direction");
+
+    const tree = await h.tree(wf.workflowId);
+    const context = buildWorkflowContext(tree);
+    const [first, second] = tree.iterations;
+
+    expect(tree.workflow.status).toBe("Cancelled");
+    expect(second.status).toBe("Cancelled");
+    expect(
+      context.files.has(`iteration_${second.id}/outcome.md`),
+      "no business outcome for a cancelled iteration",
+    ).toBe(false);
+    expect(
+      context.files.has(
+        `iteration_${second.id}/attempt_${second.attempts[0].id}/outcome.md`,
+      ),
+      "no business outcome for a cancelled attempt",
+    ).toBe(false);
+    const root = context.files.get("outcome.md")?.content ?? "";
+    expect(
+      root.startsWith("# Workflow outcome\nworkflow cancelled"),
+      "the cancellation marker leads",
+    ).toBe(true);
+    expect(root, "already closed iterations keep their outcomes").toContain(
+      `## iteration_${first.id} [Success]`,
+    );
+    expect(root).not.toContain(`## iteration_${second.id}`);
   });
 });
 
@@ -247,6 +537,14 @@ describe("keep vs refocus paths (§16 case 6)", () => {
     expect(context.files.get(`${archivedDir}/fail_reason.md`)?.content).toContain(
       "dead end",
     );
+    expect(
+      context.files.get(`${archivedDir}/plan_summary.md`)?.content,
+      "the archived attempt keeps its attempt-owned plan summary",
+    ).toBe("planned first direction");
+    expect(
+      context.files.get(`${archivedDir}/outcome.md`)?.content,
+      "the archived attempt keeps its derived outcome",
+    ).toContain("dead end");
     const driftedItem = drifted.workItems[0];
     expect(
       context.files.get(
@@ -267,6 +565,12 @@ describe("keep vs refocus paths (§16 case 6)", () => {
       context.files.has(`iteration_${iteration.id}/attempt_${live.id}/focus.md`),
       "live attempts carry no declaration files",
     ).toBe(false);
+    expect(
+      context.files.get(
+        `iteration_${iteration.id}/attempt_${live.id}/plan_summary.md`,
+      )?.content,
+      "the live attempt owns its own plan summary",
+    ).toBe("planned second direction");
 
     expect(context.files.get(`iteration_${iteration.id}/focus.md`)?.content).toBe(
       "second direction",

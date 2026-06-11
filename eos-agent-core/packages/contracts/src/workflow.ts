@@ -182,6 +182,11 @@ export const WorkflowContextWorkItemSchema = z.strictObject({
 });
 export type WorkflowContextWorkItem = z.infer<typeof WorkflowContextWorkItemSchema>;
 
+/**
+ * Plan metadata for scripts. Plans are execution state, not context
+ * folders: the rendered planner summary lives at the owning attempt's
+ * `plan_summary.md`, so no plan-owned `context_path` exists.
+ */
 export const WorkflowContextPlanSchema = z.strictObject({
   id: z.string(),
   status: WorkflowEntityRunStatusSchema,
@@ -190,7 +195,6 @@ export const WorkflowContextPlanSchema = z.strictObject({
   declared_deferred_goal: z.string().nullable(),
   summary: z.string().nullable(),
   agent_run_id: z.string().nullable(),
-  context_path: z.string(),
 });
 export type WorkflowContextPlan = z.infer<typeof WorkflowContextPlanSchema>;
 

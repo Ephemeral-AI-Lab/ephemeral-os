@@ -7,6 +7,7 @@ use std::time::Instant;
 use crate::error::LayerStackError;
 use crate::lock::STORAGE_WRITER_LOCK_FILE;
 use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use crate::LAYER_METADATA_DIR;
 use serde_json::{json, Value};
 
 pub(crate) fn remove_path(path: &Path) -> Result<(), LayerStackError> {
@@ -258,6 +259,20 @@ pub(crate) fn write_manifest(
     let encoded = serde_json::to_vec_pretty(&value)
         .map_err(|err| LayerStackError::Manifest(err.to_string()))?;
     write_atomic(path, &encoded)
+}
+
+pub(crate) fn layer_digest_path(storage_root: &Path, layer_id: &str) -> PathBuf {
+    storage_root
+        .join(LAYER_METADATA_DIR)
+        .join(format!("{layer_id}.digest"))
+}
+
+pub(crate) fn write_layer_digest(
+    storage_root: &Path,
+    layer_id: &str,
+    digest: &str,
+) -> Result<(), LayerStackError> {
+    write_atomic(layer_digest_path(storage_root, layer_id), digest.as_bytes())
 }
 
 pub(crate) fn validate_layer_ref(layer: &LayerRef) -> Result<(), LayerStackError> {

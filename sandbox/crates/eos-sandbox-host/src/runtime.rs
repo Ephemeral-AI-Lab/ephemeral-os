@@ -1,13 +1,10 @@
-//! Docker-backed daemon container runtime and helper plumbing.
-
-use std::fmt::Write as FmtWrite;
+use std::ffi::OsStr;
 use std::fs;
-use std::io::{Read, Write as IoWrite};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
 use serde_json::json;
@@ -74,13 +71,6 @@ impl DaemonContainer {
         if !keep {
             run.push("--rm".to_owned());
         }
-        // The isolated-workspace tier creates a per-workspace cgroup under
-        // /sys/fs/cgroup, which Docker mounts read-only under plain --cap-add
-        // (EROFS, e.g. on Docker Desktop). --privileged makes cgroup2 writable so
-        // the real ns-holder/veth/cgroup path runs. Sandboxes already require
-        // SYS_ADMIN/NET_ADMIN + unconfined seccomp/apparmor, so this is an
-        // acceptable superset; the explicit caps below remain for documentation
-        // and hosts where privileged is unavailable.
         run.push("--privileged".to_owned());
         if let Some(platform) = &container.platform {
             run.push("--platform".to_owned());
@@ -102,8 +92,6 @@ impl DaemonContainer {
         run.push("-p".to_owned());
         run.push(format!("127.0.0.1::{}", daemon.tcp_port));
         run.push(container.image.clone());
-        // Keep the container alive but self-terminating: `timeout` bounds the
-        // lifetime so a leaked (`--rm`) container is reclaimed automatically.
         match container.lifetime {
             ContainerLifetime::Keep => run.extend(["sleep".to_owned(), "infinity".to_owned()]),
             ContainerLifetime::SelfDestruct { ttl } => run.extend([
@@ -114,9 +102,8 @@ impl DaemonContainer {
             ]),
         }
 
-        docker(&run).with_context(|| format!("docker run for {}", container.name))?;
+        docker(run).with_context(|| format!("docker run for {}", container.name))?;
 
-        // From here, any failure must still tear the container down.
         let mut handle = Self::handle(
             container.name.clone(),
             auth_token.clone(),
@@ -136,8 +123,6 @@ impl DaemonContainer {
             }
         }
     }
-
-    #[must_use]
     pub(crate) fn for_engine(
         name: String,
         auth_token: String,
@@ -149,7 +134,7 @@ impl DaemonContainer {
 
     pub fn adopt(id: &str, auth_token: String, daemon: &DaemonSpec) -> Result<Self> {
         let mut handle = Self::handle(id.to_owned(), auth_token.clone(), daemon, None, true);
-        let addr = handle.resolve_addr(daemon.tcp_port)?;
+        let addr = wait_for_published_addr(id, daemon.tcp_port)?;
         let client = ProtocolClient::new(addr, Some(auth_token), daemon.request_timeout);
         await_ready(&client, daemon.ready_timeout)?;
         handle.client = client;
@@ -208,70 +193,35 @@ impl DaemonContainer {
             "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true; test -w /sys/fs/cgroup",
         ])
         .context("make cgroup v2 writable for isolated workspaces")?;
-        put_archive_file(
-            &self.name,
-            &daemon_dir,
-            "eosd",
-            &daemon.eosd_path,
-            daemon.request_timeout,
-        )
-        .with_context(|| {
+        copy_file_into(&self.name, &daemon_dir, "eosd", &daemon.eosd_path).with_context(|| {
             format!(
-                "Docker put_archive eosd ({}) into {daemon_dir}",
+                "copy eosd ({}) into {daemon_dir}",
                 daemon.eosd_path.display()
             )
         })?;
-        put_archive_bytes(
+        copy_bytes_into(
             &self.name,
             &config_dir,
             config_name,
             daemon.config_yaml.as_bytes(),
             0o644,
-            daemon.request_timeout,
         )
-        .with_context(|| format!("Docker put_archive merged config into {config_dir}"))?;
+        .with_context(|| format!("copy merged config into {config_dir}"))?;
 
         self.spawn_daemon(&daemon_dir, &remote_eosd_path, daemon.tcp_port)
             .context("spawn eosd daemon")?;
 
-        let addr = self.resolve_addr(daemon.tcp_port)?;
+        let addr = wait_for_published_addr(&self.name, daemon.tcp_port)?;
         let client = ProtocolClient::new(addr, Some(self.token.clone()), daemon.request_timeout);
         await_ready(&client, daemon.ready_timeout)?;
         Ok(client)
     }
-
-    fn resolve_addr(&self, container_port: u16) -> Result<SocketAddr> {
-        let deadline = Instant::now() + Duration::from_secs(15);
-        loop {
-            if let Ok(out) = docker(&[
-                "port".to_owned(),
-                self.name.clone(),
-                format!("{container_port}/tcp"),
-            ]) {
-                if let Some(addr) = parse_published_addr(&out) {
-                    return Ok(addr);
-                }
-            }
-            if Instant::now() >= deadline {
-                bail!(
-                    "could not resolve published port {container_port} for {}",
-                    self.name
-                );
-            }
-            thread::sleep(Duration::from_millis(200));
-        }
-    }
-
-    #[must_use]
     pub fn client(&self) -> &ProtocolClient {
         &self.client
     }
 
     pub fn exec(&self, argv: &[&str]) -> Result<String> {
-        // `exec` argv may start with docker flags like `-d`; the container name
-        // goes after them and before the command. Everything after the command
-        // token is passed through verbatim.
-        docker(&docker_exec_args(&self.name, argv))
+        docker(docker_exec_args(&self.name, argv))
     }
 
     pub fn restart_daemon(&self, daemon: &DaemonSpec) -> Result<()> {
@@ -315,13 +265,13 @@ impl DaemonContainer {
     }
 
     fn daemon_log(&self) -> Option<String> {
-        docker(&[
-            "exec".to_owned(),
-            self.name.clone(),
-            "tail".to_owned(),
-            "-n".to_owned(),
-            "40".to_owned(),
-            self.daemon_log_path.clone(),
+        docker([
+            "exec",
+            self.name.as_str(),
+            "tail",
+            "-n",
+            "40",
+            self.daemon_log_path.as_str(),
         ])
         .ok()
     }
@@ -332,7 +282,7 @@ impl Drop for DaemonContainer {
         if self.keep {
             return;
         }
-        let _ = docker(&["rm".to_owned(), "-f".to_owned(), self.name.clone()]);
+        let _ = docker(["rm", "-f", self.name.as_str()]);
     }
 }
 
@@ -340,10 +290,6 @@ fn placeholder_addr() -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], 1))
 }
 
-/// The bring-up ready gate: poll heartbeat until the daemon answers with
-/// success, with exponential backoff. `sandbox.runtime.ready` cannot gate
-/// provisioning — its `control_plane` probe requires a seeded workspace base
-/// (see [`crate::protocol::HEARTBEAT_OP`]).
 fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     let deadline = Instant::now() + budget;
     let mut delay = Duration::from_millis(150);
@@ -359,10 +305,6 @@ fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
         thread::sleep(delay);
         delay = (delay * 2).min(Duration::from_secs(2));
     }
-}
-
-pub(crate) fn docker(args: &[String]) -> Result<String> {
-    docker_str(&args.iter().map(String::as_str).collect::<Vec<_>>())
 }
 
 pub(crate) fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
@@ -381,41 +323,52 @@ pub(crate) fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
     rebuilt
 }
 
-fn docker_str(args: &[&str]) -> Result<String> {
+pub(crate) fn docker<I, S>(args: I) -> Result<String>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let args = args
+        .into_iter()
+        .map(|arg| arg.as_ref().to_os_string())
+        .collect::<Vec<_>>();
+    let display = args
+        .iter()
+        .map(|arg| arg.to_string_lossy().into_owned())
+        .collect::<Vec<_>>()
+        .join(" ");
     let output = Command::new("docker")
-        .args(args)
+        .args(&args)
         .output()
-        .with_context(|| format!("spawn docker {}", args.join(" ")))?;
+        .with_context(|| format!("spawn docker {display}"))?;
     if !output.status.success() {
         bail!(
             "docker {} failed ({}): {}",
-            args.join(" "),
+            display,
             output.status,
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
-
-#[must_use]
-pub fn running_container_ids(label_filters: &[String]) -> Vec<String> {
+pub fn running_container_ids<S: AsRef<str>>(label_filters: &[S]) -> Vec<String> {
     let mut args = vec!["ps".to_owned(), "-q".to_owned()];
     for filter in label_filters {
         args.push("--filter".to_owned());
-        args.push(format!("label={filter}"));
+        args.push(format!("label={}", filter.as_ref()));
     }
-    let Ok(out) = docker(&args) else {
+    let Ok(out) = docker(args) else {
         return Vec::new();
     };
     out.split_whitespace().map(str::to_owned).collect()
 }
 
 pub fn container_label(id: &str, label: &str) -> Result<String> {
-    let value = docker(&[
-        "inspect".to_owned(),
-        "-f".to_owned(),
-        format!("{{{{ index .Config.Labels \"{label}\" }}}}"),
-        id.to_owned(),
+    let value = docker([
+        "inspect",
+        "-f",
+        &format!("{{{{ index .Config.Labels \"{label}\" }}}}"),
+        id,
     ])?;
     if value.is_empty() || value == "<no value>" {
         bail!("missing {label} label on {id}");
@@ -433,7 +386,7 @@ pub fn container_labels(ids: &[String]) -> Result<Vec<serde_json::Map<String, se
         "{{json .Config.Labels}}".to_owned(),
     ];
     args.extend(ids.iter().cloned());
-    docker(&args)?
+    docker(args)?
         .lines()
         .map(|line| {
             serde_json::from_str(line).with_context(|| format!("parse container labels: {line}"))
@@ -441,28 +394,24 @@ pub fn container_labels(ids: &[String]) -> Result<Vec<serde_json::Map<String, se
         .collect()
 }
 
-pub(crate) fn put_archive_file(
+pub(crate) fn copy_file_into(
     container: &str,
     dest_dir: &str,
     remote_name: &str,
     source: &Path,
-    timeout: Duration,
 ) -> Result<()> {
-    let payload = fs::read(source).with_context(|| format!("read eosd {}", source.display()))?;
-    let tar_stream = tar_single_file(remote_name, &payload, 0o755)?;
-    docker_put_archive(container, dest_dir, &tar_stream, timeout)
+    copy_path_into(container, dest_dir, remote_name, source, 0o755)
 }
 
-pub(crate) fn put_archive_bytes(
+pub(crate) fn copy_bytes_into(
     container: &str,
     dest_dir: &str,
     remote_name: &str,
     payload: &[u8],
     mode: u32,
-    timeout: Duration,
 ) -> Result<()> {
-    let tar_stream = tar_single_file(remote_name, payload, mode)?;
-    docker_put_archive(container, dest_dir, &tar_stream, timeout)
+    let upload = TempUploadFile::write(payload, mode)?;
+    copy_path_into(container, dest_dir, remote_name, upload.path(), mode)
 }
 
 pub(crate) fn path_str(path: &Path) -> Result<String> {
@@ -471,151 +420,101 @@ pub(crate) fn path_str(path: &Path) -> Result<String> {
         .with_context(|| format!("container path is not UTF-8: {}", path.display()))
 }
 
-#[cfg(unix)]
-fn docker_put_archive(
+fn copy_path_into(
     container: &str,
     dest_dir: &str,
-    tar_stream: &[u8],
-    timeout: Duration,
+    remote_name: &str,
+    source: &Path,
+    mode: u32,
 ) -> Result<()> {
-    use std::os::unix::net::UnixStream;
+    validate_remote_name(remote_name)?;
+    let source = source
+        .to_str()
+        .with_context(|| format!("host path is not UTF-8: {}", source.display()))?;
+    docker([
+        "cp",
+        source,
+        &container_copy_target(container, dest_dir, remote_name),
+    ])?;
+    docker([
+        "exec",
+        container,
+        "chmod",
+        &format!("{mode:o}"),
+        &remote_path(dest_dir, remote_name),
+    ])?;
+    Ok(())
+}
 
-    let socket = docker_socket_path()?;
-    let mut stream = UnixStream::connect(&socket)
-        .with_context(|| format!("connect Docker socket {}", socket.display()))?;
-    stream
-        .set_read_timeout(Some(timeout))
-        .context("set Docker socket read timeout")?;
-    stream
-        .set_write_timeout(Some(timeout))
-        .context("set Docker socket write timeout")?;
-
-    let api_version = docker_api_version();
-    let request_path = format!(
-        "/v{}/containers/{}/archive?path={}",
-        api_version.trim_start_matches('v'),
-        percent_encode(container),
-        percent_encode(dest_dir)
-    );
-    let request = format!(
-        "PUT {request_path} HTTP/1.1\r\n\
-         Host: docker\r\n\
-         User-Agent: eos-sandbox-host\r\n\
-         Content-Type: application/x-tar\r\n\
-         Content-Length: {}\r\n\
-         Connection: close\r\n\
-         \r\n",
-        tar_stream.len()
-    );
-    stream
-        .write_all(request.as_bytes())
-        .context("write Docker put_archive request headers")?;
-    stream
-        .write_all(tar_stream)
-        .context("write Docker put_archive tar stream")?;
-    stream.flush().context("flush Docker put_archive request")?;
-
-    let mut response = Vec::new();
-    stream
-        .read_to_end(&mut response)
-        .context("read Docker put_archive response")?;
-    let response_text = String::from_utf8_lossy(&response);
-    let status = docker_http_status(&response_text)?;
-    if !(200..300).contains(&status) {
-        bail!("Docker put_archive failed with HTTP {status}: {response_text}");
+fn validate_remote_name(remote_name: &str) -> Result<()> {
+    if remote_name.is_empty() || remote_name.contains('/') || remote_name == ".." {
+        bail!("invalid remote file name {remote_name:?}");
     }
     Ok(())
 }
 
-#[cfg(not(unix))]
-fn docker_put_archive(
-    _container: &str,
-    _dest_dir: &str,
-    _tar_stream: &[u8],
-    _timeout: Duration,
-) -> Result<()> {
-    bail!("Docker put_archive over a Unix socket is only supported on Unix hosts")
+fn container_copy_target(container: &str, dest_dir: &str, remote_name: &str) -> String {
+    format!("{container}:{}", remote_path(dest_dir, remote_name))
 }
 
-#[cfg(unix)]
-fn docker_socket_path() -> Result<PathBuf> {
-    let mut candidates = Vec::new();
-    if let Ok(host) = std::env::var("DOCKER_HOST") {
-        if let Some(path) = docker_unix_socket_from_host(&host) {
-            candidates.push(path);
+fn remote_path(dest_dir: &str, remote_name: &str) -> String {
+    format!("{}/{remote_name}", dest_dir.trim_end_matches('/'))
+}
+
+struct TempUploadFile {
+    path: PathBuf,
+}
+
+impl TempUploadFile {
+    fn write(payload: &[u8], mode: u32) -> Result<Self> {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "eos-sandbox-host-upload-{}-{nanos}",
+            std::process::id()
+        ));
+        fs::write(&path, payload).with_context(|| format!("write {}", path.display()))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&path, fs::Permissions::from_mode(mode))
+                .with_context(|| format!("chmod {}", path.display()))?;
         }
+        Ok(Self { path })
     }
-    if let Ok(host) = docker_str(&[
-        "context",
-        "inspect",
-        "--format",
-        "{{.Endpoints.docker.Host}}",
-    ]) {
-        if let Some(path) = docker_unix_socket_from_host(&host) {
-            candidates.push(path);
-        }
-    }
-    if let Some(home) = std::env::var_os("HOME") {
-        candidates.push(PathBuf::from(home).join(".docker/run/docker.sock"));
-    }
-    candidates.push(PathBuf::from("/var/run/docker.sock"));
 
-    candidates
-        .into_iter()
-        .find(|path| path.exists())
-        .ok_or_else(|| anyhow::anyhow!("could not locate Docker Unix socket for put_archive"))
+    fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
-fn docker_unix_socket_from_host(host: &str) -> Option<PathBuf> {
-    host.trim()
-        .strip_prefix("unix://")
-        .filter(|path| !path.is_empty())
-        .map(PathBuf::from)
-}
-
-fn docker_api_version() -> String {
-    docker_str(&["version", "--format", "{{.Server.APIVersion}}"])
-        .ok()
-        .filter(|version| !version.is_empty())
-        .unwrap_or_else(|| "1.41".to_owned())
-}
-
-fn docker_http_status(response: &str) -> Result<u16> {
-    let status_line = response
-        .lines()
-        .next()
-        .context("Docker put_archive response missing status line")?;
-    let status = status_line
-        .split_whitespace()
-        .nth(1)
-        .context("Docker put_archive response missing status code")?;
-    status
-        .parse::<u16>()
-        .with_context(|| format!("parse Docker HTTP status from {status_line:?}"))
-}
-
-fn percent_encode(value: &str) -> String {
-    let mut encoded = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~') {
-            encoded.push(char::from(byte));
-        } else {
-            let _ = write!(&mut encoded, "%{byte:02X}");
-        }
+impl Drop for TempUploadFile {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
     }
-    encoded
 }
 
 pub(crate) fn resolve_published_addr(
     container: &str,
     container_port: u16,
 ) -> Result<Option<SocketAddr>> {
-    let out = docker(&[
-        "port".to_owned(),
-        container.to_owned(),
-        format!("{container_port}/tcp"),
-    ])?;
+    let out = docker(["port", container, &format!("{container_port}/tcp")])?;
     Ok(parse_published_addr(&out))
+}
+
+fn wait_for_published_addr(container: &str, container_port: u16) -> Result<SocketAddr> {
+    let deadline = Instant::now() + Duration::from_secs(15);
+    loop {
+        if let Ok(Some(addr)) = resolve_published_addr(container, container_port) {
+            return Ok(addr);
+        }
+        if Instant::now() >= deadline {
+            bail!("could not resolve published port {container_port} for {container}");
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
 }
 
 pub(crate) fn parse_published_addr(output: &str) -> Option<SocketAddr> {
@@ -630,90 +529,20 @@ pub(crate) fn parse_published_addr(output: &str) -> Option<SocketAddr> {
     }
     None
 }
-
-#[must_use]
 pub fn docker_available() -> bool {
-    docker_str(&["version", "--format", "{{.Server.Version}}"]).is_ok()
+    docker(["version", "--format", "{{.Server.Version}}"]).is_ok()
 }
 
 pub fn remove_labeled_containers(label: &str) -> Result<usize> {
-    let out = docker(&[
-        "ps".to_owned(),
-        "-aq".to_owned(),
-        "--filter".to_owned(),
-        format!("label={label}"),
-    ])?;
+    let out = docker(["ps", "-aq", "--filter", &format!("label={label}")])?;
     let ids: Vec<&str> = out.split_whitespace().collect();
     if ids.is_empty() {
         return Ok(0);
     }
     let mut argv = vec!["rm".to_owned(), "-f".to_owned()];
     argv.extend(ids.iter().map(|id| (*id).to_owned()));
-    docker(&argv)?;
+    docker(argv)?;
     Ok(ids.len())
-}
-
-pub(crate) fn tar_single_file(name: &str, payload: &[u8], mode: u32) -> Result<Vec<u8>> {
-    if name.is_empty() || name.starts_with('/') || name.split('/').any(|part| part == "..") {
-        bail!("invalid tar entry name {name:?}");
-    }
-    let name_bytes = name.as_bytes();
-    if name_bytes.len() > 100 {
-        bail!("tar entry name too long: {name}");
-    }
-
-    let mut header = [0_u8; 512];
-    header[..name_bytes.len()].copy_from_slice(name_bytes);
-    write_octal(&mut header[100..108], u64::from(mode))?;
-    write_octal(&mut header[108..116], 0)?;
-    write_octal(&mut header[116..124], 0)?;
-    write_octal(&mut header[124..136], payload.len() as u64)?;
-    write_octal(&mut header[136..148], 0)?;
-    header[148..156].fill(b' ');
-    header[156] = b'0';
-    header[257..263].copy_from_slice(b"ustar\0");
-    header[263..265].copy_from_slice(b"00");
-    let checksum = header.iter().map(|byte| u32::from(*byte)).sum::<u32>();
-    write_checksum(&mut header[148..156], checksum)?;
-
-    let mut archive = Vec::with_capacity(512 + payload.len() + 1536);
-    archive.extend_from_slice(&header);
-    archive.extend_from_slice(payload);
-    let padding = (512 - (payload.len() % 512)) % 512;
-    archive.resize(archive.len() + padding, 0);
-    archive.resize(archive.len() + 1024, 0);
-    Ok(archive)
-}
-
-fn write_octal(field: &mut [u8], value: u64) -> Result<()> {
-    let digits = field
-        .len()
-        .checked_sub(1)
-        .context("tar octal field too short")?;
-    let encoded = format!("{value:0width$o}", width = digits);
-    if encoded.len() > digits {
-        bail!(
-            "tar octal value {value} does not fit in {} bytes",
-            field.len()
-        );
-    }
-    field[..digits].copy_from_slice(encoded.as_bytes());
-    field[digits] = 0;
-    Ok(())
-}
-
-fn write_checksum(field: &mut [u8], value: u32) -> Result<()> {
-    if field.len() != 8 {
-        bail!("tar checksum field must be 8 bytes");
-    }
-    let encoded = format!("{value:06o}");
-    if encoded.len() > 6 {
-        bail!("tar checksum {value} does not fit");
-    }
-    field[..6].copy_from_slice(encoded.as_bytes());
-    field[6] = 0;
-    field[7] = b' ';
-    Ok(())
 }
 
 #[cfg(test)]

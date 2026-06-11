@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::Instant;
 
 use ignore::gitignore::GitignoreBuilder;
@@ -9,13 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::model::{CasError, LayerChange, LayerPath};
+use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
 use crate::{LayerStack, LayerStackError, Manifest, MergedView};
 
 mod worker;
 
 pub use worker::configure_auto_squash_max_depth;
-pub(crate) use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
+use worker::{CommitQueue, CommitTransaction, PreparedChangeset};
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum CommitError {
@@ -167,30 +166,20 @@ impl ChangesetResult {
             .count()
     }
 }
-pub trait RouteProvider: Send + Sync {
-    fn is_ignored(&self, path: &LayerPath) -> Result<bool, CommitError>;
-
-    fn base_hash(&self, path: &LayerPath) -> Result<Option<String>, CommitError>;
-}
-
-pub struct CommitService {
+pub(crate) struct CommitWriter {
+    root: PathBuf,
     commit_queue: CommitQueue,
-    route_provider: Arc<dyn RouteProvider>,
 }
 
-impl CommitService {
-    pub fn with_route_provider(
-        mut commit_queue: CommitQueue,
-        route_provider: Arc<dyn RouteProvider>,
-    ) -> Result<Self, CommitError> {
+impl CommitWriter {
+    pub(crate) fn new(root: PathBuf) -> Result<Self, CommitError> {
+        let transaction = CommitTransaction { root: root.clone() };
+        let mut commit_queue = CommitQueue::new(transaction);
         commit_queue.start()?;
-        Ok(Self {
-            commit_queue,
-            route_provider,
-        })
+        Ok(Self { root, commit_queue })
     }
 
-    pub fn apply_changeset_with_base_hashes(
+    pub(crate) fn apply_changeset_with_base_hashes(
         &self,
         changes: &[LayerChange],
         snapshot_version: Option<u64>,
@@ -206,35 +195,24 @@ impl CommitService {
         self.apply_prepared_changeset(prepared)
     }
 
-    pub fn prepare_changeset_with_base_hashes(
+    fn prepare_changeset_with_base_hashes(
         &self,
         changes: &[LayerChange],
         snapshot_version: Option<u64>,
         atomic: bool,
         base_hashes: &[(LayerPath, Option<String>)],
     ) -> Result<PreparedChangeset, CommitError> {
+        let stack = self.open_stack()?;
         let mut path_groups = Vec::with_capacity(changes.len());
         let mut publishable = Vec::with_capacity(changes.len());
         for change in changes {
             let path = change.path().clone();
-            if path.as_str() == ".git" || path.as_str().starts_with(".git/") {
-                path_groups.push(PublishDecision {
-                    path,
-                    route: Route::Drop,
-                    base_hash: None,
-                    message: Some(".git paths are not mutable through OCC".to_owned()),
-                });
-                continue;
-            }
-            let route = if self.route_provider.is_ignored(&path)? {
-                Route::Direct
-            } else {
-                Route::Gated
-            };
+            let route = route_for_path(&stack, &path)
+                .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
             let base_hash = if route == Route::Gated {
                 match base_hashes.iter().find(|(candidate, _)| candidate == &path) {
                     Some((_, hash)) => hash.clone(),
-                    None => self.route_provider.base_hash(&path)?,
+                    None => stack_base_hash(&stack, &path)?,
                 }
             } else {
                 None
@@ -243,9 +221,11 @@ impl CommitService {
                 path,
                 route,
                 base_hash,
-                message: None,
+                message: drop_message(route),
             });
-            publishable.push(change.clone());
+            if route != Route::Drop {
+                publishable.push(change.clone());
+            }
         }
         Ok(PreparedChangeset {
             snapshot_version,
@@ -273,6 +253,33 @@ impl CommitService {
             total_start.elapsed().as_secs_f64(),
         ))
     }
+
+    fn open_stack(&self) -> Result<LayerStack, CommitError> {
+        LayerStack::open(self.root.clone())
+            .map_err(|err| CommitError::RoutePreparation(err.to_string()))
+    }
+}
+
+fn route_for_path(stack: &LayerStack, path: &LayerPath) -> Result<Route, LayerStackError> {
+    if path.as_str() == ".git" || path.as_str().starts_with(".git/") {
+        return Ok(Route::Drop);
+    }
+    if path_is_ignored(stack, path.as_str())? {
+        Ok(Route::Direct)
+    } else {
+        Ok(Route::Gated)
+    }
+}
+
+fn drop_message(route: Route) -> Option<String> {
+    (route == Route::Drop).then(|| ".git paths are not mutable through OCC".to_owned())
+}
+
+fn stack_base_hash(stack: &LayerStack, path: &LayerPath) -> Result<Option<String>, CommitError> {
+    let (bytes, exists) = stack
+        .read_bytes(path.as_str())
+        .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
+    Ok(hash_current(bytes.as_deref(), exists))
 }
 
 fn finalize_apply_result(
@@ -314,7 +321,7 @@ fn timing_or_default(timings: &std::collections::BTreeMap<String, f64>, key: &st
     timings.get(key).copied().unwrap_or(0.0)
 }
 
-impl Drop for CommitService {
+impl Drop for CommitWriter {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
     }
@@ -325,29 +332,6 @@ pub struct RouteMetrics {
     pub direct_path_count: usize,
 }
 
-#[derive(Clone)]
-pub struct StackRouteProvider {
-    pub root: PathBuf,
-}
-
-impl RouteProvider for StackRouteProvider {
-    fn is_ignored(&self, path: &LayerPath) -> std::result::Result<bool, CommitError> {
-        let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-        path_is_ignored(&stack, path.as_str())
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))
-    }
-
-    fn base_hash(&self, path: &LayerPath) -> std::result::Result<Option<String>, CommitError> {
-        let stack = LayerStack::open(self.root.clone())
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-        let (bytes, exists) = stack
-            .read_bytes(path.as_str())
-            .map_err(|err| CommitError::RoutePreparation(err.to_string()))?;
-        Ok(hash_current(bytes.as_deref(), exists))
-    }
-}
-
 pub fn route_metrics(
     root: &Path,
     changes: &[LayerChange],
@@ -355,14 +339,10 @@ pub fn route_metrics(
     let stack = LayerStack::open(root.to_path_buf())?;
     let mut metrics = RouteMetrics::default();
     for change in changes {
-        let path = change.path().as_str();
-        if path == ".git" || path.starts_with(".git/") {
-            continue;
-        }
-        if path_is_ignored(&stack, path)? {
-            metrics.direct_path_count += 1;
-        } else {
-            metrics.gated_path_count += 1;
+        match route_for_path(&stack, change.path())? {
+            Route::Direct => metrics.direct_path_count += 1,
+            Route::Gated => metrics.gated_path_count += 1,
+            Route::Drop | Route::Reject => {}
         }
     }
     Ok(metrics)
@@ -525,18 +505,7 @@ pub fn hash_current(content: Option<&[u8]>, exists: bool) -> Option<String> {
 pub fn hash_bytes(content: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(content);
-    hex_lower(&hasher.finalize())
-}
-
-fn hex_lower(bytes: &[u8]) -> String {
-    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
-
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        out.push(char::from(LOWER_HEX[usize::from(byte >> 4)]));
-        out.push(char::from(LOWER_HEX[usize::from(byte & 0x0f)]));
-    }
-    out
+    hex_lower(hasher.finalize())
 }
 
 pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {

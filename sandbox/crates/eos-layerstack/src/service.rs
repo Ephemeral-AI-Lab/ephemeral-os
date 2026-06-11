@@ -7,13 +7,12 @@ use crate::model::{LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_V
 use serde_json::{json, Value};
 
 use crate::commit::{
-    base_hashes_for_snapshot, usize_to_f64_saturating, ChangesetResult, CommitError, CommitQueue,
-    CommitService, CommitTransaction,
+    base_hashes_for_snapshot, usize_to_f64_saturating, ChangesetResult, CommitError, CommitWriter,
 };
-use crate::commit::{insert_route_timings, route_metrics, StackRouteProvider};
+use crate::commit::{insert_route_timings, route_metrics};
 use crate::{LayerStack, LayerStackError};
 
-type RootService = Arc<CommitService>;
+type RootService = Arc<CommitWriter>;
 
 pub(crate) const SERVICE_CACHE_MAX: usize = 256;
 
@@ -107,22 +106,19 @@ impl ServiceCache {
         key: String,
         service: RootService,
         lock_wait_s: f64,
-    ) -> (ServiceLookup, Option<RootService>) {
+    ) -> ServiceLookup {
         self.record_lock_wait(lock_wait_s);
         if let Some(existing) = self.entries.get(&key).cloned() {
             self.touch(&key);
             self.stats.hits_total += 1;
-            return (
-                ServiceLookup {
-                    service: existing,
-                    lock_wait_s,
-                    cache_hit: true,
-                    cache_created: false,
-                    evicted_count: 0,
-                    cache_size: self.entries.len(),
-                },
-                Some(service),
-            );
+            return ServiceLookup {
+                service: existing,
+                lock_wait_s,
+                cache_hit: true,
+                cache_created: false,
+                evicted_count: 0,
+                cache_size: self.entries.len(),
+            };
         }
         self.stats.misses_total += 1;
         self.stats.creates_total += 1;
@@ -133,17 +129,14 @@ impl ServiceCache {
             .stats
             .evictions_total
             .saturating_add(u64::try_from(evicted_count).unwrap_or(u64::MAX));
-        (
-            ServiceLookup {
-                service,
-                lock_wait_s,
-                cache_hit: false,
-                cache_created: true,
-                evicted_count,
-                cache_size: self.entries.len(),
-            },
-            None,
-        )
+        ServiceLookup {
+            service,
+            lock_wait_s,
+            cache_hit: false,
+            cache_created: true,
+            evicted_count,
+            cache_size: self.entries.len(),
+        }
     }
 
     fn touch(&mut self, key: &str) {
@@ -187,22 +180,10 @@ fn service_for_root(root: &Path) -> Result<ServiceLookup, CommitError> {
             return Ok(lookup);
         }
     }
-    let transaction = CommitTransaction {
-        root: root.to_path_buf(),
-    };
-    let route_provider = Arc::new(StackRouteProvider {
-        root: root.to_path_buf(),
-    });
-    let service = Arc::new(CommitService::with_route_provider(
-        CommitQueue::new(transaction),
-        route_provider,
-    )?);
+    let service = Arc::new(CommitWriter::new(root.to_path_buf())?);
     let lock_start = Instant::now();
     let mut cache = lock_services()?;
-    let (lookup, rejected) = cache.insert_or_get(key, service, lock_start.elapsed().as_secs_f64());
-    drop(cache);
-    drop(rejected);
-    Ok(lookup)
+    Ok(cache.insert_or_get(key, service, lock_start.elapsed().as_secs_f64()))
 }
 
 pub(crate) fn normalize_root_key(root: &Path) -> String {

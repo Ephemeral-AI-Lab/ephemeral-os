@@ -21,16 +21,16 @@ pub(crate) const BATCH_WINDOW_S: f64 = 0.002;
 pub(crate) const MAX_OCC_CAS_RETRIES: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PreparedChangeset {
-    pub snapshot_version: Option<u64>,
-    pub path_groups: Vec<PublishDecision>,
-    pub changes: Vec<LayerChange>,
-    pub atomic: bool,
+pub(super) struct PreparedChangeset {
+    pub(super) snapshot_version: Option<u64>,
+    pub(super) path_groups: Vec<PublishDecision>,
+    pub(super) changes: Vec<LayerChange>,
+    pub(super) atomic: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PublishConflict {
-    pub observed_version: Option<u64>,
+pub(super) struct PublishConflict {
+    pub(super) observed_version: Option<u64>,
 }
 
 struct WorkItem {
@@ -44,7 +44,7 @@ enum QueueItem {
     Stop,
 }
 
-pub struct CommitQueue {
+pub(super) struct CommitQueue {
     sender: mpsc::Sender<QueueItem>,
     receiver: Mutex<Option<mpsc::Receiver<QueueItem>>>,
     transaction: Mutex<Option<CommitTransaction>>,
@@ -64,7 +64,7 @@ struct CommitWorker {
 }
 
 impl CommitQueue {
-    pub fn new(transaction: CommitTransaction) -> Self {
+    pub(super) fn new(transaction: CommitTransaction) -> Self {
         Self::with_config(
             transaction,
             MAX_BATCH_SIZE,
@@ -73,7 +73,7 @@ impl CommitQueue {
         )
     }
 
-    pub fn with_config(
+    fn with_config(
         transaction: CommitTransaction,
         max_batch_size: usize,
         batch_window_s: f64,
@@ -92,7 +92,7 @@ impl CommitQueue {
         }
     }
 
-    pub fn start(&mut self) -> Result<(), CommitError> {
+    pub(super) fn start(&mut self) -> Result<(), CommitError> {
         if self.closed {
             return Err(CommitError::QueueClosed);
         }
@@ -132,7 +132,7 @@ impl CommitQueue {
         Ok(())
     }
 
-    pub fn close(&mut self) -> Result<(), CommitError> {
+    pub(super) fn close(&mut self) -> Result<(), CommitError> {
         if self.closed {
             return Ok(());
         }
@@ -146,7 +146,7 @@ impl CommitQueue {
         })
     }
 
-    pub fn submit(
+    pub(super) fn submit(
         &self,
         prepared: PreparedChangeset,
     ) -> Result<mpsc::Receiver<Result<ChangesetResult, CommitError>>, CommitError> {
@@ -371,12 +371,12 @@ fn auto_squash_max_depth() -> usize {
 }
 
 #[derive(Clone)]
-pub struct CommitTransaction {
-    pub root: PathBuf,
+pub(super) struct CommitTransaction {
+    pub(super) root: PathBuf,
 }
 
 impl CommitTransaction {
-    pub fn revalidate_and_publish(
+    pub(super) fn revalidate_and_publish(
         &self,
         combined: &PreparedChangeset,
     ) -> std::result::Result<ChangesetResult, PublishConflict> {

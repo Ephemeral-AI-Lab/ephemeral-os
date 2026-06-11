@@ -21,22 +21,27 @@ export function workflowFieldFiles(
   return files;
 }
 
+/**
+ * §5.3: the workflow outcome is the ordered ledger of every closed
+ * iteration's outcome. A cancelled workflow renders a cancellation marker
+ * (not a business outcome) ahead of any already closed iterations.
+ */
 function composeWorkflowOutcome(
   workflow: WorkflowState,
   iterations: readonly IterationState[],
 ): string {
-  const last = iterations.at(-1);
-  switch (workflow.status) {
-    case "Success":
-      return last ? composeIterationOutcome(last) : "workflow completed";
-    case "Failed": {
-      const failReason = [...iterations]
-        .reverse()
-        .flatMap((iteration) => [...iteration.attempts].reverse())
-        .find((attempt) => attempt.failReason !== null)?.failReason;
-      return failReason ?? "workflow failed";
-    }
-    default:
-      return "workflow cancelled";
-  }
+  const head =
+    workflow.status === "Cancelled"
+      ? "# Workflow outcome\nworkflow cancelled"
+      : "# Workflow outcome";
+  const sections = iterations
+    .filter(
+      (iteration) =>
+        iteration.status === "Success" || iteration.status === "Failed",
+    )
+    .map(
+      (iteration) =>
+        `## iteration_${iteration.id} [${iteration.status}]\n${composeIterationOutcome(iteration)}`,
+    );
+  return [head, ...sections].join("\n\n");
 }

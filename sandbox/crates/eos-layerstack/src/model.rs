@@ -149,7 +149,7 @@ pub fn manifest_root_hash(manifest: &Manifest) -> String {
     let encoded = manifest_layers_json(&manifest.layers);
     let mut hasher = Sha256::new();
     hasher.update(encoded.as_bytes());
-    hex_lower(&hasher.finalize())
+    hex_lower(hasher.finalize())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -220,10 +220,11 @@ pub fn layer_digest(changes: &[LayerChange]) -> String {
     for change in aggregate_layer_changes(changes) {
         update_digest(&mut hasher, &change);
     }
-    hex_lower(&hasher.finalize())
+    hex_lower(hasher.finalize())
 }
 
-fn hex_lower(bytes: &[u8]) -> String {
+pub(crate) fn hex_lower(bytes: impl AsRef<[u8]>) -> String {
+    let bytes = bytes.as_ref();
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
         s.push(char::from(LOWER_HEX[usize::from(b >> 4)]));

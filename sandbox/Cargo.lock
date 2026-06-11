@@ -213,7 +213,6 @@ dependencies = [
  "eos-overlay",
  "eos-plugin",
  "eos-runtime",
- "nix 0.29.0",
  "proptest",
  "serde",
  "serde_json",

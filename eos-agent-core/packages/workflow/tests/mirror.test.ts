@@ -26,6 +26,13 @@ function diskFiles(root: string): Map<string, string> {
   return files;
 }
 
+function diskDirectories(root: string): string[] {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { recursive: true })
+    .map((entry) => String(entry).split("\\").join("/"))
+    .filter((relative) => statSync(join(root, relative)).isDirectory());
+}
+
 async function expectMirrorEqualsUniverse(h: Harness, workflowId: WorkflowId) {
   const context = buildWorkflowContext(await h.tree(workflowId));
   const disk = diskFiles(join(h.contextRoot, context.rootPath));
@@ -36,6 +43,12 @@ async function expectMirrorEqualsUniverse(h: Harness, workflowId: WorkflowId) {
   for (const [path, entry] of context.files) {
     expect(disk.get(path), `byte-for-byte content of ${path}`).toBe(entry.content);
   }
+  expect(
+    diskDirectories(join(h.contextRoot, context.rootPath)).filter((path) =>
+      path.split("/").some((segment) => segment.startsWith("plan_")),
+    ),
+    "no plan_<id>/ directories exist on disk",
+  ).toEqual([]);
   return context;
 }
 

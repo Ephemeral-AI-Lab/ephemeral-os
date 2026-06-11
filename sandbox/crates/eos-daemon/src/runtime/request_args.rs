@@ -1,5 +1,7 @@
 //! Shared request argument and JSON conversion helpers.
 
+use std::path::PathBuf;
+
 use eos_layerstack::WorkspaceBinding;
 use serde_json::{json, Value};
 
@@ -69,6 +71,22 @@ pub(crate) fn require_nonempty_string(args: &Value, key: &str) -> Result<String,
         )));
     }
     Ok(value.to_owned())
+}
+
+pub(crate) fn optional_u64(args: &Value, key: &str) -> Option<u64> {
+    args.get(key).and_then(|value| {
+        value
+            .as_u64()
+            .or_else(|| value.as_i64().and_then(|value| u64::try_from(value).ok()))
+    })
+}
+
+pub(crate) fn optional_path(args: &Value, key: &str) -> Option<PathBuf> {
+    args.get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .map(PathBuf::from)
 }
 
 pub(crate) fn binding_to_value(binding: &WorkspaceBinding) -> Result<Value, DaemonError> {
