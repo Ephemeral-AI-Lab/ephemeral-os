@@ -113,7 +113,6 @@ fn isolated_write_response_fields() -> Result<()> {
         json!({"path": "iso-overlay/private.txt", "content": "private\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "workspace")?, "isolated");
-    assert_eq!(as_str(&write, "workspace_mode")?, "isolated");
     assert_eq!(as_str(&write, "mutation_source")?, "isolated_workspace");
     assert_eq!(as_str(&write, "status")?, "committed");
     assert!(!as_bool(&write, "published")?);
@@ -168,7 +167,6 @@ fn isolated_edit_conflict_response_fields() -> Result<()> {
     )?;
 
     assert_eq!(as_str(&edit, "workspace")?, "isolated", "{edit}");
-    assert_eq!(as_str(&edit, "workspace_mode")?, "isolated", "{edit}");
     assert_eq!(as_str(&edit, "status")?, "aborted_overlap", "{edit}");
     assert!(!as_bool(&edit, "published")?);
     assert_eq!(as_i64(&edit, "applied_edits")?, 0);

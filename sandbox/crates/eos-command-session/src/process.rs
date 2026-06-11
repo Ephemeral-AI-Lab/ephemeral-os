@@ -29,7 +29,7 @@ pub struct CommandSessionProcess {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CommandProcessExit {
+pub(crate) struct CommandProcessExit {
     exit_code: Option<i64>,
 }
 
@@ -55,7 +55,7 @@ impl CommandProcessExit {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProcessReap {
+pub(crate) enum ProcessReap {
     Running,
     Exited(CommandProcessExit),
 }
@@ -73,7 +73,7 @@ pub enum KillReason {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommandCompletionStatus {
+pub(crate) struct CommandCompletionStatus {
     status: String,
     exit_code: i64,
 }
@@ -119,7 +119,7 @@ impl CommandCompletionStatus {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CommandRunnerResult {
+pub(crate) struct CommandRunnerResult {
     exit_code: i64,
     status: Option<String>,
     value: Value,
@@ -172,7 +172,7 @@ impl CommandRunnerResult {
 impl CommandSessionProcess {
     /// Process-free scaffold backing [`crate::session::CommandSession::new`].
     #[must_use]
-    pub fn inactive(writer: File) -> Self {
+    pub(crate) fn inactive(writer: File) -> Self {
         Self {
             pgid: None,
             writer: Mutex::new(writer),
@@ -186,7 +186,7 @@ impl CommandSessionProcess {
     /// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`
     /// before returning a structured backpressure error. Cancel/terminate is a
     /// separate (`killpg`) path, so the session stays controllable throughout.
-    pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
+    pub(crate) fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = lock(&self.writer);
         let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
         let mut offset = 0;
@@ -219,14 +219,14 @@ impl CommandSessionProcess {
         Ok(())
     }
 
-    pub fn terminate(&self) {
+    pub(crate) fn terminate(&self) {
         if let Some(pgid) = self.pgid {
             terminate_process_group(pgid);
         }
     }
 
     #[must_use]
-    pub fn try_reap(&self) -> ProcessReap {
+    pub(crate) fn try_reap(&self) -> ProcessReap {
         let mut child = lock(&self.child);
         match child.as_mut() {
             Some(handle) => match handle.try_wait() {
@@ -244,7 +244,7 @@ impl CommandSessionProcess {
         }
     }
 
-    pub fn wait_for_reader_done(&self, timeout: Duration) {
+    pub(crate) fn wait_for_reader_done(&self, timeout: Duration) {
         let reader_done = lock(&self.reader_done).take();
         if let Some(reader_done) = reader_done {
             let _ = reader_done.recv_timeout(timeout);
@@ -400,5 +400,5 @@ fn stdin_backpressure() -> io::Error {
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/pty_process.rs"]
+#[path = "../tests/unit/process.rs"]
 mod tests;

@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value;
 
-use crate::pty_process::{
+use crate::process::{
     CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, KillReason, ProcessReap,
 };
 use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
@@ -151,12 +151,6 @@ impl CommandSession {
     #[must_use]
     pub const fn started_at(&self) -> Instant {
         self.started_at
-    }
-
-    #[must_use]
-    pub fn is_expired(&self, now: Instant) -> bool {
-        self.timeout
-            .is_some_and(|timeout| now.duration_since(self.started_at) >= timeout)
     }
 
     pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {

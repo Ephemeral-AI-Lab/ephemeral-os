@@ -44,8 +44,9 @@ a user-configured context script with the same ergonomics as the existing
 Phase 05's orchestration spine is untouched: the scheduler cell, serial
 reconcile queue, claim-in-transaction/launch-after-commit, settlement
 synthesis (§2.7 there), the one-session supervisor story, the one-open-workflow
-guard, `AgentLaunchPort`, revision stamping, and `(revision, path)` render
-memoization all survive exactly as specified.
+guard, `AgentLaunchPort`, and the revision counter with its
+`(revision, path)` render memoization all survive exactly as specified
+(the §2.19 in-content stamp does not - §2.7).
 
 ## 2. Design Decisions
 
@@ -92,8 +93,11 @@ memoization all survive exactly as specified.
    `brief.md` are not implemented. Every entity-local field projects as one
    file named for the field; an absent field is an absent path, never a
    placeholder. Status never gets a file - it rides directory listings. A
-   field-file render is the §2.19 (Phase 05) revision stamp, the owning
-   entity's status line, then the field text verbatim.
+   field-file render is the field text, verbatim - no embedded metadata:
+   revision and status ride the structured DTO layer (`ContextPage`,
+   listing rows, the §7 variables), never the content. The revision
+   survives as the concurrency token - read pinning and the render memo
+   key always rode the tool input/output, not the rendered text.
 8. **Archives hold what the parent's achievement story excludes.** Two
    kinds, both derived:
    - `workflow/archived/iteration_<k>/current_goal.md` is the superseded
@@ -113,8 +117,10 @@ memoization all survive exactly as specified.
    `iteration_<id>/` is exactly the consistent set - an iteration's folder
    always reads as the current focus's story. A refocus is the one event
    that changes an entity's path; §9 names the recovery rules.
-9. **The tree listing is the overview projection.** A `read_workflow_context`
-   path resolving to a directory (the root by default) returns the subtree
+9. **The tree listing is the overview projection.** A read path (the
+   `read_workflow_context` surface - tool exposure deferred, §2.18; the
+   resolver and listing ship package-side and these semantics bind when
+   the tool lands) resolving to a directory (the root by default) returns the subtree
    listing: one row per path with the owning entity's status and, where a
    summary field exists, its first line. This replaces the Phase 05 default
    root `brief.md`.
@@ -124,8 +130,8 @@ memoization all survive exactly as specified.
     search hit is simply the filename. The archive reintroduces controlled
     duplication (an archived `current_goal` repeats the predecessor
     iteration's `deferred_goal` declaration in a different role), so
-    `query_workflow_context` skips `archived/` subtrees unless `scope`
-    names a path inside one. Drifted attempts ride the exclusion:
+    `query_workflow_context` (deferred tool, §2.18) skips `archived/`
+    subtrees unless `scope` names a path inside one. Drifted attempts ride the exclusion:
     abandoned-direction outcomes stop surfacing to current-focus agents by
     default, while retry planners still receive them through the §2.11
     variables, which read the aggregate, not paths.
@@ -157,23 +163,26 @@ memoization all survive exactly as specified.
     work items. Retry planner: `current_goal`, the standing focus, the
     *consistent* failed attempts (work items with summaries/outcomes and
     `fail_reason`), then a directive to re-plan within the focus or refocus
-    (naming that refocus resets both fields) and to read the failed
-    attempt's paths via `read_workflow_context` before planning - the
-    standing `deferred_goal` and superseded attempts are deliberately
-    omitted (§2.5). Worker: the iteration focus, dependency outcomes, own
-    `work_item_spec`, submit directive.
+    (naming that refocus resets both fields) - the consistent failed
+    attempts arrive fully expanded in the variables, so no read escalation
+    exists or is needed this round (§2.18); the standing `deferred_goal`
+    and superseded attempts are deliberately omitted (§2.5). Worker: the
+    iteration focus, dependency outcomes, own `work_item_spec`, submit
+    directive.
 14. **Compose failures ride the §2.7 uniform rule.** A script that exits
     non-zero, times out, or emits output failing the Zod parse means the
     launch never happens: the scheduler synthesizes a failed settlement for
     the claimed entity, recording `fail_reason: "context_script_error: …"`,
     and the ordinary retry path runs. `max_attempts` bounds the damage from
     a broken user script; nothing can wedge in `Running`.
-15. **Conditional payload rules validate at materialization.** The
-    submission tools stay service-free, so "the iteration's first
-    declaration is required" cannot be checked in-run. Like Phase 05's
-    unknown-`agent_name` rule, a first planner settlement whose payload
-    lacks `focus` fails the attempt with a recorded `fail_reason`; the
-    retry planner sees it.
+15. **Submission validation is in-run, end to end.** With the bound
+    submission seam (§2.19) the old "cannot check in-run" constraint is
+    gone: shape (Zod), structure (unique local ids, declared `needs`, no
+    cycles), and materialization rules (first declaration present,
+    `agent_name` registered) all return an error result the agent corrects
+    before terminating. No attempt burns for a correctable payload; the
+    fail-the-attempt path survives only as death synthesis (§2.19) for
+    runs that settle without ever submitting validly.
 16. **Closure outcomes derive from the last attempt.** An iteration's
     `outcome.md` is composed at render time from its closing attempt's plan
     summary and work-item summaries/outcomes. Prior iterations collapse to
@@ -197,6 +206,34 @@ memoization all survive exactly as specified.
     is non-fatal: logged, state untouched, healed by the next mutation's
     re-projection. `.eos-agents/workflow/` splits cleanly: `scripts/` is
     user-authored, `context/` is machine-written.
+18. **The workflow tool family is `delegate_workflow`, alone.** No
+    `cancel_workflow`: cancellation rides the background family -
+    `cancel_background_session` on the registered `workflow` session
+    reaches the handle's cancel, which runs the Phase 05 §8 cascade. No
+    read/query tools this round: the addressing, resolver, and listing
+    layers ship package-side (§9), but tool exposure awaits a later
+    discussion - the §7 variables carry prior-attempt outcomes fully
+    expanded, so the default policies need no read escalation.
+19. **Submissions validate and mutate in-run through an entity-bound
+    seam.** Amends Phase 05 §2.7: `AgentLaunchPort.launch` gains an
+    optional `SubmissionBinding` - `{ kind, submit(payload) }` - built by
+    the scheduler per claimed entity and wired by the runtime into the
+    child run's terminal submission tool. `execute` validates (§2.15) and
+    awaits `submit`, which runs the mutation as one job on the
+    per-workflow serial queue (mutate + claim in one transaction, commit,
+    mirror, launch) and returns `{ ok }` or `{ ok: false, error }` for
+    in-run correction. Settlement consumption reduces to death synthesis:
+    `onSettlement` synthesizes a failed submission only for an entity
+    still `Running` when its run settles; an entity already terminal is a
+    no-op through the idempotent guards - two triggers, one mutation
+    source at a time, no double-apply. Runs launched outside a workflow
+    carry no binding and keep the shipped service-free submission tools.
+20. **Attempt failure cancels the attempt's remaining work.** The
+    reconcile job that fails an attempt marks its other non-terminal work
+    items `Cancelled` in the same transaction and interrupts their live
+    runs (reason `attempt_failed`); their late settlements find terminal
+    entities and no-op. No zombie `Running` rows, no tokens spent on a
+    doomed attempt - the cancel cascade's shape, one level down.
 
 ## 3. Phase 05 Amendments
 
@@ -214,12 +251,19 @@ everything not listed is implemented as written there.
 | §6 schema: `workflows.goal`, `iterations.goal`, `plans.plan_spec`/`deferred_goal` | `workflows.original_goal`; iterations carry no goal/focus columns; plans gain `declared_focus`/`declared_deferred_goal` | §8 |
 | §7 `context.ts` fixed launch policy | variable builders + injected composer + default policy + kind-bound `workflow_context/` scripts | §2.12, §10 |
 | §7 default read at workflow root = `brief.md` | directory paths (root included) return subtree listings | §2.9 |
+| §2.19 every rendered projection opens with a revision stamp line | dropped: content is verbatim field text; revision and status are DTO fields (`ContextPage`, listing rows), and the revision survives as concurrency token + memo key | §2.7 |
 | §13 step 3 renderer tests bind the companion §12 criteria | replaced by the §15 projection/derivation tables | §15 |
 | §14 case 3 rendering assertions | replaced by §15 case 3 | §15 |
 
-Unchanged and re-affirmed: §2.3 status enum, §2.4 minted IDs, §2.7-2.12
-scheduler/settlement/session machinery, §2.16 `AgentLaunchPort`, §2.17 read
-paging + revision pinning, §2.18 bound functions, §2.19 revision stamp.
+| §2.7 submission tools are service-free; the scheduler is the submission's only consumer | workflow-launched runs get entity-bound submission execute - validate + mutate in-run on the serial queue; settlement consumption reduces to death synthesis against still-`Running` entities | §2.19 |
+| §2.16/§8 `AgentLaunchPort.launch(agentName, initialMessages)` | gains an optional `SubmissionBinding` third parameter | §2.19 |
+| §2.17/§9 tool family: `delegate_workflow` + `read_workflow_context` + `query_workflow_context` | the family is `delegate_workflow` alone; cancel rides `cancel_background_session`; the read/query tool surface is deferred to a later discussion | §2.18 |
+
+Unchanged and re-affirmed: §2.3 status enum, §2.4 minted IDs, §2.8-2.12
+scheduler queue/session machinery, §2.18 bound functions. §2.7 (settlement
+consumption), §2.16 (port signature), and §2.17 (read tools) are amended
+by the rows above; the §2.7 synthesis rule itself survives as the death
+path.
 
 ## 4. Companion Spec Status
 
@@ -243,19 +287,25 @@ Phase 05):
   composition policy (replacing `context.ts`), the composer seam on the
   scheduler, materialization-time declaration rules, the §14
   entity-oriented module layout,
-- `@eos/tool`: the narrowed `submit_planner_outcome` schema; read/query
-  behavior over the new path universe,
+- `@eos/tool`: `tools/workflow/delegate_workflow.ts` (the family's only
+  tool, §2.18) with supervisor registration and the one-open guard, the
+  per-kind submission schemas with bound-mutation execute (§2.19),
+  `cancel_background_session` type union gaining `"workflow"`,
 - `@eos/agent-runtime`: the `.eos-agents/workflow/scripts/` registry
   (loaded and validated at startup), the script-runner composer adapter,
   the `workflowContextRoot` mirror dependency.
 
 Out of scope: everything Phase 05 §11 defers except the physical projector
-(now in scope, §2.17), plus context-script sandboxing beyond the hook
-trust model, per-profile (agent-name) context-script overrides (one extra
-registry lookup when wanted), non-workflow uses of the composer,
+(now in scope, §2.17), plus the context read/query tools
+(`read_workflow_context` / `query_workflow_context` - deferred to a later
+discussion; their resolver and listing layers ship package-side),
+context-script sandboxing beyond the hook trust model, per-profile
+(agent-name) context-script overrides (one extra registry lookup when
+wanted), non-workflow uses of the composer,
 dirty-subtree mirror optimization (the mirror re-projects the workflow per
-mutation), and any stored focus history beyond the plan rows (none is
-needed).
+mutation), an on-disk per-workflow index file for human status visibility
+(the mirror carries no metadata), and any stored focus history beyond the
+plan rows (none is needed).
 
 ## 6. Goal and Focus Model
 
@@ -329,7 +379,7 @@ Context-script IO, versioned (snake_case serialized DTOs):
 interface PlannerContextInput {
   input_version: 1;
   kind: "planner";
-  revision: number;                               // the §2.19 stamp value
+  revision: number;                               // concurrency token (§2.7)
   workflow: { id: string; original_goal: string; current_goal: string };
   iteration: {
     id: string; sequence: number; origin: "initial" | "deferred_goal";
@@ -372,8 +422,9 @@ const ContextScriptOutputSchema = z.object({
 });
 ```
 
-`ContextPage` / `ContextSearch` keep their Phase 05 shapes; a search hit's
-`field` is the filename of the matched file.
+`ContextSearch` keeps its Phase 05 shape; `ContextPage` gains `status`
+(the owning entity's), replacing the dropped in-content status line
+(§2.7); a search hit's `field` is the filename of the matched file.
 
 ## 8. Store (`@eos/db`)
 
@@ -391,8 +442,10 @@ work_items   unchanged from Phase 05 §6
 launch_queue unchanged from Phase 05 §6
 ```
 
-`loadAggregate` computes the derived views once per load and exposes them on
-the frozen aggregate (renderers and variable builders never re-derive):
+The derived views are computed once per load: the entity `state.ts` modules
+(§14) decorate the store's frozen aggregate immediately after
+`loadAggregate` - `@eos/db` stays row-shaped and never imports workflow
+logic - and renderers and variable builders never re-derive:
 
 | View | Derivation |
 | --- | --- |
@@ -447,8 +500,9 @@ Rules:
 
 - One field, one file; an absent field is an absent path (§2.7). Status
   never projects as a file.
-- Every file render opens with the Phase 05 §2.19 revision stamp, then the
-  owning entity's status line, then the field text verbatim.
+- A file renders as its field text, verbatim - no stamp or status line
+  (§2.7). `ContextPage` carries `revision` and `status`; listing rows
+  carry status; revision pinning for paged reads is unchanged.
 - A path resolving to a directory (the workflow root by default) renders the
   subtree listing: per row the relative path, the owning entity's status,
   and the first line of the owning entity's summary field where one exists.
@@ -539,9 +593,58 @@ process.stdin.on("end", () => {
 });
 ```
 
-## 11. Lifecycle Deltas
+## 11. Lifecycle and Transition Flow
 
-Against Phase 05 §8; everything not named is unchanged.
+Against Phase 05 §8; everything not named is unchanged. The submission
+tools drive every mid-workflow transition through the §2.19 bound seam;
+the scheduler's settlement path contributes only death synthesis and the
+cancel cascade.
+
+```text
+delegate_workflow(goal)                              caller's run
+  one transaction: Workflow(Running, original_goal)
+    + Iteration 1 (Running, origin 'initial', no focus)
+    + Attempt 1 + Plan 1 (NotStarted, queued)
+  register the supervisor session (§12); return workflow_id
+  reconcile job: claim plan → Running; compose → project → launch planner
+
+submit_planner_outcome(payload)                      planner run (§2.19)
+  validate shape / structure / materialization       → error result,
+                                                       correct in-run (§2.15)
+  reconcile job: Plan → Success (summary; declared pair when `focus`
+                 present, superseding prior attempts §2.4/§2.8)
+                 mint WorkItems (NotStarted), rewrite `needs`
+                 claim ready items (`needs` empty or Success) → Running
+  commit → mirror → launch claimed workers → ok → planner terminates
+
+submit_worker_outcome({ is_pass, … })                worker run (§2.19)
+  is_pass true:  WorkItem → Success
+                 claim newly-ready dependents → launch
+                 all items Success → Attempt → Success → Iteration → Success
+                   deferred_goal declared → next Iteration + Attempt + Plan,
+                     launch planner (current_goal advances by derivation)
+                   none declared → Workflow → Success → resolve terminal
+                     → caller's session settles
+  is_pass false: WorkItem → Failed; Attempt → Failed
+                 cancel sibling work items + interrupt their runs (§2.20)
+                 attempts < max_attempts → retry Attempt + Plan → launch
+                 else Iteration → Failed → Workflow → Failed → terminal
+
+onSettlement(entity, settlement)                     scheduler
+  entity still Running → synthesized failed submission (death, compose
+    failure §2.14, interruption) → the same failure path as is_pass false
+  entity already terminal → no-op (idempotent guards)
+```
+
+| Entity | → Running | → Success | → Failed | → Cancelled |
+| --- | --- | --- | --- | --- |
+| Workflow | created by `delegate` | final iteration closes with no deferral | an iteration exhausts `max_attempts` | cancel cascade (session cancel / caller dispose) |
+| Iteration | created (initial or deferred) | closing attempt's items all `Success` | `max_attempts` exhausted | cancel cascade |
+| Attempt | claim at planner launch | all its work items `Success` | any work item `Failed`, or its plan's death synthesis | cancel cascade |
+| Plan | claim → planner launched | accepted `submit_planner_outcome` | death synthesis while `Running` | cancel cascade |
+| WorkItem | ready claim → worker launched | accepted `is_pass: true` | `is_pass: false` or death synthesis | cancel cascade, or `attempt_failed` sibling cancel (§2.20) |
+
+Deltas retained from the focus model:
 
 - `delegate` stores `original_goal`; the first iteration is created with no
   focus (origin `'initial'`).
@@ -549,10 +652,10 @@ Against Phase 05 §8; everything not named is unchanged.
   plan row (this supersedes any prior declaration, resets both fields, and
   relocates the now-drifted attempts' projections under `archived/` purely
   by derivation - no mutation step exists); absent → the plan keeps the
-  standing declaration. A first-declaration-less
-  payload, like an unknown `agent_name`, fails the attempt at
-  materialization with a recorded `fail_reason` (§2.15). Work-item
-  materialization and ready-launch are unchanged.
+  standing declaration. Validation errors return in-run results (§2.15);
+  only a run that settles without a valid submission burns the attempt
+  through death synthesis. Work-item materialization and ready-launch are
+  unchanged.
 - Iteration close (`Success`, from the last attempt): derive the outcome
   (§2.16); if the effective declaration carries a `deferred_goal`, create
   the next iteration (origin `'deferred_goal'`) - `current_goal` advances by
@@ -568,21 +671,91 @@ Against Phase 05 §8; everything not named is unchanged.
   `fail_reason: "context_script_error: …"` (§2.14).
 - Cancel cascade, reconcile serialization, terminal resolution: unchanged.
 
-## 12. Tool Deltas (`@eos/tool`)
+## 12. Tool Family, Session, and Bound Submissions (`@eos/tool`)
 
-- `submit_planner_outcome` adopts the §7 schema; in-run structural
-  validation (unique local ids, declared `needs`, no cycles) is unchanged;
-  the focus-group conditional rule is materialization-side (§2.15).
-  `submit_worker_outcome` is unchanged.
-- `read_workflow_context`: same input, paging, revision pinning, and
-  unknown-path errors; paths now resolve to field files and directories
-  (subtree listings) per §9.
-- `query_workflow_context`: `field` = filename; matches the path universe
-  and file contents; one hit per fact at its single live path; skips
-  `archived/` subtrees unless `scope` names a path inside one; explicit
-  truncation unchanged.
-- `delegate_workflow` and the one-open-workflow guard: unchanged
-  (`goal` maps to `original_goal`).
+The workflow family is one file:
+`packages/tool/src/tools/workflow/delegate_workflow.ts` (§2.18). There is
+no `cancel_workflow` and no read/query tool this round - cancellation
+rides the background family, and the read/query surface awaits a later
+discussion.
+
+`delegate_workflow` (input `{ goal, max_attempts? }`; `goal` becomes
+`original_goal`). The factory takes one bound function plus the per-run
+supervisor; `cancel` folds into the returned handle, so no service method
+beyond `delegate` crosses the tool boundary:
+
+```ts
+function workflowTools(
+  delegate: (input: DelegateWorkflowInput,
+             parent: AgentRunId) => Promise<DelegatedWorkflow>,
+  supervisor: BackgroundSupervisor,
+): ToolDefinition[];
+
+interface DelegatedWorkflow {
+  workflowId: WorkflowId;
+  terminal: Promise<WorkflowTerminal>;
+  cancel(reason: string): Promise<void>;   // resolves after the cascade
+  describe(): string;                      // goal one-liner
+}
+
+execute: async (input, ctx) => {
+  if (supervisor.list().some((s) => s.type === "workflow"))
+    return { content: "a delegated workflow is already open …",
+             isError: true };                            // one-open guard
+  const wf = await delegate(input, ctx.meta.run.run_id);
+  supervisor.register({ type: "workflow", id: wf.workflowId },
+    ctx.meta.tool_use_id, {
+      settled: wf.terminal.then((t) => ({
+        status: t.status === "Success" ? "completed"
+              : t.status === "Cancelled" ? "cancelled" : "failed",
+        summary: t.summary })),
+      cancel: wf.cancel,
+      describe: wf.describe,
+    });
+  return { content: { workflow_id: wf.workflowId } };
+},
+```
+
+Registration precedes the tool result, exactly the subagent pattern:
+`openCount()` covers the workflow before the model's next token,
+settlement publishes one `session_settled` notification, auto-wait parks
+an idle caller, the submission guard holds the caller past an unseen
+settlement, and `supervisor.dispose` on caller finish cancels through the
+handle. `cancel_background_session`'s `type` union gains `"workflow"` -
+cancelling the session IS cancelling the workflow: the handle's `cancel`
+runs the Phase 05 §8 cascade (interrupt live children, await their
+outcomes, mark all non-terminal entities `Cancelled` in one transaction,
+resolve the terminal `Cancelled`) and resolves only after teardown.
+
+`tools/submission/submit_planner_outcome.ts` and
+`submit_worker_outcome.ts` keep their §7 per-kind schemas and gain bound
+mutation (§2.19). The scheduler builds a `SubmissionBinding` per claimed
+entity and passes it through the launch port; the runtime wires it into
+the child run's terminal tool:
+
+```ts
+interface SubmissionBinding {
+  kind: "planner" | "worker";
+  submit(payload: PlannerOutcomePayload | WorkerOutcomePayload):
+    Promise<{ ok: true } | { ok: false; error: string }>;
+}
+// AgentLaunchPort.launch(agentName, initialMessages, submission?)
+
+execute(payload):
+  Zod shape parse                                    → error result
+  structure: unique local ids, declared `needs`,
+             no cycles                               → error result
+  await binding.submit(payload)                      one job on the
+    materialization rules: first declaration         per-workflow serial
+    present, `agent_name` registered                 queue → { ok:false,
+    mutate + claim in one transaction; commit;         error } in-run
+    project mirror; launch claimed entities          → { ok: true }
+  ok → terminal content; error → isError result for in-run correction
+```
+
+A run with no binding (a planner or worker profile started outside any
+workflow) keeps the shipped service-free behavior: shape-validate and
+ride `outcome.submission`.
 
 ## 13. Runtime Wiring Deltas (`@eos/agent-runtime`)
 
@@ -592,9 +765,13 @@ Against Phase 05 §8; everything not named is unchanged.
 - `AgentRuntimeDependencies` gains `workflowContextRoot?` (default
   `.eos-agents/workflow/context/`), passed to the `WorkflowService` for
   the §2.17 mirror.
-- The composer adapter (name → kind → default resolution; script
-  subprocess when bound, package default otherwise) is injected into the
-  `WorkflowService` scheduler beside the launch-port adapter.
+- The composer adapter (kind → default resolution; script subprocess when
+  bound, package default otherwise) is injected into the `WorkflowService`
+  scheduler beside the launch-port adapter.
+- The launch-port adapter threads each launch's `SubmissionBinding` into
+  per-run tool assembly: a scheduler-launched child's terminal submission
+  tool executes against `binding.submit` (§2.19); runs without a binding
+  keep the service-free submission tools.
 - Everything else in Phase 05 §10 (workflowDb, per-run `workflowTools`,
   name-universe validation, disposal cascade) is unchanged.
 
@@ -604,34 +781,58 @@ Delta to the Phase 05 §12 layout:
 
 ```text
 packages/workflow/src/
-├─ workflow/           root aggregate view + goal-chain derivation (§8);
-│                      original_goal / current_goal / outcome files;
-│                      terminal close
-├─ iteration/          declaration views; focus / deferred_goal / outcome
-│                      files; close + deferred-goal promotion (§11)
-├─ attempt/            consistency; fail_reason file; retry creation
-├─ plan/               declaration recording (§11); summary file; work-item
-│                      materialization
-├─ work_item/          spec / summary / outcome files; worker-outcome
-│                      recording; readiness
-├─ archive/            live/archived partition + path addressing/resolution
-│                      + tree listing (pure; no archive table, mutation, or
-│                      event exists)
-├─ context_engine/     variable builders (§7) + default composers (§2.13) +
-│                      the composeLaunchContext seam (§10)
-├─ file_projection/    the §2.17 disk mirror: render-all, temp-file +
-│                      atomic rename, prune of paths that left the universe
+├─ workflow/
+│  ├─ state.ts         root aggregate state; goal-chain derivation (§8)
+│  ├─ context.ts       original_goal.md / current_goal.md / outcome.md
+│  └─ transitions.ts   terminal close (Success / Failed / Cancelled)
+├─ iteration/
+│  ├─ state.ts         ordered declarations; focus / deferred views (§8)
+│  ├─ context.ts       focus.md / deferred_goal.md / outcome.md
+│  └─ transitions.ts   close; deferred-goal promotion (next iteration)
+├─ attempt/
+│  ├─ state.ts         consistency predicate (§6 invariant 5)
+│  ├─ context.ts       fail_reason.md
+│  └─ transitions.ts   creation; fail/close; retry within max_attempts
+├─ plan/
+│  ├─ state.ts         declaration record state
+│  ├─ context.ts       summary.md
+│  └─ transitions.ts   materialization: §11 declaration rules + work-item
+│                      creation
+├─ work_item/
+│  ├─ state.ts         readiness (`needs` all Success)
+│  ├─ context.ts       spec.md / summary.md / outcome.md
+│  └─ transitions.ts   worker-outcome recording (is_pass → status)
+├─ archive/            pure addressing only - membership facts (attempt
+│                      consistency, goal chain) live on the entity state
+│                      modules; no archive table, mutation, or event exists
+│  ├─ paths.ts         pathOf(entity, field?): live vs archived address
+│                      over the state-computed membership (§2.8)
+│  ├─ resolve.ts       path → file / directory / error naming valid children
+│  └─ listing.ts       subtree listing rows: path, status, summary (§2.9)
+├─ context_engine/
+│  ├─ variables.ts     buildPlannerVariables / buildWorkerVariables (§7)
+│  └─ composer.ts      the composeLaunchContext seam (§10) + the §2.13
+│                      default composers (the in-package no-script path)
+├─ context_projection.ts  the §2.17 disk mirror: render-all over archive
+│                      paths, temp-file + atomic-rename writes, prune of
+│                      departed paths
 ├─ scheduler.ts        cell, serial reconcile, claims, compose → project →
-│                      launch
-├─ service.ts          delegate / cancel / read / search (renders from the
-│                      aggregate, never from disk)
-├─ launch-port.ts
-└─ index.ts
+│                      launch; declares AgentLaunchPort / LaunchedAgent /
+│                      LaunchSettlement / SubmissionBinding (Phase 05
+│                      §2.16 contract + the §2.19 seam; the standalone
+│                      launch-port.ts file is folded here as the scheduler
+│                      is the contract's only consumer)
+├─ service.ts          delegate / cancel (read/search reserved for the
+│                      deferred context tools; renders from the aggregate,
+│                      never from disk)
+└─ index.ts            public exports (service, port types)
 ```
 
-Each entity module owns its slice - view types and derivations, its field
-renderers, and its local status transitions over `(trx, aggregate)`; the
-scheduler's reconcile job sequences the cross-entity cascade, keeping
+Each entity module owns its slice through one shape - `state.ts` (types +
+§8 derivations), `context.ts` (its §9 field files: verbatim field text
+plus the derived outcome compositions), `transitions.ts` (local status
+mutations over `(trx, aggregate)`);
+the scheduler's reconcile job sequences the cross-entity cascade, keeping
 Phase 05 §2.15's functions-not-classes rule, distributed by owner.
 
 `@eos/contracts` adds the §7 DTOs; `@eos/db` reshapes the migration and
@@ -650,8 +851,8 @@ under the Phase 05 step list with these substitutions.
 | 2 | `@eos/db`: reshaped schema, derived views in `loadAggregate` | §16 case 2 on `:memory:` | Planned |
 | 3 | Projection: field renders, listings, archives, disk mirror | §16 cases 3 + 13 | Planned |
 | 4 | Lifecycle + scheduler: declaration rules, composer seam, compose-failure synthesis | §16 cases 4-9, engine-free | Planned |
-| 5 | Service read/search over the new path universe | §16 cases 10-11 | Planned |
-| 6 | `@eos/tool`: submission schema swap, read/query behavior | §16 case 11 | Planned |
+| 5 | Service delegate/cancel + the `DelegatedWorkflow` handle | §16 cases 10-11 | Planned |
+| 6 | `@eos/tool`: `delegate_workflow` family + bound submissions | §16 case 11 | Planned |
 | 7 | Runtime: `workflow/scripts/` registry + composer adapter, end-to-end | §16 case 12 | Planned |
 | 8 | Workspace wiring + index row | `pnpm run check`; `git diff --stat -- agent-core` empty | Planned |
 
@@ -665,16 +866,16 @@ context script fixture.
 | --- | --- | --- |
 | 1 | Contracts | focus group accepts/rejects documented shapes; `deferred_goal` never validates without `iteration_focus`; `ContextScriptOutputSchema` rejects empty/role-less messages |
 | 2 | Store + derivations | goal chain across iterations (first = original, then each deferral); focus/deferred views track the latest declaration; consistency flags flip on a later declaration; archive sets per §8 table; budget counts attempts across refocuses |
-| 3 | Projection | field render = stamp + status + verbatim text; absent field = absent path; directory paths render listings with status and summary first lines; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; live `current_goal.md` is never simultaneously archived |
-| 4 | Delegation | unchanged Phase 05 case 4, plus: the launched planner's messages come from the default initial policy (goal present, focus-declaration directive present) |
-| 5 | First declaration | a valid first payload records the pair and materializes items; a first payload without `focus` fails the attempt with `fail_reason`, retry launches |
-| 6 | Keep vs refocus | keep: focus view unchanged, attempt consistent, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, a fresh read of the old live path errors naming `archived/` among valid children, the retry directive carries only consistent attempts and omits the standing `deferred_goal` |
+| 3 | Projection | field render = verbatim field text with no embedded metadata (`ContextPage` returns `revision` + `status` instead); absent field = absent path; directory paths render listings with status and summary first lines; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; live `current_goal.md` is never simultaneously archived |
+| 4 | Delegation | unchanged Phase 05 case 4, plus: the supervisor session registers before the tool result returns, a second `delegate_workflow` is rejected by the one-open guard, and the launched planner's messages come from the default initial policy (goal present, focus-declaration directive present) |
+| 5 | Submission validation | a valid first payload records the pair and materializes items in-run before the planner terminates; a payload without `focus`, with an unknown `agent_name`, or with dangling/cyclic `needs` returns an in-run error result and the same run corrects and resubmits successfully - no attempt burns for a correctable payload, and the accepted resubmission mutates exactly once |
+| 6 | Keep vs refocus | keep: focus view unchanged, attempt consistent, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, the resolver errors on the old live path naming `archived/` among valid children, the retry directive carries only consistent attempts and omits the standing `deferred_goal` |
 | 7 | Success cascade | unchanged Phase 05 case 6, plus: the next planner's `current_goal` is the promoted deferral; the closing iteration's goal appears under `archived/iteration_<id>/`; no deferral → workflow `Success` with `current_goal.md` still live |
-| 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed` |
-| 9 | Death + compose synthesis | unchanged Phase 05 case 8, plus: a composer that throws/times out/returns garbage synthesizes a failed settlement with `context_script_error` recorded; no entity stays `Running` |
-| 10 | Serialization + cancel | Phase 05 cases 9-10 re-run unchanged against the new model |
-| 11 | Tools | read: field paths, directory listings, paging + revision pinning, unknown-path children; query: filename fields, one hit per fact, `archived/` (drifted attempts included) excluded by default and reachable via `scope`, explicit truncation; submission: §7 schema tables; guard cases unchanged |
-| 12 | Runtime end-to-end | Phase 05 case 12 amended: a fixture `workflow/scripts/planner.cjs` composes the planner's complete initial messages (proven by transcript inspection - nothing merged around them); a per-name fixture overrides the kind script; a broken fixture script drives the case-9 synthesis path live; registry load fails fast on a filename matching no profile name or agent kind |
+| 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed`; a failing work item cancels its non-terminal siblings in the same transaction and interrupts their runs (`attempt_failed`, §2.20), and their late settlements no-op with no `Running` rows left |
+| 9 | Death + compose synthesis | unchanged Phase 05 case 8, plus: a composer that throws/times out/returns garbage synthesizes a failed settlement with `context_script_error` recorded; synthesis keys off the entity still being `Running` - a run whose in-run submission already landed settles as a no-op; no entity stays `Running` |
+| 10 | Serialization + cancel | Phase 05 cases 9-10 re-run against the new model; tool-driven submissions and settlement jobs share the one serial queue (instrumented store sees no interleaved transactions) |
+| 11 | Tools | `delegate_workflow` registers the session before returning, rejects a second open delegation, and returns the workflow id; submission tools: shape, structure, and materialization error tables each correctable in-run; unbound planner/worker runs keep service-free submissions; `cancel_background_session` accepts `type: "workflow"` and resolves only after the cascade |
+| 12 | Runtime end-to-end | Phase 05 case 12 amended: the caller delegates, auto-waits, drains `session_settled`, and submits; a fixture `workflow/scripts/planner.cjs` composes the planner's complete initial messages (proven by transcript inspection - nothing merged around them); a broken fixture script drives the case-9 synthesis path live; registry load fails fast on a filename naming no agent kind; `cancel_background_session` mid-workflow cascades `workflow_cancelled` into child transcripts and settles the session `cancelled` |
 | 13 | Disk mirror | after each scripted lifecycle step the on-disk tree under the context root equals the rendered universe byte-for-byte; a refocus prunes the old live attempt folder and writes the archived one; a write failure (read-only root) leaves DB state and the run unaffected and the next mutation heals the mirror; tools render identically with the mirror deleted |
 
 Commands (unchanged):
@@ -708,20 +909,28 @@ Phase 05.1 is accepted when, in the combined Phase 05 + 05.1 implementation:
   are derived views over append-only declarations - no mutable goal/focus
   columns and no archive state exist anywhere in the schema,
 - the context surface is the §9 per-field path universe: one fact one path,
-  revision-stamped field files, directory listings as the overview, derived
-  archives labeled by iteration/attempt, and no composed `spec.md`/`brief.md`
-  anywhere,
+  verbatim field files with revision and status as DTO metadata (never
+  content), directory listings as the overview, derived archives labeled by
+  iteration/attempt, and no composed `spec.md`/`brief.md` anywhere,
 - the context tree persists as the §2.17 post-commit mirror under
   `.eos-agents/workflow/context/workflow_<id>/`, byte-identical to the
   virtual renders, pruned on relocation, with non-fatal write failures and
   the DB remaining the only source of truth,
 - launch context flows through full-variable snapshots and one composer
   seam: the default policy implements §2.13, `.eos-agents/workflow/scripts/`
-  scripts override it by agent name then kind with hook-parity subprocess
-  semantics owning the complete initial messages, and every compose
-  failure synthesizes a failed settlement through the Phase 05 §2.7 path,
-- read/query tools work over the new universe with paging, revision
-  pinning, default `archived/` exclusion, and explicit truncation,
+  scripts override it by agent kind with hook-parity subprocess semantics
+  owning the complete initial messages, and every compose failure
+  synthesizes a failed settlement through the Phase 05 §2.7 path,
+- a delegated workflow is exactly one supervisor session of the caller:
+  `delegate_workflow` (the family's only tool) registers before returning,
+  the one-open guard holds, the terminal maps onto the session outcome,
+  and cancellation rides `cancel_background_session` and the caller
+  disposal cascade - no `cancel_workflow` exists, and the read/query tools
+  are deferred (§2.18),
+- planner and worker submissions validate and mutate in-run through the
+  entity-bound seam on the per-workflow serial queue, settlements reduce
+  to death synthesis against still-`Running` entities, and attempt failure
+  cancels the attempt's remaining work (§2.20),
 - Phase 05's orchestration spine passes its suite unmodified except where
   §3 amends it, under `pnpm run check`,
 - the Rust `agent-core/` tree is byte-for-byte unchanged,

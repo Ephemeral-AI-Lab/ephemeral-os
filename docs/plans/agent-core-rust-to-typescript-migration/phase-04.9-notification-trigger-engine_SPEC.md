@@ -11,14 +11,16 @@ runner), Phase 04.5 (agent runtime), Phase 04.6 (agent runtime e2e baseline)
 Give the agent loop a generic, operator-configurable notification trigger
 system: rules that observe loop lifecycle facts and publish system
 notifications into the run's `NotificationInbox`, with rule conditions and
-message text owned by command scripts under `.eos-agents/hooks/*.cjs`.
+message text owned by command scripts under
+`.eos-agents/notification-rules/*.cjs`.
 
 This phase adds:
 
 - a `LoopObserver` port on `StartAgentRunInput` (engine),
 - a `NotificationTriggerEngine` implementing that port (runtime),
-- trigger rule entries in `.eos-agents/hooks.json` (`TurnCompleted`,
-  `IdleParked` with `timeout_ms`),
+- trigger rule entries in `.eos-agents/notification_rules.json`
+  (`TurnCompleted`, `IdleParked` with `timeout_ms`), a sibling config to
+  `hooks.json` with the same loading pattern, applied to every agent run,
 - a narrow trigger script contract (`{ notification?: string }`),
 - a `{type: "reminder"}` notification payload family,
 - and three reference scripts:
@@ -26,7 +28,7 @@ This phase adds:
 | Script | Trigger | Purpose |
 | --- | --- | --- |
 | `remind-terminal-submission.cjs` | `TurnCompleted` | A no-tool-call turn with no background sessions and no pending steers gets a reminder naming the run's terminal tool. |
-| `budget-reminder.cjs` | `TurnCompleted` | When the turn count hits a percentage of `max_turns`, remind the model to wrap up and submit. |
+| `budget-reminder.cjs` | `TurnCompleted` | When the turn count hits a percentage of `max_turns` (argv, default 80), remind the model to wrap up and submit; one registered rule per percentage forms a ladder (the baseline registers 50 and 80). |
 | `idle-wake.cjs` | `IdleParked` | A park that outlives `timeout_ms` gets a reminder listing the running sessions; the publish itself wakes the park. |
 
 Triggers are notification-only. Scripts inform; the model acts. No trigger
@@ -91,12 +93,16 @@ The seam is anticipated but absent:
 9. **Steer priority is preserved for free.** Reminders are ordinary inbox
    entries; the loop drains steers first, notifications second, unchanged.
 
-10. **Reference scripts ship but are not registered in the repo baseline
-    `.eos-agents/hooks.json` in this phase.** Registering them globally
-    would perturb every existing e2e scenario shape (the spin baseline, turn
-    counts in live tests). Tests opt in via the existing `hookEntries`
-    fixture option; promoting rules to the baseline is an open question for
-    a later phase, after live observation.
+10. **Reference scripts ship registered in the repo baseline
+    `.eos-agents/notification_rules.json`, applied to every agent run.**
+    Test suites never customize rules: every runtime fixture loads the repo
+    baseline, exactly like production. The two consequences are accepted:
+    the live spin-to-`max_turns` scenario is no longer reachable through
+    the runtime (the rescue rule completes it - that IS the feature), so
+    the raw spin stays pinned at the engine unit level; and live scenarios
+    are written so their turn shapes keep unrelated rules silent (tool-call
+    turns for the budget scenario, parks under 60s where idle-wake must not
+    speak).
 
 ## 4. Engine Port
 
@@ -178,37 +184,55 @@ A published reminder is drained at the next loop top, so:
 
 ## 5. Trigger Rule Config
 
-Trigger rules share `.eos-agents/hooks.json` and the command-hook shape. The
-config schema becomes a discriminated union beside `HookConfigEntrySchema`
-in `@eos/tool`:
+Trigger rules live in `.eos-agents/notification_rules.json`, a sibling of
+`hooks.json` sharing its command shape and loading pattern (missing file =
+no rules, malformed = loud startup error, command `cwd` defaults to the
+repo root for a `.eos-agents` config). The inner key is `rules`, not
+`hooks`, to keep notification rules visually distinct from tool hooks. The
+schema sits beside `HookConfigEntrySchema` in `@eos/tool`:
 
 ```ts
-export const TriggerRuleEntrySchema = z.union([
+const TriggerRuleMatchers = {
+  /** Exact profile name; absent matches all agents. */
+  agent_name: z.string().min(1).optional(),
+  /** Profile kind; absent matches all kinds. Present with `agent_name`: AND. */
+  agent_kind: AgentKindSchema.optional(),
+};
+
+export const TriggerRuleEntrySchema = z.discriminatedUnion("event", [
   z.object({
     event: z.literal("TurnCompleted"),
-    hooks: z.array(CommandHookSchema).min(1),
+    ...TriggerRuleMatchers,
+    rules: z.array(CommandHookSchema).min(1),
   }),
   z.object({
     event: z.literal("IdleParked"),
+    ...TriggerRuleMatchers,
     /** Park lifetime before the rule fires; one shot per park entry. */
     timeout_ms: z.number().int().positive(),
-    hooks: z.array(CommandHookSchema).min(1),
+    rules: z.array(CommandHookSchema).min(1),
   }),
 ]);
 ```
 
-`loadHookConfig` parses the file as `(HookConfigEntry | TriggerRuleEntry)[]`
-and the runtime splits by event family: tool events go to the hook engine,
-trigger events go to the `NotificationTriggerEngine`. Example:
+`loadNotificationRules` parses the file as `TriggerRuleEntry[]`; at
+`startRun` the runtime narrows the list per run with
+`triggerRuleAppliesTo(rule, { agent_name, agent_kind })` before handing it
+to that run's `NotificationTriggerEngine`. `loadHookConfig` stays
+tool-events-only. Script parameters ride the command line, so one script
+serves many rules. The repo baseline (matcher-free: it applies to every
+agent):
 
 ```json
 [
   { "event": "TurnCompleted",
-    "hooks": [{ "type": "command", "command": "node .eos-agents/hooks/remind-terminal-submission.cjs" }] },
+    "rules": [{ "type": "command", "command": "node .eos-agents/notification-rules/remind-terminal-submission.cjs" }] },
   { "event": "TurnCompleted",
-    "hooks": [{ "type": "command", "command": "node .eos-agents/hooks/budget-reminder.cjs" }] },
+    "rules": [{ "type": "command", "command": "node .eos-agents/notification-rules/budget-reminder.cjs 50" }] },
+  { "event": "TurnCompleted",
+    "rules": [{ "type": "command", "command": "node .eos-agents/notification-rules/budget-reminder.cjs 80" }] },
   { "event": "IdleParked", "timeout_ms": 60000,
-    "hooks": [{ "type": "command", "command": "node .eos-agents/hooks/idle-wake.cjs" }] }
+    "rules": [{ "type": "command", "command": "node .eos-agents/notification-rules/idle-wake.cjs" }] }
 ]
 ```
 
@@ -324,10 +348,11 @@ flowchart TD
 
 ## 8. Reference Scripts
 
-`.eos-agents/hooks/remind-terminal-submission.cjs` - the spin rescue. The
-`live_sessions === 0` check is load-bearing: it is the same fact the engine's
-park gate reads, so script and engine classify the turn identically (sessions
-live: the engine parks and `idle-wake` owns it; none: this script speaks).
+`.eos-agents/notification-rules/remind-terminal-submission.cjs` - the spin
+rescue. The `live_sessions === 0` check is load-bearing: it is the same fact
+the engine's park gate reads, so script and engine classify the turn
+identically (sessions live: the engine parks and `idle-wake` owns it; none:
+this script speaks).
 
 ```js
 const fs = require("node:fs");
@@ -346,25 +371,36 @@ if (
 }
 ```
 
-`.eos-agents/hooks/budget-reminder.cjs` - stateless once-per-run via
-equality with the threshold turn, not `>=`:
+`.eos-agents/notification-rules/budget-reminder.cjs` - the percentage rides
+the command line (default 80), so one script serves a whole reminder ladder
+(one registered rule per percentage). Each rule is stateless once-per-run
+via equality with its threshold turn, not `>=`; an invalid percent exits 1,
+which the runner logs as a dropped firing:
 
 ```js
 const fs = require("node:fs");
+
+const raw = process.argv[2] ?? "80";
+const percent = Number(raw);
+if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+  process.stderr.write(`budget-reminder: invalid percent argument "${raw}"`);
+  process.exit(1);
+}
+
 const p = JSON.parse(fs.readFileSync(0, "utf8"));
-const threshold = Math.ceil(p.facts.max_turns * 0.8);
+const threshold = Math.ceil(p.facts.max_turns * (percent / 100));
 if (p.event === "TurnCompleted" && p.facts.turn === threshold) {
   process.stdout.write(JSON.stringify({
     notification:
-      `Turn ${p.facts.turn} of ${p.facts.max_turns} (80% of budget). ` +
+      `Turn ${p.facts.turn} of ${p.facts.max_turns} (${String(percent)}% of budget). ` +
       `Wrap up and submit via ${p.terminal_tool}.`,
   }));
 }
 ```
 
-`.eos-agents/hooks/idle-wake.cjs` - unconditional output is correct: being
-invoked at all proves the run is parked past the timeout. The notification
-is the wake.
+`.eos-agents/notification-rules/idle-wake.cjs` - unconditional output is
+correct: being invoked at all proves the run is parked past the timeout.
+The notification is the wake.
 
 ```js
 const fs = require("node:fs");
@@ -406,8 +442,9 @@ reminder only points at the destination.
    the park including the abort path; no observer means byte-identical
    behavior.
 3. Add `TriggerRuleEntrySchema` beside the hook config schema in `@eos/tool`;
-   extend `loadHookConfig` parsing; split entries by event family in the
-   runtime.
+   add `loadNotificationRules` over `.eos-agents/notification_rules.json`
+   with the `loadHookConfig` mechanics (missing file, loud Zod errors, cwd
+   defaulting); `loadHookConfig` stays tool-events-only.
 4. Add `TriggerPayload`/`TriggerOutputSchema` and a command runner reusing
    the tool hook runner mechanics (spawn, JSON stdin/stdout, timeout).
 5. Implement `NotificationTriggerEngine`; create it per run in `startRun`
@@ -415,18 +452,23 @@ reminder only points at the destination.
 6. Unit tests for the trigger engine: rule matching, publish-on-answer,
    skip-on-empty, failure swallowing, timer arm/clear, generation guard
    (timer fire racing a wake), re-arm on re-park.
-7. Ship the three reference scripts under `.eos-agents/hooks/`; do not
-   register them in the repo baseline `hooks.json`.
-8. E2e (opt-in via the `hookEntries` fixture option):
-   - spin rescue: the `auto-wait.e2e.ts` drifter scenario plus
-     `remind-terminal-submission` completes instead of failing `max_turns`,
-     and the drained reminder names the profile's terminal tool;
-   - idle wake: gate-held park with a small `timeout_ms` wakes on the
-     reminder, and the reminder is absent when the gate releases first;
-   - budget: a run whose turn count crosses the threshold carries exactly
-     one budget reminder in `outcome.llm`.
-9. Keep the existing `auto-wait.e2e.ts` trio untouched as the trigger-off
-   baseline.
+7. Ship the three reference scripts under `.eos-agents/notification-rules/`
+   and register them in the repo baseline
+   `.eos-agents/notification_rules.json` (the budget ladder at 50 and 80),
+   applied to every agent run.
+8. E2e over the repo baseline (suites never customize rules):
+   - spin rescue: the drifter scenario completes instead of failing
+     `max_turns`, and the drained reminder names the profile's terminal
+     tool;
+   - idle wake: a gate-held park outliving the baseline 60s `timeout_ms`
+     wakes on the reminder, and the idle reminder is absent when the gate
+     releases first;
+   - budget ladder: a five-turn tool choreography carries exactly one 50%
+     and one 80% reminder in `outcome.llm`.
+9. Rebase `auto-wait.e2e.ts` on the registered baseline: the two park
+   scenarios stay (their parks sit far below the idle timeout and the
+   budget thresholds); the spin-to-`max_turns` leg is superseded by the
+   rescue scenario, with the raw spin pinned in engine unit tests.
 10. Run the verification ladder: `pnpm run typecheck`, `pnpm run lint`,
     `pnpm run test`, then the focused e2e files.
 
@@ -436,26 +478,29 @@ reminder only points at the destination.
 | --- | --- | --- |
 | T1 | `runAgentLoop` awaits `turnCompleted` after every committed assistant turn, including batch turns, with exact facts. | `packages/engine/tests/agent-loop.test.ts` |
 | T2 | `idleStarted`/`idleEnded` bracket every park, including abort wakes; no timer or clock exists in `@eos/engine`. | engine unit tests; source scan |
-| T3 | Without an observer, loop behavior and existing tests are unchanged. | full engine suite, `auto-wait.e2e.ts` trio |
-| T4 | Trigger rules parse from `hooks.json`; tool events and trigger events split cleanly; malformed entries fail startup loudly. | `hook-config` tests |
+| T3 | Without an observer, loop behavior and existing tests are unchanged. | full engine suite |
+| T4 | Trigger rules parse from `notification_rules.json` with the `hooks.json` mechanics; events in the wrong file fail startup loudly. | `hook-config` tests |
 | T5 | A `TurnCompleted` script answer is published as `{type:"reminder", source:"TurnCompleted"}` and drained before the next provider call. | trigger engine unit test + spin-rescue e2e |
 | T6 | An `IdleParked` timer fires only if the park outlives `timeout_ms`; a wake first means the script never spawns. | trigger engine unit tests |
 | T7 | A timer fire that loses the race to a natural wake is discarded by the generation guard. | trigger engine unit test |
 | T8 | Re-park re-arms the timer; repeated reminders emerge across park cycles without a repeat flag. | trigger engine unit test |
 | T9 | Script failures (spawn error, bad JSON, schema mismatch) are logged and dropped; the run proceeds. | trigger engine unit tests |
 | T10 | Spin rescue e2e: drifter + reminder rule completes via its terminal tool instead of failing `max_turns`. | `agent-runtime/e2e` |
-| T11 | Reference scripts are present but unregistered in the repo baseline; existing e2e scenario shapes are unchanged. | baseline `hooks.json` diff; e2e suite |
+| T11 | Reference scripts are registered in the repo baseline `notification_rules.json` and apply to every agent run; test suites load that baseline, never a customized rule set. | baseline file; fixture source; e2e suite |
 | T12 | Full local gate stays green. | `pnpm run check`, focused e2e |
 
 ## 12. Open Questions
 
-1. **Baseline registration.** Should a later phase register the three
-   reference rules in the repo `.eos-agents/hooks.json` for all runs? This
-   phase ships them unregistered to keep every existing scenario shape
-   stable; promotion needs a sweep of live e2e expectations first.
-2. **Per-profile matchers.** Should trigger entries support a matcher (agent
-   kind or profile name) the way tool hooks support a tool-name matcher?
-   Deferred: scripts can already read `run.agent_name` and stay silent.
+1. **Baseline registration.** Resolved: the three reference rules (with the
+   budget ladder at 50 and 80) are registered in
+   `.eos-agents/notification_rules.json` for every agent run, and the live
+   suites were re-based on that reality (the runtime-level
+   spin-to-`max_turns` shape no longer exists because the rescue rule
+   completes it).
+2. **Per-profile matchers.** Resolved: entries carry optional
+   `agent_name`/`agent_kind` matchers (absent matches all, present fields
+   AND), applied by the runtime at `startRun` so a non-matching run never
+   spawns the rule's commands.
 3. **Assistant text in the payload.** Shape rules currently see counts, not
    content. Exposing the turn's text would enable content-aware rules but
    widens the payload and invites prompt-coupling; deferred until a rule

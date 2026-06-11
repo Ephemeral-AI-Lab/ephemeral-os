@@ -125,11 +125,9 @@ fn edit_request(args: &Value) -> Result<EditFileRequest, DaemonError> {
 }
 
 fn read_response(outcome: ReadFileOutcome) -> Value {
-    let workspace_kind = outcome.workspace_kind;
     json!({
         "success": outcome.success,
-        "workspace": workspace_kind.clone(),
-        "workspace_mode": workspace_kind,
+        "workspace": outcome.workspace_kind,
         "content": outcome.content,
         "exists": outcome.exists,
         "encoding": outcome.encoding,
@@ -187,12 +185,10 @@ struct GuardedWireResponse {
 
 impl GuardedWireResponse {
     fn into_json(self) -> Value {
-        let workspace_kind = self.workspace_kind;
         let mut response = json!({
             "success": self.success,
             "published": self.published,
-            "workspace": workspace_kind.clone(),
-            "workspace_mode": workspace_kind,
+            "workspace": self.workspace_kind,
             "changed_paths": self.changed_paths,
             "changed_path_kinds": self.changed_path_kinds,
             "mutation_source": self.mutation_source,

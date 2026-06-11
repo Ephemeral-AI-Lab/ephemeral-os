@@ -70,14 +70,19 @@ function sleepMs(ms: number): Promise<void> {
   });
 }
 
-// Budget guard: three live runs (~16 small provider calls). The `hold` gate
+// Budget guard: two live runs (~13 small provider calls). The `hold` gate
 // pins every settlement to a test-chosen instant, so the park windows are
 // measured wall-clock intervals and no assertion depends on model prose.
-// The trio contrasts what one turn shape means in three contexts: a
+// The pair contrasts what one turn shape means in two contexts: a
 // no-tool-call turn with live background work parks the loop (auto-wait);
 // dispatching background work never parks - the agent keeps working while
-// its session runs; and a no-tool-call turn with nothing pending spins
-// provider calls until the turn budget fails the run.
+// its session runs. Both park well inside the baseline 60s idle rule, so
+// the registered notification rules (04.9; applied to every agent, never
+// customized per suite) stay silent here. The third historical leg - bare
+// text with nothing pending spinning to max_turns - is no longer reachable
+// through the runtime: the baseline rescue rule reminds and completes such
+// runs (notification-triggers.e2e.ts pins that); the raw engine spin stays
+// pinned by the engine unit suite.
 describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", () => {
   it(
     "parks after dispatch once nothing else remains: a measured zero-call window, then the settlement wake submits",
@@ -92,7 +97,10 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent"],
-            maxTurns: 6,
+            // Generous budget: the baseline 50% budget rule must threshold
+            // past the measured park turn, where its publish would wake the
+            // park and break the zero-call window.
+            maxTurns: 10,
             body: TERSE_BODY,
           },
           {
@@ -168,7 +176,9 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent", "lookup_codeword"],
-            maxTurns: 8,
+            // Generous budget: keeps the baseline budget-rule thresholds
+            // clear of the measured park turn (see the idler note above).
+            maxTurns: 12,
             body: TERSE_BODY,
           },
           {
@@ -245,58 +255,4 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
     },
   );
 
-  it(
-    "spins to max_turns on bare text with nothing pending: no park, every budgeted turn is a provider call",
-    { timeout: 120_000 },
-    async () => {
-      const { runtime } = runtimeFixture({
-        llmClientsPath: llmClientsPath(),
-        profiles: [
-          {
-            name: "drifter",
-            kind: "main",
-            llmClientId: CODEX_CLIENT_ID,
-            allowed: [],
-            maxTurns: 3,
-            body: TERSE_BODY,
-          },
-        ],
-      });
-      const run = runtime.startRun({
-        agentName: "drifter",
-        initialMessages: [
-          userMessage(
-            'Reply with the plain text "standing by" and make no tool calls of any kind, on this turn and every later turn.',
-          ),
-        ],
-      });
-
-      // No session, no steer, no notification: nothing will ever change the
-      // conversation, so the loop re-calls the provider until the budget
-      // fails the run. Finishing on its own is the no-park proof - the park
-      // scenarios above would wait forever without their gate release.
-      const outcome = await run.handle.outcome;
-      if (outcome.status !== "failed") {
-        throw new Error(`expected a failed outcome, got ${outcome.status}`);
-      }
-      expect(outcome.failure.kind).toBe("max_turns");
-      expect(
-        outcome.turns,
-        "the spin burned the whole budget: every turn was a provider call, none parked",
-      ).toBe(3);
-
-      const assistants = outcome.llm.filter((message) => message.role === "assistant");
-      expect(assistants, "all three budgeted turns committed").toHaveLength(3);
-      for (const message of assistants) {
-        expect(
-          toolUses(message),
-          "every spin turn is the same bare-text shape",
-        ).toHaveLength(0);
-      }
-      expect(
-        outcome.llm.filter((message) => message.role === "user"),
-        "the conversation never changed between provider calls - nothing was pending",
-      ).toHaveLength(1);
-    },
-  );
 });

@@ -1,4 +1,3 @@
-#[cfg(target_os = "linux")]
 use eos_command_session::{
     CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionError,
 };
@@ -19,7 +18,6 @@ pub(super) fn require_command_string(args: &Value, key: &str) -> Result<String, 
     Ok(value.to_owned())
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn require_nonempty_string(args: &Value, key: &str) -> Result<String, DaemonError> {
     let value = args
         .get(key)
@@ -39,7 +37,6 @@ pub(super) fn caller_id_arg(args: &Value) -> &str {
         .unwrap_or("default")
 }
 
-#[cfg(any(target_os = "linux", test))]
 pub(super) fn optional_u64(args: &Value, key: &str) -> Option<u64> {
     args.get(key).and_then(|value| {
         value
@@ -73,12 +70,10 @@ pub(super) fn command_session_not_found() -> Value {
     command_result("error", None, "", "command_session_not_found", None)
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn command_response_to_wire(response: CommandResponse) -> Value {
     response.to_wire_value()
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn strip_session_id(mut response: Value) -> Value {
     if let Some(object) = response.as_object_mut() {
         object.remove("command_session_id");
@@ -86,7 +81,6 @@ pub(super) fn strip_session_id(mut response: Value) -> Value {
     response
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn command_session_error(error: CommandSessionError) -> DaemonError {
     match error {
         CommandSessionError::Io(message) => DaemonError::OverlayPipeline(message),
@@ -94,7 +88,6 @@ pub(super) fn command_session_error(error: CommandSessionError) -> DaemonError {
     }
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn collect_completed_request(args: &Value) -> CollectCompleted {
     let command_session_ids = args
         .get("command_session_ids")
@@ -117,7 +110,6 @@ pub(super) fn collect_completed_request(args: &Value) -> CollectCompleted {
     }
 }
 
-#[cfg(target_os = "linux")]
 pub(super) fn command_session_completion_to_wire(completion: CommandSessionCompletion) -> Value {
     json!({
         "command_session_id": completion.command_session_id,

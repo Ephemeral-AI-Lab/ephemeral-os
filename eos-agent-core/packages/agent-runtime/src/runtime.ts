@@ -21,6 +21,7 @@ import {
   runTriggerCommand,
   snapshotRunState,
   terminalToolDefinitions,
+  triggerRuleAppliesTo,
   type AgentRunState,
   type ToolDefinition,
   type TriggerRuleEntry,
@@ -32,7 +33,7 @@ import {
   type AgentProfileRegistry,
   type KnownToolNames,
 } from "./agent-profile-registry.js";
-import { loadHookConfig, splitHookConfig } from "./hook-config.js";
+import { loadHookConfig, loadNotificationRules } from "./hook-config.js";
 import {
   loadLlmClientRegistry,
   type LlmClientRegistry,
@@ -60,6 +61,8 @@ export interface AgentRuntimeDependencies {
   baseTools?: readonly ToolDefinition[];
   /** Default: `.eos-agents/hooks.json`. */
   hookConfigPath?: string;
+  /** Default: `.eos-agents/notification_rules.json`; rules apply to every run. */
+  notificationRulesPath?: string;
   /** Transcript root. */
   dataDir: string;
 }
@@ -107,16 +110,15 @@ export function createAgentRuntime(dependencies: AgentRuntimeDependencies): Agen
   // Profiles resolve before engine start (§2.8); a dangling llm_client_id
   // reference is a startup error, never a mid-run one.
   for (const profile of agentProfiles.list()) llmClients.require(profile.llm_client_id);
-  // One file, two event families (04.9 §5): tool events feed the hook
-  // engine, trigger events the per-run notification trigger engine.
-  const { hooks, triggers } = splitHookConfig(loadHookConfig(dependencies.hookConfigPath));
+  // Two operator files, two event families (04.9 §5): hooks.json feeds the
+  // hook engine, notification_rules.json the per-run trigger engine.
   return createRuntime({
     dataDir: dependencies.dataDir,
     baseTools: dependencies.baseTools ?? [],
     agentProfiles,
     llmClients,
-    hookEngine: new HookEngine(hooks),
-    triggerRules: triggers,
+    hookEngine: new HookEngine(loadHookConfig(dependencies.hookConfigPath)),
+    triggerRules: loadNotificationRules(dependencies.notificationRulesPath),
   });
 }
 
@@ -239,7 +241,12 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     });
 
     const observer = new NotificationTriggerEngine({
-      rules: ctx.triggerRules,
+      rules: ctx.triggerRules.filter((rule) =>
+        triggerRuleAppliesTo(rule, {
+          agent_name: profile.name,
+          agent_kind: profile.agent_kind,
+        }),
+      ),
       runCommand: runTriggerCommand,
       inbox,
       supervisor,

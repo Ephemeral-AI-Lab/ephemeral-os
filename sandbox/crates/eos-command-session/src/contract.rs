@@ -1,7 +1,6 @@
 //! The op contract: request DTOs in, response DTOs out, and the error type
 //! that joins them.
 
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -15,8 +14,6 @@ pub enum CommandSessionError {
     NotFound(String),
     #[error("invalid command session request: {0}")]
     InvalidRequest(String),
-    #[error("unsupported command session operation: {0}")]
-    Unsupported(String),
     #[error("command session io error: {0}")]
     Io(String),
 }
@@ -60,20 +57,16 @@ pub struct CollectCompleted {
     pub caller_id: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CommandResponse {
     pub status: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i64>,
     pub stdout: String,
     pub stderr: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command_session_id: Option<String>,
     /// Stable mode string (`"ephemeral"` / `"isolated"`) when the response
     /// settled a workspace-bound command; the substrate carries it opaquely.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub workspace_mode: Option<String>,
-    #[serde(default)]
+    pub workspace: Option<String>,
     pub metadata: Value,
 }
 
@@ -86,7 +79,7 @@ impl CommandResponse {
             stdout,
             stderr: String::new(),
             command_session_id: Some(command_session_id),
-            workspace_mode: None,
+            workspace: None,
             metadata: Value::Null,
         }
     }
@@ -99,7 +92,7 @@ impl CommandResponse {
             stdout,
             stderr: String::new(),
             command_session_id: None,
-            workspace_mode: None,
+            workspace: None,
             metadata: Value::Null,
         }
     }
@@ -112,7 +105,7 @@ impl CommandResponse {
             stdout: String::new(),
             stderr: stderr.into(),
             command_session_id: None,
-            workspace_mode: None,
+            workspace: None,
             metadata: Value::Null,
         }
     }
@@ -136,7 +129,7 @@ impl CommandResponse {
         if let Some(command_session_id) = self.command_session_id.as_ref() {
             response["command_session_id"] = json!(command_session_id);
         }
-        let Some(mode) = self.workspace_mode.as_deref() else {
+        let Some(mode) = self.workspace.as_deref() else {
             return response;
         };
         response["success"] = self
@@ -145,9 +138,6 @@ impl CommandResponse {
             .cloned()
             .unwrap_or_else(|| json!(self.status == "ok"));
         response["workspace"] = json!(mode);
-        response["workspace_mode"] = json!(mode);
-        response["stdout"] = json!(self.stdout);
-        response["stderr"] = json!(self.stderr);
         response["conflict"] = self
             .metadata
             .get("conflict")
@@ -173,7 +163,6 @@ impl CommandResponse {
             .get("mutation_source")
             .cloned()
             .unwrap_or_else(|| json!(""));
-        response["error"] = Value::Null;
         response["timings"] = self
             .metadata
             .get("timings")
@@ -191,7 +180,7 @@ impl CommandResponse {
 /// A settled command session parked for the agent-core heartbeat to drain. The
 /// daemon's workspace-run registry owns the completion queue; this is the shared
 /// DTO it stores and the wire layer serializes.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CommandSessionCompletion {
     pub command_session_id: String,
     pub caller_id: String,
@@ -199,7 +188,7 @@ pub struct CommandSessionCompletion {
     pub result: CommandResponse,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CollectCompletedResponse {
     pub success: bool,
     pub completions: Vec<CommandSessionCompletion>,

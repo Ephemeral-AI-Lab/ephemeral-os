@@ -14,7 +14,7 @@ fn session_exposes_identity_and_expiry() {
     assert_eq!(session.id(), "cmd_1");
     assert_eq!(session.caller_id(), "caller");
     assert_eq!(session.command(), "echo ok");
-    assert!(session.is_expired(session.started_at() + Duration::from_millis(2)));
+    assert!(session.is_past_deadline(session.started_at() + Duration::from_millis(2), 3600));
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
             timeout_seconds: None,
         },
         RunningCommandSessionParts {
-            process: crate::pty_process::CommandSessionProcess::inactive(writer),
+            process: crate::process::CommandSessionProcess::inactive(writer),
             output_path: root.join("runner-result.json"),
             final_path: final_path.clone(),
             transcript_path: transcript_path.clone(),
@@ -62,7 +62,7 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
         stdout: reaped.stdout.clone(),
         stderr: String::new(),
         command_session_id: Some("cmd_1".to_owned()),
-        workspace_mode: Some("ephemeral".to_owned()),
+        workspace: Some("ephemeral".to_owned()),
         metadata: serde_json::Value::Null,
     };
     session.persist_final(&response);

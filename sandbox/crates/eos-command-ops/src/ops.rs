@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use eos_command_session::pty_process::{spawn_current_exe_ns_runner, KillReason};
+use eos_command_session::process::{spawn_current_exe_ns_runner, KillReason};
 use eos_command_session::session::{
     CommandSession, CommandSessionSpec, ReapedCommand, RunningCommandSessionParts,
 };
@@ -520,7 +520,7 @@ fn command_response_from_outcome(outcome: WorkspaceCommandOutcome) -> CommandRes
         stdout: outcome.stdout,
         stderr: outcome.stderr,
         command_session_id: outcome.command_session_id,
-        workspace_mode: Some(outcome.workspace_kind),
+        workspace: Some(outcome.workspace_kind),
         metadata: serde_json::json!({
             "success": outcome.success,
             "changed_paths": outcome.changed_paths,

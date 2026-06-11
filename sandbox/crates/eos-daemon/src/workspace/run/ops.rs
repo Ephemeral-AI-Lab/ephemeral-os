@@ -1,36 +1,25 @@
 //! Command-session dispatcher handlers, driving the caller-keyed
 //! workspace-run manager ([`super::manager`]).
 
-#[cfg(target_os = "linux")]
 use std::path::PathBuf;
 
-#[cfg(target_os = "linux")]
 use eos_command_ops::ExecTarget;
-#[cfg(target_os = "linux")]
 use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
-#[cfg(target_os = "linux")]
 use eos_layerstack::require_workspace_binding;
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
+use crate::response_timings::u64_to_f64_saturating;
 
-#[cfg(target_os = "linux")]
 use super::manager::{command_ops, command_session_config, command_session_scratch_root};
-#[cfg(not(target_os = "linux"))]
-use super::wire::command_result;
-#[cfg(any(target_os = "linux", test))]
-use super::wire::optional_u64;
-#[cfg(target_os = "linux")]
-use super::wire::require_nonempty_string;
-use super::wire::{caller_id_arg, command_session_not_found, require_command_string};
-#[cfg(target_os = "linux")]
 use super::wire::{
-    collect_completed_request, command_response_to_wire, command_session_completion_to_wire,
-    command_session_error, strip_session_id,
+    caller_id_arg, collect_completed_request, command_response_to_wire,
+    command_session_completion_to_wire, command_session_error, command_session_not_found,
+    optional_u64, require_command_string, require_nonempty_string, strip_session_id,
 };
 
 /// `api.v1.exec_command` — command-session start contract.
@@ -39,70 +28,38 @@ pub(crate) fn op_exec_command(
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let cmd = require_command_string(args, "cmd")?;
-    #[cfg(target_os = "linux")]
-    {
-        let command_config = command_session_config();
-        let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
-        let yield_time_ms =
-            optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
-        if let Some(binding) = crate::workspace::isolated::command_handle_for_args(args) {
-            return start_manager_command_session(
-                args,
-                &cmd,
-                timeout_seconds,
-                yield_time_ms,
-                binding.caller_id.clone(),
-                ExecTarget::Isolated {
-                    binding: Box::new(binding),
-                },
-            );
-        }
-        let root = PathBuf::from(require_command_string(args, "layer_stack_root")?);
-        let binding = require_workspace_binding(&root)?;
-        start_manager_command_session(
+    let command_config = command_session_config();
+    let timeout_seconds = Some(exec_timeout_seconds(args, &command_config));
+    let yield_time_ms =
+        optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
+    if let Some(binding) = crate::workspace::isolated::command_handle_for_args(args) {
+        return start_manager_command_session(
             args,
             &cmd,
             timeout_seconds,
             yield_time_ms,
-            caller_id_arg(args).to_owned(),
-            ExecTarget::Ephemeral {
-                root,
-                workspace_root: PathBuf::from(binding.workspace_root),
-                scratch_root: command_session_scratch_root(),
+            binding.caller_id.clone(),
+            ExecTarget::Isolated {
+                binding: Box::new(binding),
             },
-        )
+        );
     }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = &cmd;
-        if crate::workspace::isolated::caller_has_active_handle(caller_id_arg(args)) {
-            return Ok(command_result(
-                "error",
-                None,
-                "",
-                "isolated exec_command is only supported on linux",
-                None,
-            ));
-        }
-        Ok(command_result(
-            "error",
-            None,
-            "",
-            "command sessions are only supported on linux",
-            None,
-        ))
-    }
+    let root = PathBuf::from(require_command_string(args, "layer_stack_root")?);
+    let binding = require_workspace_binding(&root)?;
+    start_manager_command_session(
+        args,
+        &cmd,
+        timeout_seconds,
+        yield_time_ms,
+        caller_id_arg(args).to_owned(),
+        ExecTarget::Ephemeral {
+            root,
+            workspace_root: PathBuf::from(binding.workspace_root),
+            scratch_root: command_session_scratch_root(),
+        },
+    )
 }
 
-#[cfg(any(target_os = "linux", test))]
-fn u64_to_f64_saturating(value: u64) -> f64 {
-    const U32_FACTOR: f64 = 4_294_967_296.0;
-    let high = u32::try_from(value >> 32).unwrap_or(u32::MAX);
-    let low = u32::try_from(value & u64::from(u32::MAX)).unwrap_or(u32::MAX);
-    f64::from(high).mul_add(U32_FACTOR, f64::from(low))
-}
-
-#[cfg(any(target_os = "linux", test))]
 fn exec_timeout_seconds(args: &Value, config: &crate::config::CommandSessionConfig) -> f64 {
     u64_to_f64_saturating(
         optional_u64(args, "timeout")
@@ -111,72 +68,25 @@ fn exec_timeout_seconds(args: &Value, config: &crate::config::CommandSessionConf
     )
 }
 
-// Dispatcher op handlers share the `Result<Value, DaemonError>` ABI even when
-// a specific op encodes all domain failures in its JSON response.
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::unnecessary_wraps,
-        reason = "dispatcher handlers share a fallible ABI"
-    )
-)]
 pub(crate) fn op_command_write_stdin(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    {
-        command_session_write_stdin(args)
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = args;
-        Ok(command_session_not_found())
-    }
+    command_session_write_stdin(args)
 }
 
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::unnecessary_wraps,
-        reason = "dispatcher handlers share a fallible ABI"
-    )
-)]
 pub(crate) fn op_command_read_progress(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    {
-        command_session_read_progress(args)
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = args;
-        Ok(command_session_not_found())
-    }
+    command_session_read_progress(args)
 }
 
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        clippy::unnecessary_wraps,
-        reason = "dispatcher handlers share a fallible ABI"
-    )
-)]
 pub(crate) fn op_command_cancel(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    {
-        command_session_cancel(args)
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = args;
-        Ok(command_session_not_found())
-    }
+    command_session_cancel(args)
 }
 
 #[expect(
@@ -187,21 +97,13 @@ pub(crate) fn op_command_collect_completed(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    {
-        let response = command_ops().collect_completed(&collect_completed_request(args));
-        let completions = response
-            .completions
-            .into_iter()
-            .map(command_session_completion_to_wire)
-            .collect::<Vec<_>>();
-        Ok(json!({"success": response.success, "completions": completions}))
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = args;
-        Ok(json!({"success": true, "completions": []}))
-    }
+    let response = command_ops().collect_completed(&collect_completed_request(args));
+    let completions = response
+        .completions
+        .into_iter()
+        .map(command_session_completion_to_wire)
+        .collect::<Vec<_>>();
+    Ok(json!({"success": response.success, "completions": completions}))
 }
 
 #[expect(
@@ -218,18 +120,10 @@ pub(crate) fn op_command_session_count(
         .unwrap_or_default()
         .trim()
         .to_owned();
-    #[cfg(target_os = "linux")]
-    {
-        let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
-        Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        Ok(json!({"success": true, "caller_id": caller_id, "count": 0}))
-    }
+    let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
+    Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
 }
 
-#[cfg(target_os = "linux")]
 fn start_manager_command_session(
     args: &Value,
     cmd: &str,
@@ -264,7 +158,6 @@ fn start_manager_command_session(
     }
 }
 
-#[cfg(target_os = "linux")]
 fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     let request = WriteStdin {
         command_session_id: require_command_string(args, "command_session_id")?,
@@ -275,7 +168,6 @@ fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     command_session_response_to_wire(command_ops().write_stdin(request))
 }
 
-#[cfg(target_os = "linux")]
 fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
     let last_n_lines = optional_u64(args, "last_n_lines").unwrap_or(50);
     let request = ReadCommandProgress {
@@ -287,7 +179,6 @@ fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
     command_session_response_to_wire(command_ops().read_command_progress(request))
 }
 
-#[cfg(target_os = "linux")]
 fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,
@@ -295,7 +186,6 @@ fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
     command_session_response_to_wire(command_ops().cancel(request))
 }
 
-#[cfg(target_os = "linux")]
 fn command_session_response_to_wire(
     response: Result<CommandResponse, CommandSessionError>,
 ) -> Result<Value, DaemonError> {

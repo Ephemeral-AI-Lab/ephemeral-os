@@ -19,3 +19,4 @@ anchors plus EOS migration takeaways.
 | `background-task-spawn-and-cancellation.md` | Foreground→background promotion, per-type kill paths, signal/exit-code semantics, interrupt-survival matrix, TaskStop |
 | `agent-run-concurrency.md` | Run inventory (main/sync/async/teammate/SDK), QueryGuard single-main-run invariant, queue-vs-steer-vs-abort on new input, spawn lanes + promotion restart, task-notification re-entry, concurrency limits |
 | `subagent-state-management.md` | `createSubagentContext` shared-vs-isolated field table, per-agent AppState views and keyed slices, sidechain transcripts/resume/fork, abort topology, inboxes, cleanup ledger, agentType-keyed memory |
+| `task-list-tools-and-notifications.md` | TaskCreate/Get/List/Update tool inventory and storage model, TaskCreated/TaskCompleted hook veto points, silent-create + push-on-assign mailbox policy, turn-counter stale-task reminder (10/10), idle-loop auto-claim and tasks-mode watcher |

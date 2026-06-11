@@ -1,28 +1,50 @@
+import { AgentKindSchema, type AgentKind } from "@eos/contracts";
 import { z } from "zod";
 
 import type { AgentRunSnapshot } from "../contract.js";
 import { CommandHookSchema, type HookBackgroundSession } from "./protocol.js";
 import { spawnJsonCommand } from "./spawn.js";
 
+/** Matcher axes shared by every rule kind; absent fields match every run. */
+const TriggerRuleMatchers = {
+  /** Exact profile name; absent matches all agents. */
+  agent_name: z.string().min(1).optional(),
+  /** Profile kind; absent matches all kinds. Present with `agent_name`: AND. */
+  agent_kind: AgentKindSchema.optional(),
+};
+
 /**
- * Notification trigger rules (Phase 04.9): loop-lifecycle rules sharing
- * `.eos-agents/hooks.json` with the tool-scoped hook entries. Triggers are
+ * Notification trigger rules (Phase 04.9): loop-lifecycle rules loaded from
+ * `.eos-agents/notification_rules.json` (the inner key is `rules`, not
+ * `hooks`, to keep them visually distinct from tool hooks). Triggers are
  * notification-only — scripts inform, the model acts; no trigger can deny,
  * rewrite state, or cancel anything.
  */
 export const TriggerRuleEntrySchema = z.discriminatedUnion("event", [
   z.object({
     event: z.literal("TurnCompleted"),
-    hooks: z.array(CommandHookSchema).min(1),
+    ...TriggerRuleMatchers,
+    rules: z.array(CommandHookSchema).min(1),
   }),
   z.object({
     event: z.literal("IdleParked"),
+    ...TriggerRuleMatchers,
     /** Park lifetime before the rule fires; one shot per park entry. */
     timeout_ms: z.number().int().positive(),
-    hooks: z.array(CommandHookSchema).min(1),
+    rules: z.array(CommandHookSchema).min(1),
   }),
 ]);
 export type TriggerRuleEntry = z.infer<typeof TriggerRuleEntrySchema>;
+
+/** The matcher fold: absent fields match every run; present fields AND. */
+export function triggerRuleAppliesTo(
+  rule: TriggerRuleEntry,
+  run: { agent_name: string; agent_kind: AgentKind },
+): boolean {
+  if (rule.agent_name !== undefined && rule.agent_name !== run.agent_name) return false;
+  if (rule.agent_kind !== undefined && rule.agent_kind !== run.agent_kind) return false;
+  return true;
+}
 
 export type TriggerCommand = z.infer<typeof CommandHookSchema>;
 

@@ -19,6 +19,7 @@ import type {
 type IdleRule = Extract<TriggerRuleEntry, { event: "IdleParked" }>;
 
 export interface NotificationTriggerEngineDeps {
+  /** Already narrowed to this run by the `agent_name`/`agent_kind` matchers. */
   rules: readonly TriggerRuleEntry[];
   /** Reuses the tool hook runner mechanics; stubbed in unit tests. */
   runCommand: TriggerCommandRunner;
@@ -59,7 +60,7 @@ export class NotificationTriggerEngine implements LoopObserver {
   async turnCompleted(facts: TurnFacts): Promise<void> {
     const commands = this.#deps.rules
       .filter((rule) => rule.event === "TurnCompleted")
-      .flatMap((rule) => rule.hooks);
+      .flatMap((rule) => rule.rules);
     if (commands.length === 0) return;
     await this.#run(commands, {
       event: "TurnCompleted",
@@ -96,7 +97,7 @@ export class NotificationTriggerEngine implements LoopObserver {
 
   async #fire(rule: IdleRule, generation: number, since: number): Promise<void> {
     await this.#run(
-      rule.hooks,
+      rule.rules,
       {
         event: "IdleTimeout",
         facts: { idle_elapsed_ms: Date.now() - since, timeout_ms: rule.timeout_ms },

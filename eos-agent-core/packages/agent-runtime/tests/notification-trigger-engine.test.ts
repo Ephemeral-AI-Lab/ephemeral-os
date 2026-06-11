@@ -33,12 +33,12 @@ function command(name: string): TriggerCommand {
   return { type: "command", command: name };
 }
 
-function turnRule(...hooks: TriggerCommand[]): TriggerRuleEntry {
-  return { event: "TurnCompleted", hooks };
+function turnRule(...rules: TriggerCommand[]): TriggerRuleEntry {
+  return { event: "TurnCompleted", rules };
 }
 
-function idleRule(timeoutMs: number, ...hooks: TriggerCommand[]): TriggerRuleEntry {
-  return { event: "IdleParked", timeout_ms: timeoutMs, hooks };
+function idleRule(timeoutMs: number, ...rules: TriggerCommand[]): TriggerRuleEntry {
+  return { event: "IdleParked", timeout_ms: timeoutMs, rules };
 }
 
 function reminder(source: "TurnCompleted" | "IdleTimeout", text: string) {

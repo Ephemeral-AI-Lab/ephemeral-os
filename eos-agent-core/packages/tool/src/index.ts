@@ -29,6 +29,7 @@ export {
   TriggerOutputSchema,
   TriggerRuleEntrySchema,
   runTriggerCommand,
+  triggerRuleAppliesTo,
   type IdleTimeoutFacts,
   type TriggerCommand,
   type TriggerCommandRun,

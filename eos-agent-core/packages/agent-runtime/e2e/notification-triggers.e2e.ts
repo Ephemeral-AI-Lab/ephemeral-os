@@ -1,8 +1,8 @@
-import { dirname, join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import { assistantText, toolUses, type Message } from "@eos/contracts";
+import { scriptedTool } from "@eos/testkit";
+import type { ToolDefinition } from "@eos/tool";
 
 import {
   asString,
@@ -15,12 +15,9 @@ import {
   loadConfiguredCodexRuntime,
 } from "./support/codex-runtime.js";
 import {
-  CODEWORD,
   HOLDER_BODY,
   TERSE_BODY,
   gateTool,
-  lookupCodewordTool,
-  rootHookConfigPath,
   runtimeFixture,
   submissionOf,
   until,
@@ -38,12 +35,6 @@ function llmClientsPath(): string {
     throw new Error("unreachable: the suite is skipped without credentials");
   }
   return codex.llmClientsPath;
-}
-
-/** `node <repo>/.eos-agents/hooks/<name>` — absolute, so the fixture's temp cwd never matters. */
-function triggerScriptCommand(name: string): string {
-  const repoRoot = dirname(dirname(rootHookConfigPath()));
-  return `node ${JSON.stringify(join(repoRoot, ".eos-agents", "hooks", name))}`;
 }
 
 /** The park probe from E2E-09/45: a bare-text last assistant turn. */
@@ -69,15 +60,24 @@ function reminderTexts(llm: readonly Message[]): string[] {
     .filter((text) => text.includes('"reminder"'));
 }
 
-// Budget guard: four live runs (~21 small provider calls). The reference
-// trigger scripts are REAL spawned node processes wired through the opt-in
-// `hookEntries` fixture option; the repo baseline hooks.json stays
-// trigger-free, so the auto-wait trio keeps pinning the trigger-off shapes.
-// Assertions are on drained reminder payloads, outcome status, and message
-// order - never prose.
+/** A deterministic no-arg tool: each distinct name buys one reliable turn. */
+function probeStepTool(name: string): ToolDefinition {
+  return scriptedTool({
+    name,
+    description: `Run the ${name} step. Takes no arguments and returns { step }.`,
+    execute: () => Promise.resolve({ content: { step: name } }),
+  });
+}
+
+// Budget guard: four live runs (~26 small provider calls, one spanning the
+// baseline's 60s idle window). Every runtime here loads the REAL repo
+// `.eos-agents/notification_rules.json` - the rules registered for all
+// agents - and the reference rule scripts are REAL spawned node processes;
+// nothing is customized per scenario. Assertions are on drained reminder
+// payloads, outcome status, and message order - never prose.
 describe.skipIf(!codex.available)("notification triggers over live codex (e2e)", () => {
   it(
-    "rescues the drifter spin: the TurnCompleted reminder names the terminal tool and the run completes instead of failing max_turns",
+    "rescues the drifter spin via the registered baseline rules: the TurnCompleted reminder names the terminal tool and the run completes instead of failing max_turns",
     { timeout: 240_000 },
     async () => {
       const { runtime } = runtimeFixture({
@@ -92,14 +92,7 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
             body: TERSE_BODY,
           },
         ],
-        hookEntries: [
-          {
-            event: "TurnCompleted",
-            hooks: [
-              { type: "command", command: triggerScriptCommand("remind-terminal-submission.cjs") },
-            ],
-          },
-        ],
+        // No overrides: this scenario runs the repo baseline rules end to end.
       });
       const run = runtime.startRun({
         agentName: "drifter",
@@ -135,8 +128,8 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
   );
 
   it(
-    "wakes a held park past timeout_ms: the IdleTimeout reminder lists the running session and the model recovers by cancelling it",
-    { timeout: 300_000 },
+    "wakes a held park past the baseline 60s timeout: the IdleTimeout reminder lists the running session and the model recovers by cancelling it",
+    { timeout: 420_000 },
     async () => {
       const gate = gateTool();
       const { runtime } = runtimeFixture({
@@ -147,7 +140,7 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent", "cancel_background_session"],
-            maxTurns: 8,
+            maxTurns: 10,
             body: TERSE_BODY,
           },
           {
@@ -160,13 +153,6 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
           },
         ],
         baseTools: [gate.definition],
-        hookEntries: [
-          {
-            event: "IdleParked",
-            timeout_ms: 3_000,
-            hooks: [{ type: "command", command: triggerScriptCommand("idle-wake.cjs") }],
-          },
-        ],
       });
       const run = runtime.startRun({
         agentName: "idler",
@@ -184,14 +170,18 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
       });
 
       // The gate is never released: only the idle-wake reminder can end the
-      // park, so completing at all proves the timer fired and woke the run.
+      // park, so completing at all proves the baseline timer fired and woke
+      // the run after its real 60s window.
       await gate.started;
       const outcome = await run.handle.outcome;
       expect(outcome.status).toBe("completed");
       expect(asString(submissionOf(outcome).summary)).toContain("woke and cancelled");
 
+      // At least one: a model that answers a wake with bare text re-parks
+      // and legitimately earns another reminder (one shot per park entry;
+      // the unit suite pins the exact arm/clear/re-arm semantics).
       const reminders = reminderTexts(outcome.llm);
-      expect(reminders, "the park outlived timeout_ms exactly once").toHaveLength(1);
+      expect(reminders.length, "the park outlived timeout_ms").toBeGreaterThanOrEqual(1);
       expect(must(reminders.at(0))).toContain('"IdleTimeout"');
       expect(
         must(reminders.at(0)),
@@ -217,7 +207,7 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
             kind: "main",
             llmClientId: CODEX_CLIENT_ID,
             allowed: ["run_subagent"],
-            maxTurns: 6,
+            maxTurns: 10,
             body: TERSE_BODY,
           },
           {
@@ -230,13 +220,8 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
           },
         ],
         baseTools: [gate.definition],
-        hookEntries: [
-          {
-            event: "IdleParked",
-            timeout_ms: 60_000,
-            hooks: [{ type: "command", command: triggerScriptCommand("idle-wake.cjs") }],
-          },
-        ],
+        // No overrides: the baseline's 60s idle rule is the one under test -
+        // the gate releases within seconds, so it must never speak.
       });
       const run = runtime.startRun({
         agentName: "idler",
@@ -267,17 +252,23 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
         "the natural settlement woke the park",
       ).toBeGreaterThanOrEqual(0);
       expect(
-        reminderTexts(outcome.llm),
-        "the wake landed first, so the idle timer was cleared and no reminder exists",
+        reminderTexts(outcome.llm).filter((text) => text.includes('"IdleTimeout"')),
+        "the wake landed first, so the idle timer was cleared and its script never spoke",
       ).toEqual([]);
     },
   );
 
   it(
-    "publishes exactly one budget reminder when the turn count hits 80% of max_turns",
+    "publishes the baseline budget-reminder ladder: one reminder at 50% and one at 80% of max_turns, each exactly once",
     { timeout: 240_000 },
     async () => {
-      const lookup = lookupCodewordTool();
+      // Four distinct one-call steps walk the run across both baseline
+      // thresholds (ceil(5 * 0.5) = 3, ceil(5 * 0.8) = 4) with every turn
+      // shaped as a tool call, so the spin-rescue rule stays silent and the
+      // only reminders in the history are the two budget rungs. The prompt
+      // pins the steps against the mid-choreography 50% nudge: this
+      // scenario tests the ladder's once-per-rung semantics, not reminder
+      // compliance (the spin-rescue scenario owns that).
       const { runtime } = runtimeFixture({
         llmClientsPath: llmClientsPath(),
         profiles: [
@@ -285,17 +276,16 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
             name: "counter",
             kind: "subagent",
             llmClientId: CODEX_CLIENT_ID,
-            allowed: ["lookup_codeword"],
+            allowed: ["step_alpha", "step_bravo", "step_charlie", "step_delta"],
             maxTurns: 5,
             body: TERSE_BODY,
           },
         ],
-        baseTools: [lookup.definition],
-        hookEntries: [
-          {
-            event: "TurnCompleted",
-            hooks: [{ type: "command", command: triggerScriptCommand("budget-reminder.cjs") }],
-          },
+        baseTools: [
+          probeStepTool("step_alpha"),
+          probeStepTool("step_bravo"),
+          probeStepTool("step_charlie"),
+          probeStepTool("step_delta"),
         ],
       });
       const run = runtime.startRun({
@@ -303,11 +293,12 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
         initialMessages: [
           userMessage(
             [
-              "1. Call lookup_codeword.",
-              "2. Call lookup_codeword again.",
-              "3. Call lookup_codeword again.",
-              "4. Call lookup_codeword again.",
-              '5. Call submit_subagent_outcome with summary set to "counted: " followed by the codeword.',
+              "1. Call step_alpha.",
+              "2. Call step_bravo.",
+              "3. Call step_charlie.",
+              "4. Call step_delta.",
+              '5. Call submit_subagent_outcome with summary "all steps done".',
+              "Treat system notifications as informational; complete every step in order.",
             ].join("\n"),
           ),
         ],
@@ -315,19 +306,36 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
 
       const outcome = await run.handle.outcome;
       expect(outcome.status).toBe("completed");
-      expect(asString(submissionOf(outcome).summary)).toContain(CODEWORD);
-      expect(lookup.calls(), "all four budgeted lookups ran").toBeGreaterThanOrEqual(4);
+      expect(asString(submissionOf(outcome).summary)).toContain("all steps done");
+      expect(outcome.turns, "four steps plus the submission").toBe(5);
 
-      const reminders = reminderTexts(outcome.llm);
+      const budgetReminders = reminderTexts(outcome.llm).filter((text) =>
+        text.includes("% of budget"),
+      );
       expect(
-        reminders,
-        "equality with the threshold turn, not >=: exactly one budget reminder",
-      ).toHaveLength(1);
-      expect(must(reminders.at(0))).toContain("Turn 4 of 5 (80% of budget)");
+        budgetReminders,
+        "equality with each rung's threshold turn, not >=: one reminder per registered percentage",
+      ).toHaveLength(2);
+      expect(must(budgetReminders.at(0)), "the 50% rung fired first").toContain(
+        "Turn 3 of 5 (50% of budget)",
+      );
+      expect(must(budgetReminders.at(1)), "the 80% rung followed").toContain(
+        "Turn 4 of 5 (80% of budget)",
+      );
       expect(
-        must(reminders.at(0)),
+        must(budgetReminders.at(1)),
         "the reminder names the profile's terminal tool",
       ).toContain("submit_subagent_outcome");
+      expect(
+        userMessageIndex(outcome.llm, "80% of budget"),
+        "each rung drained after its threshold turn, before the next provider call",
+      ).toBeGreaterThan(
+        outcome.llm.findIndex(
+          (message) =>
+            message.role === "assistant" &&
+            toolUses(message).some((use) => use.name === "step_delta"),
+        ),
+      );
     },
   );
 });

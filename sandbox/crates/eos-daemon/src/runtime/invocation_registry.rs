@@ -11,9 +11,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
-#[cfg(target_os = "linux")]
 use nix::sys::signal::{killpg, Signal};
-#[cfg(target_os = "linux")]
 use nix::unistd::Pid;
 use tokio::task::AbortHandle;
 
@@ -224,22 +222,17 @@ fn monotonic_seconds() -> f64 {
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
 }
 
-fn terminate_process_group(process_group_id: Option<i32>) {
+/// SIGTERM the process group, give it a brief grace window, then SIGKILL.
+/// Shared by invocation cancel/TTL reaping and plugin service teardown.
+pub(crate) fn terminate_process_group(process_group_id: Option<i32>) {
     let Some(pgid) = process_group_id else {
         return;
     };
-    #[cfg(target_os = "linux")]
-    {
-        let pid = Pid::from_raw(pgid);
-        if killpg(pid, Signal::SIGTERM).is_ok() {
-            std::thread::sleep(std::time::Duration::from_millis(50));
-        }
-        let _ = killpg(pid, Signal::SIGKILL);
+    let pid = Pid::from_raw(pgid);
+    if killpg(pid, Signal::SIGTERM).is_ok() {
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = pgid;
-    }
+    let _ = killpg(pid, Signal::SIGKILL);
 }
 
 #[cfg(test)]

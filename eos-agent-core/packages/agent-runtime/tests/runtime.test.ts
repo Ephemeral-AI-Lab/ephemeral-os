@@ -72,6 +72,8 @@ interface FixtureOptions {
   baseTools?: ToolDefinition[];
   /** Written to `<root>/hooks.json` when present. */
   hookEntries?: unknown;
+  /** Written to `<root>/notification_rules.json` when present. */
+  notificationRules?: unknown;
 }
 
 function runtimeFixture(options: FixtureOptions): {
@@ -86,12 +88,17 @@ function runtimeFixture(options: FixtureOptions): {
   if (options.hookEntries !== undefined) {
     writeFileSync(hookConfigPath, JSON.stringify(options.hookEntries));
   }
+  const notificationRulesPath = join(root, "notification_rules.json");
+  if (options.notificationRules !== undefined) {
+    writeFileSync(notificationRulesPath, JSON.stringify(options.notificationRules));
+  }
   const dataDir = join(root, "data");
   const runtime = createAgentRuntime({
     agentProfilesDir: dir,
     llmClients: llmRegistry(options.clients),
     baseTools: options.baseTools,
     hookConfigPath,
+    notificationRulesPath,
     dataDir,
   });
   return { runtime, dataDir };
@@ -801,6 +808,65 @@ process.stdin.on("end", () => {
         text: "note was read before writing",
       }),
     );
+  });
+
+  it("narrows notification rules per run by the agent matchers (04.9 §5)", async () => {
+    const helperClient = new MockLlmClient([
+      scriptedTurn([complete(assistantMessage(textBlock("thinking")))]),
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_hs", "submit_subagent_outcome", { summary: "done" }),
+          ),
+          "tool_use",
+        ),
+      ]),
+    ]);
+    const rootClient = new MockLlmClient([
+      scriptedTurn([complete(assistantMessage(textBlock("thinking")))]),
+      scriptedTurn([
+        complete(
+          assistantMessage(toolUseBlock("tu_rs", "submit_main_outcome", { summary: "done" })),
+          "tool_use",
+        ),
+      ]),
+    ]);
+    const { runtime } = runtimeFixture({
+      profiles: [ROOT, HELPER],
+      clients: { root_llm: rootClient, helper_llm: helperClient },
+      notificationRules: [
+        {
+          event: "TurnCompleted",
+          agent_kind: "subagent",
+          rules: [
+            {
+              type: "command",
+              command: `node -e 'console.log(JSON.stringify({notification:"kind scoped"}))'`,
+            },
+          ],
+        },
+      ],
+    });
+    const helper = runtime.startRun({
+      agentName: "helper",
+      initialMessages: [userMessage("go")],
+    });
+    const root = runtime.startRun({ agentName: "root", initialMessages: [userMessage("go")] });
+    await Promise.all([helper.handle.outcome, root.handle.outcome]);
+    expect(
+      must(helperClient.requests.at(1)).messages.at(-1),
+      "the matching subagent-kind run drained the reminder before its next provider call",
+    ).toEqual(
+      systemNotificationMessage({
+        type: "reminder",
+        source: "TurnCompleted",
+        text: "kind scoped",
+      }),
+    );
+    expect(
+      JSON.stringify(must(rootClient.requests.at(1)).messages),
+      "the main-kind run never matched the rule, so its script never ran",
+    ).not.toContain('"reminder"');
   });
 
   it("keeps every conversation-shaping event readable through the tool once the outcome settles (§13.9)", async () => {

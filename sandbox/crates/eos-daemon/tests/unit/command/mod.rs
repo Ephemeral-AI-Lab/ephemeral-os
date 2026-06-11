@@ -161,7 +161,7 @@ fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCom
         stdout: stdout.to_owned(),
         stderr: String::new(),
         command_session_id: Some(id.to_owned()),
-        workspace_mode: None,
+        workspace: None,
         metadata: serde_json::Value::Null,
     };
     CommandSessionCompletion {

@@ -306,7 +306,6 @@ pub(crate) fn stdout(value: &Value) -> &str {
         .get("output")
         .and_then(|output| output.get("stdout"))
         .and_then(Value::as_str)
-        .or_else(|| value.get("stdout").and_then(Value::as_str))
         .unwrap_or_default()
 }
 

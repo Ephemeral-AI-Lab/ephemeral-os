@@ -14,7 +14,7 @@
 #![forbid(unsafe_code)]
 
 mod contract;
-pub mod pty_process;
+pub mod process;
 pub mod session;
 mod transcript;
 pub mod yield_wait_loop;

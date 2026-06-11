@@ -5,12 +5,7 @@ import { fileURLToPath } from "node:url";
 import { assistantText, type JsonObject, type Message } from "@eos/contracts";
 import type { AgentRunOutcome } from "@eos/engine";
 import { scriptedTool } from "@eos/testkit";
-import {
-  defineTool,
-  type HookConfigEntry,
-  type ToolDefinition,
-  type TriggerRuleEntry,
-} from "@eos/tool";
+import { defineTool, type HookConfigEntry, type ToolDefinition } from "@eos/tool";
 import { z } from "zod";
 
 import { loadHookConfig } from "../../src/hook-config.js";
@@ -67,6 +62,13 @@ export function rootHookConfigPath(): string {
   return join(
     dirname(fileURLToPath(import.meta.url)),
     "../../../../../.eos-agents/hooks.json",
+  );
+}
+
+export function rootNotificationRulesPath(): string {
+  return join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../../../.eos-agents/notification_rules.json",
   );
 }
 
@@ -280,8 +282,8 @@ export interface RuntimeFixtureOptions {
   llmClientsPath: string;
   profiles: readonly ProfileSpec[];
   baseTools?: ToolDefinition[];
-  /** Extra hook or trigger entries appended to the repo `.eos-agents/hooks.json` baseline. */
-  hookEntries?: readonly (HookConfigEntry | TriggerRuleEntry)[];
+  /** Extra hooks appended to the repo `.eos-agents/hooks.json` baseline. */
+  hookEntries?: readonly HookConfigEntry[];
 }
 
 export interface RuntimeFixture {
@@ -289,7 +291,11 @@ export interface RuntimeFixture {
   dataDir: string;
 }
 
-/** Temp profiles + data dir over the configured llm clients. */
+/**
+ * Temp profiles + data dir over the configured llm clients. Notification
+ * rules are NOT customizable here: every fixture runtime runs the repo
+ * baseline `.eos-agents/notification_rules.json`, exactly like production.
+ */
 export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
   const root = tempDir("eos-agent-runtime-e2e-");
   const profilesDir = join(root, "profiles");
@@ -311,6 +317,7 @@ export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
     llmClientsPath: options.llmClientsPath,
     baseTools: options.baseTools,
     hookConfigPath,
+    notificationRulesPath: rootNotificationRulesPath(),
     dataDir,
   });
   return { runtime, dataDir };

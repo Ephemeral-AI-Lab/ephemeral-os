@@ -107,7 +107,6 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         assert_eq!(as_str(&exec, "workspace")?, "isolated", "{exec}");
-        assert_eq!(as_str(&exec, "workspace_mode")?, "isolated", "{exec}");
         assert_eq!(
             as_str(&exec, "mutation_source")?,
             "isolated_workspace",
