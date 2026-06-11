@@ -9,7 +9,7 @@ import {
 
 import { NotificationInbox, systemNotificationMessage } from "../src/inbox.js";
 import type { TurnFacts } from "../src/loop-observer.js";
-import { NotificationTriggerEngine } from "../src/trigger-engine.js";
+import { NotificationTriggerEngine, runTriggerCommand } from "../src/trigger-runner.js";
 import type {
   CommandScript,
   TriggerCommandRun,
@@ -94,7 +94,7 @@ describe("notification trigger engine", () => {
     vi.restoreAllMocks();
   });
 
-  it("resolves immediately and spawns nothing when no TurnCompleted rule is configured", async () => {
+  it("resolves immediately and executes nothing when no TurnCompleted rule is configured", async () => {
     const { engine, inbox, ran } = fixture([idleRule(1_000, command("idle"))]);
     await engine.turnCompleted(FACTS);
     expect(ran).toEqual([]);
@@ -167,11 +167,11 @@ describe("notification trigger engine", () => {
   it("never rejects even when the injected runner does (T9)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { engine, inbox } = fixture([turnRule(command("explode"))], {
-      explode: () => Promise.reject(new Error("spawn machinery died")),
+      explode: () => Promise.reject(new Error("execute machinery died")),
     });
     await expect(engine.turnCompleted(FACTS)).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledWith(
-      "notification trigger (TurnCompleted): spawn machinery died",
+      "notification trigger (TurnCompleted): execute machinery died",
     );
     expect(inbox.drain()).toEqual([]);
   });
@@ -199,7 +199,7 @@ describe("notification trigger engine", () => {
     ]);
   });
 
-  it("never spawns when a wake lands before the timeout (T6)", async () => {
+  it("never executes when a wake lands before the timeout (T6)", async () => {
     vi.useFakeTimers();
     const { engine, ran } = fixture([idleRule(1_000, command("idle"))]);
     engine.idleStarted();
@@ -220,7 +220,7 @@ describe("notification trigger engine", () => {
     });
     engine.idleStarted();
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(ran, "the script is mid-spawn").toHaveLength(1);
+    expect(ran, "the script is mid-execution").toHaveLength(1);
     engine.idleEnded();
     settle({ notification: "stale answer" });
     await vi.advanceTimersByTimeAsync(0);
@@ -244,5 +244,85 @@ describe("notification trigger engine", () => {
       reminder("IdleTimeout", "still waiting"),
       reminder("IdleTimeout", "still waiting"),
     ]);
+  });
+});
+
+/** A trigger command running an inline node script (double quotes only). */
+function nodeCommand(js: string, timeoutMs?: number): CommandScript {
+  return {
+    type: "command",
+    command: `"${process.execPath}" -e '${js}'`,
+    ...(timeoutMs !== undefined && { timeout_ms: timeoutMs }),
+  };
+}
+
+const PAYLOAD: TriggerPayload = {
+  event: "TurnCompleted",
+  facts: {
+    turn: 1,
+    max_turns: 4,
+    tool_calls: 0,
+    background_session_count: 0,
+    has_pending_steers: false,
+  },
+  run: SNAPSHOT,
+  terminal_tool: "submit_main_outcome",
+  background_sessions: [],
+};
+
+describe("trigger command runner", () => {
+  it("answers the notification from valid stdout, reading the payload as JSON on stdin", async () => {
+    const echo =
+      'let d="";process.stdin.on("data",(c)=>d+=c);process.stdin.on("end",()=>{const p=JSON.parse(d);console.log(JSON.stringify({notification:p.event+":"+p.terminal_tool}));});';
+    await expect(runTriggerCommand(nodeCommand(echo), PAYLOAD)).resolves.toEqual({
+      notification: "TurnCompleted:submit_main_outcome",
+    });
+  });
+
+  it.each`
+    js                       | label
+    ${"process.exit(0);"}    | ${"empty stdout"}
+    ${'console.log("{}");'}  | ${"an empty JSON object"}
+  `("answers a skip (no notification, no warning) for $label", async ({ js }) => {
+    await expect(runTriggerCommand(nodeCommand(js as string), PAYLOAD)).resolves.toEqual({});
+  });
+
+  it("maps a nonzero exit to a warning carrying stderr - exit 2 has no deny semantics here", async () => {
+    const run = await runTriggerCommand(
+      nodeCommand('process.stderr.write("blocked"); process.exit(2);'),
+      PAYLOAD,
+    );
+    expect(run.notification).toBeUndefined();
+    expect(run.warning).toContain("exited 2");
+    expect(run.warning).toContain("blocked");
+  });
+
+  it("maps non-JSON stdout to a warning", async () => {
+    const run = await runTriggerCommand(
+      nodeCommand('process.stdout.write("not json at all");'),
+      PAYLOAD,
+    );
+    expect(run.notification).toBeUndefined();
+    expect(run.warning).toContain("not JSON");
+  });
+
+  it.each`
+    js                                                       | label
+    ${'console.log(JSON.stringify({decision:"deny"}));'}     | ${"a decision field"}
+    ${'console.log(JSON.stringify({updatedInput:{n:1}}));'}  | ${"an updatedInput field"}
+    ${'console.log(JSON.stringify({notification:""}));'}     | ${"an empty notification"}
+  `("rejects $label as a schema mismatch, never accepting or stripping it", async ({ js }) => {
+    const run = await runTriggerCommand(nodeCommand(js as string), PAYLOAD);
+    expect(run.notification).toBeUndefined();
+    expect(run.warning).toContain("did not match TriggerOutput");
+  });
+
+  it("kills a command on its timeout and maps it to a warning", { timeout: 10_000 }, async () => {
+    const run = await runTriggerCommand(
+      nodeCommand("setInterval(() => {}, 1000);", 250),
+      PAYLOAD,
+    );
+    expect(run.notification).toBeUndefined();
+    expect(run.warning).toBe("trigger command timed out");
   });
 });

@@ -57,7 +57,7 @@ export type HookOutput = z.infer<typeof HookOutputSchema>;
 
 export type HookCommand =
   | {
-      /** Spawned with `shell: true`; payload JSON + newline on stdin. */
+      /** Executed with `shell: true`; payload JSON + newline on stdin. */
       type: "command";
       command: string;
       /** Working directory for relative command paths; runtime-filled when omitted. */

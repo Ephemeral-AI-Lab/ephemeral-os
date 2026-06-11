@@ -6,7 +6,7 @@ import {
 import type { AgentEvent, ToolUseBlock } from "@eos/engine";
 import { scriptedRunState } from "@eos/testkit";
 
-import { HookEngine } from "../src/hooks/runner.js";
+import { HookEngine } from "../src/hooks/hook-runner.js";
 import type { HookConfigEntry, HookOutput } from "../src/hooks/protocol.js";
 import {
   bindTool,

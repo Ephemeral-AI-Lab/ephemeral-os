@@ -1,19 +1,374 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
+use std::sync::{mpsc, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::model::{LayerChange, LayerPath, Manifest};
-
 use crate::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 
-use super::outcome::{ChangesetResult, CommitStatus, FileResult, Route};
-use super::queue::{CommitTransactionPort, PreparedChangeset, PublishConflict};
-use super::{hash_current, i64_to_f64_saturating, usize_to_f64_saturating};
+use super::{
+    hash_current, i64_to_f64_saturating, usize_to_f64_saturating, ChangesetResult, CommitError,
+    CommitStatus, FileResult, PublishDecision, Route,
+};
+
+pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
+
+pub(crate) const MAX_BATCH_SIZE: usize = 64;
+
+pub(crate) const BATCH_WINDOW_S: f64 = 0.002;
+
+pub(crate) const MAX_OCC_CAS_RETRIES: u32 = 3;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreparedChangeset {
+    pub snapshot_version: Option<u64>,
+    pub path_groups: Vec<PublishDecision>,
+    pub changes: Vec<LayerChange>,
+    pub atomic: bool,
+}
+
+pub trait CommitTransactionPort: Send {
+    fn revalidate_and_publish(
+        &self,
+        combined: &PreparedChangeset,
+    ) -> Result<ChangesetResult, PublishConflict>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishConflict {
+    pub observed_version: Option<u64>,
+}
+
+struct WorkItem {
+    prepared: PreparedChangeset,
+    reply: mpsc::Sender<Result<ChangesetResult, CommitError>>,
+    enqueued_at: Instant,
+}
+
+enum QueueItem {
+    Work(WorkItem),
+    Stop,
+}
+
+pub struct CommitQueue<T: CommitTransactionPort + 'static> {
+    sender: mpsc::Sender<QueueItem>,
+    receiver: Mutex<Option<mpsc::Receiver<QueueItem>>>,
+    transaction: Mutex<Option<T>>,
+    handle: Option<std::thread::JoinHandle<()>>,
+    max_batch_size: usize,
+    batch_window_s: f64,
+    max_cas_retries: u32,
+    closed: bool,
+}
+
+struct CommitWorker<T: CommitTransactionPort + 'static> {
+    receiver: mpsc::Receiver<QueueItem>,
+    transaction: T,
+    max_batch_size: usize,
+    batch_window_s: f64,
+    max_cas_retries: u32,
+}
+
+impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
+    pub fn new(transaction: T) -> Self {
+        Self::with_config(
+            transaction,
+            MAX_BATCH_SIZE,
+            BATCH_WINDOW_S,
+            MAX_OCC_CAS_RETRIES,
+        )
+    }
+
+    pub fn with_config(
+        transaction: T,
+        max_batch_size: usize,
+        batch_window_s: f64,
+        max_cas_retries: u32,
+    ) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        Self {
+            sender,
+            receiver: Mutex::new(Some(receiver)),
+            transaction: Mutex::new(Some(transaction)),
+            handle: None,
+            max_batch_size: max_batch_size.max(1),
+            batch_window_s: batch_window_s.max(0.0),
+            max_cas_retries: max_cas_retries.max(1),
+            closed: false,
+        }
+    }
+
+    pub fn start(&mut self) -> Result<(), CommitError> {
+        if self.closed {
+            return Err(CommitError::QueueClosed);
+        }
+        if self
+            .handle
+            .as_ref()
+            .is_some_and(|handle| !handle.is_finished())
+        {
+            return Ok(());
+        }
+        let receiver = self
+            .receiver
+            .lock()
+            .map_err(|_| CommitError::QueueStatePoisoned("receiver slot"))?
+            .take()
+            .ok_or(CommitError::QueueNotStarted)?;
+        let transaction = self
+            .transaction
+            .lock()
+            .map_err(|_| CommitError::QueueStatePoisoned("transaction slot"))?
+            .take()
+            .ok_or(CommitError::QueueNotStarted)?;
+        let worker = CommitWorker {
+            receiver,
+            transaction,
+            max_batch_size: self.max_batch_size,
+            batch_window_s: self.batch_window_s,
+            max_cas_retries: self.max_cas_retries,
+        };
+        let handle = std::thread::Builder::new()
+            .name(COMMIT_QUEUE_THREAD_NAME.to_owned())
+            .spawn(move || {
+                worker.run();
+            })
+            .map_err(|err| CommitError::WorkerStart(err.to_string()))?;
+        self.handle = Some(handle);
+        Ok(())
+    }
+
+    pub fn close(&mut self) -> Result<(), CommitError> {
+        if self.closed {
+            return Ok(());
+        }
+        self.closed = true;
+        if self.handle.is_none() {
+            return Ok(());
+        }
+        let _ = self.sender.send(QueueItem::Stop);
+        self.handle.take().map_or(Ok(()), |handle| {
+            handle.join().map_err(|_| CommitError::WorkerPanicked)
+        })
+    }
+
+    pub fn submit(
+        &self,
+        prepared: PreparedChangeset,
+    ) -> Result<mpsc::Receiver<Result<ChangesetResult, CommitError>>, CommitError> {
+        if self.closed {
+            return Err(CommitError::QueueClosed);
+        }
+        if self
+            .handle
+            .as_ref()
+            .is_none_or(std::thread::JoinHandle::is_finished)
+        {
+            return Err(CommitError::QueueNotStarted);
+        }
+        let (reply, receiver) = mpsc::channel();
+        self.sender
+            .send(QueueItem::Work(WorkItem {
+                prepared,
+                reply,
+                enqueued_at: Instant::now(),
+            }))
+            .map_err(|_| CommitError::QueueClosed)?;
+        Ok(receiver)
+    }
+
+    fn commit_batch(transaction: &T, batch: Vec<WorkItem>, max_cas_retries: u32) {
+        let commit_start = Instant::now();
+        let Some(combined) = combine_prepared(batch.iter().map(|item| &item.prepared)) else {
+            return;
+        };
+        let mut attempts = 0;
+        let result = loop {
+            match transaction.revalidate_and_publish(&combined) {
+                Ok(result) => break result,
+                Err(conflict) => {
+                    attempts += 1;
+                    if attempts >= max_cas_retries {
+                        break cas_exhaustion_result(&combined, &conflict, max_cas_retries);
+                    }
+                }
+            }
+        };
+        let commit_elapsed_s = commit_start.elapsed().as_secs_f64();
+        let batch_size = usize_to_f64_saturating(batch.len());
+        for item in batch {
+            let files = result_files_for_item(&result, &item.prepared);
+            let mut timings = result.timings.clone();
+            timings.insert(
+                "occ.serial.queue_wait_s".to_owned(),
+                commit_start.duration_since(item.enqueued_at).as_secs_f64(),
+            );
+            timings.insert("occ.serial.batch_size".to_owned(), batch_size);
+            timings.insert("occ.serial.commit_s".to_owned(), commit_elapsed_s);
+            timings.insert(
+                "occ.serial.cas_attempts".to_owned(),
+                f64::from(attempts + 1),
+            );
+            let _ = item.reply.send(Ok(ChangesetResult {
+                files,
+                published_manifest_version: result.published_manifest_version,
+                timings,
+            }));
+        }
+    }
+}
+
+impl<T: CommitTransactionPort + 'static> CommitWorker<T> {
+    fn run(self) {
+        while let Ok(first) = self.receiver.recv() {
+            let QueueItem::Work(first) = first else {
+                return;
+            };
+            let mut items = vec![first];
+            let mut stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
+            if !stop_seen && self.batch_window_s > 0.0 && items.len() < self.max_batch_size {
+                std::thread::sleep(Duration::from_secs_f64(self.batch_window_s));
+                stop_seen = drain_ready(&self.receiver, &mut items, self.max_batch_size);
+            }
+            for batch in disjoint_batches(items) {
+                CommitQueue::<T>::commit_batch(&self.transaction, batch, self.max_cas_retries);
+            }
+            if stop_seen {
+                return;
+            }
+        }
+    }
+}
+
+fn drain_ready(
+    receiver: &mpsc::Receiver<QueueItem>,
+    items: &mut Vec<WorkItem>,
+    max_batch_size: usize,
+) -> bool {
+    while items.len() < max_batch_size {
+        match receiver.try_recv() {
+            Ok(QueueItem::Work(item)) => items.push(item),
+            Ok(QueueItem::Stop) | Err(mpsc::TryRecvError::Disconnected) => return true,
+            Err(mpsc::TryRecvError::Empty) => return false,
+        }
+    }
+    false
+}
+
+fn disjoint_batches(items: Vec<WorkItem>) -> Vec<Vec<WorkItem>> {
+    let mut pending: Vec<(WorkItem, HashSet<String>)> = items
+        .into_iter()
+        .map(|item| {
+            let paths = item
+                .prepared
+                .path_groups
+                .iter()
+                .map(|group| group.path.as_str().to_owned())
+                .collect();
+            (item, paths)
+        })
+        .collect();
+    let mut batches = Vec::new();
+    while !pending.is_empty() {
+        let mut used = HashSet::new();
+        let mut batch = Vec::new();
+        let mut rest = Vec::new();
+        for (item, paths) in pending {
+            if item.prepared.atomic || !used.is_disjoint(&paths) {
+                rest.push((item, paths));
+            } else {
+                used.extend(paths.iter().cloned());
+                batch.push(item);
+            }
+        }
+        if batch.is_empty() {
+            let (item, _) = rest.remove(0);
+            batch.push(item);
+        }
+        batches.push(batch);
+        pending = rest;
+    }
+    batches
+}
+
+fn combine_prepared<'a>(
+    items: impl Iterator<Item = &'a PreparedChangeset>,
+) -> Option<PreparedChangeset> {
+    let items: Vec<&PreparedChangeset> = items.collect();
+    let first = items.first()?;
+    debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
+    Some(PreparedChangeset {
+        snapshot_version: first.snapshot_version,
+        path_groups: items
+            .iter()
+            .flat_map(|prepared| prepared.path_groups.iter().cloned())
+            .collect(),
+        changes: items
+            .iter()
+            .flat_map(|prepared| prepared.changes.iter().cloned())
+            .collect(),
+        atomic: first.atomic,
+    })
+}
+
+fn result_files_for_item(
+    result: &ChangesetResult,
+    prepared: &PreparedChangeset,
+) -> Vec<FileResult> {
+    prepared
+        .path_groups
+        .iter()
+        .filter_map(|group| {
+            result
+                .files
+                .iter()
+                .find(|file| file.path == group.path)
+                .cloned()
+        })
+        .collect()
+}
+
+fn cas_exhaustion_result(
+    prepared: &PreparedChangeset,
+    conflict: &PublishConflict,
+    max_cas_retries: u32,
+) -> ChangesetResult {
+    let message = format!(
+        "CAS mismatch retry budget exhausted after {max_cas_retries} attempts: observed version {:?}",
+        conflict.observed_version
+    );
+    let files = prepared
+        .path_groups
+        .iter()
+        .map(|group| {
+            let (status, message) = match group.route {
+                Route::Drop => (
+                    CommitStatus::Dropped,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                Route::Reject => (
+                    CommitStatus::Rejected,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                Route::Direct | Route::Gated => (CommitStatus::AbortedVersion, message.clone()),
+            };
+            FileResult {
+                path: group.path.clone(),
+                status,
+                message,
+            }
+        })
+        .collect();
+    ChangesetResult {
+        files,
+        published_manifest_version: None,
+        timings: std::collections::BTreeMap::new(),
+    }
+}
 
 static AUTO_SQUASH_MAX_DEPTH_CONFIG: AtomicUsize = AtomicUsize::new(AUTO_SQUASH_MAX_DEPTH);
 
-/// Configure the auto-squash depth ceiling applied after each publish.
 pub fn configure_auto_squash_max_depth(max_depth: usize) {
     AUTO_SQUASH_MAX_DEPTH_CONFIG.store(max_depth.max(1), Ordering::Relaxed);
 }
@@ -22,12 +377,8 @@ fn auto_squash_max_depth() -> usize {
     AUTO_SQUASH_MAX_DEPTH_CONFIG.load(Ordering::Relaxed)
 }
 
-/// [`CommitTransactionPort`] impl that revalidates a prepared changeset
-/// against the active manifest and publishes a new layer (with auto-squash) via
-/// `LayerStack` for `root`.
 #[derive(Clone)]
 pub struct CommitTransaction {
-    /// The layer-stack root this transaction publishes into.
     pub root: PathBuf,
 }
 
@@ -466,6 +817,10 @@ fn manifest_version_u64_optional(version: i64) -> Option<u64> {
     u64::try_from(version).ok()
 }
 
+
+#[cfg(test)]
+#[path = "../../tests/unit/commit/queue.rs"]
+mod queue_tests;
 #[cfg(test)]
 #[path = "../../tests/unit/commit/transaction.rs"]
-mod tests;
+mod transaction_tests;

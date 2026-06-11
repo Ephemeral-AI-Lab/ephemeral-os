@@ -17,7 +17,7 @@ import type {
   HookEvent,
   HookPayload,
 } from "./hooks/protocol.js";
-import type { HookEngine, HookRunSummary } from "./hooks/runner.js";
+import type { HookEngine, HookRunSummary } from "./hooks/hook-runner.js";
 
 /**
  * Everything the pipeline owns about one settled call. The batch executor

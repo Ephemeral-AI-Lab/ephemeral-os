@@ -13,6 +13,7 @@ import { BackgroundSessionSupervisor } from "@eos/background";
 import {
   NotificationInbox,
   NotificationTriggerEngine,
+  runTriggerCommand,
   triggerRuleAppliesTo,
   type TriggerRuleEntry,
 } from "@eos/notification";
@@ -24,7 +25,6 @@ import {
   agentTools,
   backgroundTools,
   buildToolExecutor,
-  runTriggerCommand,
   snapshotRunState,
   terminalToolDefinitions,
   type AgentRunState,

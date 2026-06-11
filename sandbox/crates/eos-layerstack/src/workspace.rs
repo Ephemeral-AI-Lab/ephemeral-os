@@ -1,4 +1,4 @@
-//! Workspace-base construction for an empty layer stack.
+//! Workspace binding and base-layer construction for a layer stack.
 //!
 
 use std::collections::BTreeMap;
@@ -7,16 +7,74 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use crate::model::{LayerRef, Manifest, MANIFEST_SCHEMA_VERSION};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::error::LayerStackError;
-use crate::fsutil::{join_layer_path, record_elapsed, remove_path};
-use crate::stack::{read_manifest, write_atomic, write_manifest, LayerStack};
-use crate::workspace_binding::{read_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE};
+use crate::fs::{
+    join_layer_path, read_manifest, record_elapsed, remove_path, write_atomic, write_manifest,
+};
+use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
+
+/// Binding filename under a layer-stack storage root.
+pub const WORKSPACE_BINDING_FILE: &str = "workspace.json";
 
 /// The immutable base-layer id used by the Rust implementation.
 pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
+
+/// Durable binding from a real workspace root to the layer-stack storage root.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct WorkspaceBinding {
+    pub workspace_root: String,
+    pub layer_stack_root: String,
+    pub active_manifest_version: i64,
+    pub active_root_hash: String,
+    pub base_manifest_version: i64,
+    pub base_root_hash: String,
+}
+
+impl WorkspaceBinding {
+    /// Translate a repo-relative path into the normalized layer path.
+    pub fn layer_path_from_relative(&self, path: &str) -> Result<String, LayerStackError> {
+        let raw = path.trim();
+        if raw.is_empty() {
+            return Err(LayerStackError::WorkspaceBinding(
+                "path is required".to_owned(),
+            ));
+        }
+        if raw.starts_with('/') {
+            return Err(LayerStackError::WorkspaceBinding(format!(
+                "path must be relative: {raw}"
+            )));
+        }
+        normalize_layer_path(raw)
+    }
+
+    /// Translate a workspace-absolute path into the normalized layer path.
+    pub fn layer_path_from_absolute(&self, path: &str) -> Result<String, LayerStackError> {
+        let raw = path.trim();
+        if raw.is_empty() {
+            return Err(LayerStackError::WorkspaceBinding(
+                "path is required".to_owned(),
+            ));
+        }
+        if !raw.starts_with('/') {
+            return Err(LayerStackError::WorkspaceBinding(format!(
+                "path must be absolute: {raw}"
+            )));
+        }
+        let workspace = PathBuf::from(&self.workspace_root);
+        let candidate = PathBuf::from(raw);
+        let relative = candidate.strip_prefix(&workspace).map_err(|_| {
+            LayerStackError::WorkspaceBinding(format!(
+                "path is outside bound workspace {}: {raw}",
+                self.workspace_root
+            ))
+        })?;
+        normalize_layer_path(&relative.to_string_lossy())
+    }
+}
 
 /// Build result: binding plus phase timings.
 #[derive(Debug, Clone, PartialEq)]
@@ -84,6 +142,35 @@ pub fn ensure_workspace_base(
     }
     let built = build_workspace_base(stack, workspace, false)?;
     Ok((built.binding, true))
+}
+
+/// Read the optional workspace binding.
+pub fn read_workspace_binding(
+    layer_stack_root: impl AsRef<Path>,
+) -> Result<Option<WorkspaceBinding>, LayerStackError> {
+    let path = layer_stack_root.as_ref().join(WORKSPACE_BINDING_FILE);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let payload = std::fs::read_to_string(&path)?;
+    let binding = serde_json::from_str::<WorkspaceBinding>(&payload)
+        .map_err(|err| LayerStackError::WorkspaceBinding(err.to_string()))?;
+    Ok(Some(binding))
+}
+
+/// Read the required workspace binding.
+pub fn require_workspace_binding(
+    layer_stack_root: impl AsRef<Path>,
+) -> Result<WorkspaceBinding, LayerStackError> {
+    read_workspace_binding(layer_stack_root.as_ref())?.ok_or_else(|| {
+        LayerStackError::WorkspaceBinding(format!(
+            "workspace binding is missing: {}",
+            layer_stack_root
+                .as_ref()
+                .join(WORKSPACE_BINDING_FILE)
+                .display()
+        ))
+    })
 }
 
 /// Build or rebuild the workspace base for one layer-stack root.
@@ -407,6 +494,12 @@ fn write_workspace_binding(binding: &WorkspaceBinding) -> Result<(), LayerStackE
         Path::new(&binding.layer_stack_root).join(WORKSPACE_BINDING_FILE),
         &encoded,
     )
+}
+
+fn normalize_layer_path(path: &str) -> Result<String, LayerStackError> {
+    crate::model::LayerPath::parse(path)
+        .map(|path| path.as_str().to_owned())
+        .map_err(LayerStackError::from)
 }
 
 fn write_layer_digest(stack: &Path, layer_id: &str, digest: &str) -> Result<(), LayerStackError> {

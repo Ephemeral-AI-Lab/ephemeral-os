@@ -5,7 +5,7 @@ import { scriptedRunState, scriptedTool } from "@eos/testkit";
 
 import type { ToolDefinition } from "../src/contract.js";
 import { toolBatchExecutor } from "../src/executor.js";
-import { HookEngine } from "../src/hooks/runner.js";
+import { HookEngine } from "../src/hooks/hook-runner.js";
 import { bindTool } from "../src/pipeline.js";
 import type { AgentRunState } from "../src/run-state.js";
 import { collector, live, must, resultContent, tick, toolUse } from "./support.js";

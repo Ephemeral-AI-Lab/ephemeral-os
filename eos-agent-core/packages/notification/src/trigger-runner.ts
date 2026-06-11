@@ -2,23 +2,74 @@ import type {
   AgentRunSnapshot,
   BackgroundSessionSnapshot,
 } from "@eos/contracts";
+import { executeJsonCommand } from "@eos/scripts";
 
 import { systemNotificationMessage, type NotificationInbox } from "./inbox.js";
 import type { LoopObserver, TurnFacts } from "./loop-observer.js";
-import type {
-  CommandScript,
-  TriggerCommandRun,
-  TriggerCommandRunner,
-  TriggerPayload,
-  TriggerRuleEntry,
+import {
+  TriggerOutputSchema,
+  type CommandScript,
+  type TriggerCommandRun,
+  type TriggerCommandRunner,
+  type TriggerPayload,
+  type TriggerRuleEntry,
 } from "./triggers.js";
+
+/**
+ * The execute-backed implementation of the `TriggerCommandRunner` seam,
+ * over the shared JSON-command mechanics in `@eos/scripts` (shell
+ * execution, payload JSON + newline on stdin, per-command timeout). Never
+ * rejects: every failure — execute fault, timeout, nonzero exit, bad
+ * JSON, schema mismatch — settles as a `warning` and the firing is
+ * dropped.
+ */
+export const runTriggerCommand: TriggerCommandRunner = async (command, payload) => {
+  let settled;
+  try {
+    settled = await executeJsonCommand(command, payload);
+  } catch (error) {
+    return {
+      warning: `trigger command failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  if (settled.kind === "execute_error") {
+    return { warning: `trigger command failed to execute: ${settled.message}` };
+  }
+  if (settled.kind === "aborted") {
+    return { warning: "trigger command timed out" };
+  }
+  if (settled.code !== 0) {
+    return {
+      warning: `trigger command exited ${String(settled.code)}: ${settled.stderr.trim() || "(no stderr)"}`,
+    };
+  }
+  const trimmed = settled.stdout.trim();
+  if (!trimmed) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return { warning: `trigger stdout was not JSON: ${trimmed.slice(0, 200)}` };
+  }
+  const checked = TriggerOutputSchema.safeParse(parsed);
+  if (!checked.success) {
+    return {
+      warning: `trigger stdout did not match TriggerOutput: ${checked.error.issues
+        .map((issue) => issue.message)
+        .join("; ")}`,
+    };
+  }
+  return checked.data.notification === undefined
+    ? {}
+    : { notification: checked.data.notification };
+};
 
 type IdleRule = Extract<TriggerRuleEntry, { event: "IdleParked" }>;
 
 export interface NotificationTriggerEngineDeps {
   /** Already narrowed to this run by the `agent_name`/`agent_kind` matchers. */
   rules: readonly TriggerRuleEntry[];
-  /** The spawn-backed `@eos/tool` runner in production; stubbed in unit tests. */
+  /** The execute-backed `runTriggerCommand` in production; stubbed in unit tests. */
   runCommand: TriggerCommandRunner;
   inbox: NotificationInbox;
   /** Background-session list at fire time, not park time. */
@@ -99,9 +150,9 @@ export class NotificationTriggerEngine implements LoopObserver {
         event: "IdleTimeout",
         facts: { idle_elapsed_ms: Date.now() - since, timeout_ms: rule.timeout_ms },
       },
-      // Script spawn takes time and a natural wake can land mid-spawn: a
-      // fire whose park epoch moved is discarded, never published into a
-      // later phase of the run.
+      // Script execution takes time and a natural wake can land
+      // mid-execution: a fire whose park epoch moved is discarded, never
+      // published into a later phase of the run.
       () => this.#generation === generation,
     );
   }
@@ -124,7 +175,7 @@ export class NotificationTriggerEngine implements LoopObserver {
       );
     } catch (error) {
       // The observer contract: never throws, never rejects. A runner that
-      // rejects (the spawn-backed one never does) drops the whole firing.
+      // rejects (the execute-backed one never does) drops the whole firing.
       this.#warn(occurrence.event, error instanceof Error ? error.message : String(error));
       return;
     }

@@ -108,9 +108,14 @@ importers:
       '@eos/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@eos/scripts':
+        specifier: workspace:*
+        version: link:../scripts
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+
+  packages/scripts: {}
 
   packages/testkit:
     dependencies:
@@ -135,6 +140,9 @@ importers:
       '@eos/notification':
         specifier: workspace:*
         version: link:../notification
+      '@eos/scripts':
+        specifier: workspace:*
+        version: link:../scripts
       zod:
         specifier: ^4.4.3
         version: 4.4.3

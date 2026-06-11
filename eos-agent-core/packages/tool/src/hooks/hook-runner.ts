@@ -1,5 +1,7 @@
 import type { z } from "zod";
 
+import { executeJsonCommand } from "@eos/scripts";
+
 import {
   HookOutputSchema,
   combineHookOutputs,
@@ -9,7 +11,6 @@ import {
   type HookOutput,
   type HookPayload,
 } from "./protocol.js";
-import { spawnJsonCommand } from "../spawn.js";
 
 /** One hook's settled run: a structured output, or passthrough + warning. */
 interface HookRunResult {
@@ -76,7 +77,7 @@ async function runHook(
       return passthrough(`callback hook failed: ${errorMessage(error)}`);
     }
   }
-  // A synchronous spawn() fault rejects the command promise; map it to a
+  // A synchronous execute fault rejects the command promise; map it to a
   // warning so HookEngine.run keeps its never-throws contract.
   return runCommandHook(command, payload, signal).catch((error: unknown) =>
     passthrough(`hook command failed: ${errorMessage(error)}`),
@@ -84,20 +85,20 @@ async function runHook(
 }
 
 /**
- * The JS-script pluggability over the shared spawn core: per-hook timeout
- * derived from the call's signal (a cancelled run kills its hooks). Exit 0
- * stdout parses as `HookOutput` (mismatch = passthrough + warning); exit 2
- * denies with stderr as the model-visible reason; anything else is
- * passthrough + warning.
+ * The JS-script pluggability over the shared execute core (`@eos/scripts`):
+ * per-hook timeout derived from the call's signal (a cancelled run kills
+ * its hooks). Exit 0 stdout parses as `HookOutput` (mismatch = passthrough
+ * + warning); exit 2 denies with stderr as the model-visible reason;
+ * anything else is passthrough + warning.
  */
 async function runCommandHook(
   command: Extract<HookCommand, { type: "command" }>,
   payload: HookPayload,
   signal: AbortSignal,
 ): Promise<HookRunResult> {
-  const settled = await spawnJsonCommand(command, payload, signal);
-  if (settled.kind === "spawn_error") {
-    return passthrough(`hook command failed to spawn: ${settled.message}`);
+  const settled = await executeJsonCommand(command, payload, signal);
+  if (settled.kind === "execute_error") {
+    return passthrough(`hook command failed to execute: ${settled.message}`);
   }
   if (settled.kind === "aborted") {
     return passthrough("hook command aborted (timeout or run abort)");

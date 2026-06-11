@@ -1,5 +1,5 @@
 {
-  "name": "@eos/notification",
+  "name": "@eos/scripts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,10 +8,5 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     }
-  },
-  "dependencies": {
-    "@eos/contracts": "workspace:*",
-    "@eos/scripts": "workspace:*",
-    "zod": "^4.4.3"
   }
 }

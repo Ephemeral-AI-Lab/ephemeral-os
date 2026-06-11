@@ -8,7 +8,7 @@ import { z } from "zod";
 
 /**
  * One notification-rule command script in `notification_rules.json`:
- * spawned with `shell: true`, payload JSON + newline on stdin. Owned by
+ * executed with `shell: true`, payload JSON + newline on stdin. Owned by
  * this package — other operator configs have look-alike command shapes,
  * but each config's schema evolves independently.
  */
@@ -110,10 +110,9 @@ export interface TriggerCommandRun {
 }
 
 /**
- * The runner seam `NotificationTriggerEngine` calls. The spawn-backed
- * implementation lives with the shared command-spawn mechanics in
- * `@eos/tool` (`runTriggerCommand`), the same dependency direction as the
- * tool layer implementing the engine's `ToolExecutor` port; tests stub it.
+ * The runner seam `NotificationTriggerEngine` calls. The execute-backed
+ * implementation is `runTriggerCommand` in `trigger-runner.ts`, over the
+ * shared JSON-command mechanics in `@eos/scripts`; tests stub it.
  */
 export type TriggerCommandRunner = (
   command: CommandScript,

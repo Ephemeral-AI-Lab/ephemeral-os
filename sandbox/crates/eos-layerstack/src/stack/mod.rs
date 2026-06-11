@@ -7,12 +7,13 @@
 //! EXISTING `layer_paths`, NEVER a rendered tree (rendering is the caller's
 //! overlay/projection concern).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsString;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Instant;
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, LayerChange, LayerPath, LayerRef,
@@ -20,24 +21,19 @@ use crate::model::{
 };
 
 use crate::error::LayerStackError;
-use crate::fsutil::{join_layer_path, record_elapsed, remove_path, resolve_layer_path};
-use crate::lease::{
-    lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
-    SharedLeaseRegistry,
+use crate::fs::{
+    clear_storage_root_preserving_lock, fsync_dir, fsync_tree_files, join_layer_path,
+    read_manifest, record_elapsed, remove_path, replace_workspace_contents, resolve_layer_path,
+    validate_layer_ref, write_atomic, write_manifest,
 };
 use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
-use crate::storage_lock::StorageWriterLockLease;
-use crate::workspace_base::build_workspace_base;
+use crate::lock::StorageWriterLockLease;
+use crate::workspace::build_workspace_base;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
-mod fs;
-mod manifest_io;
 mod projection;
 mod whiteout;
 
-use fs::{clear_storage_root_preserving_lock, fsync_tree_files, replace_workspace_contents};
-pub(crate) use fs::{fsync_dir, write_atomic};
-pub(crate) use manifest_io::{read_manifest, validate_layer_ref, write_manifest};
 use whiteout::{is_kernel_whiteout, write_kernel_whiteout, LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 
 /// Immutable result of an O(1) snapshot: a lease id + the pinned manifest's
@@ -54,6 +50,144 @@ pub struct Lease {
     pub layer_paths: Vec<String>,
     /// Phase timings keyed `layer_stack.acquire_snapshot.*`.
     pub timings: BTreeMap<String, f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LayerStackLeaseRecord {
+    lease_id: String,
+    manifest: Manifest,
+}
+
+#[derive(Debug, Default)]
+struct LeaseRegistry {
+    leases: HashMap<String, LayerStackLeaseRecord>,
+    refcounts: BTreeMap<LayerRefKey, usize>,
+}
+
+type SharedLeaseRegistry = Arc<Mutex<LeaseRegistry>>;
+
+fn shared_registry_for_root(storage_root: &Path) -> Result<SharedLeaseRegistry, LayerStackError> {
+    let key = storage_root
+        .canonicalize()
+        .unwrap_or_else(|_| storage_root.to_path_buf())
+        .to_string_lossy()
+        .into_owned();
+    let mut registries = shared_registries()
+        .lock()
+        .map_err(|_| LayerStackError::LockPoisoned("lease registry map"))?;
+    Ok(registries
+        .entry(key)
+        .or_insert_with(|| Arc::new(Mutex::new(LeaseRegistry::default())))
+        .clone())
+}
+
+fn lock_shared_registry(
+    registry: &SharedLeaseRegistry,
+) -> Result<MutexGuard<'_, LeaseRegistry>, LayerStackError> {
+    registry
+        .lock()
+        .map_err(|_| LayerStackError::LockPoisoned("lease registry"))
+}
+
+fn lock_shared_registry_recover(registry: &SharedLeaseRegistry) -> MutexGuard<'_, LeaseRegistry> {
+    registry
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+impl LeaseRegistry {
+    fn acquire(
+        &mut self,
+        manifest: Manifest,
+        owner_request_id: &str,
+    ) -> Result<LayerStackLeaseRecord, LayerStackError> {
+        if owner_request_id.is_empty() {
+            return Err(LayerStackError::InvalidLeaseOwner(
+                "owner_request_id must not be empty".to_owned(),
+            ));
+        }
+        let lease = LayerStackLeaseRecord {
+            lease_id: new_lease_id(),
+            manifest,
+        };
+        for layer in &lease.manifest.layers {
+            *self.refcounts.entry(LayerRefKey::from(layer)).or_insert(0) += 1;
+        }
+        self.leases.insert(lease.lease_id.clone(), lease.clone());
+        Ok(lease)
+    }
+
+    fn release(&mut self, lease_id: &str) -> Option<LayerStackLeaseRecord> {
+        let lease = self.leases.remove(lease_id)?;
+        for layer in &lease.manifest.layers {
+            let key = LayerRefKey::from(layer);
+            match self.refcounts.get_mut(&key) {
+                Some(count) if *count > 1 => *count -= 1,
+                Some(_) => {
+                    self.refcounts.remove(&key);
+                }
+                None => {}
+            }
+        }
+        Some(lease)
+    }
+
+    fn leased_layers(&self) -> Vec<LayerRef> {
+        self.refcounts.keys().map(LayerRef::from).collect()
+    }
+
+    fn lease_head_layers(&self) -> Vec<LayerRef> {
+        self.leases
+            .values()
+            .filter_map(|lease| lease.manifest.layers.first())
+            .map(LayerRefKey::from)
+            .collect::<BTreeSet<_>>()
+            .iter()
+            .map(LayerRef::from)
+            .collect()
+    }
+
+    fn active_count(&self) -> usize {
+        self.leases.len()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct LayerRefKey {
+    layer_id: String,
+    path: String,
+}
+
+impl From<&LayerRef> for LayerRefKey {
+    fn from(layer: &LayerRef) -> Self {
+        Self {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+}
+
+impl From<&LayerRefKey> for LayerRef {
+    fn from(layer: &LayerRefKey) -> Self {
+        Self {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+}
+
+fn new_lease_id() -> String {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+    let counter = NEXT_LEASE.fetch_add(1, Ordering::Relaxed);
+    format!("{nanos:032x}{counter:016x}")
+}
+
+fn shared_registries() -> &'static Mutex<HashMap<String, SharedLeaseRegistry>> {
+    static REGISTRIES: OnceLock<Mutex<HashMap<String, SharedLeaseRegistry>>> = OnceLock::new();
+    REGISTRIES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Layered read view over a storage root's manifest (lowest→highest precedence).
@@ -183,6 +317,14 @@ impl MergedView {
         }
         false
     }
+}
+
+/// Filesystem storage metrics for a [`LayerStack`] root.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LayerStackStorageMetrics {
+    pub layer_dirs: usize,
+    pub staging_dirs: usize,
+    pub storage_bytes: u64,
 }
 
 /// Durable storage facade for one layer-stack root.
@@ -403,6 +545,16 @@ impl LayerStack {
     #[must_use]
     pub fn active_lease_count(&self) -> usize {
         lock_shared_registry_recover(&self.leases).active_count()
+    }
+
+    /// Walk this stack's storage layout for directory counts and total bytes.
+    pub fn storage_metrics(&self) -> Result<LayerStackStorageMetrics, LayerStackError> {
+        let root = self.storage_root();
+        Ok(LayerStackStorageMetrics {
+            layer_dirs: count_dirs(&root.join(LAYERS_DIR))?,
+            staging_dirs: count_dirs(&root.join(STAGING_DIR))?,
+            storage_bytes: storage_bytes(root)?,
+        })
     }
 
     /// Collapse the active manifest back into the bound workspace base.
@@ -690,6 +842,39 @@ fn layer_digest_path_at(storage_root: &Path, layer_id: &str) -> PathBuf {
         .join(format!("{layer_id}.digest"))
 }
 
+fn count_dirs(path: &Path) -> Result<usize, LayerStackError> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    let mut count = 0;
+    for entry in std::fs::read_dir(path)? {
+        if entry?.file_type()?.is_dir() {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
+
+fn storage_bytes(path: &Path) -> Result<u64, LayerStackError> {
+    if !path.exists() {
+        return Ok(0);
+    }
+    let mut total = 0;
+    let mut stack = vec![path.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let meta = entry.metadata()?;
+            if meta.is_dir() {
+                stack.push(entry.path());
+            } else if meta.is_file() {
+                total += meta.len();
+            }
+        }
+    }
+    Ok(total)
+}
+
 fn write_layer_changes(layer_dir: &Path, changes: &[LayerChange]) -> Result<(), LayerStackError> {
     for change in aggregate_layer_changes(changes) {
         match change {
@@ -731,6 +916,7 @@ fn write_layer_changes(layer_dir: &Path, changes: &[LayerChange]) -> Result<(), 
 
 static NEXT_LAYER: AtomicU64 = AtomicU64::new(0);
 static NEXT_TMP_WRITE: AtomicU64 = AtomicU64::new(0);
+static NEXT_LEASE: AtomicU64 = AtomicU64::new(0);
 
 fn stale_layer_error(layer: &LayerRef, rel: &str, err: &std::io::Error) -> LayerStackError {
     LayerStackError::Storage(format!(

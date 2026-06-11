@@ -37,7 +37,7 @@
 //! Single-threaded core plus a per-root reentrant write lease (the dual-layer
 //! `flock` cross-process lease + in-process reentrant mutex). No tokio. The
 //! reentrant write-guard requirement (a non-reentrant `Mutex` would self-deadlock)
-//! is documented in [`storage_lock`].
+//! is documented in the storage lock implementation.
 #![forbid(unsafe_code)]
 
 // Integration-test dev-dependencies (golden CAS fixtures) used only by
@@ -48,21 +48,18 @@ use base64 as _;
 use proptest as _;
 
 mod commit;
-pub mod error;
-pub(crate) mod fsutil;
-pub(crate) mod lease;
-mod metrics;
-pub mod model;
+mod error;
+pub(crate) mod fs;
+pub(crate) mod lock;
+mod model;
 mod route;
 pub mod service;
-pub mod squash;
-pub mod stack;
-pub mod storage_lock;
+mod squash;
+mod stack;
 #[cfg(test)]
 #[path = "../tests/unit/test_fixture.rs"]
 mod test_fixture;
-pub mod workspace_base;
-pub mod workspace_binding;
+mod workspace;
 
 // The manifest/layer data model and its byte-identity hashes are owned here;
 // re-export so downstream crates use ONE set of hashes/types.
@@ -76,10 +73,9 @@ pub use commit::{
     FileResult, Route,
 };
 pub use error::LayerStackError;
-pub use squash::{CheckpointSegment, LayerCheckpointSquasher, SquashPlan, SquashPlanEntry};
 pub use stack::{LayerStack, Lease, MergedView};
-pub use workspace_base::{build_workspace_base, ensure_workspace_base};
-pub use workspace_binding::{
+pub use workspace::{
+    build_workspace_base, ensure_workspace_base,
     read_workspace_binding, require_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE,
 };
 

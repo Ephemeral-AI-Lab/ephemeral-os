@@ -3,7 +3,7 @@ import type { ToolExecutor } from "@eos/engine";
 import type { ToolDefinition } from "./contract.js";
 import { toolBatchExecutor } from "./executor.js";
 import type { HookAdvisoryRequirement } from "./hooks/protocol.js";
-import { HookEngine } from "./hooks/runner.js";
+import { HookEngine } from "./hooks/hook-runner.js";
 import { bindTool, type HookPayloadFacts } from "./pipeline.js";
 import type { AgentRunState } from "./run-state.js";
 

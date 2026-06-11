@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::error::LayerStackError;
 
 use super::whiteout::{is_kernel_whiteout_meta, LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
-use crate::fsutil::remove_path;
+use crate::fs::remove_path;
 
 pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), LayerStackError> {
     let mut entries = collect_project_entries(layer_dir)?;
