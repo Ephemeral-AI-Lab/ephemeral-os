@@ -41,12 +41,12 @@ full-variable snapshots composed either by a built-in default policy or by
 a user-configured context script with the same ergonomics as the existing
 `.eos-agents/hooks` command hooks.
 
-Phase 05's orchestration spine is untouched: the scheduler cell, serial
-reconcile queue, claim-in-transaction/launch-after-commit, settlement
-synthesis (§2.7 there), the one-session supervisor story, the one-open-workflow
-guard, `AgentLaunchPort`, and the revision counter with its
-`(revision, path)` render memoization all survive exactly as specified
-(the §2.19 in-content stamp does not - §2.7).
+Phase 05's durable orchestration spine is untouched: claim-in-transaction /
+launch-after-commit, settlement synthesis (§2.7 there), the one-session
+supervisor story, the one-open-workflow guard, `AgentLaunchPort`, and the
+revision counter with its `(revision, path)` render memoization all survive
+exactly as specified (the in-memory `WorkflowCell`, `liveRuns`, serial
+reconcile queue, and the §2.19 in-content stamp do not - §2.7, §2.21).
 
 ## 2. Design Decisions
 
@@ -192,20 +192,20 @@ guard, `AgentLaunchPort`, and the revision counter with its
     it contains only consistent attempts. The workflow terminal summary
     mechanism is unchanged.
 17. **The context tree persists to disk as a post-commit mirror.** Each
-    reconcile job, after commit and before launches, re-renders the §9
+    mutation, after commit and before guarded launches, re-renders the §9
     universe from the fresh aggregate and mirrors it under
     `<workflowContextRoot>/workflow_<id>/` (default
     `.eos-agents/workflow/context/`): temp-file + atomic rename per file,
     and paths that left the universe (a refocus relocation) are pruned.
     The DB stays authoritative, rendering never reads these files, and the
     tools keep rendering from the aggregate - the mirror serves humans
-    tailing a workflow and the deferred sandboxed-worker seam. The serial
-    reconcile queue makes the writer single-threaded per workflow and
-    per-field files keep each write small, which is what retires Phase 05
-    §2.2's write-amplification and stale-race objections. A write failure
-    is non-fatal: logged, state untouched, healed by the next mutation's
-    re-projection. `.eos-agents/workflow/` splits cleanly: `scripts/` is
-    user-authored, `context/` is machine-written.
+    tailing a workflow and the deferred sandboxed-worker seam. Per-field
+    files keep each write small, and a launch-token guard (§2.21) prevents a
+    stale post-commit projector/launcher from starting work after a competing
+    cancel or settlement changed the entity. A write failure is non-fatal:
+    logged, state untouched, healed by the next mutation's re-projection.
+    `.eos-agents/workflow/` splits cleanly: `scripts/` is user-authored,
+    `context/` is machine-written.
 18. **The workflow tool family is `delegate_workflow`, alone.** No
     `cancel_workflow`: cancellation rides the background family -
     `cancel_background_session` on the registered `workflow` session
@@ -219,21 +219,31 @@ guard, `AgentLaunchPort`, and the revision counter with its
     optional `SubmissionBinding` - `{ kind, submit(payload) }` - built by
     the scheduler per claimed entity and wired by the runtime into the
     child run's terminal submission tool. `execute` validates (§2.15) and
-    awaits `submit`, which runs the mutation as one job on the
-    per-workflow serial queue (mutate + claim in one transaction, commit,
-    mirror, launch) and returns `{ ok }` or `{ ok: false, error }` for
-    in-run correction. Settlement consumption reduces to death synthesis:
-    `onSettlement` synthesizes a failed submission only for an entity
-    still `Running` when its run settles; an entity already terminal is a
-    no-op through the idempotent guards - two triggers, one mutation
-    source at a time, no double-apply. Runs launched outside a workflow
-    carry no binding and keep the shipped service-free submission tools.
-20. **Attempt failure cancels the attempt's remaining work.** The
-    reconcile job that fails an attempt marks its other non-terminal work
-    items `Cancelled` in the same transaction and interrupts their live
-    runs (reason `attempt_failed`); their late settlements find terminal
-    entities and no-op. No zombie `Running` rows, no tokens spent on a
-    doomed attempt - the cancel cascade's shape, one level down.
+    awaits `submit`, which runs one DB transaction (mutate + claim), then
+    mirrors and launches through guarded claim tokens (§2.21), and returns
+    `{ ok }` or `{ ok: false, error }` for in-run correction. Settlement
+    consumption reduces to death synthesis: `onSettlement` synthesizes a
+    failed submission only for an entity still `Running` when its run
+    settles; an entity already terminal is a no-op through idempotent DB
+    guards. Runs launched outside a workflow carry no binding and keep the
+    shipped service-free submission tools.
+20. **Attempt failure cancels the attempt's remaining work.** The mutation
+    that fails an attempt marks its other non-terminal work items `Cancelled`
+    in the same transaction and advances the workflow abort generation
+    (reason `attempt_failed`) so their runs observe cancellation through the
+    workflow signal; their late settlements find terminal entities and no-op.
+    No zombie `Running` rows, no tokens spent on a doomed attempt - the cancel
+    cascade's shape, one level down.
+21. **No `WorkflowCell`, no `liveRuns`, no in-memory workflow queues.**
+    `WorkflowService` keeps only the minimal active handles that the caller
+    session needs: a terminal resolver per active workflow, and a workflow
+    `AbortController` per active workflow so all planner/worker launches share
+    one cancellation signal. Ordering and deduplication are DB facts:
+    mutations reload fresh state, terminal guards no-op, `claimLaunchable`
+    stamps a unique `launch_token`, and the post-commit launcher rechecks that
+    token and `Running` status before stamping `agent_run_id` and calling
+    `AgentLaunchPort.launch`. A cancel or settlement that wins the race changes
+    the row first; the guarded launcher skips instead of starting stale work.
 
 ## 3. Phase 05 Amendments
 
@@ -255,15 +265,16 @@ everything not listed is implemented as written there.
 | §13 step 3 renderer tests bind the companion §12 criteria | replaced by the §15 projection/derivation tables | §15 |
 | §14 case 3 rendering assertions | replaced by §15 case 3 | §15 |
 
-| §2.7 submission tools are service-free; the scheduler is the submission's only consumer | workflow-launched runs get entity-bound submission execute - validate + mutate in-run on the serial queue; settlement consumption reduces to death synthesis against still-`Running` entities | §2.19 |
+| §2.7 submission tools are service-free; the scheduler is the submission's only consumer | workflow-launched runs get entity-bound submission execute - validate + mutate in-run through DB-guarded transitions; settlement consumption reduces to death synthesis against still-`Running` entities | §2.19, §2.21 |
 | §2.16/§8 `AgentLaunchPort.launch(agentName, initialMessages)` | gains an optional `SubmissionBinding` third parameter | §2.19 |
 | §2.17/§9 tool family: `delegate_workflow` + `read_workflow_context` + `query_workflow_context` | the family is `delegate_workflow` alone; cancel rides `cancel_background_session`; the read/query tool surface is deferred to a later discussion | §2.18 |
+| §2.8-§2.9 `WorkflowCell`, `liveRuns`, and per-workflow promise queue | removed; DB rows carry claims, launch tokens, terminal guards, and cancellation generations; `WorkflowService` keeps only active terminal resolvers and workflow abort controllers | §2.21 |
 
 Unchanged and re-affirmed: §2.3 status enum, §2.4 minted IDs, §2.8-2.12
-scheduler queue/session machinery, §2.18 bound functions. §2.7 (settlement
-consumption), §2.16 (port signature), and §2.17 (read tools) are amended
-by the rows above; the §2.7 synthesis rule itself survives as the death
-path.
+session machinery, §2.18 bound functions. §2.7 (settlement consumption),
+§2.8-§2.9 (active scheduler shape), §2.16 (port signature), and §2.17
+(read tools) are amended by the rows above; the §2.7 synthesis rule itself
+survives as the death path.
 
 ## 4. Companion Spec Status
 
@@ -439,7 +450,7 @@ plans        id PK, workflow_id, iteration_id, attempt_id, agent_run_id,
              status, declared_focus, declared_deferred_goal,   -- null = kept
              planner_summary, timestamps                -- plan_spec deleted
 work_items   unchanged from Phase 05 §6
-launch_queue unchanged from Phase 05 §6
+launch_queue gains `launch_token`; otherwise unchanged from Phase 05 §6
 ```
 
 The derived views are computed once per load: the entity `state.ts` modules
@@ -528,15 +539,22 @@ Rules:
 
 ## 10. Launch Context Pipeline
 
-The reconcile job's post-commit launch step becomes:
+The post-commit launch step becomes:
 
 ```text
 for each claimed entity:
   input    = buildPlannerVariables(aggregate, plan)        // or buildWorker…
-  messages = composeLaunchContext(agent_name, input)       // injected (§2.11)
-  port.launch(agent_name, messages)                        // unchanged
-  …stamp agent_run_id, track in liveRuns, settle as in Phase 05 §8
+  messages = composeLaunchContext(agentName, input)        // injected (§2.11)
+  guardedStampLaunch(entity, launch_token)                 // still Running?
+  port.launch(agentName, messages, submission, workflowSignal)
+  launched.outcome.then((s) => onSettlement(entity, s))     // no liveRuns map
 ```
+
+The guarded stamp is a short transaction after composition and mirror writes:
+it verifies that the entity is still `Running` and still carries the
+claim's `launch_token`, stamps `agent_run_id`, and returns permission to
+launch. If a cancel, attempt failure, or settlement reached the row first,
+the guard returns false and no agent run starts.
 
 `buildPlannerVariables` / `buildWorkerVariables` are pure functions in
 `@eos/workflow` over the frozen aggregate, producing the §7 snapshots with
@@ -602,19 +620,24 @@ cancel cascade.
 
 ```text
 delegate_workflow(goal)                              caller's run
-  one transaction: Workflow(Running, original_goal)
-    + Iteration 1 (Running, origin 'initial', no focus)
-    + Attempt 1 + Plan 1 (NotStarted, queued)
+  one transaction:
+    createWorkflow(Running, original_goal)
+      → createIteration(Running, origin 'initial', no focus)
+        → createAttempt(sequence 1)
+          → createPlan(NotStarted)
+            → enqueueLaunch(kind='plan')
+    claimLaunchable → Plan Running + launch_token
   register the supervisor session (§12); return workflow_id
-  reconcile job: claim plan → Running; compose → project → launch planner
+  commit → mirror → guarded stamp → launch planner with workflow signal
 
 submit_planner_outcome(payload)                      planner run (§2.19)
   validate shape / structure / materialization       → error result,
                                                        correct in-run (§2.15)
-  reconcile job: Plan → Success (summary; declared pair when `focus`
-                 present, superseding prior attempts §2.4/§2.8)
-                 mint WorkItems (NotStarted), rewrite `needs`
-                 claim ready items (`needs` empty or Success) → Running
+  one transaction: Plan → Success (summary; declared pair when `focus`
+                   present, superseding prior attempts §2.4/§2.8)
+                   mint WorkItems (NotStarted), rewrite `needs`
+                   claim ready items (`needs` empty or Success)
+                     → Running + launch_token
   commit → mirror → launch claimed workers → ok → planner terminates
 
 submit_worker_outcome({ is_pass, … })                worker run (§2.19)
@@ -626,11 +649,11 @@ submit_worker_outcome({ is_pass, … })                worker run (§2.19)
                    none declared → Workflow → Success → resolve terminal
                      → caller's session settles
   is_pass false: WorkItem → Failed; Attempt → Failed
-                 cancel sibling work items + interrupt their runs (§2.20)
+                cancel sibling work items + advance abort generation (§2.20)
                  attempts < max_attempts → retry Attempt + Plan → launch
                  else Iteration → Failed → Workflow → Failed → terminal
 
-onSettlement(entity, settlement)                     scheduler
+onSettlement(entity, settlement)
   entity still Running → synthesized failed submission (death, compose
     failure §2.14, interruption) → the same failure path as is_pass false
   entity already terminal → no-op (idempotent guards)
@@ -664,12 +687,14 @@ Deltas retained from the focus model:
 - Failure/retry: unchanged, except the retry planner's variables carry only
   consistent prior attempts in expanded form and the budget counts all
   attempts (§2.4).
-- Every reconcile job re-projects the disk mirror after commit and before
-  launches (§2.17), so a launched agent's filesystem view - once the
-  sandboxed-worker seam is consumed - is never older than its own claim.
+- Every mutating transition re-projects the disk mirror after commit and
+  before guarded launches (§2.17), so a launched agent's filesystem view -
+  once the sandboxed-worker seam is consumed - is never older than its own
+  claim.
 - Compose failures synthesize failed settlements with
   `fail_reason: "context_script_error: …"` (§2.14).
-- Cancel cascade, reconcile serialization, terminal resolution: unchanged.
+- Cancel cascade, guarded launch serialization, terminal resolution:
+  unchanged except for the removed cell/queue/live-run registry (§2.21).
 
 ## 12. Tool Family, Session, and Bound Submissions (`@eos/tool`)
 
