@@ -17,7 +17,7 @@ fn read_nonexistent_reports_absent() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "does/not/exist.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "does/not/exist.txt"}))?;
     assert!(
         !as_bool(&read, "exists")?,
         "missing file must report exists=false: {read}"
@@ -34,11 +34,11 @@ fn edit_error_catalog_anchor_not_found_and_count_mismatch() -> Result<()> {
 
     // anchor-not-found
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "edit/a.txt", "content": "hello world\n", "overwrite": true}),
     )?;
     let not_found = lease.call(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({"path": "edit/a.txt", "edits": [{"old_text": "ABSENT", "new_text": "x", "replace_all": false}]}),
     )?;
     assert!(
@@ -48,11 +48,11 @@ fn edit_error_catalog_anchor_not_found_and_count_mismatch() -> Result<()> {
 
     // count-mismatch (anchor appears twice, replace_all=false)
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "edit/b.txt", "content": "dup dup\n", "overwrite": true}),
     )?;
     let mismatch = lease.call(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({"path": "edit/b.txt", "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]}),
     )?;
     assert!(
@@ -69,11 +69,11 @@ fn write_create_only_conflict() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "co/only.txt", "content": "first\n", "overwrite": true}),
     )?;
     let rejected = lease.call(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "co/only.txt", "content": "second\n", "overwrite": false}),
     )?;
     let reason = rejected

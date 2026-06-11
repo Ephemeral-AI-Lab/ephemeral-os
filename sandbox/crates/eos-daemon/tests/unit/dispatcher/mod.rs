@@ -77,7 +77,7 @@ fn op_table_rejects_different_handler_collision() {
 #[test]
 fn builtin_table_routes_commit_to_workspace() {
     let response = OpTable::with_builtins().dispatch(&Request {
-        op: "api.commit_to_workspace".to_owned(),
+        op: "sandbox.checkpoint.commit_to_workspace".to_owned(),
         invocation_id: "commit-to-workspace-route-test".to_owned(),
         args: json!({}),
     });
@@ -93,7 +93,7 @@ fn builtin_table_routes_commit_to_workspace() {
 #[test]
 fn builtin_table_routes_commit_to_git() {
     let response = OpTable::with_builtins().dispatch(&Request {
-        op: "api.commit_to_git".to_owned(),
+        op: "sandbox.checkpoint.commit_to_git".to_owned(),
         invocation_id: "commit-to-git-route-test".to_owned(),
         args: json!({}),
     });
@@ -162,7 +162,7 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
 
     let response = OpTable::with_builtins().dispatch_with_context(
         &Request {
-            op: "api.v1.cancel".to_owned(),
+            op: "sandbox.call.cancel".to_owned(),
             invocation_id: "cancel-request".to_owned(),
             args: json!({"invocation_id": "cancel-target"}),
         },

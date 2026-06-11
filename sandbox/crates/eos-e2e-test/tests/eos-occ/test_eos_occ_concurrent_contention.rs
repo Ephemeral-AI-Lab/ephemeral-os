@@ -32,7 +32,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
     let files: usize = 8;
 
     let before = as_i64(
-        &lease.call_ok(ops::API_LAYER_METRICS, json!({}))?,
+        &lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?,
         "manifest_depth",
     )?;
 
@@ -41,7 +41,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
         cmd.push_str(&format!(" && printf '{index}\\n' > {dir}/file-{index}.txt"));
     }
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": cmd,
             "yield_time_ms": 1000,
@@ -63,7 +63,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
     }
 
     let after = as_i64(
-        &lease.call_ok(ops::API_LAYER_METRICS, json!({}))?,
+        &lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?,
         "manifest_depth",
     )?;
     let delta = after - before;
@@ -78,7 +78,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
 
     for index in 0..files {
         let read = lease.call_ok(
-            ops::API_V1_READ_FILE,
+            ops::SANDBOX_FILE_READ,
             json!({"path": format!("{dir}/file-{index}.txt")}),
         )?;
         assert_eq!(
@@ -112,7 +112,7 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
         .map(|index| format!("LINE{index}=orig\n"))
         .collect();
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": seed, "overwrite": true}),
     )?;
 
@@ -127,7 +127,7 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::API_V1_EDIT_FILE,
+                    ops::SANDBOX_FILE_EDIT,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -165,7 +165,7 @@ fn concurrent_disjoint_anchor_edits_stay_atomic_and_coherent() -> Result<()> {
         );
     }
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     let content = as_str(&read, "content")?;
     let observed: Vec<&str> = content.lines().collect();
     assert_eq!(
@@ -206,7 +206,7 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
     let lease = pool.acquire()?;
     let path = format!("occ/same-anchor-{}.txt", unique_suffix());
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "TARGET=orig\n", "overwrite": true}),
     )?;
 
@@ -222,7 +222,7 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::API_V1_EDIT_FILE,
+                    ops::SANDBOX_FILE_EDIT,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -262,7 +262,7 @@ fn concurrent_same_anchor_edits_resolve_to_one_winner() -> Result<()> {
         );
     }
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     let content = as_str(&read, "content")?;
     assert!(
         (0..contenders).any(|index| content == format!("TARGET={index}\n")),

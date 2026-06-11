@@ -38,8 +38,10 @@ When either version must change:
    in the same change. `check-contract` enforces the lockstep.
 2. The golden fixtures (`contract/fixtures/`) are **immutable ground truth**
    captured from the original Python runtime, which has been removed — they
-   can no longer be regenerated. Never edit a fixture to match code.
-3. The aliases `api.v1.read_file` and `api.v1.heartbeat` are pinned by those
-   fixtures and are never removed from the catalog.
+   can no longer be regenerated. Never edit a fixture to match code. One
+   deliberate exception: when the legacy `api.*` aliases were retired
+   (2026-06), the `op` field of the three request fixtures was rewritten to
+   the canonical `sandbox.*` spellings. Every other byte — args, response
+   envelopes, timing keys — remains the original capture.
 
 Until such a change, both versions are pinned at `1`.

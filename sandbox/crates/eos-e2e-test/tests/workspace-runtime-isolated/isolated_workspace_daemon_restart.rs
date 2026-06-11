@@ -24,7 +24,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
 
     let caller = format!("restart-iws-{}", eos_e2e_test::unique_suffix());
     let enter = lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_ENTER,
+        ops::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": caller}),
     )?;
     assert!(
@@ -38,7 +38,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
         1,
         "isolated enter should hold one snapshot lease: {held}"
     );
-    let before = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+    let before = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
     assert!(
         open_contains(&before, &caller),
         "the handle should be open before restart: {before}"
@@ -48,12 +48,12 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
     // becomes an orphan that startup reconciliation must reap.
     lease.restart_daemon()?;
 
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(
         as_bool(&ready, "ready")?,
         "daemon must be ready again after restart: {ready}"
     );
-    let after = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+    let after = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
     assert!(
         !open_contains(&after, &caller),
         "startup reconciliation must reap the orphaned isolated handle: {after}"
@@ -68,7 +68,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
     // The recovered daemon serves fresh isolated enters again.
     let fresh_caller = format!("restart-iws-fresh-{}", eos_e2e_test::unique_suffix());
     let fresh = lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_ENTER,
+        ops::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": fresh_caller}),
     )?;
     assert!(
@@ -76,7 +76,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
         "a fresh isolated enter should succeed after restart: {fresh}"
     );
     lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_EXIT,
+        ops::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": fresh_caller, "grace_s": 0.0}),
     )?;
     let drained = wait_for_active_leases(&lease, 0)?;

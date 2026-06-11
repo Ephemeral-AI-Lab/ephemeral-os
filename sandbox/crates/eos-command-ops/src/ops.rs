@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use eos_command_session::process::{spawn_current_exe_ns_runner, KillReason};
+use eos_command_session::pty_process::{spawn_current_exe_ns_runner, KillReason};
 use eos_command_session::session::{
     CommandSession, CommandSessionSpec, ReapedCommand, RunningCommandSessionParts,
 };
-use eos_command_session::wait::{wait_for_yield, WaitOutcome};
+use eos_command_session::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use eos_command_session::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSessionCompletion, CommandSessionConfig, CommandSessionError, ReadCommandProgress,

@@ -19,7 +19,7 @@ fn overlay_exec_publishes_file_back_to_layerstack() -> Result<()> {
     let lease = pool.acquire()?;
 
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "mkdir -p e2e_overlay && printf overlay-ok > e2e_overlay/from_exec.txt",
             "yield_time_ms": 1000,
@@ -31,12 +31,12 @@ fn overlay_exec_publishes_file_back_to_layerstack() -> Result<()> {
     assert_eq!(as_i64(&exec, "exit_code")?, 0);
 
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "e2e_overlay/from_exec.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "overlay-ok");
 
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&metrics, "active_leases")?,
         0,
@@ -66,7 +66,7 @@ fn ephemeral_exec_ladder_1_3_6_12() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::API_V1_EXEC_COMMAND,
+                        ops::SANDBOX_COMMAND_EXEC,
                         &root,
                         &caller_id,
                         json!({
@@ -101,7 +101,7 @@ fn ephemeral_exec_ladder_1_3_6_12() -> Result<()> {
 
         for index in 0..level {
             let read = lease.call_ok(
-                ops::API_V1_READ_FILE,
+                ops::SANDBOX_FILE_READ,
                 json!({"path": format!("pressure/ladder/exec/level-{level}/item-{index}.txt")}),
             )?;
             assert_eq!(
@@ -129,7 +129,7 @@ fn layerstack_auto_squash_keeps_depth_bounded() -> Result<()> {
 
     for version in 0..105 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": "e2e_squash/depth.txt",
                 "content": format!("version-{version}\n"),
@@ -139,12 +139,12 @@ fn layerstack_auto_squash_keeps_depth_bounded() -> Result<()> {
     }
 
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "e2e_squash/depth.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "version-104\n");
 
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&metrics, "manifest_depth")? <= 100,
         "auto-squash should keep manifest depth at or below the operational target: {metrics}"
@@ -173,7 +173,7 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
             thread::spawn(move || -> Result<Value> {
                 barrier.wait();
                 Ok(client.request(
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &format!("occ-merge-{index}"),
                     &json!({
                         "layer_stack_root": root,
@@ -197,7 +197,7 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
 
     for index in 0..8 {
         let read = lease.call_ok(
-            ops::API_V1_READ_FILE,
+            ops::SANDBOX_FILE_READ,
             json!({"path": format!("e2e_occ/file-{index}.txt")}),
         )?;
         assert_eq!(as_str(&read, "content")?, format!("merge-{index}\n"));
@@ -238,7 +238,7 @@ fn run_disjoint_occ_level(lease: &eos_e2e_test::NodeLease<'_>, level: usize) -> 
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &root,
                     &caller_id,
                     json!({
@@ -261,7 +261,7 @@ fn run_disjoint_occ_level(lease: &eos_e2e_test::NodeLease<'_>, level: usize) -> 
 
     for index in 0..level {
         let read = lease.call_ok(
-            ops::API_V1_READ_FILE,
+            ops::SANDBOX_FILE_READ,
             json!({"path": format!("pressure/ladder/occ/disjoint/level-{level}/item-{index}.txt")}),
         )?;
         assert_eq!(
@@ -285,7 +285,7 @@ fn run_same_path_occ_level(lease: &eos_e2e_test::NodeLease<'_>, level: usize) ->
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &root,
                     &caller_id,
                     json!({
@@ -319,7 +319,7 @@ fn run_same_path_occ_level(lease: &eos_e2e_test::NodeLease<'_>, level: usize) ->
     }
 
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": format!("pressure/ladder/occ/conflict-level-{level}.txt")}),
     )?;
     let content = as_str(&read, "content")?;

@@ -180,7 +180,7 @@ impl<'p> NodeLease<'p> {
         }
         let iid = next_invocation_id();
         let ensure = node.container.client().request(
-            ops::API_ENSURE_WORKSPACE_BASE,
+            ops::SANDBOX_CHECKPOINT_ENSURE_BASE,
             &iid,
             &json!({
                 "layer_stack_root": stack_root,

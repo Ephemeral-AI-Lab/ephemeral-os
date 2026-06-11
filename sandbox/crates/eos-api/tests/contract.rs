@@ -100,26 +100,32 @@ fn router_covers_every_catalog_entry() {
 }
 
 #[test]
-fn daemon_ops_route_under_both_spellings() {
+fn daemon_ops_route_under_canonical_names_only() {
     let catalog = Catalog::load_builtin().expect("catalog");
     let engine = StubEngine;
-    for (spelling, canonical) in [
-        ("sandbox.file.read", "sandbox.file.read"),
-        ("api.v1.read_file", "sandbox.file.read"),
-        ("sandbox.call.heartbeat", "sandbox.call.heartbeat"),
-        ("api.v1.heartbeat", "sandbox.call.heartbeat"),
-    ] {
-        let entry = catalog.lookup(spelling).expect("spelling resolves");
-        assert_eq!(entry.name, canonical);
+    for name in ["sandbox.file.read", "sandbox.call.heartbeat"] {
+        let entry = catalog.lookup(name).expect("canonical name resolves");
+        assert_eq!(entry.name, name);
         assert_eq!(entry.route, Route::Daemon);
         let response = router::handle(
             &catalog,
             &engine,
             Surface::Client,
-            &request(spelling, Some(KNOWN_SANDBOX)),
+            &request(name, Some(KNOWN_SANDBOX)),
         );
-        // The daemon's response comes back verbatim under either spelling.
-        assert_eq!(response["forwarded_op"], json!(spelling));
+        // The daemon's response comes back verbatim.
+        assert_eq!(response["forwarded_op"], json!(name));
+    }
+    // The retired legacy spellings are no longer in the catalog.
+    for legacy in ["api.v1.read_file", "api.v1.heartbeat"] {
+        assert!(catalog.lookup(legacy).is_none(), "{legacy} must be retired");
+        let response = router::handle(
+            &catalog,
+            &engine,
+            Surface::Client,
+            &request(legacy, Some(KNOWN_SANDBOX)),
+        );
+        assert_eq!(kind(&response), Some("unknown_op"), "{legacy}: {response}");
     }
 }
 

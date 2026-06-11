@@ -11,7 +11,7 @@ fn status_probe_services_sends_health_request() -> TestResult {
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-ok")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-ok".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -41,7 +41,7 @@ fn status_probe_services_sends_health_request() -> TestResult {
     });
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-health-ok".to_owned(),
         args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
     });
@@ -65,7 +65,7 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("status-health-fail")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-fail".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -91,7 +91,7 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
     });
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-health-fail".to_owned(),
         args: json!({"probe_services": true, "probe_timeout_ms": 1000}),
     });

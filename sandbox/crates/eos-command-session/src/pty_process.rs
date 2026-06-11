@@ -7,13 +7,14 @@ use std::sync::{mpsc, Mutex, MutexGuard, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use nix::sys::signal::{killpg, Signal};
+use nix::unistd::Pid;
 use rustix::event::{poll, PollFd, PollFlags};
 use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
+use rustix::pty::{grantpt, ioctl_tiocgptpeer, openpt, unlockpt, OpenptFlags};
 use serde_json::Value;
 
 use crate::transcript::TranscriptTimestampPrefixer;
-
-use super::{open_pty_pair, terminate_process_group};
 
 /// Cap on how long a single `write_stdin` pushes bytes into the PTY before
 /// returning a structured backpressure error. The master is non-blocking, so a
@@ -358,6 +359,23 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+fn open_pty_pair() -> io::Result<(File, File)> {
+    let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY | OpenptFlags::CLOEXEC;
+    let master = openpt(flags).map_err(io::Error::from)?;
+    grantpt(&master).map_err(io::Error::from)?;
+    unlockpt(&master).map_err(io::Error::from)?;
+    let slave = ioctl_tiocgptpeer(&master, flags).map_err(io::Error::from)?;
+
+    Ok((File::from(master), File::from(slave)))
+}
+
+fn terminate_process_group(pgid: i32) {
+    if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
+        thread::sleep(Duration::from_millis(50));
+        let _ = killpg(Pid::from_raw(pgid), Signal::SIGKILL);
+    }
+}
+
 /// Mark `file`'s open file description non-blocking so `read`/`write` return
 /// `WouldBlock` instead of stalling. Applied to the PTY master before it is
 /// shared between the writer dup and the reader thread.
@@ -382,5 +400,5 @@ fn stdin_backpressure() -> io::Error {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/process/runner.rs"]
+#[path = "../tests/unit/pty_process.rs"]
 mod tests;

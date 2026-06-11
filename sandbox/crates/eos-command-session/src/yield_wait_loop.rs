@@ -46,5 +46,5 @@ where
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/wait.rs"]
+#[path = "../tests/unit/yield_wait_loop.rs"]
 mod tests;

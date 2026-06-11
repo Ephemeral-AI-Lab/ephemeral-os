@@ -1,17 +1,8 @@
 use std::collections::BTreeSet;
 
-use crate::wire::ops::{BUILTIN_DAEMON_OPS, BUILTIN_DAEMON_OP_SPECS};
+use crate::wire::ops::BUILTIN_DAEMON_OP_SPECS;
 
 use super::*;
-
-#[test]
-fn builtin_registry_matches_protocol_ops() {
-    let registered = BUILTIN_OPS
-        .iter()
-        .map(|op| op.spec.aliases[0])
-        .collect::<Vec<_>>();
-    assert_eq!(registered, BUILTIN_DAEMON_OPS);
-}
 
 #[test]
 fn builtin_registry_matches_protocol_catalog() {
@@ -23,7 +14,7 @@ fn builtin_registry_matches_protocol_catalog() {
 fn builtin_registry_has_no_duplicate_wires() {
     let registered = BUILTIN_OPS
         .iter()
-        .map(|op| op.spec.aliases[0])
+        .map(|op| op.spec.name)
         .collect::<Vec<_>>();
     let unique = registered.iter().copied().collect::<BTreeSet<_>>();
     assert_eq!(unique.len(), registered.len());

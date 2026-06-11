@@ -27,7 +27,7 @@ type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 fn dispatches_layerstack_read_file() -> TestResult {
     let (root, workspace) = seed_layer_stack("read_file")?;
     let request = Request {
-        op: "api.v1.read_file".to_owned(),
+        op: "sandbox.file.read".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({
             "layer_stack_root": root,
@@ -49,7 +49,7 @@ fn dispatches_layerstack_read_file() -> TestResult {
 fn dispatches_runtime_ready_probe() -> TestResult {
     let (root, _workspace) = seed_layer_stack("ready")?;
     let request = Request {
-        op: "api.runtime.ready".to_owned(),
+        op: "sandbox.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
     };
@@ -76,7 +76,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
 
     let ensure = dispatch_request(
         &table,
-        "api.ensure_workspace_base",
+        "sandbox.checkpoint.ensure_base",
         "ensure",
         json!({
             "layer_stack_root": &root,
@@ -88,7 +88,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
 
     let binding = dispatch_request(
         &table,
-        "api.workspace_binding",
+        "sandbox.checkpoint.binding",
         "binding",
         json!({"layer_stack_root": &root}),
     );
@@ -138,7 +138,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     configure_isolated_workspace_for_test(false, None)?;
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     let _ = OpTable::with_builtins().dispatch(&Request {
-        op: "api.isolated_workspace.test_reset".to_owned(),
+        op: "sandbox.isolation.test_reset".to_owned(),
         invocation_id: "iws-reset".to_owned(),
         args: json!({}),
     });
@@ -146,7 +146,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     let table = OpTable::with_builtins();
 
     let enter = table.dispatch(&Request {
-        op: "api.isolated_workspace.enter".to_owned(),
+        op: "sandbox.isolation.enter".to_owned(),
         invocation_id: "iws-enter".to_owned(),
         args: json!({
             "caller_id": "caller-a",
@@ -160,7 +160,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     );
 
     let status = table.dispatch(&Request {
-        op: "api.isolated_workspace.status".to_owned(),
+        op: "sandbox.isolation.status".to_owned(),
         invocation_id: "iws-status".to_owned(),
         args: json!({"caller_id": "caller-a"}),
     });
@@ -171,7 +171,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     );
 
     let open = table.dispatch(&Request {
-        op: "api.isolated_workspace.list_open".to_owned(),
+        op: "sandbox.isolation.list_open".to_owned(),
         invocation_id: "iws-list".to_owned(),
         args: json!({}),
     });
@@ -191,7 +191,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
 
     let enter = dispatch_request(
         &table,
-        "api.isolated_workspace.enter",
+        "sandbox.isolation.enter",
         "iws-enter",
         json!({
             "caller_id": "caller-enabled",
@@ -215,7 +215,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     assert_isolated_open_state(&table, &env.root);
     let exit = dispatch_request(
         &table,
-        "api.isolated_workspace.exit",
+        "sandbox.isolation.exit",
         "iws-exit",
         json!({"caller_id": "caller-enabled"}),
     );
@@ -232,7 +232,7 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
         .map_err(|_| "isolated env lock poisoned")?;
     configure_isolated_workspace_for_test(false, None)?;
     let response = OpTable::with_builtins().dispatch(&Request {
-        op: "api.isolated_workspace.enter".to_owned(),
+        op: "sandbox.isolation.enter".to_owned(),
         invocation_id: "iws-enter-missing-agent".to_owned(),
         args: json!({"layer_stack_root": "/tmp/layer-stack"}),
     });
@@ -259,7 +259,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
 
     let count = table.dispatch_with_context(
         &Request {
-            op: "api.v1.inflight_count".to_owned(),
+            op: "sandbox.call.count".to_owned(),
             invocation_id: "count".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
@@ -270,7 +270,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
 
     let command_session_count = table.dispatch_with_context(
         &Request {
-            op: "api.v1.command_session_count".to_owned(),
+            op: "sandbox.command.count".to_owned(),
             invocation_id: "command-session-count".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
@@ -281,7 +281,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
 
     let heartbeat = table.dispatch_with_context(
         &Request {
-            op: "api.v1.heartbeat".to_owned(),
+            op: "sandbox.call.heartbeat".to_owned(),
             invocation_id: "heartbeat".to_owned(),
             args: json!({"invocation_ids": ["bg-shell", "missing"]}),
         },
@@ -292,7 +292,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
 
     let cancel = table.dispatch_with_context(
         &Request {
-            op: "api.v1.cancel".to_owned(),
+            op: "sandbox.call.cancel".to_owned(),
             invocation_id: "cancel".to_owned(),
             args: json!({"invocation_id": "bg-shell"}),
         },
@@ -309,7 +309,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     registry.deregister("bg-shell");
     let count = table.dispatch_with_context(
         &Request {
-            op: "api.v1.inflight_count".to_owned(),
+            op: "sandbox.call.count".to_owned(),
             invocation_id: "count-after".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
@@ -345,7 +345,7 @@ async fn unix_server_dispatches_framed_ready_request() -> TestResult {
     }
 
     let request = Envelope::Request(Request {
-        op: "api.runtime.ready".to_owned(),
+        op: "sandbox.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
     });
@@ -395,7 +395,7 @@ async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
     }
 
     let mut value = serde_json::to_value(Request {
-        op: "api.runtime.ready".to_owned(),
+        op: "sandbox.runtime.ready".to_owned(),
         invocation_id: "inv-1".to_owned(),
         args: json!({"layer_stack_root": root}),
     })?;
@@ -492,7 +492,7 @@ fn assert_workspace_base_symlinks(root: &Path, outside_target: &Path) -> TestRes
 fn assert_read_content(table: &OpTable, root: &Path, path: &Value, content: &str) {
     let read = dispatch_request(
         table,
-        "api.v1.read_file",
+        "sandbox.file.read",
         "read",
         json!({
             "layer_stack_root": root,
@@ -506,7 +506,7 @@ fn assert_read_content(table: &OpTable, root: &Path, path: &Value, content: &str
 fn assert_workspace_base_idempotent(table: &OpTable, root: &Path, workspace: &Path) {
     let ensure_again = dispatch_request(
         table,
-        "api.ensure_workspace_base",
+        "sandbox.checkpoint.ensure_base",
         "ensure-again",
         json!({
             "layer_stack_root": root,
@@ -526,7 +526,7 @@ fn rebuild_workspace_base(
     std::fs::write(workspace.join("README.md"), "# reset\n")?;
     let rebuilt = dispatch_request(
         table,
-        "api.build_workspace_base",
+        "sandbox.checkpoint.build_base",
         "rebuild",
         json!({
             "layer_stack_root": root,
@@ -595,7 +595,7 @@ fn configure_isolated_workspace_for_test(enabled: bool, scratch_root: Option<&Pa
 fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {
     let reset = dispatch_request(
         table,
-        "api.isolated_workspace.test_reset",
+        "sandbox.isolation.test_reset",
         invocation_id,
         json!({}),
     );
@@ -605,7 +605,7 @@ fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {
 fn assert_isolated_open_state(table: &OpTable, root: &Path) {
     let status = dispatch_request(
         table,
-        "api.isolated_workspace.status",
+        "sandbox.isolation.status",
         "iws-status",
         json!({"caller_id": "caller-enabled"}),
     );
@@ -615,7 +615,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
 
     let duplicate = dispatch_request(
         table,
-        "api.isolated_workspace.enter",
+        "sandbox.isolation.enter",
         "iws-enter-again",
         json!({
             "caller_id": "caller-enabled",
@@ -627,7 +627,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
 
     let open = dispatch_request(
         table,
-        "api.isolated_workspace.list_open",
+        "sandbox.isolation.list_open",
         "iws-list",
         json!({}),
     );
@@ -655,7 +655,7 @@ fn assert_isolated_exit(exit: &Value, handle_scratch: &Path) -> TestResult {
 fn assert_isolated_status_closed(table: &OpTable) {
     let status = dispatch_request(
         table,
-        "api.isolated_workspace.status",
+        "sandbox.isolation.status",
         "iws-status-closed",
         json!({"caller_id": "caller-enabled"}),
     );

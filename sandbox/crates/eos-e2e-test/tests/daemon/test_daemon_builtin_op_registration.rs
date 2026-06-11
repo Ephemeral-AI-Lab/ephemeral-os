@@ -1,5 +1,5 @@
-//! Every built-in daemon op is actually wire-routed (end-to-end registration),
-//! under BOTH its canonical `sandbox.*` name and each legacy alias.
+//! Every built-in daemon op is actually wire-routed (end-to-end registration)
+//! under its canonical `sandbox.*` name.
 //!
 //! Complements the in-process `registry` unit test by proving the live `eosd`
 //! serves each catalog spelling over TCP: a registered handler returns success
@@ -25,7 +25,7 @@ const SKIP: &[BuiltinDaemonOp] = &[
 ];
 
 #[test]
-fn every_builtin_op_is_wire_routed_under_both_spellings() -> Result<()> {
+fn every_builtin_op_is_wire_routed_under_its_canonical_name() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -34,14 +34,13 @@ fn every_builtin_op_is_wire_routed_under_both_spellings() -> Result<()> {
         if SKIP.contains(&spec.op) {
             continue;
         }
-        for spelling in std::iter::once(&spec.name).chain(spec.aliases) {
-            let resp = lease.call(spelling, json!({}))?;
-            assert_ne!(
-                error_kind(&resp),
-                Some("unknown_op"),
-                "catalog spelling {spelling} must be registered over the wire: {resp}"
-            );
-        }
+        let resp = lease.call(spec.name, json!({}))?;
+        assert_ne!(
+            error_kind(&resp),
+            Some("unknown_op"),
+            "catalog spelling {} must be registered over the wire: {resp}",
+            spec.name
+        );
     }
     // Negative control: an unregistered op must surface unknown_op.
     let bogus = lease.call("api.totally.bogus.op", json!({}))?;

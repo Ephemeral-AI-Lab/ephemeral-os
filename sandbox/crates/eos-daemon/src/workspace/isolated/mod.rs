@@ -152,7 +152,7 @@ pub(crate) fn op_test_reset(
     if !env_true(TEST_HARNESS_ENV) {
         return Ok(error_json(
             "forbidden",
-            "api.isolated_workspace.test_reset requires EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true",
+            "sandbox.isolation.test_reset requires EOS_ISOLATED_WORKSPACE_TEST_HARNESS=true",
             json!({}),
         ));
     }

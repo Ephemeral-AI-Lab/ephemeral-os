@@ -17,7 +17,7 @@ fn heartbeat_touched_counts_only_bogus_as_zero() -> Result<()> {
     let lease = pool.acquire()?;
     // Deterministic: no id is registered, so nothing is touched.
     let heartbeat = lease.call_ok(
-        ops::API_V1_HEARTBEAT,
+        ops::SANDBOX_CALL_HEARTBEAT,
         json!({"invocation_ids": ["nope-1", "nope-2"]}),
     )?;
     assert_eq!(
@@ -39,7 +39,7 @@ fn heartbeat_touched_distinguishes_live_from_bogus() -> Result<()> {
 
     let deadline = Instant::now() + Duration::from_secs(4);
     loop {
-        let count = lease.call_ok(ops::API_V1_INFLIGHT_COUNT, json!({}))?;
+        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
         if as_i64(&count, "count")? >= 1 {
             break;
         }
@@ -51,7 +51,7 @@ fn heartbeat_touched_distinguishes_live_from_bogus() -> Result<()> {
     }
 
     let heartbeat = lease.call_ok(
-        ops::API_V1_HEARTBEAT,
+        ops::SANDBOX_CALL_HEARTBEAT,
         json!({"invocation_ids": [invocation_id, "definitely-not-registered"]}),
     )?;
     let touched = as_i64(&heartbeat, "touched")?;

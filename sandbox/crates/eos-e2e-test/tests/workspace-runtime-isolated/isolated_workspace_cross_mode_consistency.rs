@@ -19,14 +19,14 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
     let public_caller = format!("public-cross-mode-{suffix}");
 
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "base\n", "overwrite": true}),
     )?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
 
     let body = (|| -> Result<()> {
         let private = lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": path, "content": "private\n", "overwrite": true}),
         )?;
         ensure!(
@@ -35,7 +35,7 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
         );
 
         let public = lease.client().request(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             &next_invocation_id(),
             &json!({
                 "layer_stack_root": lease.root(),
@@ -50,7 +50,7 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
             "foreign public write should publish while isolated caller remains open: {public}"
         );
 
-        let isolated_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+        let isolated_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
         ensure!(
             as_str(&isolated_read, "workspace")? == "isolated",
             "isolated caller should still route to its private workspace: {isolated_read}"
@@ -62,11 +62,11 @@ fn isolated_private_same_path_does_not_overwrite_public_publish() -> Result<()> 
         Ok(())
     })();
 
-    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
+    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     body?;
     exit?;
 
-    let public_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let public_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     ensure!(
         as_str(&public_read, "workspace")? == "ephemeral",
         "read after isolated exit should route to public/ephemeral workspace: {public_read}"
@@ -90,14 +90,14 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
     let public_path = format!("cross-mode/public-after-enter-{suffix}.txt");
     let public_caller = format!("pin-public-{suffix}");
 
-    let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let pinned_version = as_i64(&enter, "manifest_version")?;
     let pinned_hash = as_str(&enter, "manifest_root_hash")?.to_owned();
 
     let body = (|| -> Result<()> {
         for index in 0..3 {
             let public = lease.client().request(
-                ops::API_V1_WRITE_FILE,
+                ops::SANDBOX_FILE_WRITE,
                 &next_invocation_id(),
                 &json!({
                     "layer_stack_root": lease.root(),
@@ -113,7 +113,7 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
             );
         }
 
-        let status = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+        let status = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
         ensure!(
             as_i64(&status, "manifest_version")? == pinned_version,
             "isolated status should keep the enter-time manifest version: {status}"
@@ -123,7 +123,7 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
             "isolated status should keep the enter-time manifest hash: {status}"
         );
         let hidden = lease.call_ok(
-            ops::API_V1_READ_FILE,
+            ops::SANDBOX_FILE_READ,
             json!({"path": format!("{public_path}-2")}),
         )?;
         ensure!(
@@ -137,12 +137,12 @@ fn isolated_pin_hides_later_public_paths_until_exit() -> Result<()> {
         Ok(())
     })();
 
-    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
+    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.1}));
     body?;
     exit?;
 
     let public_read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": format!("{public_path}-2")}),
     )?;
     ensure!(

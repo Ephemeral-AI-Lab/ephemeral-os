@@ -43,7 +43,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::API_V1_WRITE_FILE,
+                        ops::SANDBOX_FILE_WRITE,
                         &root,
                         &caller_id,
                         json!({
@@ -65,7 +65,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
 
         // An overlay exec that publishes back into the fixed set.
         let exec = lease.call_ok(
-            ops::API_V1_EXEC_COMMAND,
+            ops::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": "mkdir -p soak && printf exec > soak/exec.txt",
                 "yield_time_ms": 1000,
@@ -79,7 +79,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
 
         // A long-running command session that must start, cancel, and fully drain.
         let session = lease.call_ok(
-            ops::API_V1_EXEC_COMMAND,
+            ops::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("sh -c 'echo soak-{round}; sleep 60'"),
                 "yield_time_ms": 100,
@@ -87,7 +87,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
         )?;
         assert_eq!(as_str(&session, "status")?, "running", "{session}");
         lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": as_str(&session, "command_session_id")?}),
         )?;
         wait_for_session_count(&lease, 0)?;
@@ -97,7 +97,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
         // does not grow with round count.
         for version in 0..hot_overwrites {
             lease.call_ok(
-                ops::API_V1_WRITE_FILE,
+                ops::SANDBOX_FILE_WRITE,
                 json!({
                     "path": "soak/hot.txt",
                     "content": format!("hot-{round}-{version}\n"),
@@ -113,7 +113,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
             0,
             "soak must not leak leases at round {round}: {metrics}"
         );
-        let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+        let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
         assert_eq!(
             as_i64(&count, "count")?,
             0,
@@ -156,7 +156,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
         "auto-squash should reclaim storage at least once during the soak: {storage_samples:?}"
     );
 
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(
         as_bool(&ready, "ready")?,
         "daemon must stay ready after the soak: {ready}"

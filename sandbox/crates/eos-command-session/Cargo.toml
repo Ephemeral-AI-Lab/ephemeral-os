@@ -7,13 +7,11 @@ license.workspace = true
 
 [dependencies]
 eos-config.workspace = true
+nix = { workspace = true, features = ["process", "signal"] }
+rustix = { workspace = true, features = ["pty", "event"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-
-[target.'cfg(target_os = "linux")'.dependencies]
-rustix = { workspace = true, features = ["pty", "event"] }
-nix = { workspace = true, features = ["process", "signal"] }
 time.workspace = true
 
 [lints]

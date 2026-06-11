@@ -1,6 +1,5 @@
 use super::*;
 
-#[cfg(target_os = "linux")]
 use crate::CommandResponse;
 
 #[test]
@@ -18,7 +17,6 @@ fn session_exposes_identity_and_expiry() {
     assert!(session.is_expired(session.started_at() + Duration::from_millis(2)));
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::temp_dir().join(format!(
@@ -45,7 +43,7 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
             timeout_seconds: None,
         },
         RunningCommandSessionParts {
-            process: crate::process::CommandSessionProcess::inactive(writer),
+            process: crate::pty_process::CommandSessionProcess::inactive(writer),
             output_path: root.join("runner-result.json"),
             final_path: final_path.clone(),
             transcript_path: transcript_path.clone(),

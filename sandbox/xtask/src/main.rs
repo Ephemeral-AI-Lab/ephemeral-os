@@ -82,20 +82,6 @@ fn render_api_doc(root: &Path) -> Result<String> {
             .get("mutates_state")
             .and_then(serde_json::Value::as_bool)
             .context("catalog op missing mutates_state")?;
-        let aliases = op
-            .get("aliases")
-            .and_then(serde_json::Value::as_array)
-            .context("catalog op missing aliases")?
-            .iter()
-            .filter_map(serde_json::Value::as_str)
-            .map(|alias| format!("`{alias}`"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let aliases = if aliases.is_empty() {
-            "—".to_owned()
-        } else {
-            aliases
-        };
         let key = match visibility.as_str() {
             "public" => "public",
             "operator" => "operator",
@@ -104,7 +90,7 @@ fn render_api_doc(root: &Path) -> Result<String> {
             other => bail!("unknown visibility {other:?}"),
         };
         sections.entry(key).or_default().push(format!(
-            "| `{name}` | {aliases} | {served_by} | {family} | {} | {summary} |",
+            "| `{name}` | {served_by} | {family} | {} | {summary} |",
             if mutates { "yes" } else { "no" }
         ));
     }
@@ -143,8 +129,8 @@ fn render_api_doc(root: &Path) -> Result<String> {
             continue;
         };
         let _ = writeln!(&mut body, "## {title}\n\n{blurb}\n");
-        body.push_str("| Op | Aliases | Served by | Family | Mutates | Summary |\n");
-        body.push_str("|---|---|---|---|---|---|\n");
+        body.push_str("| Op | Served by | Family | Mutates | Summary |\n");
+        body.push_str("|---|---|---|---|---|\n");
         for row in rows {
             body.push_str(row);
             body.push('\n');
@@ -161,8 +147,7 @@ fn render_api_doc(root: &Path) -> Result<String> {
 
 /// The CI drift gate for `contract/` (SPEC §9):
 /// 1. `eosd dump-ops` must equal the committed `contract/ops.json`.
-/// 2. Alias integrity: spellings unique, no alias collides with a canonical
-///    name, and the two fixture-pinned aliases exist.
+/// 2. Name integrity: canonical names unique.
 /// 3. Both sides' conformance test suites pass against `contract/fixtures/`.
 fn check_contract() -> Result<()> {
     let root = workspace_root()?;
@@ -181,7 +166,7 @@ fn check_contract() -> Result<()> {
              `cargo run -p eosd -- dump-ops > contract/ops.json` and review the diff"
         );
     }
-    check_alias_integrity(&committed)?;
+    check_name_integrity(&committed)?;
 
     let api_doc_path = root.join("docs").join("API.md");
     let committed_doc = fs::read_to_string(&api_doc_path)
@@ -198,7 +183,7 @@ fn check_contract() -> Result<()> {
         run_cargo(&root, &cargo_args, suite.package)?;
     }
 
-    println!("check-contract: ops.json in sync, aliases sound, conformance suites green");
+    println!("check-contract: ops.json in sync, names sound, conformance suites green");
     Ok(())
 }
 
@@ -230,14 +215,7 @@ const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
     },
 ];
 
-/// Aliases pinned by immutable golden fixtures; they may never leave the
-/// catalog (SPEC §4.2).
-const PINNED_ALIASES: &[(&str, &str)] = &[
-    ("sandbox.file.read", "api.v1.read_file"),
-    ("sandbox.call.heartbeat", "api.v1.heartbeat"),
-];
-
-fn check_alias_integrity(ops_json: &str) -> Result<()> {
+fn check_name_integrity(ops_json: &str) -> Result<()> {
     let document: serde_json::Value =
         serde_json::from_str(ops_json).context("parse contract/ops.json")?;
     let ops = document
@@ -246,7 +224,6 @@ fn check_alias_integrity(ops_json: &str) -> Result<()> {
         .context("contract/ops.json must carry an `ops` array")?;
 
     let mut names = std::collections::BTreeSet::new();
-    let mut aliases = std::collections::BTreeMap::new();
     for op in ops {
         let name = op
             .get("name")
@@ -254,24 +231,6 @@ fn check_alias_integrity(ops_json: &str) -> Result<()> {
             .context("catalog op missing `name`")?;
         if !names.insert(name) {
             bail!("canonical name claimed twice in contract/ops.json: {name}");
-        }
-        for alias in op
-            .get("aliases")
-            .and_then(serde_json::Value::as_array)
-            .context("catalog op missing `aliases`")?
-        {
-            let alias = alias.as_str().context("catalog alias must be a string")?;
-            if aliases.insert(alias, name).is_some() {
-                bail!("alias claimed twice in contract/ops.json: {alias}");
-            }
-        }
-    }
-    if let Some(collision) = aliases.keys().find(|alias| names.contains(**alias)) {
-        bail!("alias collides with a canonical name in contract/ops.json: {collision}");
-    }
-    for (name, alias) in PINNED_ALIASES {
-        if aliases.get(alias) != Some(name) {
-            bail!("fixture-pinned alias missing from contract/ops.json: {alias} -> {name}");
         }
     }
     Ok(())

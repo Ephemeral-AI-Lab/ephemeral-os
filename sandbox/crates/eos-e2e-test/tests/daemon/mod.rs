@@ -44,7 +44,7 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
         Ok(client.request(
-            ops::API_V1_EXEC_COMMAND,
+            ops::SANDBOX_COMMAND_EXEC,
             &invocation_id,
             &json!({
                 "layer_stack_root": root,

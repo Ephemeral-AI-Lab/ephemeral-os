@@ -3,15 +3,6 @@ use std::collections::BTreeSet;
 use super::*;
 
 #[test]
-fn builtin_specs_match_legacy_wire_list() {
-    let catalog_wires = BUILTIN_DAEMON_OP_SPECS
-        .iter()
-        .map(|spec| spec.aliases[0])
-        .collect::<Vec<_>>();
-    assert_eq!(catalog_wires, BUILTIN_DAEMON_OPS);
-}
-
-#[test]
 fn builtin_specs_are_returned_by_ops() {
     for spec in BUILTIN_DAEMON_OP_SPECS {
         assert_eq!(*spec, spec.op.spec());
@@ -47,44 +38,13 @@ fn no_spelling_is_claimed_twice() {
     let all_names = HOST_OP_SPECS
         .iter()
         .map(|spec| spec.name)
-        .chain(BUILTIN_DAEMON_OP_SPECS.iter().map(|spec| spec.name))
-        .chain(
-            BUILTIN_DAEMON_OP_SPECS
-                .iter()
-                .flat_map(|spec| spec.aliases.iter().copied()),
-        );
+        .chain(BUILTIN_DAEMON_OP_SPECS.iter().map(|spec| spec.name));
     for spelling in all_names {
         assert!(
             spellings.insert(spelling),
             "spelling claimed twice in the catalog: {spelling}"
         );
     }
-}
-
-#[test]
-fn resolve_accepts_both_spellings() {
-    for spec in BUILTIN_DAEMON_OP_SPECS {
-        assert_eq!(BuiltinDaemonOp::resolve(spec.name), Some(spec.op));
-        for alias in spec.aliases {
-            assert_eq!(BuiltinDaemonOp::resolve(alias), Some(spec.op));
-        }
-    }
-    assert_eq!(BuiltinDaemonOp::resolve("api.totally.bogus.op"), None);
-}
-
-#[test]
-fn fixture_pinned_aliases_are_present() {
-    // Pinned by immutable golden fixtures; these aliases are never removed.
-    assert_eq!(
-        BuiltinDaemonOp::ReadFile.aliases(),
-        ["api.v1.read_file"],
-        "sandbox.file.read must keep its fixture-pinned alias"
-    );
-    assert_eq!(
-        BuiltinDaemonOp::InvocationHeartbeat.aliases(),
-        ["api.v1.heartbeat"],
-        "sandbox.call.heartbeat must keep its fixture-pinned alias"
-    );
 }
 
 #[test]

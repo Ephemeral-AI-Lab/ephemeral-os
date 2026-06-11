@@ -15,7 +15,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-ppc")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -60,7 +60,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     let table = Arc::new(OpTable::with_builtins());
     let (layer_stack_root, workspace_root) = test_bound_workspace("concurrent-read-only")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -142,7 +142,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
     let (layer_stack_root, workspace_root) =
         test_bound_workspace("concurrent-read-only-out-of-order")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -224,7 +224,7 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-broken-ppc")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -246,7 +246,7 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
     assert_eq!(routed["error"]["kind"], "internal_error");
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-broken-ppc".to_owned(),
         args: json!({}),
     });
@@ -268,7 +268,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
         "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-recover-after-ppc-failure".to_owned(),
         args: json!({
             "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
@@ -292,7 +292,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     assert_eq!(failed["error"]["kind"], "internal_error");
 
     let after_failure = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-recoverable-failure".to_owned(),
         args: json!({}),
     });
@@ -318,7 +318,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     assert_eq!(recovered["from_recovered_service"], true);
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-recovery".to_owned(),
         args: json!({}),
     });

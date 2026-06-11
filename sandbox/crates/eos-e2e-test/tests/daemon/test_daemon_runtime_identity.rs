@@ -12,7 +12,7 @@ fn runtime_ready_exposes_daemon_identity() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     // The daemon is the in-sandbox parent process: ready exposes its pid + uptime.
     assert!(
         as_i64(&ready, "daemon_pid")? > 0,
@@ -41,7 +41,7 @@ fn every_response_carries_dispatch_timings() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     let timings = ready
         .get("timings")
         .and_then(Value::as_object)

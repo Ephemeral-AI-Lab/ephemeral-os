@@ -7,27 +7,22 @@
 //! workspace, and what happens to the upperdir at settle, is the command-ops
 //! tier's concern. The mode string a settled response carries is opaque here.
 //!
-//! Mechanism crate, like `eos-overlay` and `eos-namespace`: the PTY surface is
-//! Linux-only; the request/response DTOs, the session scaffold, and the
-//! yield-wait loop compile everywhere so non-Linux hosts can type-check and
-//! unit-test the policy tiers above.
+//! Mechanism crate, like `eos-overlay` and `eos-namespace`. The sandbox
+//! runtime this crate backs only ever runs on Linux, so the crate compiles
+//! for Linux alone; type-check from other hosts via
+//! `cargo check --target x86_64-unknown-linux-gnu`.
 #![forbid(unsafe_code)]
 
-mod error;
-#[cfg(target_os = "linux")]
-pub mod process;
-mod request;
-mod response;
+mod contract;
+pub mod pty_process;
 pub mod session;
-pub(crate) mod tail;
-#[cfg(target_os = "linux")]
 mod transcript;
-pub mod wait;
+pub mod yield_wait_loop;
 
-pub use eos_config::configs::command_session::CommandSessionConfig;
-pub use error::CommandSessionError;
-pub use request::{
-    CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,
+pub use contract::{
+    CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
+    CommandSessionCompletion, CommandSessionError, ReadCommandProgress, StartCommandSession,
+    WriteStdin,
 };
-pub use response::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
+pub use eos_config::configs::command_session::CommandSessionConfig;
 pub use session::{CommandSession, CommandSessionSpec};

@@ -341,7 +341,7 @@ fn require_string(args: &Value, key: &str) -> Result<String, PluginError> {
         .to_owned();
     if value.is_empty() {
         return Err(PluginError::Ensure(format!(
-            "api.plugin.ensure requires {key}"
+            "sandbox.plugin.ensure requires {key}"
         )));
     }
     Ok(value)
@@ -350,7 +350,7 @@ fn require_string(args: &Value, key: &str) -> Result<String, PluginError> {
 fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginError> {
     if value.is_empty() {
         return Err(PluginError::Ensure(format!(
-            "api.plugin.ensure requires {field} name"
+            "sandbox.plugin.ensure requires {field} name"
         )));
     }
     let mut chars = value.chars();

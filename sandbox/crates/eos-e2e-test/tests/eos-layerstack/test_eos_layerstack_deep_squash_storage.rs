@@ -12,7 +12,7 @@ fn deep_stack_repeated_squash() -> Result<()> {
     let lease = pool.acquire()?;
     for version in 0..220 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": "pressure-squash/repeated.txt",
                 "content": format!("deep-{version}\n"),
@@ -21,11 +21,11 @@ fn deep_stack_repeated_squash() -> Result<()> {
         )?;
     }
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "pressure-squash/repeated.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "deep-219\n");
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&metrics, "manifest_depth")? <= 100,
         "repeated auto-squash should keep depth bounded: {metrics}"
@@ -41,7 +41,7 @@ fn squash_storage_no_orphan() -> Result<()> {
     let lease = pool.acquire()?;
     for version in 0..125 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": format!("pressure-squash/orphans-{version}.txt"),
                 "content": "x\n",
@@ -49,7 +49,7 @@ fn squash_storage_no_orphan() -> Result<()> {
             }),
         )?;
     }
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&metrics, "orphan_layer_count")?,
         0,

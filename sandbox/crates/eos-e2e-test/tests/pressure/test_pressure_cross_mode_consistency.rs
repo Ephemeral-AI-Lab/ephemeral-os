@@ -27,7 +27,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
             .collect();
         for caller_id in &callers {
             let entered = lease.call_ok(
-                ops::API_ISOLATED_WORKSPACE_ENTER,
+                ops::SANDBOX_ISOLATION_ENTER,
                 json!({"caller_id": caller_id}),
             )?;
             ensure!(
@@ -51,7 +51,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
                     isolated_barrier.wait();
                     let private = request_with_identity(
                         &isolated_client,
-                        ops::API_V1_WRITE_FILE,
+                        ops::SANDBOX_FILE_WRITE,
                         &isolated_root,
                         &isolated_caller,
                         json!({
@@ -76,7 +76,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
                     public_barrier.wait();
                     let public = request_with_identity(
                         &public_client,
-                        ops::API_V1_WRITE_FILE,
+                        ops::SANDBOX_FILE_WRITE,
                         &public_root,
                         &public_caller,
                         json!({
@@ -100,7 +100,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
             for (index, caller_id) in callers.iter().enumerate() {
                 let path = format!("pressure/cross-mode/level-{level}/item-{index}.txt");
                 let private_read = lease.call_ok(
-                    ops::API_V1_READ_FILE,
+                    ops::SANDBOX_FILE_READ,
                     json!({"caller_id": caller_id, "path": path}),
                 )?;
                 ensure!(
@@ -116,7 +116,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
 
         for index in 0..level {
             let public_read = lease.call_ok(
-                ops::API_V1_READ_FILE,
+                ops::SANDBOX_FILE_READ,
                 json!({"path": format!("pressure/cross-mode/level-{level}/item-{index}.txt")}),
             )?;
             ensure!(
@@ -136,7 +136,7 @@ fn public_and_isolated_same_path_ladder_1_3_6_12() -> Result<()> {
 fn exit_callers(lease: &eos_e2e_test::NodeLease<'_>, callers: &[String]) {
     for caller_id in callers {
         let _ = lease.call(
-            ops::API_ISOLATED_WORKSPACE_EXIT,
+            ops::SANDBOX_ISOLATION_EXIT,
             json!({"caller_id": caller_id, "grace_s": 0.1}),
         );
     }

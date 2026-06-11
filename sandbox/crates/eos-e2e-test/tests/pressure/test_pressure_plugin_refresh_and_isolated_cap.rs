@@ -29,10 +29,10 @@ fn plugin_refresh_ladder_1_3_6_12() -> Result<()> {
         let path = format!("pressure/plugin/refresh-level-{level}.txt");
         let content = format!("plugin-refresh-level-{level}\n");
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": path, "content": content, "overwrite": true}),
         )?;
-        let before = generic_refresh_count(&lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?)?;
+        let before = generic_refresh_count(&lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?)?;
 
         let barrier = Arc::new(Barrier::new(level));
         let handles: Vec<_> = (0..level)
@@ -69,7 +69,7 @@ fn plugin_refresh_ladder_1_3_6_12() -> Result<()> {
             );
         }
 
-        let status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+        let status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
         let after = generic_refresh_count(&status)?;
         assert!(
             after >= before,
@@ -121,7 +121,7 @@ fn isolated_handle_cap_ladder() -> Result<()> {
             }
         }
 
-        let listing = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+        let listing = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
         let open_count = open_count_for(&listing, &opened);
         assert_eq!(
             open_count,
@@ -163,11 +163,11 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
     let setup_digest = format!("setup-{digest}");
 
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "capstone/scaffold.txt", "content": "scaffold\n", "overwrite": true}),
     )?;
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "mkdir -p capstone && printf exec > capstone/exec.txt",
             "yield_time_ms": 1000,
@@ -190,7 +190,7 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &root,
                     &caller_id,
                     json!({
@@ -216,7 +216,7 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
 
     for version in 0..12 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": "capstone/squash.txt",
                 "content": format!("squash-{version}\n"),
@@ -227,11 +227,11 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
 
     let isolated_caller = format!("capstone-iws-{suffix}");
     lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_ENTER,
+        ops::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": isolated_caller}),
     )?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({
             "caller_id": isolated_caller,
             "path": "capstone/private.txt",
@@ -240,11 +240,11 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
         }),
     )?;
     lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_EXIT,
+        ops::SANDBOX_ISOLATION_EXIT,
         json!({"caller_id": isolated_caller, "grace_s": 0.1}),
     )?;
     let private_read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "capstone/private.txt"}),
     )?;
     assert!(
@@ -255,16 +255,16 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
     assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
 
     let commit = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&commit, "success")?, "{commit}");
     let scaffold = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "capstone/scaffold.txt"}),
     )?;
     assert_eq!(as_str(&scaffold, "content")?, "scaffold\n", "{scaffold}");
-    let exec_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "capstone/exec.txt"}))?;
+    let exec_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "capstone/exec.txt"}))?;
     assert_eq!(as_str(&exec_read, "content")?, "exec", "{exec_read}");
 
     ensure_generic_service_package(&lease, &digest, &setup_digest)?;
@@ -293,7 +293,7 @@ fn enter_isolated_callers(
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::API_ISOLATED_WORKSPACE_ENTER,
+                    ops::SANDBOX_ISOLATION_ENTER,
                     &root,
                     &caller_id,
                     json!({}),
@@ -311,7 +311,7 @@ fn enter_isolated_callers(
 fn exit_isolated_callers(lease: &eos_e2e_test::NodeLease<'_>, callers: &[String]) {
     for caller_id in callers {
         let _ = lease.call(
-            ops::API_ISOLATED_WORKSPACE_EXIT,
+            ops::SANDBOX_ISOLATION_EXIT,
             json!({"caller_id": caller_id, "grace_s": 0.0}),
         );
     }
@@ -347,7 +347,7 @@ fn ensure_generic_service_package(
     setup_digest: &str,
 ) -> Result<Value> {
     let warm = lease.call_ok(
-        ops::API_PLUGIN_ENSURE,
+        ops::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest(digest, setup_digest),
@@ -357,7 +357,7 @@ fn ensure_generic_service_package(
     assert_eq!(warm["needs_upload"], true, "{warm}");
     let staged = stage_generic_service_package(lease, digest)?;
     let cold = lease.call_ok(
-        ops::API_PLUGIN_ENSURE,
+        ops::SANDBOX_PLUGIN_ENSURE,
         json!({
             "workspace_root": lease.workspace_root(),
             "manifest": service_manifest(digest, setup_digest),

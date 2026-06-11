@@ -35,7 +35,7 @@ fn distinct_callers_disjoint_writes_ladder_1_3_6_12() -> Result<()> {
                     barrier.wait();
                     request_with_identity(
                         &client,
-                        ops::API_V1_WRITE_FILE,
+                        ops::SANDBOX_FILE_WRITE,
                         &root,
                         &caller_id,
                         json!({
@@ -60,7 +60,7 @@ fn distinct_callers_disjoint_writes_ladder_1_3_6_12() -> Result<()> {
         // channel, so a distinct caller still reads peers' published content.
         for index in 0..level {
             let read = lease.call_ok(
-                ops::API_V1_READ_FILE,
+                ops::SANDBOX_FILE_READ,
                 json!({"path": format!("pressure/multi-caller/level-{level}/agent-{index}.txt")}),
             )?;
             assert_eq!(
@@ -104,7 +104,7 @@ fn distinct_callers_same_path_conflict_resolves_to_one_winner() -> Result<()> {
                 barrier.wait();
                 request_with_identity(
                     &client,
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &root,
                     &caller_id,
                     json!({"path": path, "content": format!("agent-{index}\n"), "overwrite": true}),
@@ -134,7 +134,7 @@ fn distinct_callers_same_path_conflict_resolves_to_one_winner() -> Result<()> {
         );
     }
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     let content = as_str(&read, "content")?;
     assert!(
         (0..level).any(|index| content == format!("agent-{index}\n")),

@@ -64,11 +64,11 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
     };
     let lease = pool.acquire()?;
 
-    let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 0);
 
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
@@ -83,14 +83,14 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
             .contains("ready"),
         "expected initial stdout to contain readiness marker: {started}"
     );
-    let leased = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let leased = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&leased, "active_leases")? >= 1,
         "running command should hold a layer lease: {leased}"
     );
 
     let stdin = lease.call_ok(
-        ops::API_V1_WRITE_STDIN,
+        ops::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": session_id,
             "chars": "line-one\n",
@@ -108,7 +108,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
     );
 
     let cancel = lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": &session_id}),
     )?;
     assert!(matches!(
@@ -116,7 +116,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         "cancelled" | "ok" | "error"
     ));
 
-    let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 0);
     let released = wait_for_active_leases(&lease, 0)?;
     assert_eq!(
@@ -136,7 +136,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
     let lease = pool.acquire()?;
     let marker = format!("eos_e2e_descendant_{}", unique_suffix().replace('-', "_"));
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("bash -lc 'bash -c \"exec -a {marker} sleep 60\" & echo descendant-ready; wait'"),
             "yield_time_ms": 500,
@@ -159,7 +159,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
     }
 
     let cancel = lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": &session_id}),
     )?;
     assert!(matches!(

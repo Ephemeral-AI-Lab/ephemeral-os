@@ -29,10 +29,10 @@ fn write_read_roundtrip() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/roundtrip.txt", "content": "roundtrip\n", "overwrite": true}),
     )?;
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/roundtrip.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/roundtrip.txt"}))?;
     assert!(as_bool(&read, "exists")?);
     assert_eq!(as_str(&read, "content")?, "roundtrip\n");
     assert_eq!(as_str(&read, "encoding")?, "utf-8");
@@ -46,7 +46,7 @@ fn write_publishes_changed_paths() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let write = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/changed.txt", "content": "changed\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "status")?, "committed");
@@ -68,18 +68,18 @@ fn edit_search_replace_applied() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/edit.txt", "content": "alpha beta\n", "overwrite": true}),
     )?;
     let edit = lease.call_ok(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({
             "path": "tool/edit.txt",
             "edits": [{"old_text": "alpha", "new_text": "omega", "replace_all": false}]
         }),
     )?;
     assert_eq!(as_i64(&edit, "applied_edits")?, 1);
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/edit.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/edit.txt"}))?;
     assert_eq!(as_str(&read, "content")?, "omega beta\n");
     Ok(())
 }
@@ -91,18 +91,18 @@ fn edit_replace_all() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/replace-all.txt", "content": "x x x\n", "overwrite": true}),
     )?;
     lease.call_ok(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({
             "path": "tool/replace-all.txt",
             "edits": [{"old_text": "x", "new_text": "y", "replace_all": true}]
         }),
     )?;
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "tool/replace-all.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "y y y\n");
@@ -116,11 +116,11 @@ fn edit_anchor_not_found() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/not-found.txt", "content": "present\n", "overwrite": true}),
     )?;
     let edit = lease.call(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({
             "path": "tool/not-found.txt",
             "edits": [{"old_text": "absent", "new_text": "x", "replace_all": false}]
@@ -140,11 +140,11 @@ fn edit_count_mismatch() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/count-mismatch.txt", "content": "dup dup\n", "overwrite": true}),
     )?;
     let edit = lease.call(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({
             "path": "tool/count-mismatch.txt",
             "edits": [{"old_text": "dup", "new_text": "x", "replace_all": false}]
@@ -163,7 +163,7 @@ fn read_nonexistent() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/missing.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/missing.txt"}))?;
     assert!(!as_bool(&read, "exists")?);
     assert_eq!(as_str(&read, "content")?, "");
     Ok(())
@@ -176,7 +176,7 @@ fn read_max_bytes_guard() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("mkdir -p tool && python3 - <<'PY'\nopen('tool/too-big-read.txt', 'wb').write(b'x' * {})\nPY", MAX_READ_BYTES + 1),
             "yield_time_ms": 1000,
@@ -189,7 +189,7 @@ fn read_max_bytes_guard() -> Result<()> {
         "seed command should publish big file: {exec}"
     );
     let read = lease.call(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "tool/too-big-read.txt"}),
     )?;
     assert_eq!(error_kind(&read), Some("invalid_envelope"));
@@ -210,13 +210,13 @@ fn fast_path_write_publishes_without_holding_a_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "fastpath/no-overlay.txt", "content": "x\n", "overwrite": true}),
     )?;
     lease.call_ok(
-        ops::API_V1_EDIT_FILE,
+        ops::SANDBOX_FILE_EDIT,
         json!({
             "path": "fastpath/no-overlay.txt",
             "edits": [{"old_text": "x", "new_text": "y", "replace_all": false}]
@@ -225,7 +225,7 @@ fn fast_path_write_publishes_without_holding_a_lease() -> Result<()> {
     // The fast path bypasses the overlay pipeline entirely: writes commit
     // directly through OCC (manifest version advances) without ever taking a
     // snapshot lease (active_leases stays flat).
-    let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&after, "manifest_version")? > as_i64(&before, "manifest_version")?,
         "fast-path write/edit must publish through OCC: before={before} after={after}"
@@ -245,7 +245,7 @@ fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let write = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "fastpath/timings.txt", "content": "t\n", "overwrite": true}),
     )?;
     // The fast path accounts its work as a direct LayerStack/OCC operation
@@ -255,7 +255,7 @@ fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
         "fast-path write should surface api.write.occ_apply_s: {write}"
     );
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "fastpath/timings.txt"}),
     )?;
     assert!(
@@ -273,7 +273,7 @@ fn repeated_fast_path_writes_keep_leases_zero() -> Result<()> {
     let lease = pool.acquire()?;
     for index in 0..30 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": "fastpath/leak.txt", "content": format!("v{index}\n"), "overwrite": true}),
         )?;
     }
@@ -307,7 +307,7 @@ fn direct_file_ops_concurrency_ladder() -> Result<()> {
                 thread::spawn(move || {
                     barrier.wait();
                     client.request(
-                        ops::API_V1_WRITE_FILE,
+                        ops::SANDBOX_FILE_WRITE,
                         &next_invocation_id(),
                         &json!({
                             "layer_stack_root": root,
@@ -335,7 +335,7 @@ fn direct_file_ops_concurrency_ladder() -> Result<()> {
         }
         for index in 0..level {
             let read = lease.call_ok(
-                ops::API_V1_READ_FILE,
+                ops::SANDBOX_FILE_READ,
                 json!({"path": format!("fastpath/ladder-{level}-{index}.txt")}),
             )?;
             assert_eq!(
@@ -360,7 +360,7 @@ fn write_max_file_bytes_guard() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let write = lease.call(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({
             "path": "tool/too-big-write.txt",
             "content": "x".repeat(MAX_FILE_BYTES + 1),
@@ -391,14 +391,14 @@ fn write_above_legacy_two_mib_cap_succeeds() -> Result<()> {
     // driven write limit is honored end to end, not just the old hardcoded 2 MiB.
     let size = 3 * 1024 * 1024;
     let write = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/three-mib.txt", "content": "x".repeat(size), "overwrite": true}),
     )?;
     assert!(
         as_bool(&write, "success")?,
         "3 MiB write should publish under the raised cap: {write}"
     );
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/three-mib.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/three-mib.txt"}))?;
     assert_eq!(
         as_str(&read, "content")?.len(),
         size,

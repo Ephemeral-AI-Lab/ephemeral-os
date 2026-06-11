@@ -38,7 +38,7 @@ fn git_writes_are_dropped_and_unreadable() -> Result<()> {
     // read positively proves the Drop (rather than a coincidentally-absent file).
     let path = ".git/eos-probe.txt";
     let write = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "blocked\n", "overwrite": true}),
     )?;
     // .git/* routes Route::Drop -> OccStatus::Dropped, which is_success()==true,
@@ -50,7 +50,7 @@ fn git_writes_are_dropped_and_unreadable() -> Result<()> {
         "a .git write must publish nothing: {write}"
     );
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert!(
         !as_bool(&read, "exists")?,
         "a dropped .git write must not be readable: {read}"
@@ -68,13 +68,13 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
     // so the warm pooled node is not globally polluted. The .gitignore file is
     // itself a normal (gated) write.
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/.gitignore", "content": "*.txt\n", "overwrite": true}),
     )?;
 
     // An ignored path (*.txt) routes Route::Direct: no base-hash gate.
     let ignored = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/secret.txt", "content": "ignored\n", "overwrite": true}),
     )?;
     assert!(as_bool(&ignored, "success")?, "{ignored}");
@@ -91,7 +91,7 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
 
     // Control: a non-ignored sibling (.log not matched by *.txt) stays Gated.
     let tracked = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "ignore-probe/tracked.log", "content": "tracked\n", "overwrite": true}),
     )?;
     assert_eq!(
@@ -116,7 +116,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
     let dir = format!("ignore-race-{}", unique_suffix());
     let path = format!("{dir}/same.txt");
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": format!("{dir}/.gitignore"), "content": "*.txt\n", "overwrite": true}),
     )?;
 
@@ -139,7 +139,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -171,7 +171,7 @@ fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
         );
     }
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     let final_content = as_str(&read, "content")?;
     assert!(
         payloads.iter().any(|payload| payload == final_content),

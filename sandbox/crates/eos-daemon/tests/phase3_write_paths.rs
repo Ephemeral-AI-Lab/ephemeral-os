@@ -21,7 +21,7 @@ type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
     let fixture = seed_layer_stack("write_file")?;
     let write = Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -47,7 +47,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
         .is_some());
 
     let read = Request {
-        op: "api.v1.read_file".to_owned(),
+        op: "sandbox.file.read".to_owned(),
         invocation_id: "inv-read".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -65,7 +65,7 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
 fn write_file_missing_content_is_invalid_envelope() -> TestResult {
     let fixture = seed_layer_stack("write_missing_content")?;
     let request = Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -90,7 +90,7 @@ fn write_file_missing_content_is_invalid_envelope() -> TestResult {
 fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
     let fixture = seed_layer_stack("write_create_only")?;
     let request = Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -121,7 +121,7 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
     let fixture = seed_layer_stack("write_git_drop")?;
     let table = OpTable::with_builtins();
     let write = Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -141,7 +141,7 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
     );
 
     let read = Request {
-        op: "api.v1.read_file".to_owned(),
+        op: "sandbox.file.read".to_owned(),
         invocation_id: "inv-read".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -158,7 +158,7 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
 fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
     let fixture = seed_layer_stack("edit_file")?;
     let edit = Request {
-        op: "api.v1.edit_file".to_owned(),
+        op: "sandbox.file.edit".to_owned(),
         invocation_id: "inv-edit".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -179,7 +179,7 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
     assert_eq!(response["applied_edits"], json!(1));
 
     let read = Request {
-        op: "api.v1.read_file".to_owned(),
+        op: "sandbox.file.read".to_owned(),
         invocation_id: "inv-read".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -196,7 +196,7 @@ fn identical_head_write_is_idempotent() -> TestResult {
     let fixture = seed_layer_stack("write_idempotent")?;
     let table = OpTable::with_builtins();
     let request = Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "inv-write".to_owned(),
         args: json!({
             "layer_stack_root": &fixture.root,
@@ -209,7 +209,7 @@ fn identical_head_write_is_idempotent() -> TestResult {
     assert_eq!(table.dispatch(&request)["success"], Value::Bool(true));
 
     let metrics = Request {
-        op: "api.layer_metrics".to_owned(),
+        op: "sandbox.checkpoint.layer_metrics".to_owned(),
         invocation_id: "inv-metrics".to_owned(),
         args: request.args,
     };

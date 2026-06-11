@@ -38,7 +38,7 @@ fn stamped_encoder_reproduces_read_file_fixture() {
         "path": "/workspace/repo/README.md",
         "caller_id": "caller-1",
     });
-    let encoded = stamped_envelope_bytes("api.v1.read_file", invocation_id, &args, None);
+    let encoded = stamped_envelope_bytes("sandbox.file.read", invocation_id, &args, None);
     assert_eq!(
         encoded,
         fixture_line(READ_FILE_FIXTURE),
@@ -56,7 +56,7 @@ fn stamped_encoder_reproduces_heartbeat_fixture() {
         DAEMON_PROTOCOL_FIELD: DAEMON_PROTOCOL_VERSION,
         "invocation_ids": [invocation_id],
     });
-    let encoded = stamped_envelope_bytes("api.v1.heartbeat", invocation_id, &args, None);
+    let encoded = stamped_envelope_bytes("sandbox.call.heartbeat", invocation_id, &args, None);
     assert_eq!(
         encoded,
         fixture_line(HEARTBEAT_FIXTURE),
@@ -69,7 +69,7 @@ fn stamped_encoder_reproduces_heartbeat_fixture() {
 #[test]
 fn raw_encoder_reproduces_readiness_fixture() {
     let encoded = raw_envelope_bytes(
-        "api.runtime.ready",
+        "sandbox.runtime.ready",
         "00000000000000000000000000000001",
         &json!({"layer_stack_root": "/eos/layer-stack"}),
         None,
@@ -84,7 +84,7 @@ fn raw_encoder_reproduces_readiness_fixture() {
 /// The auth token is a TOP-LEVEL envelope field, never inside args.
 #[test]
 fn auth_token_is_stamped_top_level() {
-    let encoded = stamped_envelope_bytes("api.v1.heartbeat", "i1", &json!({}), Some("tok-1"));
+    let encoded = stamped_envelope_bytes("sandbox.call.heartbeat", "i1", &json!({}), Some("tok-1"));
     let value: serde_json::Value = serde_json::from_slice(&encoded).expect("decode");
     assert_eq!(value[DAEMON_AUTH_FIELD], json!("tok-1"));
     assert!(value["args"].get(DAEMON_AUTH_FIELD).is_none());

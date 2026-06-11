@@ -18,7 +18,7 @@ use crate::support::{
 /// whether it finished foreground or just after. Used only for foreground execs;
 /// the background/running-path tests keep their explicit `lease.call_ok`.
 fn exec_settled(lease: &NodeLease<'_>, args: Value) -> Result<Value> {
-    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, args)?;
+    let response = lease.call_ok(ops::SANDBOX_COMMAND_EXEC, args)?;
     settle_foreground_command(lease, response, Instant::now() + Duration::from_secs(25))
 }
 
@@ -247,11 +247,11 @@ fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result
     let foreign = format!("{dir}/foreign.txt");
 
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": &deleted, "content": "delete me\n", "overwrite": true}),
     )?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": &old, "content": "old\n", "overwrite": true}),
     )?;
 
@@ -277,25 +277,25 @@ fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result
         "replacement write should publish the new file: {overlay}"
     );
 
-    let deleted_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &deleted}))?;
+    let deleted_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &deleted}))?;
     assert!(
         !as_bool(&deleted_read, "exists")?,
         "deleted file must stay masked after overlay publish: {deleted_read}"
     );
-    let replacement_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &replacement}))?;
+    let replacement_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &replacement}))?;
     assert_eq!(
         as_str(&replacement_read, "content")?,
         "new",
         "{replacement_read}"
     );
-    let old_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &old}))?;
+    let old_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &old}))?;
     assert!(
         !as_bool(&old_read, "exists")?,
         "old replaced file must stay masked after overlay publish: {old_read}"
     );
 
     lease.client().request(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         &eos_e2e_test::next_invocation_id(),
         &json!({
             "layer_stack_root": lease.root(),
@@ -305,7 +305,7 @@ fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result
             "overwrite": true
         }),
     )?;
-    let foreign_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &foreign}))?;
+    let foreign_read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": &foreign}))?;
     assert_eq!(
         as_str(&foreign_read, "content")?,
         "foreign publish\n",
@@ -322,7 +322,7 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
     let lease = pool.acquire()?;
     // Seed a 200KB base file via the fast path (lands in the lower layer stack).
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "perf/base_big.txt", "content": "x".repeat(200_000), "overwrite": true}),
     )?;
     // A tiny overlay write must capture only its own delta — the overlay does NOT
@@ -439,7 +439,7 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
     let lease = pool.acquire()?;
     let path = format!("cancel-no-partial/{}.txt", eos_e2e_test::unique_suffix());
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("bash -lc 'printf READY; sleep 30; mkdir -p cancel-no-partial; printf partial > {path}'"),
             "yield_time_ms": 500,
@@ -452,14 +452,14 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
     );
     let session_id = as_str(&exec, "command_session_id")?.to_owned();
     lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": session_id}),
     )?;
     wait_for_session_count(&lease, 0)?;
     let metrics = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert!(
         !as_bool(&read, "exists")?,
         "cancelled background exec must not publish the later workspace write: {read}"
@@ -488,7 +488,7 @@ fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
             .any(|path| path.as_str() == Some("overlay/exec.txt")),
         "exec overlay should publish captured upperdir paths: {exec}"
     );
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "overlay/exec.txt"}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "overlay/exec.txt"}))?;
     assert_eq!(as_str(&read, "content")?, "from-overlay");
     Ok(())
 }
@@ -501,12 +501,12 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
     let lease = pool.acquire()?;
     let path = format!("stale-exec/{}.txt", unique_suffix().replace('-', "_"));
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": "base\n", "overwrite": true}),
     )?;
 
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; printf stale-session > {path}'"),
             "yield_time_ms": 500,
@@ -525,7 +525,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
 
     let body = (|| -> Result<()> {
         let direct = lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": path, "content": "direct-write\n", "overwrite": true}),
         )?;
         assert!(
@@ -559,7 +559,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
 
-        let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+        let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
         assert_eq!(
             as_str(&read, "content")?,
             "direct-write\n",
@@ -570,7 +570,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
 
     if body.is_err() {
         let _ = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
@@ -582,7 +582,7 @@ fn wait_for_completion(lease: &NodeLease<'_>, session_id: &str) -> Result<Value>
     let deadline = Instant::now() + Duration::from_secs(8);
     loop {
         let collected = lease.call_ok(
-            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {

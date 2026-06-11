@@ -16,7 +16,7 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let failed = lease.call(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'printf stdout-before; printf stderr-before >&2; exit 42'",
             "yield_time_ms": 1000,
@@ -55,7 +55,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"stderr-ready\", file=sys.stderr, flush=True); payload=sys.stdin.readline().strip(); print(\"stderr-reply:\" + payload, file=sys.stderr, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
@@ -77,7 +77,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
 
     let body = (|| -> Result<()> {
         let answered = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+            ops::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
                 "command_session_id": &session_id,
                 "chars": "payload\n",
@@ -107,7 +107,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         );
 
         let not_done = lease.call_ok(
-            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
             json!({"command_session_ids": [session_id.clone()]}),
         )?;
         ensure!(
@@ -116,7 +116,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         );
 
         let cancelled = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         )?;
         ensure!(
@@ -131,7 +131,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
 
     if body.is_err() {
         let _ = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
@@ -146,7 +146,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let missing = lease.call(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "definitely_missing_eos_e2e_command",
             "yield_time_ms": 1000,
@@ -170,7 +170,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     let stdin = lease.call(
-        ops::API_V1_WRITE_STDIN,
+        ops::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": bogus,
             "chars": "ignored\n",
@@ -186,7 +186,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     );
 
     let cancel = lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": bogus}),
     )?;
     ensure!(
@@ -199,7 +199,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     );
 
     let collect = lease.call_ok(
-        ops::API_V1_COMMAND_COLLECT_COMPLETED,
+        ops::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_session_ids": [bogus]}),
     )?;
     ensure!(
@@ -218,7 +218,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "python3 -u - <<'PY'\nimport sys, time\nsys.stdout.write('Ω' * 20000)\nsys.stdout.flush()\ntime.sleep(60)\nPY",
             "yield_time_ms": 500,
@@ -238,7 +238,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
     let body = (|| -> Result<()> {
         for _ in 0..2 {
             let poll = lease.call_ok(
-                ops::API_V1_COMMAND_READ_PROGRESS,
+                ops::SANDBOX_COMMAND_POLL,
                 json!({
                     "command_session_id": &session_id,
                     "last_n_lines": 1,
@@ -251,7 +251,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
             ensure_valid_utf8_prefix(&poll)?;
         }
         let cancelled = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         )?;
         ensure!(
@@ -266,7 +266,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
 
     if body.is_err() {
         let _ = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
@@ -297,7 +297,7 @@ fn poll_read_progress_until_stdout_contains(
     let mut last = None;
     while Instant::now() < deadline {
         let poll = lease.call_ok(
-            ops::API_V1_COMMAND_READ_PROGRESS,
+            ops::SANDBOX_COMMAND_POLL,
             json!({
                 "command_session_id": session_id,
                 "last_n_lines": 8,
@@ -331,7 +331,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     // case (where the non-blocking writer must bound the push by a deadline) is
     // covered by `over_buffer_stdin_to_non_reading_consumer_returns_backpressure`.
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo no-read-ready; sleep 60'",
             "yield_time_ms": 800,
@@ -346,7 +346,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     let payload = format!("{}\n", "x".repeat(1024));
     let write_started = Instant::now();
     let wrote = lease.call_ok(
-        ops::API_V1_WRITE_STDIN,
+        ops::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": payload,
@@ -363,7 +363,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     );
 
     let cancelled = lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": &id}),
     )?;
     ensure!(
@@ -388,7 +388,7 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     // session must stay cancellable. (Before the non-blocking rewrite this write
     // blocked until the session timeout.)
     let started = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "sh -c 'echo no-read-ready; sleep 60'",
             "yield_time_ms": 800,
@@ -407,7 +407,7 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     let payload = "eos-e2e-backpressure-line\n".repeat(16384);
     let write_started = Instant::now();
     let pushed = lease.call(
-        ops::API_V1_WRITE_STDIN,
+        ops::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
             "command_session_id": &id,
             "chars": payload,
@@ -425,7 +425,7 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     );
 
     let cancelled = lease.call(
-        ops::API_V1_COMMAND_CANCEL,
+        ops::SANDBOX_COMMAND_CANCEL,
         json!({"command_session_id": &id}),
     )?;
     ensure!(

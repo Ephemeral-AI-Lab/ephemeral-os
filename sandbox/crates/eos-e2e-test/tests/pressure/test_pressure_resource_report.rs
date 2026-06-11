@@ -26,7 +26,7 @@ fn resource_report_smoke() -> Result<()> {
     for sample in 0..workload.sample_count {
         let path = format!("pressure/resource/sample-{sample}.txt");
         let write = lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": path,
                 "content": format!("resource-sample-{sample}\n"),
@@ -34,7 +34,7 @@ fn resource_report_smoke() -> Result<()> {
             }),
         )?;
         let read = lease.call_ok(
-            ops::API_V1_READ_FILE,
+            ops::SANDBOX_FILE_READ,
             json!({"path": format!("pressure/resource/sample-{sample}.txt")}),
         )?;
         assert_eq!(
@@ -44,7 +44,7 @@ fn resource_report_smoke() -> Result<()> {
         );
 
         let exec = lease.call_ok(
-            ops::API_V1_EXEC_COMMAND,
+            ops::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("mkdir -p pressure/resource && printf exec-{sample} > pressure/resource/exec-{sample}.txt"),
                 "yield_time_ms": 1000,
@@ -79,7 +79,7 @@ fn resource_report_smoke() -> Result<()> {
         );
 
         let session = lease.call_ok(
-            ops::API_V1_EXEC_COMMAND,
+            ops::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("sh -c 'echo resource-report-{sample}; sleep 60'"),
                 "yield_time_ms": 100,
@@ -91,7 +91,7 @@ fn resource_report_smoke() -> Result<()> {
         // command-cancel convention, as in the isolated-workspace tests) rather
         // than `call_ok`, then assert the structured status below.
         let cancel = lease.call(
-            ops::API_V1_COMMAND_CANCEL,
+            ops::SANDBOX_COMMAND_CANCEL,
             json!({"command_session_id": as_str(&session, "command_session_id")?}),
         )?;
         assert!(
@@ -100,7 +100,7 @@ fn resource_report_smoke() -> Result<()> {
         );
         wait_for_session_count(&lease, 0)?;
         let metrics = wait_for_active_leases(&lease, 0)?;
-        let session_count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+        let session_count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
 
         samples.push(json!({
             "sample": sample,
@@ -116,11 +116,11 @@ fn resource_report_smoke() -> Result<()> {
     }
 
     let final_metrics = wait_for_active_leases(&lease, 0)?;
-    let final_session_count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let final_session_count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(as_bool(&ready, "ready")?, "{ready}");
-    let plugin_status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
-    let isolated_open = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+    let plugin_status = lease.call_ok(ops::SANDBOX_PLUGIN_STATUS, json!({}))?;
+    let isolated_open = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
 
     let report = json!({
         "schema_version": 1,
@@ -184,7 +184,7 @@ fn large_base_overlay_keeps_memory_bounded() -> Result<()> {
     // O(1) bound. The ~20MB base is built from sub-cap files (2 MiB write cap).
     seed_base_files(&lease, "pressure/mem/base", 20, 1_000_000)?;
     let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": "printf TINY > pressure/mem/delta.txt",
             "yield_time_ms": 1000,
@@ -194,7 +194,7 @@ fn large_base_overlay_keeps_memory_bounded() -> Result<()> {
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     // Memory gauges land on the fast-path file response; sample one after the op.
     let probe = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "pressure/mem/probe.txt", "content": "probe\n", "overwrite": true}),
     )?;
     let memory_current = read_timing(&probe, "resource.cgroup.memory_current_bytes")?;

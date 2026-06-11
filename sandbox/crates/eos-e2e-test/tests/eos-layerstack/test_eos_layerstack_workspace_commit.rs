@@ -20,18 +20,18 @@ fn commit_collapses_layers() -> Result<()> {
     let lease = pool.acquire()?;
     for index in 0..5 {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": format!("commit/collapse-{index}.txt"), "content": "x\n", "overwrite": true}),
         )?;
     }
-    let before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(as_i64(&before, "manifest_depth")? > 1);
     let commit = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&commit, "success")?);
-    let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         as_i64(&after, "manifest_depth")?,
         1,
@@ -47,19 +47,19 @@ fn commit_materializes_merged_view() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "commit/materialized.txt", "content": "materialized\n", "overwrite": true}),
     )?;
     lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     lease.call_ok(
-        ops::API_BUILD_WORKSPACE_BASE,
+        ops::SANDBOX_CHECKPOINT_BUILD_BASE,
         json!({"workspace_root": lease.workspace_root(), "reset": true}),
     )?;
     let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "commit/materialized.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "materialized\n");
@@ -73,19 +73,19 @@ fn commit_version_monotonic() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "commit/version.txt", "content": "v1\n", "overwrite": true}),
     )?;
     let first = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "commit/version.txt", "content": "v2\n", "overwrite": true}),
     )?;
     let second = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(
@@ -102,10 +102,10 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "commit/lease-guard.txt", "content": "guard\n", "overwrite": true}),
     )?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let held = wait_for_active_leases(&lease, 1)?;
     assert_eq!(
         as_i64(&held, "active_leases")?,
@@ -114,7 +114,7 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
     );
 
     let blocked = lease.call(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     let outcome: Result<()> = {
@@ -135,12 +135,12 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
         Ok(())
     };
 
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let released = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&released, "active_leases")?, 0, "{released}");
     outcome?;
     let committed = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&committed, "success")?, "{committed}");
@@ -166,12 +166,12 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
         (&target, "target\n"),
     ] {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({"path": path, "content": content, "overwrite": true}),
         )?;
     }
     let overlay = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!("rm -f {deleted} {old} && mkdir -p {dir}/replace && printf new > {new} && ln -s target.txt {link}"),
             "yield_time_ms": 1000,
@@ -183,7 +183,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
 
     let commit = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&commit, "success")?, "{commit}");
@@ -196,7 +196,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
     }
 
     let check = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
+        ops::SANDBOX_COMMAND_EXEC,
         json!({
             "cmd": format!(
                 "test ! -e {deleted} && test ! -e {old} && test -f {new} && test -L {link} && test \"$(readlink {link})\" = target.txt"
@@ -223,18 +223,18 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
     let content = "stable workspace base\n";
 
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": path, "content": content, "overwrite": true}),
     )?;
     lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
 
     let first = rebuild_workspace_base(&lease)?;
-    let first_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let first_metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     let second = rebuild_workspace_base(&lease)?;
-    let second_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let second_metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
 
     assert_rebuild_response(&first)?;
     assert_rebuild_response(&second)?;
@@ -250,14 +250,14 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
         "repeated reset rebuild should not grow durable stack storage: first={first_metrics} second={second_metrics}"
     );
 
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": path}))?;
     assert_eq!(as_str(&read, "content")?, content);
     Ok(())
 }
 
 fn rebuild_workspace_base(lease: &eos_e2e_test::NodeLease<'_>) -> Result<Value> {
     lease.call_ok(
-        ops::API_BUILD_WORKSPACE_BASE,
+        ops::SANDBOX_CHECKPOINT_BUILD_BASE,
         json!({"workspace_root": lease.workspace_root(), "reset": true}),
     )
 }
@@ -379,7 +379,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(
-        ops::API_V1_WRITE_FILE,
+        ops::SANDBOX_FILE_WRITE,
         json!({"path": "commit/race/base.txt", "content": "base\n", "overwrite": true}),
     )?;
 
@@ -395,7 +395,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
         thread::spawn(move || {
             barrier.wait();
             client.request(
-                ops::API_COMMIT_TO_WORKSPACE,
+                ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
                 &next_invocation_id(),
                 &json!({
                     "layer_stack_root": root,
@@ -415,7 +415,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
             thread::spawn(move || {
                 barrier.wait();
                 client.request(
-                    ops::API_V1_WRITE_FILE,
+                    ops::SANDBOX_FILE_WRITE,
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
@@ -461,18 +461,18 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
     // Drain, then a clean retried commit must succeed and collapse the manifest.
     wait_for_active_leases(&lease, 0)?;
     let committed = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
+        ops::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&committed, "success")?, "{committed}");
 
     // Rebuild from the committed base to prove durability survived the race.
     lease.call_ok(
-        ops::API_BUILD_WORKSPACE_BASE,
+        ops::SANDBOX_CHECKPOINT_BUILD_BASE,
         json!({"workspace_root": lease.workspace_root(), "reset": true}),
     )?;
     let base_read = lease.call_ok(
-        ops::API_V1_READ_FILE,
+        ops::SANDBOX_FILE_READ,
         json!({"path": "commit/race/base.txt"}),
     )?;
     assert_eq!(as_str(&base_read, "content")?, "base\n", "{base_read}");
@@ -482,7 +482,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
     for (index, response) in writer_responses.iter().enumerate() {
         if as_bool(response, "success").unwrap_or(false) {
             let read = lease.call_ok(
-                ops::API_V1_READ_FILE,
+                ops::SANDBOX_FILE_READ,
                 json!({"path": format!("commit/race/w-{index}.txt")}),
             )?;
             assert_eq!(
@@ -493,7 +493,7 @@ fn commit_races_inflight_writes_stays_structured_and_coherent() -> Result<()> {
         }
     }
 
-    let ready = lease.call_ok(ops::API_RUNTIME_READY, json!({}))?;
+    let ready = lease.call_ok(ops::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(
         as_bool(&ready, "ready")?,
         "daemon must stay ready after commit race: {ready}"

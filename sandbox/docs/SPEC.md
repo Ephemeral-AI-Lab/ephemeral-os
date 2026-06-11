@@ -108,9 +108,10 @@ from `docs/contract/01-wire-protocol.md`):
 ## 4. Op catalog
 
 Canonical grammar: `sandbox.<verb>` for host ops, `sandbox.<service>.<verb>`
-for daemon ops, `plugin.<id>.<op>` for dynamic plugin ops. The `api.*` names
-are legacy aliases, all daemon-bound. The token `v1` is dead: protocol
-versioning lives in `args`/`ops.json`, never in names.
+for daemon ops, `plugin.<id>.<op>` for dynamic plugin ops. Each op has exactly
+one wire spelling — its canonical name; the legacy `api.*` aliases are retired.
+The token `v1` is dead: protocol versioning lives in `args`/`ops.json`, never
+in names.
 
 ### 4.1 Host ops (`served_by: host`, `visibility: public`)
 
@@ -123,36 +124,33 @@ versioning lives in `args`/`ops.json`, never in names.
 
 ### 4.2 Daemon ops (`served_by: daemon`, `visibility: public`)
 
-| Service | Op | Legacy alias |
-|---|---|---|
-| file | `sandbox.file.read` | `api.v1.read_file` † |
-| | `sandbox.file.write` | `api.v1.write_file` |
-| | `sandbox.file.edit` | `api.v1.edit_file` |
-| command | `sandbox.command.exec` | `api.v1.exec_command` |
-| | `sandbox.command.poll` | `api.v1.command.read_progress` |
-| | `sandbox.command.write_stdin` | `api.v1.write_stdin` |
-| | `sandbox.command.cancel` | `api.v1.command.cancel` |
-| | `sandbox.command.collect_completed` | `api.v1.command.collect_completed` |
-| | `sandbox.command.count` | `api.v1.command_session_count` |
-| isolation | `sandbox.isolation.enter` | `api.isolated_workspace.enter` |
-| | `sandbox.isolation.exit` | `api.isolated_workspace.exit` |
-| | `sandbox.isolation.status` | `api.isolated_workspace.status` |
-| plugin | `sandbox.plugin.ensure` | `api.plugin.ensure` |
-| | `sandbox.plugin.status` | `api.plugin.status` |
-| | `plugin.<id>.<op>` (dynamic) | unchanged |
-| run | `sandbox.run.end` | `api.v1.cancel_workspace_runs_by_caller_id` |
-| call | `sandbox.call.heartbeat` | `api.v1.heartbeat` † |
-| | `sandbox.call.cancel` | `api.v1.cancel` |
-| | `sandbox.call.count` | `api.v1.inflight_count` |
-
-† Alias is pinned by immutable golden fixtures and is **never** removed.
-All other aliases may sunset after consumers migrate.
+| Service | Op |
+|---|---|
+| file | `sandbox.file.read` |
+| | `sandbox.file.write` |
+| | `sandbox.file.edit` |
+| command | `sandbox.command.exec` |
+| | `sandbox.command.poll` |
+| | `sandbox.command.write_stdin` |
+| | `sandbox.command.cancel` |
+| | `sandbox.command.collect_completed` |
+| | `sandbox.command.count` |
+| isolation | `sandbox.isolation.enter` |
+| | `sandbox.isolation.exit` |
+| | `sandbox.isolation.status` |
+| plugin | `sandbox.plugin.ensure` |
+| | `sandbox.plugin.status` |
+| | `plugin.<id>.<op>` (dynamic) |
+| run | `sandbox.run.end` |
+| call | `sandbox.call.heartbeat` |
+| | `sandbox.call.cancel` |
+| | `sandbox.call.count` |
 
 ### 4.3 Non-public ops
 
 | Visibility | Ops | Caller |
 |---|---|---|
-| `internal` | `sandbox.runtime.ready` (alias `api.runtime.ready`) | host recovery machine only |
+| `internal` | `sandbox.runtime.ready` | host recovery machine only |
 | `operator` | `sandbox.checkpoint.{layer_metrics, ensure_base, build_base, commit_to_workspace, commit_to_git, binding}` · `sandbox.run.cancel_all` · `sandbox.isolation.list_open` | `eos-api admin <op>` CLI; never the client socket |
 | `test` | `sandbox.isolation.test_reset` | test builds only |
 
@@ -164,7 +162,6 @@ All other aliases may sunset after consumers migrate.
   "ops": [
     {
       "name": "sandbox.file.read",
-      "aliases": ["api.v1.read_file"],
       "served_by": "daemon",          // "host" | "daemon"
       "visibility": "public",         // "public" | "operator" | "internal" | "test"
       "family": "Files",
@@ -255,7 +252,7 @@ sandbox/
 │   │   └── tests/
 │   ├── eosd/                       + dump-ops subcommand
 │   ├── eos-daemon/
-│   │   ├── src/wire/               absorbed: envelope, ops catalog (+aliases), errors, version
+│   │   ├── src/wire/               absorbed: envelope, ops catalog, errors, version
 │   │   └── tests/contract.rs
 │   ├── eos-cas/                    renamed rump of eos-protocol: cas.rs, models.rs,
 │   │                               runner.rs (daemon↔ns-runner wire DTOs)
@@ -284,8 +281,7 @@ sandbox/
 3. Host conformance: `eos-sandbox-host` encodes requests that reproduce the
    request fixtures; `eos-api` refuses non-public ops; router covers every
    catalog entry.
-4. Alias integrity: no alias collides with a canonical name; the two
-   fixture-pinned aliases exist.
+4. Name integrity: canonical names are unique across the catalog.
 
 CAS byte-identity remains governed by `docs/contract/02-cas-byte-identity.md`
 and the 18 golden cases — `eos-cas` carries them; host-side crates never

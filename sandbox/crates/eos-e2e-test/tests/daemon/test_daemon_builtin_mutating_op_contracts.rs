@@ -18,31 +18,31 @@ fn isolated_workspace_lifecycle_ops_are_live() -> Result<()> {
 
     let caller_id = lease.caller_id().to_owned();
     let body = (|| -> Result<()> {
-        let before = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+        let before = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
         assert!(
             !open_callers(&before).contains(&caller_id.as_str()),
             "fresh caller should not start open: {before}"
         );
 
-        let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+        let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert!(
             !as_str(&enter, "workspace_handle_id")?.is_empty(),
             "enter must allocate an isolated workspace handle: {enter}"
         );
 
-        let open = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+        let open = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
         assert!(
             open_callers(&open).contains(&caller_id.as_str()),
             "list_open should expose the entered caller: {open}"
         );
 
-        let status = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+        let status = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
         assert!(
             as_bool(&status, "open")?,
             "status should report the caller open after enter: {status}"
         );
 
-        let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.0}))?;
+        let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}))?;
         let inspection = exit.get("inspection").context("exit inspection")?;
         assert_eq!(
             inspection
@@ -52,13 +52,13 @@ fn isolated_workspace_lifecycle_ops_are_live() -> Result<()> {
             "exit should unregister the isolated handle: {exit}"
         );
 
-        let closed = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+        let closed = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
         assert!(
             !as_bool(&closed, "open")?,
             "status should report closed after exit: {closed}"
         );
 
-        let after = lease.call_ok(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({}))?;
+        let after = lease.call_ok(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({}))?;
         assert!(
             !open_callers(&after).contains(&caller_id.as_str()),
             "list_open should drop the caller after exit: {after}"
@@ -67,7 +67,7 @@ fn isolated_workspace_lifecycle_ops_are_live() -> Result<()> {
     })();
 
     if body.is_err() {
-        let _ = lease.call(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.0}));
+        let _ = lease.call(ops::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}));
     }
     body
 }
@@ -79,7 +79,7 @@ fn isolated_workspace_test_reset_op_is_live_and_harness_gated() -> Result<()> {
     };
     let lease = pool.acquire()?;
 
-    let reset = lease.call(ops::API_ISOLATED_WORKSPACE_TEST_RESET, json!({}))?;
+    let reset = lease.call(ops::SANDBOX_ISOLATION_TEST_RESET, json!({}))?;
     assert_ne!(
         error_kind(&reset),
         Some("unknown_op"),

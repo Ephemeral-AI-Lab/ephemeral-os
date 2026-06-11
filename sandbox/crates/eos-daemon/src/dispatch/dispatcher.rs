@@ -101,15 +101,11 @@ pub struct OpTable {
 
 impl OpTable {
     /// Build the table pre-populated with the daemon-owned builtin ops (NO
-    /// `ping`). Every op is registered under its canonical `sandbox.*` name
-    /// AND each legacy alias; both spellings route to the same handler.
+    /// `ping`). Every op is registered under its canonical `sandbox.*` name.
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
         for op in BUILTIN_OPS {
             table.register_builtin(op.spec.name, op.handler);
-            for spelling in op.spec.aliases {
-                table.register_builtin(spelling, op.handler);
-            }
         }
         table
     }

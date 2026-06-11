@@ -341,7 +341,7 @@ fn build_workspace_base_reset_stops_plugin_service_snapshots_for_layer_root() ->
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("reset-plugin-service")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-reset-service".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -357,7 +357,7 @@ fn build_workspace_base_reset_stops_plugin_service_snapshots_for_layer_root() ->
     );
 
     let reset = table.dispatch(&Request {
-        op: "api.build_workspace_base".to_owned(),
+        op: "sandbox.checkpoint.build_base".to_owned(),
         invocation_id: "workspace-base-reset-stops-service".to_owned(),
         args: json!({
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
@@ -372,7 +372,7 @@ fn build_workspace_base_reset_stops_plugin_service_snapshots_for_layer_root() ->
         0
     );
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-reset-service".to_owned(),
         args: json!({}),
     });
@@ -389,14 +389,14 @@ fn op_table_registers_plugin_status_and_ensure() -> TestResult {
     let _guard = PluginTestGuard::new()?;
     let table = OpTable::with_builtins();
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({"plugin": "demo", "digest": "a"}),
     });
     assert_eq!(ensure["success"], true);
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-test".to_owned(),
         args: json!({}),
     });
@@ -411,7 +411,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
     let _guard = PluginTestGuard::new()?;
     let table = OpTable::with_builtins();
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -454,12 +454,12 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
     let _harness = TestEnvVar::set("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
 
     let _ = table.dispatch(&Request {
-        op: "api.isolated_workspace.test_reset".to_owned(),
+        op: "sandbox.isolation.test_reset".to_owned(),
         invocation_id: "iws-reset-before-plugin-block".to_owned(),
         args: json!({}),
     });
     let entered = table.dispatch(&Request {
-        op: "api.isolated_workspace.enter".to_owned(),
+        op: "sandbox.isolation.enter".to_owned(),
         invocation_id: "iws-enter-before-plugin-block".to_owned(),
         args: json!({
             "caller_id": "caller-plugin",
@@ -476,13 +476,13 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
     assert_eq!(blocked["error"]["kind"], "forbidden_in_isolated_workspace");
 
     let exited = table.dispatch(&Request {
-        op: "api.isolated_workspace.exit".to_owned(),
+        op: "sandbox.isolation.exit".to_owned(),
         invocation_id: "iws-exit-after-plugin-block".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(exited["success"], true);
     let _ = table.dispatch(&Request {
-        op: "api.isolated_workspace.test_reset".to_owned(),
+        op: "sandbox.isolation.test_reset".to_owned(),
         invocation_id: "iws-reset-after-plugin-block".to_owned(),
         args: json!({}),
     });
@@ -578,7 +578,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("exited-service")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-exited-service".to_owned(),
         args: json!({
             "manifest": generic_service_manifest_with_command(
@@ -632,7 +632,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
     );
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-exited-service".to_owned(),
         args: json!({}),
     });
@@ -684,7 +684,7 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
     let _guard = PluginTestGuard::new()?;
     let table = OpTable::with_builtins();
     let first = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-a".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -695,7 +695,7 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
     assert_eq!(first["registered_ops"], json!(["plugin.generic.hover"]));
 
     let second = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-b".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-b", "diagnostics"),
@@ -768,7 +768,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-refresh")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -782,7 +782,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
 
     let write = table.dispatch(&Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "peer-write".to_owned(),
         args: json!({
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
@@ -843,7 +843,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     assert_eq!(routed["after_refresh"], true);
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-refresh".to_owned(),
         args: json!({}),
     });
@@ -864,7 +864,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     let (layer_stack_root, workspace_root) =
         test_bound_workspace("read-only-refresh-singleflight")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_service_manifest("digest-a", "hover"),
@@ -878,7 +878,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
 
     let write = table.dispatch(&Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "peer-write".to_owned(),
         args: json!({
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
@@ -986,7 +986,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     assert_eq!(second_response["success"], true);
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-refresh-singleflight".to_owned(),
         args: json!({}),
     });
@@ -1018,7 +1018,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
         "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-restart-service".to_owned(),
         args: json!({
             "manifest": generic_restart_manifest("digest-a", "hover", command),
@@ -1032,7 +1032,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     assert_eq!(ensure["service_processes_started"], true);
 
     let status_before = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-before-restart".to_owned(),
         args: json!({}),
     });
@@ -1047,7 +1047,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     .to_owned();
 
     let write = table.dispatch(&Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "peer-write-before-restart".to_owned(),
         args: json!({
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
@@ -1067,7 +1067,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     assert_eq!(routed["from_restart_service"], true);
 
     let status_after = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-restart".to_owned(),
         args: json!({}),
     });
@@ -1095,7 +1095,7 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
     let layer_stack_root = test_layer_stack_root("self-managed-callback")?;
     let table = OpTable::with_builtins();
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_self_managed_manifest("digest-a", "apply"),
@@ -1168,7 +1168,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     let table = OpTable::with_builtins();
     let (layer_stack_root, workspace_root) = test_bound_workspace("self-managed-refresh")?;
     let ensure = table.dispatch(&Request {
-        op: "api.plugin.ensure".to_owned(),
+        op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
             "manifest": generic_self_managed_manifest("digest-a", "apply"),
@@ -1182,7 +1182,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     register_ppc_client_for_tests("plugin.generic.apply", client_stream)?;
 
     let write = table.dispatch(&Request {
-        op: "api.v1.write_file".to_owned(),
+        op: "sandbox.file.write".to_owned(),
         invocation_id: "peer-write".to_owned(),
         args: json!({
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
@@ -1243,7 +1243,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     assert_eq!(routed["self_managed_after_refresh"], true);
 
     let status = table.dispatch(&Request {
-        op: "api.plugin.status".to_owned(),
+        op: "sandbox.plugin.status".to_owned(),
         invocation_id: "plugin-status-after-self-managed-refresh".to_owned(),
         args: json!({}),
     });

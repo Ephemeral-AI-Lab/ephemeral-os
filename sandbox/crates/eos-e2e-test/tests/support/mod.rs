@@ -27,7 +27,7 @@ pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
 pub(crate) fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Result<Value> {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+        let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
         if as_i64(&metrics, "active_leases")? == expected {
             return Ok(metrics);
         }
@@ -45,7 +45,7 @@ pub(crate) fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Re
 /// ungated `list_open` + `exit` ops (the `test_reset` hook needs a daemon env
 /// flag the harness does not set). Best-effort: errors are ignored.
 pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
-    let Ok(listing) = lease.call(ops::API_ISOLATED_WORKSPACE_LIST_OPEN, json!({})) else {
+    let Ok(listing) = lease.call(ops::SANDBOX_ISOLATION_LIST_OPEN, json!({})) else {
         return;
     };
     let callers: Vec<String> = listing
@@ -61,7 +61,7 @@ pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
         .unwrap_or_default();
     for caller_id in callers {
         let _ = lease.call(
-            ops::API_ISOLATED_WORKSPACE_EXIT,
+            ops::SANDBOX_ISOLATION_EXIT,
             json!({"caller_id": caller_id, "grace_s": 0.0}),
         );
     }
@@ -75,7 +75,7 @@ pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
 pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
-        let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+        let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({}))?;
         if as_i64(&count, "count")? == expected {
             return Ok(());
         }
@@ -116,7 +116,7 @@ pub(crate) fn settle_foreground_command(
         // returns `success:false`, which is a valid terminal outcome here, not a
         // transport error. `call_ok` would reject it and break error-exit settles.
         let progress = lease.call(
-            ops::API_V1_COMMAND_READ_PROGRESS,
+            ops::SANDBOX_COMMAND_POLL,
             json!({"command_session_id": &session_id, "last_n_lines": 50}),
         )?;
         // A reaping `read_progress` finalizes with `publish_completion = false`
@@ -154,7 +154,7 @@ pub(crate) fn wait_for_command_stdout_contains(
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let progress = lease.call_ok(
-            ops::API_V1_COMMAND_READ_PROGRESS,
+            ops::SANDBOX_COMMAND_POLL,
             json!({"command_session_id": session_id, "last_n_lines": 50}),
         )?;
         if clean_stdout(&progress).contains(needle) {
@@ -262,7 +262,7 @@ pub(crate) fn seed_base_files(
 ) -> Result<usize> {
     for index in 0..file_count {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "path": format!("{dir}/base-{index}.txt"),
                 "content": "x".repeat(bytes_each),

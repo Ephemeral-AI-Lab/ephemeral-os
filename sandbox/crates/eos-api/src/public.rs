@@ -1,6 +1,6 @@
 //! The op catalog as `eos-api` sees it: parsed from the committed
 //! `contract/ops.json` (embedded at compile time — the shared artifact is
-//! data, never code) and indexed by every accepted spelling.
+//! data, never code) and indexed by canonical name.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -60,9 +60,9 @@ pub struct OpEntry {
     pub mutates_state: bool,
 }
 
-/// The catalog indexed by every accepted spelling (canonical + aliases).
+/// The catalog indexed by canonical name.
 pub struct Catalog {
-    by_spelling: HashMap<String, Arc<OpEntry>>,
+    by_name: HashMap<String, Arc<OpEntry>>,
 }
 
 impl Catalog {
@@ -82,7 +82,7 @@ impl Catalog {
             .get("ops")
             .and_then(Value::as_array)
             .context("ops.json must carry an `ops` array")?;
-        let mut by_spelling = HashMap::new();
+        let mut by_name = HashMap::new();
         for op in ops {
             let name = str_field(op, "name")?.to_owned();
             let served_by = str_field(op, "served_by")?;
@@ -108,45 +108,23 @@ impl Catalog {
                 visibility,
                 mutates_state,
             });
-            let mut spellings = vec![name.clone()];
-            for alias in op
-                .get("aliases")
-                .and_then(Value::as_array)
-                .with_context(|| format!("op {name}: missing aliases"))?
-            {
-                spellings.push(
-                    alias
-                        .as_str()
-                        .with_context(|| format!("op {name}: non-string alias"))?
-                        .to_owned(),
-                );
-            }
-            for spelling in spellings {
-                if by_spelling
-                    .insert(spelling.clone(), Arc::clone(&entry))
-                    .is_some()
-                {
-                    bail!("catalog spelling claimed twice: {spelling}");
-                }
+            if by_name.insert(name.clone(), entry).is_some() {
+                bail!("catalog name claimed twice: {name}");
             }
         }
-        Ok(Self { by_spelling })
+        Ok(Self { by_name })
     }
 
     /// Resolve a request spelling to its catalog entry.
     #[must_use]
     pub fn lookup(&self, op: &str) -> Option<&Arc<OpEntry>> {
-        self.by_spelling.get(op)
+        self.by_name.get(op)
     }
 
-    /// Every entry (deduplicated), for coverage tests.
+    /// Every entry, for coverage tests.
     #[must_use]
     pub fn entries(&self) -> Vec<&Arc<OpEntry>> {
-        let mut seen = std::collections::HashSet::new();
-        self.by_spelling
-            .values()
-            .filter(|entry| seen.insert(entry.name.clone()))
-            .collect()
+        self.by_name.values().collect()
     }
 }
 

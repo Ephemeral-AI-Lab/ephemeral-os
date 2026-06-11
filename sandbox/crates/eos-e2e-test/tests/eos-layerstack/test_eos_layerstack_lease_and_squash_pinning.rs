@@ -16,16 +16,16 @@ fn enter_acquires_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
     assert!(!as_str(&enter, "workspace_handle_id")?.is_empty());
-    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&metrics, "active_leases")? >= 1,
         "enter should hold a snapshot lease while the workspace is open: {metrics}"
     );
-    let status = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+    let status = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
     assert!(status.get("open").and_then(Value::as_bool).unwrap_or(false));
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
     Ok(())
 }
 
@@ -35,9 +35,9 @@ fn exit_releases_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
-    let closed = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
+    let closed = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
     assert!(!closed.get("open").and_then(Value::as_bool).unwrap_or(true));
     let metrics = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&metrics, "active_leases")?, 0);
@@ -50,7 +50,7 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
     let pinned_version = enter.get("manifest_version").and_then(Value::as_i64);
     let pinned_hash = enter
         .get("manifest_root_hash")
@@ -59,7 +59,7 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
     let root = lease.root().to_owned();
     for version in 0..105 {
         lease.client().request(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             &next_invocation_id(),
             &json!({
                 "layer_stack_root": root,
@@ -70,7 +70,7 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
             }),
         )?;
     }
-    let held = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
+    let held = lease.call_ok(ops::SANDBOX_ISOLATION_STATUS, json!({}))?;
     assert!(
         held.get("open").and_then(Value::as_bool).unwrap_or(false),
         "isolated status should remain open while public squash pressure runs: {held}"
@@ -83,7 +83,7 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
         held.get("manifest_root_hash").and_then(Value::as_str),
         pinned_hash.as_deref()
     );
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let released = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&released, "active_leases")?, 0);
     Ok(())
@@ -123,7 +123,7 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
         // Base + 8 public writes pushes the stack past the squash trigger; the
         // post-squash active manifest must stay bounded while the three pinned
         // statuses above remain stable.
-        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+        let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
         let depth = as_i64(&metrics, "manifest_depth")?;
         assert!(
             depth <= 8,
@@ -143,7 +143,7 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
 
     for caller in &callers {
         let _ = lease.call(
-            ops::API_ISOLATED_WORKSPACE_EXIT,
+            ops::SANDBOX_ISOLATION_EXIT,
             json!({"caller_id": caller, "grace_s": 0.0}),
         );
     }
@@ -160,9 +160,9 @@ fn lease_hold_time_ordering() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
     thread::sleep(Duration::from_millis(150));
-    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({}))?;
     let lifetime_s = exit
         .get("lifetime_s")
         .and_then(Value::as_f64)
@@ -181,7 +181,7 @@ struct PinnedLease {
 
 fn enter_isolated(lease: &eos_e2e_test::NodeLease<'_>, caller_id: &str) -> Result<PinnedLease> {
     let enter = lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_ENTER,
+        ops::SANDBOX_ISOLATION_ENTER,
         json!({"caller_id": caller_id}),
     )?;
     Ok(PinnedLease {
@@ -196,7 +196,7 @@ fn assert_pinned_status(
     pinned: &PinnedLease,
 ) -> Result<()> {
     let status = lease.call_ok(
-        ops::API_ISOLATED_WORKSPACE_STATUS,
+        ops::SANDBOX_ISOLATION_STATUS,
         json!({"caller_id": caller_id}),
     )?;
     assert!(
@@ -222,7 +222,7 @@ fn write_public_versions(
 ) -> Result<()> {
     for version in versions {
         lease.call_ok(
-            ops::API_V1_WRITE_FILE,
+            ops::SANDBOX_FILE_WRITE,
             json!({
                 "caller_id": "layerstack-gap-public-writer",
                 "path": "lease/gap-formula.txt",

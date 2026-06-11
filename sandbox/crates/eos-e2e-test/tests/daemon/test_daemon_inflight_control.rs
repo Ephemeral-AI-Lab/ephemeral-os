@@ -25,7 +25,7 @@ fn inflight_count_observes_concurrent_background_invocations() -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(4);
     let mut peak = 0;
     loop {
-        let count = lease.call_ok(ops::API_V1_INFLIGHT_COUNT, json!({}))?;
+        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
         peak = peak.max(as_i64(&count, "count")?);
         if peak >= 2 || Instant::now() >= deadline {
             break;

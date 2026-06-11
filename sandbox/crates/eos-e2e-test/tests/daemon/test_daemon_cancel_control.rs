@@ -18,7 +18,7 @@ fn cancel_unknown_invocation_returns_done_envelope() -> Result<()> {
     let lease = pool.acquire()?;
     let invocation_id = format!("never-registered-{}", unique_suffix());
     let cancel = lease.call_ok(
-        ops::API_V1_CANCEL,
+        ops::SANDBOX_CALL_CANCEL,
         json!({"invocation_id": invocation_id.clone()}),
     )?;
     // Cancelling an id the registry never saw is a deterministic "already done".
@@ -54,7 +54,7 @@ fn live_cancel_of_inflight_sets_cancelled() -> Result<()> {
     // Only cancel once the registry actually holds the entry (gate on inflight).
     let deadline = Instant::now() + Duration::from_secs(4);
     loop {
-        let count = lease.call_ok(ops::API_V1_INFLIGHT_COUNT, json!({}))?;
+        let count = lease.call_ok(ops::SANDBOX_CALL_COUNT, json!({}))?;
         if as_i64(&count, "count")? >= 1 {
             break;
         }
@@ -65,7 +65,7 @@ fn live_cancel_of_inflight_sets_cancelled() -> Result<()> {
         std::thread::sleep(Duration::from_millis(50));
     }
 
-    let cancel = lease.call_ok(ops::API_V1_CANCEL, json!({"invocation_id": invocation_id}))?;
+    let cancel = lease.call_ok(ops::SANDBOX_CALL_CANCEL, json!({"invocation_id": invocation_id}))?;
     let cancelled = as_bool(&cancel, "cancelled")?;
     // Join before the lease drops so the background request never outlives the node.
     let _ = handle.join();
