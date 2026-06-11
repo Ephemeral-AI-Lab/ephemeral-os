@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
+use crate::runtime::ns_runner::NsRunnerLauncher;
 use eos_plugin::PluginServiceStatus;
 use eos_plugin_runtime::ensure::ParsedEnsure;
 use serde::Serialize;
@@ -37,13 +38,15 @@ pub(super) struct DaemonPluginState {
 /// of loaded plugins, service processes, PPC clients, and snapshots.
 pub(crate) struct PluginRuntime {
     pub(super) config: PluginRuntimeConfig,
+    pub(super) launcher: Arc<dyn NsRunnerLauncher>,
     state: Mutex<DaemonPluginState>,
 }
 
 impl PluginRuntime {
-    pub(crate) fn new(config: PluginRuntimeConfig) -> Self {
+    pub(crate) fn new(config: PluginRuntimeConfig, launcher: Arc<dyn NsRunnerLauncher>) -> Self {
         Self {
             config,
+            launcher,
             state: Mutex::new(DaemonPluginState::default()),
         }
     }

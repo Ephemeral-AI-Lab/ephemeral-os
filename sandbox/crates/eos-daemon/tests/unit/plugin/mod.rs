@@ -722,23 +722,72 @@ fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
 
 #[test]
 fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult {
-    let daemon = TestDaemon::new();
+    let socket_root = test_socket_root("read-only-refresh");
+    let daemon = TestDaemon::with_ppc_root(&socket_root);
     let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-refresh")?;
+    let command = vec![
+        "/bin/sh",
+        "-c",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
+    ];
+    let server = std::thread::spawn({
+        let socket_root = socket_root.clone();
+        move || -> TestResult {
+            let mut server_stream = connect_ppc_socket(&socket_root)?;
+            let mut refresh_types = Vec::new();
+            let mut current_manifest_key = String::new();
+            loop {
+                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
+                if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
+                    let body: Value = serde_json::from_str(&request.body)?;
+                    refresh_types.push(
+                        value_str(&body["type"], "refresh type must be a string")?.to_owned(),
+                    );
+                    if let Some(key) = body
+                        .get("target_manifest_key")
+                        .or_else(|| body.get("manifest_key"))
+                        .and_then(Value::as_str)
+                    {
+                        current_manifest_key = key.to_owned();
+                    }
+                    let refresh_reply = json!({
+                            "manifest_key": current_manifest_key,
+                            "accepted": true
+                    });
+                    write_ppc_reply_json_result(
+                        &mut server_stream,
+                        request.message_id,
+                        &refresh_reply,
+                    )?;
+                    continue;
+                }
+
+                assert_eq!(request.message_id, "plugin-hover-after-peer-write");
+                assert_eq!(request.op, "plugin.generic.hover");
+                assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
+                assert!(refresh_types.contains(&"swap_workspace".to_owned()));
+                assert!(refresh_types.contains(&"health".to_owned()));
+                write_ppc_reply_result(
+                    &mut server_stream,
+                    request.message_id,
+                    r#"{"success":true,"after_refresh":true}"#,
+                )?;
+                break Ok(());
+            }
+        }
+    });
     let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": generic_service_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
+            "workspace_root": workspace_root.to_string_lossy().into_owned(),
+            "start_services": true
         }),
     });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    daemon
-        .plugin()
-        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
+    assert_eq!(ensure["service_processes_started"], true);
 
     let write = daemon.dispatch(&Request {
         op: "sandbox.file.write".to_owned(),
@@ -750,48 +799,6 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
         }),
     });
     assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let server = std::thread::spawn(move || -> TestResult {
-        let mut refresh_types = Vec::new();
-        let mut current_manifest_key = String::new();
-        loop {
-            let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-            if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
-                let body: Value = serde_json::from_str(&request.body)?;
-                refresh_types
-                    .push(value_str(&body["type"], "refresh type must be a string")?.to_owned());
-                if let Some(key) = body
-                    .get("target_manifest_key")
-                    .or_else(|| body.get("manifest_key"))
-                    .and_then(Value::as_str)
-                {
-                    current_manifest_key = key.to_owned();
-                }
-                let refresh_reply = json!({
-                        "manifest_key": current_manifest_key,
-                        "accepted": true
-                });
-                write_ppc_reply_json_result(
-                    &mut server_stream,
-                    request.message_id,
-                    &refresh_reply,
-                )?;
-                continue;
-            }
-
-            assert_eq!(request.message_id, "plugin-hover-after-peer-write");
-            assert_eq!(request.op, "plugin.generic.hover");
-            assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
-            assert!(refresh_types.contains(&"swap_workspace".to_owned()));
-            assert!(refresh_types.contains(&"health".to_owned()));
-            write_ppc_reply_result(
-                &mut server_stream,
-                request.message_id,
-                r#"{"success":true,"after_refresh":true}"#,
-            )?;
-            break Ok(());
-        }
-    });
 
     let routed = daemon.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
@@ -812,30 +819,111 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
         1
     );
     join_test_thread(server, "server thread panicked")?;
+    let _ = std::fs::remove_dir_all(socket_root);
     remove_test_tree(&layer_stack_root)?;
     Ok(())
 }
 
 #[test]
 fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult {
-    let daemon = Arc::new(TestDaemon::new());
+    let socket_root = test_socket_root("read-only-refresh-singleflight");
+    let daemon = Arc::new(TestDaemon::with_ppc_root(&socket_root));
     let (layer_stack_root, workspace_root) =
         test_bound_workspace("read-only-refresh-singleflight")?;
+    let command = vec![
+        "/bin/sh",
+        "-c",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
+    ];
+
+    let (refresh_started_tx, refresh_started_rx) = mpsc::channel();
+    let (continue_refresh_tx, continue_refresh_rx) = mpsc::channel();
+    let server = std::thread::spawn({
+        let socket_root = socket_root.clone();
+        move || -> TestResult {
+            let mut server_stream = connect_ppc_socket(&socket_root)?;
+            let mut refresh_types = Vec::new();
+            let mut current_manifest_key = String::new();
+            let first_op = loop {
+                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
+                if request.op != WORKSPACE_SNAPSHOT_REFRESH_OP {
+                    break request;
+                }
+                let body: Value = serde_json::from_str(&request.body)?;
+                let refresh_type =
+                    value_str(&body["type"], "refresh type must be a string")?.to_owned();
+                if refresh_types.is_empty() {
+                    assert_eq!(refresh_type, "prepare_refresh");
+                    refresh_started_tx.send(())?;
+                    continue_refresh_rx.recv_timeout(Duration::from_secs(1))?;
+                }
+                refresh_types.push(refresh_type);
+                if let Some(key) = body
+                    .get("target_manifest_key")
+                    .or_else(|| body.get("manifest_key"))
+                    .and_then(Value::as_str)
+                {
+                    current_manifest_key = key.to_owned();
+                }
+                let refresh_reply = json!({
+                    "manifest_key": current_manifest_key,
+                    "accepted": true
+                });
+                write_ppc_reply_json_result(
+                    &mut server_stream,
+                    request.message_id,
+                    &refresh_reply,
+                )?;
+            };
+            assert_eq!(
+                refresh_types,
+                vec![
+                    "prepare_refresh".to_owned(),
+                    "quiesce".to_owned(),
+                    "swap_workspace".to_owned(),
+                    "notify_refresh".to_owned(),
+                    "resume".to_owned(),
+                    "health".to_owned(),
+                ]
+            );
+
+            let second_op = read_ppc_request(&mut server_stream, "read second plugin request")?;
+            let mut message_ids = vec![first_op.message_id.clone(), second_op.message_id.clone()];
+            message_ids.sort();
+            assert_eq!(
+                message_ids,
+                vec![
+                    "plugin-hover-concurrent-refresh-a".to_owned(),
+                    "plugin-hover-concurrent-refresh-b".to_owned(),
+                ]
+            );
+            assert_eq!(first_op.op, "plugin.generic.hover");
+            assert_eq!(second_op.op, "plugin.generic.hover");
+            write_ppc_reply_result(
+                &mut server_stream,
+                second_op.message_id,
+                r#"{"success":true,"seq":2}"#,
+            )?;
+            write_ppc_reply_result(
+                &mut server_stream,
+                first_op.message_id,
+                r#"{"success":true,"seq":1}"#,
+            )?;
+            Ok(())
+        }
+    });
+
     let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": generic_service_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
+            "workspace_root": workspace_root.to_string_lossy().into_owned(),
+            "start_services": true
         }),
     });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    daemon
-        .plugin()
-        .register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
 
     let write = daemon.dispatch(&Request {
         op: "sandbox.file.write".to_owned(),
@@ -847,75 +935,6 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
         }),
     });
     assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let (refresh_started_tx, refresh_started_rx) = mpsc::channel();
-    let (continue_refresh_tx, continue_refresh_rx) = mpsc::channel();
-    let server = std::thread::spawn(move || -> TestResult {
-        let mut refresh_types = Vec::new();
-        let mut current_manifest_key = String::new();
-        let first_op = loop {
-            let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-            if request.op != WORKSPACE_SNAPSHOT_REFRESH_OP {
-                break request;
-            }
-            let body: Value = serde_json::from_str(&request.body)?;
-            let refresh_type =
-                value_str(&body["type"], "refresh type must be a string")?.to_owned();
-            if refresh_types.is_empty() {
-                assert_eq!(refresh_type, "prepare_refresh");
-                refresh_started_tx.send(())?;
-                continue_refresh_rx.recv_timeout(Duration::from_secs(1))?;
-            }
-            refresh_types.push(refresh_type);
-            if let Some(key) = body
-                .get("target_manifest_key")
-                .or_else(|| body.get("manifest_key"))
-                .and_then(Value::as_str)
-            {
-                current_manifest_key = key.to_owned();
-            }
-            let refresh_reply = json!({
-                "manifest_key": current_manifest_key,
-                "accepted": true
-            });
-            write_ppc_reply_json_result(&mut server_stream, request.message_id, &refresh_reply)?;
-        };
-        assert_eq!(
-            refresh_types,
-            vec![
-                "prepare_refresh".to_owned(),
-                "quiesce".to_owned(),
-                "swap_workspace".to_owned(),
-                "notify_refresh".to_owned(),
-                "resume".to_owned(),
-                "health".to_owned(),
-            ]
-        );
-
-        let second_op = read_ppc_request(&mut server_stream, "read second plugin request")?;
-        let mut message_ids = vec![first_op.message_id.clone(), second_op.message_id.clone()];
-        message_ids.sort();
-        assert_eq!(
-            message_ids,
-            vec![
-                "plugin-hover-concurrent-refresh-a".to_owned(),
-                "plugin-hover-concurrent-refresh-b".to_owned(),
-            ]
-        );
-        assert_eq!(first_op.op, "plugin.generic.hover");
-        assert_eq!(second_op.op, "plugin.generic.hover");
-        write_ppc_reply_result(
-            &mut server_stream,
-            second_op.message_id,
-            r#"{"success":true,"seq":2}"#,
-        )?;
-        write_ppc_reply_result(
-            &mut server_stream,
-            first_op.message_id,
-            r#"{"success":true,"seq":1}"#,
-        )?;
-        Ok(())
-    });
 
     let first_daemon = Arc::clone(&daemon);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
@@ -956,6 +975,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
         1
     );
     join_test_thread(server, "server thread panicked")?;
+    let _ = std::fs::remove_dir_all(socket_root);
     remove_test_tree(&layer_stack_root)?;
     Ok(())
 }
@@ -1123,23 +1143,73 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
 
 #[test]
 fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestResult {
-    let daemon = TestDaemon::new();
+    let socket_root = test_socket_root("self-managed-refresh");
+    let daemon = TestDaemon::with_ppc_root(&socket_root);
     let (layer_stack_root, workspace_root) = test_bound_workspace("self-managed-refresh")?;
+    let mut manifest = generic_self_managed_manifest("digest-a", "apply");
+    manifest["services"][0]["command"] = json!([
+        "/bin/sh",
+        "-c",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
+    ]);
+
+    let server = std::thread::spawn({
+        let socket_root = socket_root.clone();
+        move || -> TestResult {
+            let mut server_stream = connect_ppc_socket(&socket_root)?;
+            let mut refresh_types = Vec::new();
+            let mut current_manifest_key = String::new();
+            loop {
+                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
+                if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
+                    let body: Value = serde_json::from_str(&request.body)?;
+                    refresh_types.push(
+                        value_str(&body["type"], "refresh type must be a string")?.to_owned(),
+                    );
+                    if let Some(key) = body
+                        .get("target_manifest_key")
+                        .or_else(|| body.get("manifest_key"))
+                        .and_then(Value::as_str)
+                    {
+                        current_manifest_key = key.to_owned();
+                    }
+                    let refresh_reply = json!({
+                        "manifest_key": current_manifest_key,
+                        "accepted": true
+                    });
+                    write_ppc_reply_json_result(
+                        &mut server_stream,
+                        request.message_id,
+                        &refresh_reply,
+                    )?;
+                    continue;
+                }
+
+                assert_eq!(request.message_id, "plugin-apply-after-peer-write");
+                assert_eq!(request.op, "plugin.generic.apply");
+                assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
+                assert!(refresh_types.contains(&"swap_workspace".to_owned()));
+                assert!(refresh_types.contains(&"health".to_owned()));
+                write_ppc_reply_result(
+                    &mut server_stream,
+                    request.message_id,
+                    r#"{"success":true,"self_managed_after_refresh":true}"#,
+                )?;
+                break Ok(());
+            }
+        }
+    });
     let ensure = daemon.dispatch(&Request {
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": generic_self_managed_manifest("digest-a", "apply"),
+            "manifest": manifest,
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
+            "workspace_root": workspace_root.to_string_lossy().into_owned(),
+            "start_services": true
         }),
     });
-    assert_eq!(ensure["success"], true);
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    daemon
-        .plugin()
-        .register_ppc_client_for_tests("plugin.generic.apply", client_stream)?;
+    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
 
     let write = daemon.dispatch(&Request {
         op: "sandbox.file.write".to_owned(),
@@ -1151,48 +1221,6 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
         }),
     });
     assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let server = std::thread::spawn(move || -> TestResult {
-        let mut refresh_types = Vec::new();
-        let mut current_manifest_key = String::new();
-        loop {
-            let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-            if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
-                let body: Value = serde_json::from_str(&request.body)?;
-                refresh_types
-                    .push(value_str(&body["type"], "refresh type must be a string")?.to_owned());
-                if let Some(key) = body
-                    .get("target_manifest_key")
-                    .or_else(|| body.get("manifest_key"))
-                    .and_then(Value::as_str)
-                {
-                    current_manifest_key = key.to_owned();
-                }
-                let refresh_reply = json!({
-                    "manifest_key": current_manifest_key,
-                    "accepted": true
-                });
-                write_ppc_reply_json_result(
-                    &mut server_stream,
-                    request.message_id,
-                    &refresh_reply,
-                )?;
-                continue;
-            }
-
-            assert_eq!(request.message_id, "plugin-apply-after-peer-write");
-            assert_eq!(request.op, "plugin.generic.apply");
-            assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
-            assert!(refresh_types.contains(&"swap_workspace".to_owned()));
-            assert!(refresh_types.contains(&"health".to_owned()));
-            write_ppc_reply_result(
-                &mut server_stream,
-                request.message_id,
-                r#"{"success":true,"self_managed_after_refresh":true}"#,
-            )?;
-            break Ok(());
-        }
-    });
 
     let routed = daemon.dispatch(&Request {
         op: "plugin.generic.apply".to_owned(),
@@ -1213,6 +1241,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
         1
     );
     join_test_thread(server, "server thread panicked")?;
+    let _ = std::fs::remove_dir_all(socket_root);
     remove_test_tree(&layer_stack_root)?;
     Ok(())
 }

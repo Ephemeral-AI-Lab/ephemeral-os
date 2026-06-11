@@ -221,7 +221,15 @@ fn try_prepare_overlay_worktree(
         },
     ) {
         Ok(mount) => mount,
+        // No overlayfs, or no mount capability in this environment (e.g. an
+        // unprivileged test run): fall back to the projection worktree.
         Err(OverlayError::Unsupported) => {
+            let _ = std::fs::remove_dir_all(&run_dir);
+            return Ok(None);
+        }
+        Err(OverlayError::MountSyscall { source, .. })
+            if source.kind() == std::io::ErrorKind::PermissionDenied =>
+        {
             let _ = std::fs::remove_dir_all(&run_dir);
             return Ok(None);
         }

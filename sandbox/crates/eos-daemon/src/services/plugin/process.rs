@@ -1,33 +1,28 @@
 //! Plugin service process *lifecycle* — the daemon's impure half over the
 //! host-neutral [`PluginProcessSpec`] launch contract (`eos_plugin_runtime::route`).
 //!
-//! The daemon owns spawning the live child (overlay/namespace runner included),
-//! the PPC accept handshake, and teardown (`Drop` = `killpg`). The spec data,
-//! env construction, and socket-path derivation live host-side.
+//! This module owns the PPC accept handshake, the run-request shapes for
+//! overlay-backed services, and teardown (`Drop` = `killpg`). The ns-runner
+//! binary identity lives behind the injected
+//! [`crate::runtime::ns_runner::NsRunnerLauncher`]; the spec data, env
+//! construction, and socket-path derivation live host-side.
 
 use std::io::ErrorKind;
-#[cfg(not(test))]
-use std::io::Write;
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-#[cfg(not(test))]
-use eos_namespace::protocol::Intent;
-#[cfg(not(test))]
-use eos_namespace::protocol::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
-use eos_plugin_runtime::route::PluginProcessSpec;
-#[cfg(not(test))]
-use eos_plugin_runtime::route::ENV_PLUGIN_WORKSPACE_MOUNTED;
+use eos_namespace::protocol::{Intent, RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use eos_plugin::PluginError;
+use eos_plugin_runtime::route::{PluginProcessSpec, ENV_PLUGIN_WORKSPACE_MOUNTED};
 use eos_plugin_runtime::PpcClient;
 use serde::Serialize;
-#[cfg(not(test))]
 use serde_json::json;
 
 use crate::error::DaemonError;
 use crate::invocation_registry::terminate_process_group;
+use crate::runtime::ns_runner::NsRunnerLauncher;
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginServiceOverlay {
@@ -38,12 +33,16 @@ pub(super) struct PluginServiceOverlay {
 }
 
 pub(super) fn spawn_connected_with_overlay(
+    launcher: &dyn NsRunnerLauncher,
     spec: &PluginProcessSpec,
     overlay: Option<&PluginServiceOverlay>,
     timeout: Duration,
 ) -> Result<(PluginServiceProcess, PpcClient), DaemonError> {
     let listener = bind_ppc_listener(&spec.socket_path)?;
-    let mut process = spawn_for_overlay(spec, overlay)?;
+    let mut process = match overlay {
+        Some(overlay) => spawn_overlay_runner(launcher, spec, overlay)?,
+        None => spawn(spec)?,
+    };
     match accept_ppc_client(&listener, &mut process, timeout) {
         Ok(client) => Ok((process, client)),
         Err(err) => {
@@ -71,69 +70,19 @@ pub(super) fn spawn(spec: &PluginProcessSpec) -> Result<PluginServiceProcess, Da
         command.process_group(0);
     }
     let child = command.spawn()?;
-    let process_group_id = i32::try_from(child.id()).ok();
-    Ok(PluginServiceProcess {
-        spec: spec.clone(),
-        child,
-        process_group_id,
-        torn_down: false,
-    })
+    Ok(PluginServiceProcess::from_child(spec.clone(), child))
 }
 
-fn spawn_for_overlay(
-    spec: &PluginProcessSpec,
-    overlay: Option<&PluginServiceOverlay>,
-) -> Result<PluginServiceProcess, DaemonError> {
-    if let Some(overlay) = overlay {
-        return spawn_overlay_runner(spec, overlay);
-    }
-    spawn(spec)
-}
-
-#[cfg(not(test))]
 fn spawn_overlay_runner(
+    launcher: &dyn NsRunnerLauncher,
     spec: &PluginProcessSpec,
     overlay: &PluginServiceOverlay,
 ) -> Result<PluginServiceProcess, DaemonError> {
     let request = overlay_run_request(spec, overlay);
-    let payload = serde_json::to_vec(&request)
-        .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
-    let mut command = Command::new(std::env::current_exe()?);
-    command
-        .arg("ns-runner")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    {
-        use std::os::unix::process::CommandExt;
-        command.process_group(0);
-    }
-    let mut child = command.spawn()?;
-    child
-        .stdin
-        .as_mut()
-        .ok_or_else(|| DaemonError::InvalidEnvelope("ns-runner stdin unavailable".to_owned()))?
-        .write_all(&payload)?;
-    drop(child.stdin.take());
-    let process_group_id = i32::try_from(child.id()).ok();
-    Ok(PluginServiceProcess {
-        spec: spec.clone(),
-        child,
-        process_group_id,
-        torn_down: false,
-    })
+    let child = launcher.spawn_detached(&request)?;
+    Ok(PluginServiceProcess::from_child(spec.clone(), child))
 }
 
-#[cfg(test)]
-fn spawn_overlay_runner(
-    spec: &PluginProcessSpec,
-    overlay: &PluginServiceOverlay,
-) -> Result<PluginServiceProcess, DaemonError> {
-    let _ = (&overlay.layer_paths, &overlay.upperdir, &overlay.workdir);
-    spawn(spec)
-}
-
-#[cfg(not(test))]
 fn overlay_run_request(spec: &PluginProcessSpec, overlay: &PluginServiceOverlay) -> RunRequest {
     let mut env = spec.environment();
     env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "1".to_owned());
@@ -183,6 +132,16 @@ pub(super) struct PluginServiceProcess {
 }
 
 impl PluginServiceProcess {
+    fn from_child(spec: PluginProcessSpec, child: Child) -> Self {
+        let process_group_id = i32::try_from(child.id()).ok();
+        Self {
+            spec,
+            child,
+            process_group_id,
+            torn_down: false,
+        }
+    }
+
     pub(super) fn pid(&self) -> u32 {
         self.child.id()
     }
@@ -225,8 +184,10 @@ impl Drop for PluginServiceProcess {
     }
 }
 
-#[cfg(not(test))]
+/// Remount the service's workspace overlay inside the running child's
+/// namespaces (the refresh swap step).
 pub(super) fn remount_workspace_overlay(
+    launcher: &dyn NsRunnerLauncher,
     target_pid: u32,
     workspace_root: &str,
     overlay: &PluginServiceOverlay,
@@ -250,89 +211,9 @@ pub(super) fn remount_workspace_overlay(
         cgroup_path: None,
         timeout_seconds: None,
     };
-    let payload = serde_json::to_vec(&request)
-        .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
-    let mut command = Command::new("nsenter");
-    command
-        .arg("-t")
-        .arg(target_pid.to_string())
-        .arg("-U")
-        .arg("-m")
-        .arg("--preserve-credentials")
-        .arg("--")
-        .arg(std::env::current_exe()?)
-        .arg("ns-runner")
-        .arg("--remount-overlay")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped());
-    #[cfg(unix)]
-    {
-        use std::os::unix::process::CommandExt;
-        command.process_group(0);
-    }
-    let mut child = command.spawn().map_err(|err| {
-        DaemonError::OverlayPipeline(format!(
-            "failed to spawn nsenter for plugin service remount: {err}"
-        ))
-    })?;
-    child
-        .stdin
-        .as_mut()
-        .ok_or_else(|| DaemonError::OverlayPipeline("nsenter stdin unavailable".to_owned()))?
-        .write_all(&payload)?;
-    drop(child.stdin.take());
-    let output = wait_for_helper(child, timeout, "plugin service remount")?;
-    if output.status.success() {
-        return Ok(());
-    }
-    Err(DaemonError::OverlayPipeline(format!(
-        "plugin service remount failed with status {}: {}",
-        output.status,
-        String::from_utf8_lossy(&output.stderr).trim()
-    )))
-}
-
-#[cfg(test)]
-// Keep the same fallible signature as the real remount path so refresh callers
-// stay cfg-free; test builds only validate overlay metadata plumbing.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "test parity keeps the real fallible helper signature"
-)]
-pub(super) const fn remount_workspace_overlay(
-    _target_pid: u32,
-    _workspace_root: &str,
-    _overlay: &PluginServiceOverlay,
-    _timeout: Duration,
-) -> Result<(), DaemonError> {
-    Ok(())
-}
-
-#[cfg(not(test))]
-fn wait_for_helper(
-    mut child: Child,
-    timeout: Duration,
-    label: &str,
-) -> Result<std::process::Output, DaemonError> {
-    let process_group_id = i32::try_from(child.id()).ok();
-    let deadline = Instant::now() + timeout;
-    loop {
-        if child.try_wait()?.is_some() {
-            return child.wait_with_output().map_err(DaemonError::from);
-        }
-        if Instant::now() >= deadline {
-            terminate_process_group(process_group_id);
-            let _ = child.kill();
-            let output = child.wait_with_output()?;
-            return Err(DaemonError::OverlayPipeline(format!(
-                "{label} timed out after {:.3}s: {}",
-                timeout.as_secs_f64(),
-                String::from_utf8_lossy(&output.stderr).trim()
-            )));
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    }
+    launcher
+        .remount_in(target_pid, &request, timeout)
+        .map_err(DaemonError::from)
 }
 
 fn bind_ppc_listener(socket_path: &Path) -> Result<UnixListener, DaemonError> {
@@ -381,50 +262,6 @@ fn accept_ppc_client(
         }
         std::thread::sleep(Duration::from_millis(10));
     }
-}
-
-#[cfg(test)]
-fn new_spec_for_test(
-    key: eos_plugin::PluginServiceKey,
-    command: Vec<String>,
-    ppc_protocol_version: u32,
-) -> Result<PluginProcessSpec, PluginError> {
-    let socket_root = eos_config::configs::daemon::PluginRuntimeConfig::default().ppc_root;
-    new_spec_with_socket_root(key, command, ppc_protocol_version, socket_root)
-}
-
-#[cfg(test)]
-fn new_spec_with_socket_root(
-    key: eos_plugin::PluginServiceKey,
-    command: Vec<String>,
-    ppc_protocol_version: u32,
-    socket_root: impl AsRef<Path>,
-) -> Result<PluginProcessSpec, PluginError> {
-    let package_root = default_package_root(&key);
-    let dependency_root = default_dependency_root(&key);
-    PluginProcessSpec::new_with_package_paths(
-        key,
-        command,
-        package_root,
-        dependency_root,
-        PathBuf::from("."),
-        ppc_protocol_version,
-        socket_root,
-    )
-}
-
-#[cfg(test)]
-fn default_package_root(key: &eos_plugin::PluginServiceKey) -> PathBuf {
-    PathBuf::from("/eos/runtime/plugins/catalog")
-        .join(&key.plugin_id)
-        .join(&key.plugin_digest)
-}
-
-#[cfg(test)]
-fn default_dependency_root(key: &eos_plugin::PluginServiceKey) -> PathBuf {
-    PathBuf::from("/eos/runtime/packages")
-        .join(&key.plugin_id)
-        .join(&key.plugin_digest)
 }
 
 #[cfg(test)]

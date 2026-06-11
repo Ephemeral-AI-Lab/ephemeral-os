@@ -7,7 +7,7 @@
 use eos_namespace::protocol::Intent;
 use serde_json::{json, Value};
 
-use super::overlay::{dispatch_oneshot_overlay_route, PluginOverlayOutcome};
+use super::overlay::PluginOverlayOutcome;
 use super::state::PluginRuntime;
 use crate::error::DaemonError;
 use eos_plugin_runtime::route::PluginOperationRoute;
@@ -62,7 +62,7 @@ impl PluginRuntime {
             }
         }
         if route.intent == Intent::WriteAllowed && route.auto_workspace_overlay {
-            if let Some(outcome) = dispatch_oneshot_overlay_route(route, invocation_id, args)? {
+            if let Some(outcome) = self.dispatch_oneshot_overlay_route(route, invocation_id, args)? {
                 return Ok(PluginDispatchOutcome::OneshotOverlay(Box::new(outcome)));
             }
         }

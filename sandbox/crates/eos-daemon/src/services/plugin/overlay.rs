@@ -17,9 +17,10 @@ use eos_namespace::protocol::{RunMode, RunRequest, RunResult, ToolCall, Workspac
 use eos_plugin::ServiceMode;
 use serde_json::{json, Value};
 
+use super::state::PluginRuntime;
 use crate::error::DaemonError;
 use crate::response::{u64_to_f64_saturating, TreeResourceStats};
-use crate::runtime::ns_runner::run_ns_runner_child;
+use crate::runtime::ns_runner::NsRunnerLauncher;
 
 use eos_plugin_runtime::route::PluginOperationRoute;
 
@@ -35,11 +36,13 @@ struct PluginOverlayCommand {
     timeout_seconds: Option<f64>,
 }
 
-pub(crate) fn dispatch_oneshot_overlay_route(
-    route: &PluginOperationRoute,
-    invocation_id: &str,
-    args: &Value,
-) -> Result<Option<PluginOverlayOutcome>, DaemonError> {
+impl PluginRuntime {
+    pub(super) fn dispatch_oneshot_overlay_route(
+        &self,
+        route: &PluginOperationRoute,
+        invocation_id: &str,
+        args: &Value,
+    ) -> Result<Option<PluginOverlayOutcome>, DaemonError> {
     if route.service_mode != Some(ServiceMode::OneshotOverlay) {
         return Ok(None);
     }
@@ -97,7 +100,12 @@ pub(crate) fn dispatch_oneshot_overlay_route(
         env,
         timeout_seconds,
     };
-    Ok(Some(run_plugin_overlay_command(&overlay_command, args)?))
+        Ok(Some(run_plugin_overlay_command(
+            &*self.launcher,
+            &overlay_command,
+            args,
+        )?))
+    }
 }
 
 /// Typed result of one oneshot plugin overlay run; the `ops::plugin` adapter
@@ -115,6 +123,7 @@ pub(crate) struct PluginOverlayOutcome {
 }
 
 fn run_plugin_overlay_command(
+    launcher: &dyn NsRunnerLauncher,
     spec: &PluginOverlayCommand,
     args: &Value,
 ) -> Result<PluginOverlayOutcome, DaemonError> {
@@ -131,12 +140,13 @@ fn run_plugin_overlay_command(
         spec.caller_id, spec.invocation_id
     ))?;
     let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
-    let run_result = run_plugin_overlay_once(spec, args, &binding, &lease, lease_acquire_s);
+    let run_result = run_plugin_overlay_once(launcher, spec, args, &binding, &lease, lease_acquire_s);
     let _ = stack.release_lease(&lease.lease_id);
     run_result
 }
 
 fn run_plugin_overlay_once(
+    launcher: &dyn NsRunnerLauncher,
     spec: &PluginOverlayCommand,
     args: &Value,
     binding: &WorkspaceBinding,
@@ -151,7 +161,7 @@ fn run_plugin_overlay_once(
 
     let request =
         plugin_overlay_run_request(spec, binding, lease, &dirs, &request_path, &result_path);
-    let runner = run_ns_runner_child(&request, None)?;
+    let runner = launcher.run(&request)?;
     let plugin_result = read_plugin_overlay_result(&result_path)?;
     let captured = capture_upperdir(&dirs.upperdir)
         .map_err(|err| DaemonError::OverlayPipeline(err.to_string()))?;

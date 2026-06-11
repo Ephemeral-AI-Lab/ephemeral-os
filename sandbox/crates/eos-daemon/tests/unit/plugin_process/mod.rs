@@ -4,6 +4,7 @@
 //! reach the `pub(super)` spec/process types and `ENV_*` constants.
 
 use super::*;
+use crate::runtime::ns_runner::DaemonNsRunnerLauncher;
 use eos_plugin_runtime::route::{
     ENV_PLUGIN_DEPENDENCY_ROOT, ENV_PLUGIN_ID, ENV_PLUGIN_LAYER_STACK_ROOT,
     ENV_PLUGIN_PACKAGE_ROOT, ENV_PLUGIN_PPC_PROTOCOL_VERSION, ENV_PLUGIN_PPC_SOCKET,
@@ -116,8 +117,9 @@ fn spawn_connected_accepts_ppc_socket() -> TestResult {
         std::os::unix::net::UnixStream::connect(socket).map(|_| ())
     });
 
+    let launcher = DaemonNsRunnerLauncher::default();
     let (mut process, _client) =
-        match spawn_connected_with_overlay(&spec, None, Duration::from_secs(5)) {
+        match spawn_connected_with_overlay(&launcher, &spec, None, Duration::from_secs(5)) {
             Ok(pair) => pair,
             Err(err) => {
                 let _ = connector.join();
@@ -133,6 +135,38 @@ fn spawn_connected_accepts_ppc_socket() -> TestResult {
     process.teardown();
     let _ = std::fs::remove_dir_all(root);
     Ok(())
+}
+
+fn new_spec_for_test(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+) -> Result<PluginProcessSpec, PluginError> {
+    let socket_root = eos_config::configs::daemon::PluginRuntimeConfig::default().ppc_root;
+    new_spec_with_socket_root(key, command, ppc_protocol_version, socket_root)
+}
+
+fn new_spec_with_socket_root(
+    key: eos_plugin::PluginServiceKey,
+    command: Vec<String>,
+    ppc_protocol_version: u32,
+    socket_root: impl AsRef<Path>,
+) -> Result<PluginProcessSpec, PluginError> {
+    let package_root = PathBuf::from("/eos/runtime/plugins/catalog")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest);
+    let dependency_root = PathBuf::from("/eos/runtime/packages")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest);
+    PluginProcessSpec::new_with_package_paths(
+        key,
+        command,
+        package_root,
+        dependency_root,
+        PathBuf::from("."),
+        ppc_protocol_version,
+        socket_root,
+    )
 }
 
 fn test_socket_root(name: &str) -> PathBuf {

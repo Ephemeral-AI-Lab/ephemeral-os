@@ -318,6 +318,7 @@ impl PluginRuntime {
         };
         let target_pid = self.service_process_pid(service_instance_id)?;
         process::remount_workspace_overlay(
+            &*self.launcher,
             target_pid,
             &service_key.workspace_root,
             overlay,

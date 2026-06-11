@@ -6,7 +6,6 @@ use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
 use eos_plugin::{PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus};
 
 use crate::error::DaemonError;
-#[cfg(not(test))]
 use eos_ephemeral_workspace::overlay_run_dirs;
 
 use super::process::PluginServiceOverlay;
@@ -53,6 +52,7 @@ impl PluginRuntime {
         for spec in specs {
             let snapshot = acquire_service_snapshot(&spec.key, "start")?;
             let (process, client) = match super::process::spawn_connected_with_overlay(
+                &*self.launcher,
                 spec,
                 snapshot.overlay.as_ref(),
                 Duration::from_millis(self.config.service_probe_timeout_ms),
@@ -279,7 +279,6 @@ fn service_snapshot_from_lease(layer_stack_root: &str, lease: Lease) -> PluginSe
     }
 }
 
-#[cfg(not(test))]
 fn service_overlay_for_snapshot(
     key: &PluginServiceKey,
     snapshot: &PluginServiceSnapshot,
@@ -295,20 +294,6 @@ fn service_overlay_for_snapshot(
         upperdir: dirs.upperdir,
         workdir: dirs.workdir,
     }))
-}
-
-#[cfg(test)]
-// Keep the same fallible signature as the real path so service snapshot setup
-// remains cfg-free for callers; test builds do not allocate overlay dirs.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "test parity keeps the real fallible helper signature"
-)]
-const fn service_overlay_for_snapshot(
-    _key: &PluginServiceKey,
-    _snapshot: &PluginServiceSnapshot,
-) -> Result<Option<PluginServiceOverlay>, DaemonError> {
-    Ok(None)
 }
 
 fn manifest_key(version: i64, root_hash: &str) -> String {

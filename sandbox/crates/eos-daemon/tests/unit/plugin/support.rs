@@ -5,6 +5,7 @@ use super::super::PluginRuntime;
 
 use crate::dispatcher::OpTable;
 use crate::runtime::context::DispatchContext;
+use crate::runtime::ns_runner::{LaunchError, NsRunnerLauncher};
 use crate::runtime::services::Services;
 use crate::wire::Request;
 use eos_config::configs::daemon::PluginRuntimeConfig;
@@ -31,21 +32,24 @@ pub(super) struct TestDaemon {
 
 impl TestDaemon {
     pub(super) fn new() -> Self {
-        Self::with_services(Services::default())
+        Self::with_services_config(
+            PluginRuntimeConfig::default(),
+            IsolatedWorkspaceConfig::default(),
+        )
     }
 
     pub(super) fn with_ppc_root(ppc_root: &Path) -> Self {
-        Self::with_services(Services::new(
+        Self::with_services_config(
             PluginRuntimeConfig {
                 ppc_root: ppc_root.to_path_buf(),
                 ..PluginRuntimeConfig::default()
             },
             IsolatedWorkspaceConfig::default(),
-        ))
+        )
     }
 
     pub(super) fn with_isolated_workspace(scratch_root: &Path, workspace_root: &Path) -> Self {
-        Self::with_services(Services::new(
+        Self::with_services_config(
             PluginRuntimeConfig::default(),
             IsolatedWorkspaceConfig {
                 enabled: true,
@@ -53,13 +57,20 @@ impl TestDaemon {
                 workspace_root: workspace_root.to_path_buf(),
                 ..IsolatedWorkspaceConfig::default()
             },
-        ))
+        )
     }
 
-    fn with_services(services: Services) -> Self {
+    fn with_services_config(
+        plugin: PluginRuntimeConfig,
+        isolated_workspace: IsolatedWorkspaceConfig,
+    ) -> Self {
         Self {
             table: OpTable::with_builtins(),
-            services,
+            services: Services::with_ns_runner_launcher(
+                plugin,
+                isolated_workspace,
+                std::sync::Arc::new(FakeNsRunnerLauncher),
+            ),
         }
     }
 
@@ -84,6 +95,57 @@ impl TestDaemon {
 
     pub(super) fn dispatch(&self, request: &Request) -> Value {
         self.table.dispatch_with_context(request, self.context())
+    }
+}
+
+/// Launcher fake: spawns the service command from the run request directly
+/// (no ns-runner binary, no namespaces) and treats remounts as no-ops.
+pub(super) struct FakeNsRunnerLauncher;
+
+impl NsRunnerLauncher for FakeNsRunnerLauncher {
+    fn run(
+        &self,
+        _request: &eos_namespace::protocol::RunRequest,
+    ) -> Result<eos_namespace::protocol::RunResult, LaunchError> {
+        Err(LaunchError::Failed(
+            "fake launcher cannot run oneshot overlay requests".to_owned(),
+        ))
+    }
+
+    fn spawn_detached(
+        &self,
+        request: &eos_namespace::protocol::RunRequest,
+    ) -> Result<std::process::Child, LaunchError> {
+        let args = &request.tool_call.args;
+        let command: Vec<String> = serde_json::from_value(args["command"].clone())
+            .map_err(|err| LaunchError::InvalidRequest(err.to_string()))?;
+        let env: std::collections::BTreeMap<String, String> =
+            serde_json::from_value(args["env"].clone())
+                .map_err(|err| LaunchError::InvalidRequest(err.to_string()))?;
+        let (program, rest) = command
+            .split_first()
+            .ok_or_else(|| LaunchError::InvalidRequest("empty service command".to_owned()))?;
+        let mut child = std::process::Command::new(program);
+        child
+            .args(rest)
+            .envs(env)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        {
+            use std::os::unix::process::CommandExt;
+            child.process_group(0);
+        }
+        Ok(child.spawn()?)
+    }
+
+    fn remount_in(
+        &self,
+        _target_pid: u32,
+        _request: &eos_namespace::protocol::RunRequest,
+        _timeout: Duration,
+    ) -> Result<(), LaunchError> {
+        Ok(())
     }
 }
 
@@ -377,7 +439,9 @@ fn wait_for_socket(root: &Path) -> Result<PathBuf, std::io::Error> {
     }
 }
 
-fn connect_ppc_socket(root: &Path) -> Result<std::os::unix::net::UnixStream, std::io::Error> {
+pub(super) fn connect_ppc_socket(
+    root: &Path,
+) -> Result<std::os::unix::net::UnixStream, std::io::Error> {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         if let Ok(entries) = std::fs::read_dir(root) {
