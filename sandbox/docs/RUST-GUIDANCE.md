@@ -120,7 +120,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   `[workspace.dependencies]`; crates use `dep.workspace = true`. Internal crates are path deps.
 - `proj-lib-main-split`: `eosd/src/main.rs` is subcommand dispatch only; all logic in libraries.
 - **The dependency edges ARE the architecture.** The single sharpest invariant —
-  *isolated captures writes for audit but NEVER publishes* — is encoded by **`eos-isolated`'s
+  *isolated keeps writes private and NEVER publishes* — is encoded by **`eos-isolated`'s
   `Cargo.toml` not listing `eos-occ`**. `eos-plugin` is even narrower now:
   it is a pure contract/PPC crate, while snapshot/overlay/publish/process
   behavior stays daemon-owned. Verified edges (get these EXACTLY right):
@@ -137,8 +137,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates define only
   the narrow ports they actually consume (for example `OccRouteProvider` in `eos-occ` and
   `LayerStackSnapshotPort`/`NamespaceRuntimePort` in `eos-isolated`); `eos-daemon` owns the concrete
-  caches and injections. The audit *schema* (pure dataclasses) moves into `eos-protocol`; the impure
-  `safe_emit`/`safe_record_phase` stay in `eos-daemon` (partial severing).
+  caches and injections.
 
 ---
 

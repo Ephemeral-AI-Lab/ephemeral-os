@@ -1,14 +1,16 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use eos_e2e_test::cas::looks_like_sha256;
 use eos_e2e_test::next_invocation_id;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases};
+use crate::support::{
+    as_bool, as_i64, as_str, live_pool_or_skip, settle_foreground_command, wait_for_active_leases,
+};
 
 #[test]
 fn commit_collapses_layers() -> Result<()> {
@@ -89,45 +91,6 @@ fn commit_version_monotonic() -> Result<()> {
     assert!(
         as_i64(&second, "manifest_version")? >= as_i64(&first, "manifest_version")?,
         "commit manifest versions should be monotonic: first={first} second={second}"
-    );
-    Ok(())
-}
-
-#[test]
-fn commit_emits_audit() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": "commit/audit.txt", "content": "audit\n", "overwrite": true}),
-    )?;
-    let mut audit = lease.audit_tap()?;
-    let commit = lease.call_ok(
-        ops::API_COMMIT_TO_WORKSPACE,
-        json!({"workspace_root": lease.workspace_root()}),
-    )?;
-    audit.collect()?;
-    let event = audit
-        .first("layer_stack.commit_completed")
-        .context("layer_stack.commit_completed audit event")?;
-    let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-    assert_eq!(
-        layer_stack
-            .get("manifest_version")
-            .and_then(serde_json::Value::as_i64),
-        commit
-            .get("manifest_version")
-            .and_then(serde_json::Value::as_i64),
-        "commit audit should report response manifest version: {event}"
-    );
-    assert!(
-        layer_stack
-            .get("manifest_root_hash")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(looks_like_sha256),
-        "commit audit should report a CAS-shaped root hash: {event}"
     );
     Ok(())
 }
@@ -214,6 +177,9 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
     )?;
+    // Under x86-on-arm64 emulation a quick command can outlast its yield window
+    // and return `running`; settle it before asserting the terminal outcome.
+    let overlay = settle_foreground_command(&lease, overlay, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
 
     let commit = lease.call_ok(
@@ -238,6 +204,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
             "yield_time_ms": 1000,
             "timeout_seconds": 10,}),
     )?;
+    let check = settle_foreground_command(&lease, check, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(
         as_str(&check, "status")?,
         "ok",
@@ -264,12 +231,10 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
         json!({"workspace_root": lease.workspace_root()}),
     )?;
 
-    let mut audit = lease.audit_tap()?;
     let first = rebuild_workspace_base(&lease)?;
     let first_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     let second = rebuild_workspace_base(&lease)?;
     let second_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
-    audit.collect()?;
 
     assert_rebuild_response(&first)?;
     assert_rebuild_response(&second)?;
@@ -287,16 +252,6 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
 
     let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
     assert_eq!(as_str(&read, "content")?, content);
-
-    let built_events = audit.all("workspace_base.built");
-    assert!(
-        built_events.len() >= 2,
-        "two reset rebuilds should emit workspace_base.built audit events: {:?}",
-        audit.events()
-    );
-    for event in built_events.into_iter().rev().take(2) {
-        assert_workspace_base_built_event(event)?;
-    }
     Ok(())
 }
 
@@ -385,35 +340,6 @@ fn assert_rebuilt_base_metrics(metrics: &Value) -> Result<()> {
     assert!(
         as_i64(metrics, "storage_bytes")? > 0,
         "base rebuild should expose nonzero stack storage bytes: {metrics}"
-    );
-    Ok(())
-}
-
-fn assert_workspace_base_built_event(event: &Value) -> Result<()> {
-    let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-    assert_eq!(
-        layer_stack.get("manifest_version").and_then(Value::as_i64),
-        Some(1),
-        "workspace_base.built audit should report rebuilt manifest version: {event}"
-    );
-    assert_eq!(
-        layer_stack.get("layer_count").and_then(Value::as_i64),
-        Some(1),
-        "workspace_base.built audit should report a single rebuilt layer: {event}"
-    );
-    assert!(
-        layer_stack
-            .get("manifest_root_hash")
-            .and_then(Value::as_str)
-            .is_some_and(looks_like_sha256),
-        "workspace_base.built audit should report a CAS-shaped manifest hash: {event}"
-    );
-    assert!(
-        layer_stack
-            .get("total_ms")
-            .and_then(Value::as_f64)
-            .is_some_and(|total_ms| total_ms >= 0.0),
-        "workspace_base.built audit should report nonnegative total_ms: {event}"
     );
     Ok(())
 }

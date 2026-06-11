@@ -7,8 +7,7 @@
 //! newline-delimited compact-JSON protocol-v1 RPC server on an `AF_UNIX` socket
 //! AND a 127.0.0.1 TCP listener ([`DaemonServer`]), routes ops through the
 //! [`dispatcher`] op table, tracks in-flight invocations with a TTL reaper
-//! ([`invocation_registry`]), houses the audit RING BUFFER plus the impure emit
-//! bridges ([`audit`]), and orchestrates background execution.
+//! ([`invocation_registry`]), and orchestrates background execution.
 //!
 //! It ORCHESTRATES but NEVER enters a namespace. The kernel requires the
 //! `unshare(CLONE_NEWUSER)` / `setns`-into-a-userns caller to be single-threaded,
@@ -16,8 +15,8 @@
 //! single-threaded `eosd ns-holder` / `eosd ns-runner` children and wires their
 //! pinned namespace FDs in — it does the namespace syscalls only by delegation.
 //!
-//! Op handlers live with their feature modules — [`audit`], [`checkpoint`],
-//! [`control`], [`plugins`], and [`workspace`] — and [`dispatch::registry`] is
+//! Op handlers live with their feature modules — [`checkpoint`], [`control`],
+//! [`plugins`], and [`workspace`] — and [`dispatch::registry`] is
 //! the single table binding wire op names to those handlers. [`overlay`] is
 //! the shared substrate seam over the sibling crates. Write-capable
 //! shared-workspace operations route through `eos_layerstack::service`, the
@@ -33,7 +32,6 @@
 //!
 #![forbid(unsafe_code)]
 
-pub(crate) mod audit;
 pub(crate) mod checkpoint;
 pub(crate) mod control;
 pub(crate) mod dispatch;

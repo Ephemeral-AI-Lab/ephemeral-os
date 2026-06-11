@@ -9,21 +9,6 @@ use serde_json::{json, Value};
 use crate::support::{as_bool, as_str, live_pool_or_skip, reset_isolated_workspaces};
 
 #[test]
-fn audit_reset_floor_is_live_and_config_gated() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-
-    let reset = lease.call_ok(ops::API_AUDIT_RESET_FLOOR, json!({}))?;
-    assert!(
-        as_bool(&reset, "reset")?,
-        "daemon test config should enable audit floor reset: {reset}"
-    );
-    Ok(())
-}
-
-#[test]
 fn isolated_workspace_lifecycle_ops_are_live() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

@@ -5,7 +5,6 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use eos_config::configs::daemon::{MAX_FILE_BYTES, MAX_READ_BYTES};
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use eos_e2e_test::client::error_kind;
 use eos_e2e_test::next_invocation_id;
 use serde_json::{json, Value};
@@ -206,12 +205,12 @@ fn read_max_bytes_guard() -> Result<()> {
 }
 
 #[test]
-fn fast_path_write_edit_emit_no_overlay_or_lease_audit() -> Result<()> {
+fn fast_path_write_publishes_without_holding_a_lease() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let mut audit = lease.audit_tap()?;
+    let before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     lease.call_ok(
         ops::API_V1_WRITE_FILE,
         json!({"path": "fastpath/no-overlay.txt", "content": "x\n", "overwrite": true}),
@@ -223,67 +222,18 @@ fn fast_path_write_edit_emit_no_overlay_or_lease_audit() -> Result<()> {
             "edits": [{"old_text": "x", "new_text": "y", "replace_all": false}]
         }),
     )?;
-    audit.collect()?;
-    // The fast path bypasses the overlay pipeline entirely: no overlay mount is
-    // built and no lease is released, so the overlay/lease lifecycle events that a
-    // foreground exec emits do NOT fire — but the OCC publish still does. (Only
-    // events that the paired positive-contrast test confirms are emitted are
-    // asserted negatively here; `lease_acquired` is gated on a timing the exec
-    // path never produces, so a negative on it would be vacuous.)
+    // The fast path bypasses the overlay pipeline entirely: writes commit
+    // directly through OCC (manifest version advances) without ever taking a
+    // snapshot lease (active_leases stays flat).
+    let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     assert!(
-        !audit.any("layer_stack.lease_released"),
-        "fast-path write/edit must not release a layer lease: {:?}",
-        audit.events()
+        as_i64(&after, "manifest_version")? > as_i64(&before, "manifest_version")?,
+        "fast-path write/edit must publish through OCC: before={before} after={after}"
     );
-    assert!(
-        !audit.any("overlay_workspace.cleanup"),
-        "fast-path write/edit must not build/recycle an overlay: {:?}",
-        audit.events()
-    );
-    assert!(
-        audit.any("occ.publish"),
-        "fast-path write must still publish through OCC: {:?}",
-        audit.events()
-    );
-    Ok(())
-}
-
-#[test]
-fn foreground_exec_emits_lease_and_overlay_audit() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    let mut audit = lease.audit_tap()?;
-    // A foreground exec (completes within the yield, so NO command_session_id)
-    // DOES run the overlay pipeline: lease acquire/release + overlay cleanup.
-    let exec = lease.call_ok(
-        ops::API_V1_EXEC_COMMAND,
-        json!({
-            "cmd": "mkdir -p fastpath && printf hi > fastpath/exec.txt",
-            "yield_time_ms": 1000,
-            "timeout_seconds": 20,}),
-    )?;
-    assert_eq!(as_str(&exec, "status")?, "ok", "exec must complete: {exec}");
-    assert!(
-        exec.get("command_session_id").is_none(),
-        "completed foreground exec must not be a background session: {exec}"
-    );
-    audit.collect()?;
-    assert!(
-        audit.any("layer_stack.lease_released"),
-        "foreground exec must release a layer lease: {:?}",
-        audit.events()
-    );
-    let cleanup = audit
-        .first("overlay_workspace.cleanup")
-        .context("foreground exec must emit overlay_workspace.cleanup")?;
     assert_eq!(
-        section(cleanup, "overlay_workspace")
-            .and_then(|overlay| overlay.get("workspace_mode"))
-            .and_then(Value::as_str),
-        Some("ephemeral"),
-        "overlay cleanup should report ephemeral mode: {cleanup}"
+        as_i64(&after, "active_leases")?,
+        as_i64(&before, "active_leases")?,
+        "fast-path write/edit must not hold a layer lease: {after}"
     );
     Ok(())
 }

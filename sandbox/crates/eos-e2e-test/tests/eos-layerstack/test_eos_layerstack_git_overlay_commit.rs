@@ -1,6 +1,5 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
@@ -17,7 +16,6 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         .container()
         .exec(&["git", "-C", lease.workspace_root(), "init"])
         .context("git init workspace")?;
-    let mut audit = lease.audit_tap()?;
     for version in 0..POST_SQUASH_WRITES {
         lease.call_ok(
             ops::API_V1_WRITE_FILE,
@@ -36,14 +34,13 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
             }),
         )?;
     }
-    audit.collect()?;
-    let squash_completed = audit.count("layer_stack.squash_completed");
+    // 56 publishes against `auto_squash_max_depth: 8` only stays this shallow
+    // if auto-squash folded the stack repeatedly along the way.
+    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     assert!(
-        squash_completed >= 2,
-        "commit_to_git e2e should run after repeated auto-squash; observed {squash_completed}: {:?}",
-        audit.events()
+        as_i64(&metrics, "manifest_depth")? <= 8,
+        "commit_to_git e2e should run after repeated auto-squash bounded the depth: {metrics}"
     );
-    assert_squash_events_reduced_depth(&audit)?;
 
     let commit = lease.call_ok(
         ops::API_COMMIT_TO_GIT,
@@ -108,27 +105,9 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         "path-filtered commit should not include noise files"
     );
     eprintln!(
-        "commit_to_git timing: {} squashes={squash_completed} depth={committed_depth}",
+        "commit_to_git timing: {} depth={committed_depth}",
         timing_report(&commit)?
     );
-    Ok(())
-}
-
-fn assert_squash_events_reduced_depth(audit: &eos_e2e_test::audit::AuditTap) -> Result<()> {
-    for event in audit.all("layer_stack.squash_completed") {
-        let layer_stack = section(event, "layer_stack").context("layer_stack section")?;
-        let input = layer_stack
-            .get("squash_input_layers")
-            .and_then(Value::as_i64)
-            .context("squash_input_layers")?;
-        let output = layer_stack
-            .get("squash_result_layers")
-            .and_then(Value::as_i64)
-            .context("squash_result_layers")?;
-        if output >= input {
-            bail!("squash should reduce layer count: {event}");
-        }
-    }
     Ok(())
 }
 

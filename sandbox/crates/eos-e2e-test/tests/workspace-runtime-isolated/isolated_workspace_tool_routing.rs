@@ -15,9 +15,10 @@ fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
     let lease = pool.acquire()?;
     reset_isolated_workspaces(&lease);
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    // Baseline AFTER enter so enter's own lease_acquired is excluded; the isolated
-    // write must not release a public lease (it writes the private upperdir only).
-    let mut audit = lease.audit_tap()?;
+    // Baseline AFTER enter so its lease is part of the gauge; the isolated write
+    // must not publish or touch the public lease (it writes the private upperdir
+    // only), so both gauges must hold steady across the write.
+    let baseline = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     let body = (|| -> Result<()> {
         let write = lease.call_ok(
             ops::API_V1_WRITE_FILE,
@@ -27,11 +28,14 @@ fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
             !as_bool(&write, "published")?,
             "isolated write must not publish to OCC: {write}"
         );
-        audit.collect()?;
+        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
         ensure!(
-            !audit.any("layer_stack.lease_released"),
-            "isolated write must not release a public layer lease: {:?}",
-            audit.events()
+            as_i64(&metrics, "manifest_version")? == as_i64(&baseline, "manifest_version")?,
+            "isolated write must not publish a new manifest version: {metrics}"
+        );
+        ensure!(
+            as_i64(&metrics, "active_leases")? == as_i64(&baseline, "active_leases")?,
+            "isolated write must not release a public layer lease: {metrics}"
         );
         Ok(())
     })();

@@ -95,14 +95,13 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, envelope guards, and basic audit/metrics visibility. It exercises daemon ops including `api.runtime.ready`, `api.v1.heartbeat`, `api.workspace.binding`, `api.layer_metrics`, `api.audit.snapshot`, `api.ensure_workspace_base`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.v1.read_file`, `api.v1.write_file`, `api.v1.edit_file`, `api.v1.exec_command`, and raw malformed/auth envelope paths. Module config: `crates/eos-e2e-test/tests/core/config/default.test.yml`.",
+        "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, envelope guards, and basic metrics visibility. It exercises daemon ops including `api.runtime.ready`, `api.v1.heartbeat`, `api.workspace.binding`, `api.layer_metrics`, `api.ensure_workspace_base`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.v1.read_file`, `api.v1.write_file`, `api.v1.edit_file`, `api.v1.exec_command`, and raw malformed/auth envelope paths. Module config: `crates/eos-e2e-test/tests/core/config/default.test.yml`.",
         "moduleConfig": "crates/eos-e2e-test/tests/core/config/default.test.yml",
         "ops": [
           "api.runtime.ready",
           "api.v1.heartbeat",
           "api.workspace.binding",
           "api.layer_metrics",
-          "api.audit.snapshot",
           "api.ensure_workspace_base",
           "api.build_workspace_base",
           "api.commit_to_workspace",
@@ -119,7 +118,7 @@
         {
           "id": "core-runtime-base",
           "title": "Runtime Base",
-          "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base audit fields remain protocol-visible and coherent.",
+          "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base-binding fields remain protocol-visible and coherent.",
           "tags": [
             "core"
           ]
@@ -135,7 +134,7 @@
         {
           "id": "core-workspace-commit",
           "title": "Workspace Commit",
-          "description": "Committing the LayerStack view to the workspace survives a base rebuild and keeps manifest audit fields aligned with the response.",
+          "description": "Committing the LayerStack view to the workspace survives a base rebuild and keeps the committed content readable after the rebuild.",
           "tags": [
             "core"
           ]
@@ -169,7 +168,7 @@
         {
           "id": "core-runtime-and-workspace-state",
           "name": "core-runtime-and-workspace-state",
-          "description": "Runs the unified runtime/base/workspace scenario: `setup_readiness_metrics_and_audit_are_protocol_visible`, `runtime_ready_handshake`, `ensure_base_creates_single_base_layer`, `ensure_base_idempotent`, `build_base_reset_rebuilds`, `workspace_binding_roundtrip`, `heartbeat_inflight_idle_zero`, and `commit_to_workspace_survives_protocol_rebuild` together prove readiness, base metrics, audit evidence, idle command state, and rebuild-safe workspace commits.",
+          "description": "Runs the unified runtime/base/workspace scenario: `setup_readiness_and_metrics_are_protocol_visible`, `runtime_ready_handshake`, `ensure_base_creates_single_base_layer`, `ensure_base_idempotent`, `build_base_reset_rebuilds`, `workspace_binding_roundtrip`, `heartbeat_inflight_idle_zero`, and `commit_to_workspace_survives_protocol_rebuild` together prove readiness, base metrics, idle command state, and rebuild-safe workspace commits.",
           "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
           "checklist": [
             "core-runtime-base",
@@ -190,7 +189,7 @@
         {
           "id": "core-direct-file-occ-path",
           "name": "core-direct-file-occ-path",
-          "description": "Groups direct file correctness and resource behavior: `direct_file_ops_round_trip_through_protocol`, `write_read_roundtrip`, `write_publishes_changed_paths`, `edit_search_replace_applied`, `edit_replace_all`, `fast_path_write_edit_emit_no_overlay_or_lease_audit`, `fast_path_surfaces_occ_and_read_timings`, `repeated_fast_path_writes_keep_leases_zero`, and `direct_file_ops_concurrency_ladder` cover OCC publish, timing counters, no overlay lease leakage, and concurrent readback across the configured `1/3/6/12` ladder.",
+          "description": "Groups direct file correctness and resource behavior: `direct_file_ops_round_trip_through_protocol`, `write_read_roundtrip`, `write_publishes_changed_paths`, `edit_search_replace_applied`, `edit_replace_all`, `fast_path_write_publishes_without_holding_a_lease`, `fast_path_surfaces_occ_and_read_timings`, `repeated_fast_path_writes_keep_leases_zero`, and `direct_file_ops_concurrency_ladder` cover OCC publish, timing counters, no overlay lease leakage, and concurrent readback across the configured `1/3/6/12` ladder.",
           "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
           "checklist": [
             "core-direct-file-ops",
@@ -212,7 +211,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation envelopes, audit pagination/reset, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.audit.pull`, `api.audit.reset_floor`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which enables the audit reset gate and shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
+        "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation envelopes, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
         "moduleConfig": "crates/eos-e2e-test/tests/daemon/config/default.test.yml",
         "ops": [
           "api.runtime.ready",
@@ -220,8 +219,6 @@
           "api.v1.heartbeat",
           "api.v1.cancel",
           "api.v1.exec_command",
-          "api.audit.pull",
-          "api.audit.reset_floor",
           "api.plugin.ensure",
           "api.plugin.status",
           "plugin.daemonplug.query"
@@ -272,22 +269,6 @@
           ]
         },
         {
-          "id": "daemon-audit",
-          "title": "Audit",
-          "description": "Audit pull, pagination, cursor/floor behavior, and the config-gated reset hook are explicitly covered without relying on transient global state.",
-          "tags": [
-            "daemon"
-          ]
-        },
-        {
-          "id": "daemon-audit-scope-boundary",
-          "title": "Audit Scope Boundary",
-          "description": "Daemon audit tests cover ring pagination/reset behavior while isolated lifecycle event fields and orphan checks stay owned by isolated workspace tests.",
-          "tags": [
-            "daemon"
-          ]
-        },
-        {
           "id": "daemon-ttl-reaper",
           "title": "Ttl Reaper",
           "description": "Short TTL/reaper daemon config removes stale inflight state and proves cleanup through registry counts.",
@@ -332,16 +313,6 @@
             "daemon-inflight",
             "daemon-heartbeat",
             "daemon-cancel-control"
-          ]
-        },
-        {
-          "id": "daemon-audit-cursor-reset-contract",
-          "name": "daemon-audit-cursor-reset-contract",
-          "description": "Uses `audit_pull_paginates_and_reset_floor_is_enabled_by_config`: audit pulls paginate with `limit=1`, cursor filtering is strictly after the requested sequence, empty future pulls preserve the requested floor, and the module config enables the reset gate.",
-          "command": "cargo test -p eos-e2e-test --features e2e --test daemon audit_pull_paginates_and_reset_floor_is_enabled_by_config -- --nocapture",
-          "checklist": [
-            "daemon-audit",
-            "daemon-ready-identity"
           ]
         },
         {
@@ -448,7 +419,7 @@
         {
           "id": "ephemeral_workspace-route-edges",
           "title": "Route Edges",
-          "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and audit events.",
+          "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and metrics.",
           "tags": [
             "ephemeral_workspace"
           ]
@@ -672,7 +643,7 @@
         {
           "id": "isolated_workspace-audit-trail",
           "title": "Isolated Workspace Audit Trail",
-          "description": "Enter, exit, and isolated tool calls emit lifecycle audit fields, teardown timings, discarded-byte counters, and orphan-check evidence.",
+          "description": "Enter, exit, and isolated tool calls keep teardown timings, discarded-byte counters, and no-publish behavior observable through op responses and metrics.",
           "tags": [
             "workspace-runtime-isolated"
           ]
@@ -717,7 +688,7 @@
         {
           "id": "isolated_workspace_lifecycle_gates_and_audit",
           "name": "isolated_workspace_lifecycle_gates_and_audit",
-          "description": "Groups `enter_rejects_active_command_session_and_repeated_enter_reports_already_open` and `isolated_workspace_jsonl_records_lifecycle_and_tool_call_fields`: active command sessions block enter, repeated enter reports already-open, and JSONL lifecycle/tool-call audit records namespace, timing, discarded-byte, cleanup, and no-publish fields.",
+          "description": "Uses `enter_rejects_active_command_session_and_repeated_enter_reports_already_open`: active command sessions block enter and repeated enter reports already-open, with teardown keeping cleanup and no-publish fields response-visible.",
           "command": "cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture",
           "checklist": [
             "isolated_workspace-lifecycle-gates",
@@ -847,7 +818,7 @@
         {
           "id": "layerstack-lease-open-close",
           "title": "Layerstack Lease Open Close",
-          "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and audit signals.",
+          "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
           "tags": [
             "eos-layerstack"
           ]
@@ -879,7 +850,7 @@
         {
           "id": "layerstack-workspace-commit-audit",
           "title": "Layerstack Workspace Commit Audit",
-          "description": "commit-to-workspace emits audit fields that match the response manifest version and CAS-shaped root hash.",
+          "description": "commit-to-workspace reports a manifest version consistent with the metrics surface.",
           "tags": [
             "eos-layerstack"
           ]
@@ -961,7 +932,7 @@
         {
           "id": "layerstack-lease-lifecycle-and-pinned-squash",
           "name": "layerstack-lease-lifecycle-and-pinned-squash",
-          "description": "Covers `enter_acquires_lease`, `exit_releases_lease`, `lease_pins_layers_vs_squash`, `squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses`, and `lease_hold_time_ordering`: enter/exit status, lease acquire/release audit, active lease cleanup, pinned manifest stability under public squash pressure, bounded active manifest depth and layer dirs, and nonnegative lease lifetime.",
+          "description": "Covers `enter_acquires_lease`, `exit_releases_lease`, `lease_pins_layers_vs_squash`, `squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses`, and `lease_hold_time_ordering`: enter/exit status, active lease gauges and cleanup, pinned manifest stability under public squash pressure, bounded active manifest depth and layer dirs, and nonnegative lease lifetime.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack lease -- --nocapture",
           "checklist": [
             "layerstack-lease-open-close",
@@ -974,7 +945,7 @@
         {
           "id": "layerstack-workspace-base-and-commit-contract",
           "name": "layerstack-workspace-base-and-commit-contract",
-          "description": "Covers the workspace commit module: workspace commits collapse depth, rebuild exposes merged content, repeated rebuild metrics stay bounded, manifest versions stay monotonic, audit matches response hashes, active snapshot leases block workspace commits, and projection preserves delete masks, symlinks, and replacement writes.",
+          "description": "Covers the workspace commit module: workspace commits collapse depth, rebuild exposes merged content, repeated rebuild metrics stay bounded, manifest versions stay monotonic, base hashes stay stable across rebuilds, active snapshot leases block workspace commits, and projection preserves delete masks, symlinks, and replacement writes.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack test_eos_layerstack_workspace_commit -- --nocapture",
           "checklist": [
             "layerstack-base-rebuild",
@@ -1008,7 +979,7 @@
         {
           "id": "layerstack-squash-integrity-and-depth",
           "name": "layerstack-squash-integrity-and-depth",
-          "description": "Covers `auto_squash_triggers_past_depth`, `checkpoint_layer_reduces_result_depth`, `head_readable_after_squash`, `squash_cas_hash_is_protocol_visible`, `squash_not_raced_single_client`, and `deep_stack_repeated_squash`: squash triggers, bounded depth, reduced checkpoint depth, readable head content, CAS-shaped audit hash, no single-client squash failure, and deep-stack readability.",
+          "description": "Covers `auto_squash_triggers_past_depth`, `head_readable_after_squash`, and `deep_stack_repeated_squash`: bounded post-squash depth, readable head content, and deep-stack readability.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack squash -- --nocapture",
           "checklist": [
             "layerstack-squash-depth",
@@ -1063,7 +1034,7 @@
         "markdown": "readme.md"
       },
       "overview": {
-        "summary": "OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, `api.v1.exec_command`, `api.layer_metrics`, and audit pull helpers against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, audit accounting, publish batching, and concurrent publish behavior.",
+        "summary": "OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, `api.v1.exec_command`, and `api.layer_metrics` against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, publish accounting, publish batching, and concurrent publish behavior.",
         "moduleConfig": "crates/eos-e2e-test/tests/eos-occ/config/default.test.yml",
         "ops": [
           "api.v1.write_file",
@@ -1130,7 +1101,7 @@
         {
           "id": "occ-audit-accounting",
           "title": "Occ Audit Accounting",
-          "description": "successful publish and conflict/rejection paths emit coherent audit or route accounting signals.",
+          "description": "successful publish and conflict/rejection paths emit coherent route accounting signals.",
           "tags": [
             "eos-occ"
           ]
@@ -1146,7 +1117,7 @@
         {
           "id": "occ-atomic-changeset-audit",
           "title": "Occ Atomic Changeset Audit",
-          "description": "Multi-path publishes are all-or-nothing on conflict, causal audit identifiers link prepare/apply, and conflict versus publish outcomes are mutually exclusive for one commit.",
+          "description": "Multi-path publishes are all-or-nothing on conflict, and conflict versus publish outcomes are mutually exclusive for one commit.",
           "tags": [
             "eos-occ"
           ]
@@ -1218,7 +1189,7 @@
         {
           "id": "occ-publish-audit-accounting",
           "name": "occ-publish-audit-accounting",
-          "description": "Covers `publish_accounting` plus the route counters from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, `occ.publish` audit events, and direct/gated timing counters.",
+          "description": "Covers `publish_accounting` plus the route counters from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, advance the manifest version, and surface direct/gated timing counters.",
           "command": "cargo test -p eos-e2e-test --features e2e --test eos-occ -- --nocapture",
           "checklist": [
             "occ-tracked-gated",
@@ -1981,7 +1952,7 @@
         {
           "id": "plugin-intent-contract",
           "title": "Intent Contract",
-          "description": "Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable audit and error payloads.",
+          "description": "Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable error payloads.",
           "tags": [
             "plugin"
           ]

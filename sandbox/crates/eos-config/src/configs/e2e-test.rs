@@ -77,8 +77,6 @@ pub struct Config {
     pub keep_container: bool,
     /// A non-kept container self-removes after this long.
     pub non_kept_container_ttl: Duration,
-    /// `limit` passed to `api.audit.pull`.
-    pub audit_pull_limit: u64,
     /// Correctness, pressure, and performance workload knobs.
     pub workload: WorkloadConfig,
 }
@@ -105,7 +103,6 @@ pub struct EosE2eTestConfig {
     pub docker: E2eDockerConfig,
     pub pool: E2ePoolConfig,
     pub timeouts: E2eTimeoutConfig,
-    pub audit: E2eAuditConfig,
     pub workload: E2eWorkloadConfig,
 }
 
@@ -152,13 +149,6 @@ pub enum E2eNodeMode {
 pub struct E2eTimeoutConfig {
     pub ready_s: u64,
     pub request_s: u64,
-}
-
-/// E2E audit query defaults.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct E2eAuditConfig {
-    pub pull_limit: u64,
 }
 
 /// Workload defaults for correctness, pressure, and performance E2E tests.
@@ -229,7 +219,6 @@ impl EosE2eTestConfig {
             1,
             "eos_e2e_test.timeouts.request_s",
         )?;
-        require_u64_at_least(self.audit.pull_limit, 1, "eos_e2e_test.audit.pull_limit")?;
         require_concurrency_levels(
             &self.workload.concurrency_levels,
             "eos_e2e_test.workload.concurrency_levels",
@@ -303,7 +292,6 @@ impl Config {
             workspace_root: isolated.workspace_root.to_string_lossy().into_owned(),
             keep_container: e2e.pool.keep_container,
             non_kept_container_ttl: Duration::from_secs(e2e.docker.non_kept_container_ttl_s),
-            audit_pull_limit: e2e.audit.pull_limit,
             workload: WorkloadConfig {
                 concurrency_levels: e2e.workload.concurrency_levels,
                 write_iterations: e2e.workload.write_iterations,
@@ -401,58 +389,5 @@ fn require_usize_at_least(value: usize, minimum: usize, field: &str) -> Result<(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn prd_e2e_section_deserializes_and_validates() {
-        let doc = crate::load_prd().expect("prd config loads");
-        EosE2eTestConfig::from_document(&doc).expect("prd eos_e2e_test config is valid");
-    }
-
-    #[test]
-    fn validation_rejects_invalid_e2e_values() {
-        let mut cfg = prd_config();
-        cfg.docker.image.clear();
-        assert_invalid(cfg, "eos_e2e_test.docker.image");
-
-        let mut cfg = prd_config();
-        cfg.docker.remote_eosd_path = PathBuf::from("relative");
-        assert_invalid(cfg, "eos_e2e_test.docker.remote_eosd_path");
-
-        let mut cfg = prd_config();
-        cfg.docker.tcp_port = 0;
-        assert_invalid(cfg, "eos_e2e_test.docker.tcp_port");
-
-        let mut cfg = prd_config();
-        cfg.pool.sandboxes = 0;
-        assert_invalid(cfg, "eos_e2e_test.pool.sandboxes");
-
-        let mut cfg = prd_config();
-        cfg.timeouts.ready_s = 0;
-        assert_invalid(cfg, "eos_e2e_test.timeouts.ready_s");
-
-        let mut cfg = prd_config();
-        cfg.workload.concurrency_levels = vec![1, 0, 3];
-        assert_invalid(cfg, "eos_e2e_test.workload.concurrency_levels");
-
-        let mut cfg = prd_config();
-        cfg.workload.concurrency_levels = vec![1, 3, 3];
-        assert_invalid(cfg, "duplicate level 3");
-
-        let mut cfg = prd_config();
-        cfg.workload.write_iterations = 0;
-        assert_invalid(cfg, "eos_e2e_test.workload.write_iterations");
-    }
-
-    fn prd_config() -> EosE2eTestConfig {
-        let doc = crate::load_prd().expect("prd config loads");
-        EosE2eTestConfig::from_document(&doc).expect("eos_e2e_test section deserializes")
-    }
-
-    fn assert_invalid(config: EosE2eTestConfig, field: &str) {
-        let err = config.validate().expect_err("config should be invalid");
-        let message = err.to_string();
-        assert!(message.contains(field), "{message}");
-    }
-}
+#[path = "../../tests/unit/configs/e2e-test.rs"]
+mod tests;

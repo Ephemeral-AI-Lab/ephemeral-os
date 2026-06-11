@@ -10,9 +10,9 @@
 //! # The two async invariants (§5)
 //!
 //! 1. **Never hold a lock across `.await`.** Connection handlers clone the data
-//!    they need out of any guarded state, drop the guard, THEN await. The audit
-//!    ring + invocation registry use synchronous mutexes held only across
-//!    non-await sections.
+//!    they need out of any guarded state, drop the guard, THEN await. The
+//!    invocation registry uses a synchronous mutex held only across non-await
+//!    sections.
 //! 2. **One OCC writer per root.** Write-capable handlers run inside their
 //!    per-request dispatch task and route to the dispatcher-owned per-root
 //!    `eos_layerstack::service` writer cache. The server never holds a mutex guard across an await
@@ -32,13 +32,11 @@ use tokio_util::sync::CancellationToken;
 
 use crate::wire::{decode_value, encode, Envelope, ErrorKind, Request};
 use eos_config::configs::{
-    daemon::{AuditConfig, DaemonConfig, FileLimitsConfig},
+    daemon::{DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
 
 use super::framing::{read_request_line, signal_shutdown, MAX_REQUEST_BYTES};
-use super::tool_call_events::{caller_id_from_args, emit_tool_call_event};
-use crate::audit::events::should_emit_tool_call_event;
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
@@ -58,9 +56,8 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
 }
 
-/// The running daemon: the op table, audit config, invocation registry, and the
-/// shutdown token. Audit events flow through the process-wide audit ring
-/// singleton (`audit::buffer`), not an instance field.
+/// The running daemon: the op table, invocation registry, and the shutdown
+/// token.
 ///
 /// It ORCHESTRATES but NEVER enters a namespace: namespace work is delegated to
 /// the `eosd ns-holder` / `eosd ns-runner` children it spawns; the daemon stays
@@ -69,7 +66,6 @@ pub struct ServerConfig {
 pub struct DaemonServer {
     config: ServerConfig,
     op_table: Arc<OpTable>,
-    audit_config: AuditConfig,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
     isolated_sweeper_interval_ms: u64,
@@ -77,14 +73,13 @@ pub struct DaemonServer {
 }
 
 impl DaemonServer {
-    /// Assemble a daemon over `config`, wiring the op table, audit ring, the
-    /// invocation registry, and the shutdown token.
+    /// Assemble a daemon over `config`, wiring the op table, the invocation
+    /// registry, and the shutdown token.
     #[must_use]
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
-            audit_config: default_audit_config(),
             file_limits: default_file_limits(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
@@ -112,7 +107,6 @@ impl DaemonServer {
         Self {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
-            audit_config: daemon_config.audit.clone(),
             file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
@@ -352,21 +346,9 @@ impl DaemonServer {
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         let op = request.op.clone();
-        let emit_tool_events = should_emit_tool_call_event(&op);
-        if emit_tool_events {
-            emit_tool_call_event(
-                "tool_call.started",
-                &invocation_id,
-                &op,
-                &caller_id,
-                None,
-                None,
-            );
-        }
         let table = Arc::clone(&self.op_table);
         let registry = Arc::clone(&self.invocation_registry);
         let task_registry = Arc::clone(&registry);
-        let audit_config = self.audit_config.clone();
         let file_limits = self.file_limits;
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
@@ -375,7 +357,6 @@ impl DaemonServer {
                 &request,
                 DispatchContext::with_runtime_config(
                     &task_registry,
-                    &audit_config,
                     file_limits,
                     read_request_s,
                 ),
@@ -397,10 +378,6 @@ impl DaemonServer {
             ),
         };
         registry.deregister(&invocation_id);
-        // The rich `tool_call.completed` is emitted once by the dispatcher's
-        // audit pass (see `audit::events::emit_dispatch_audit`); the transport
-        // layer only opens the lifecycle with `tool_call.started` so a single
-        // `tool_call.completed` lands per op instead of two on `Lane::Normal`.
         response
     }
 
@@ -433,12 +410,10 @@ fn default_file_limits() -> FileLimitsConfig {
     }
 }
 
-fn default_audit_config() -> AuditConfig {
-    AuditConfig {
-        allow_floor_reset: false,
-        pull_limit_default: 1000,
-        ring_max_events: 50_000,
-        ring_max_bytes: 8_388_608,
-        pressure_threshold: 0.8,
-    }
+fn caller_id_from_args(args: &serde_json::Value) -> String {
+    args.get("caller_id")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned()
 }

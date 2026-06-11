@@ -47,9 +47,6 @@ Served only on the operator socket beside the client socket; never the client so
 | `sandbox.checkpoint.commit_to_workspace` | `api.commit_to_workspace` | daemon | Checkpoint | yes | Materialize LayerStack state into the bound workspace. |
 | `sandbox.checkpoint.commit_to_git` | `api.commit_to_git` | daemon | Checkpoint | yes | Commit a LayerStack snapshot into the bound workspace's durable Git repo. |
 | `sandbox.checkpoint.binding` | `api.workspace_binding` | daemon | Checkpoint | no | Inspect the workspace binding for a layer stack root. |
-| `sandbox.audit.pull` | `api.audit.pull` | daemon | Audit | no | Pull audit events after a cursor. |
-| `sandbox.audit.snapshot` | `api.audit.snapshot` | daemon | Audit | no | Snapshot audit ring metadata. |
-| `sandbox.audit.reset_floor` | `api.audit.reset_floor` | daemon | Audit | yes | Reset the audit floor when the daemon-side test gate allows it. |
 | `sandbox.isolation.list_open` | `api.isolated_workspace.list_open` | daemon | IsolatedWorkspace | no | List open isolated workspaces. |
 | `sandbox.run.cancel_all` | `api.v1.cancel_workspace_runs` | daemon | WorkspaceRun | yes | Cancel every workspace run in the sandbox: the whole-sandbox sweep backstop. |
 

@@ -53,7 +53,7 @@
     {
       "id": "layerstack-lease-open-close",
       "title": "Layerstack Lease Open Close",
-      "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and audit signals.",
+      "description": "isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and lease gauges.",
       "tags": [
         "eos-layerstack"
       ]
@@ -85,7 +85,7 @@
     {
       "id": "layerstack-workspace-commit-audit",
       "title": "Layerstack Workspace Commit Audit",
-      "description": "commit-to-workspace emits audit fields that match the response manifest version and CAS-shaped root hash.",
+      "description": "commit-to-workspace reports a manifest version consistent with the metrics surface.",
       "tags": [
         "eos-layerstack"
       ]
@@ -167,7 +167,7 @@
     {
       "id": "layerstack-lease-lifecycle-and-pinned-squash",
       "name": "layerstack-lease-lifecycle-and-pinned-squash",
-      "description": "Covers `enter_acquires_lease`, `exit_releases_lease`, `lease_pins_layers_vs_squash`, `squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses`, and `lease_hold_time_ordering`: enter/exit status, lease acquire/release audit, active lease cleanup, pinned manifest stability under public squash pressure, bounded active manifest depth and layer dirs, and nonnegative lease lifetime.",
+      "description": "Covers `enter_acquires_lease`, `exit_releases_lease`, `lease_pins_layers_vs_squash`, `squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses`, and `lease_hold_time_ordering`: enter/exit status, active lease gauges and cleanup, pinned manifest stability under public squash pressure, bounded active manifest depth and layer dirs, and nonnegative lease lifetime.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack lease -- --nocapture",
       "checklist": [
         "layerstack-lease-open-close",
@@ -180,7 +180,7 @@
     {
       "id": "layerstack-workspace-base-and-commit-contract",
       "name": "layerstack-workspace-base-and-commit-contract",
-      "description": "Covers the workspace commit module: workspace commits collapse depth, rebuild exposes merged content, repeated rebuild metrics stay bounded, manifest versions stay monotonic, audit matches response hashes, active snapshot leases block workspace commits, and projection preserves delete masks, symlinks, and replacement writes.",
+      "description": "Covers the workspace commit module: workspace commits collapse depth, rebuild exposes merged content, repeated rebuild metrics stay bounded, manifest versions stay monotonic, base hashes stay stable across rebuilds, active snapshot leases block workspace commits, and projection preserves delete masks, symlinks, and replacement writes.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack test_eos_layerstack_workspace_commit -- --nocapture",
       "checklist": [
         "layerstack-base-rebuild",
@@ -214,7 +214,7 @@
     {
       "id": "layerstack-squash-integrity-and-depth",
       "name": "layerstack-squash-integrity-and-depth",
-      "description": "Covers `auto_squash_triggers_past_depth`, `checkpoint_layer_reduces_result_depth`, `head_readable_after_squash`, `squash_cas_hash_is_protocol_visible`, `squash_not_raced_single_client`, and `deep_stack_repeated_squash`: squash triggers, bounded depth, reduced checkpoint depth, readable head content, CAS-shaped audit hash, no single-client squash failure, and deep-stack readability.",
+      "description": "Covers `auto_squash_triggers_past_depth`, `head_readable_after_squash`, and `deep_stack_repeated_squash`: bounded post-squash depth, readable head content, and deep-stack readability.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack squash -- --nocapture",
       "checklist": [
         "layerstack-squash-depth",

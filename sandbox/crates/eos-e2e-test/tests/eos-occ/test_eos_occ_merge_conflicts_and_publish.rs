@@ -317,17 +317,16 @@ fn publish_accounting() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let mut audit = lease.audit_tap()?;
+    let before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     let write = lease.call_ok(
         ops::API_V1_WRITE_FILE,
-        json!({"path": "occ/audit.txt", "content": "audit\n", "overwrite": true}),
+        json!({"path": "occ/publish.txt", "content": "published\n", "overwrite": true}),
     )?;
     assert!(!array(&write, "changed_paths")?.is_empty());
-    audit.collect()?;
+    let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
     assert!(
-        audit.any("occ.publish"),
-        "write publish should emit occ.publish: {:?}",
-        audit.events()
+        as_i64(&after, "manifest_version")? > as_i64(&before, "manifest_version")?,
+        "write publish should advance the active manifest version: before={before} after={after}"
     );
     Ok(())
 }

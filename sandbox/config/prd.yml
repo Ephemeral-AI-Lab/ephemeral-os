@@ -10,13 +10,6 @@ daemon:
     ttl_s: 300
     reaper_interval_s: 30
 
-  audit:
-    allow_floor_reset: false
-    pull_limit_default: 1000
-    ring_max_events: 50000
-    ring_max_bytes: 8388608
-    pressure_threshold: 0.8
-
   command_sessions:
     scratch_root: /eos/scratch/command-sessions
     default_yield_time_ms: 1000
@@ -110,9 +103,6 @@ eos_e2e_test:
   timeouts:
     ready_s: 60
     request_s: 30
-
-  audit:
-    pull_limit: 2000
 
   workload:
     concurrency_levels: [1, 3, 6, 12]

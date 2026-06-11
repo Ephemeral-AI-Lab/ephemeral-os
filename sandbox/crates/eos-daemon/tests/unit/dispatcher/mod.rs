@@ -6,7 +6,6 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
-use crate::audit::schema::Lane;
 use serde_json::json;
 
 use super::*;
@@ -129,7 +128,6 @@ fn dispatch_attaches_real_runtime_timings() {
         },
         DispatchContext {
             invocation_registry: None,
-            audit_config: None,
             file_limits: None,
             read_request_s: Some(0.125),
         },
@@ -206,172 +204,8 @@ fn internal_error_envelope_adds_error_id() {
     assert!(matches!(error_id.as_bytes()[16], b'8' | b'9' | b'a' | b'b'));
 }
 
-#[test]
-fn command_collect_completed_is_background_only_not_overlay_lifecycle() {
-    let request = Request {
-        op: "api.v1.command.collect_completed".to_owned(),
-        invocation_id: "collect-completed".to_owned(),
-        args: json!({"command_session_id": "cmd-1", "caller_id": "caller-1"}),
-    };
-
-    assert_eq!(
-        background_event_kind(&request, &json!({"success": true})),
-        Some(("background_tool.completed", "command_session"))
-    );
-    assert!(!uses_overlay_or_lease(
-        &request.op,
-        &json!({"success": true})
-    ));
-}
-
-#[test]
-fn audit_pull_reads_shared_daemon_ring() -> TestResult {
-    let marker = format!("phase3t-audit-test-{}", unique_suffix());
-    let after_seq = audit_after_seq()?;
-    crate::audit::buffer::safe_emit(
-        json!({"type": marker, "payload": {"source": "unit-test"}}),
-        Lane::Normal,
-    );
-
-    let pulled = op_audit_pull(
-        &json!({"after_seq": after_seq, "limit": 128}),
-        DispatchContext::empty(),
-    )?;
-
-    let events = pulled["events"].as_array().ok_or("events array")?;
-    assert!(events
-        .iter()
-        .any(|event| event["type"].as_str() == Some(marker.as_str())));
-    Ok(())
-}
-
-#[test]
-fn auto_squash_audit_emits_triggered_and_completed() -> TestResult {
-    let fixture = Fixture::new("auto_squash_completed")?;
-    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
-    let expected_hash = eos_layerstack::manifest_root_hash(&manifest);
-    let invocation_id = format!("autosquash-completed-{}", unique_suffix());
-    let request = Request {
-        op: "api.v1.write_file".to_owned(),
-        invocation_id: invocation_id.clone(),
-        args: json!({"layer_stack_root": &fixture.root}),
-    };
-    let response = json!({
-        "timings": {
-            "layer_stack.auto_squash.depth_before": 101.0,
-            "layer_stack.auto_squash.depth_after": 3.0,
-            "layer_stack.auto_squash.total_s": 0.25,
-            "layer_stack.auto_squash.manifest_version": i64_to_f64_saturating(manifest.version),
-        }
-    });
-    let after_seq = audit_after_seq()?;
-
-    emit_auto_squash_audit(&request, &response);
-
-    let events = layer_stack_events_after(after_seq, &invocation_id)?;
-    assert_eq!(
-        event_types(&events),
-        vec![
-            "layer_stack.squash_triggered",
-            "layer_stack.squash_completed"
-        ]
-    );
-    assert_eq!(
-        events[0]["payload"]["layer_stack"]["squash_trigger_reason"],
-        "post_publish_depth"
-    );
-    assert_eq!(
-        events[0]["payload"]["layer_stack"]["squash_input_layers"],
-        101
-    );
-    assert_eq!(
-        events[1]["payload"]["layer_stack"]["squash_result_layers"],
-        3
-    );
-    assert_eq!(
-        events[1]["payload"]["layer_stack"]["manifest_root_hash"],
-        expected_hash
-    );
-    Ok(())
-}
-
-#[test]
-fn auto_squash_audit_emits_triggered_and_failed_for_race() -> TestResult {
-    let invocation_id = format!("autosquash-raced-{}", unique_suffix());
-    let request = Request {
-        op: "api.v1.write_file".to_owned(),
-        invocation_id: invocation_id.clone(),
-        args: json!({}),
-    };
-    let response = json!({
-        "timings": {
-            "layer_stack.auto_squash.depth_before": 102.0,
-            "layer_stack.auto_squash.total_s": 0.10,
-            "layer_stack.auto_squash.raced": 1.0,
-        }
-    });
-    let after_seq = audit_after_seq()?;
-
-    emit_auto_squash_audit(&request, &response);
-
-    let events = layer_stack_events_after(after_seq, &invocation_id)?;
-    assert_eq!(
-        event_types(&events),
-        vec!["layer_stack.squash_triggered", "layer_stack.squash_failed"]
-    );
-    assert_eq!(
-        events[1]["payload"]["layer_stack"]["squash_failure_kind"],
-        "raced_or_plan_aborted"
-    );
-    assert_eq!(
-        events[1]["payload"]["layer_stack"]["squash_trigger_reason"],
-        "post_publish_depth"
-    );
-    Ok(())
-}
-
-fn unique_suffix() -> String {
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    format!(
-        "{}-{}",
-        std::process::id(),
-        COUNTER.fetch_add(1, Ordering::Relaxed)
-    )
-}
-
 fn timing_f64_value(timings: &serde_json::Map<String, Value>, key: &str) -> f64 {
     timings.get(key).and_then(Value::as_f64).unwrap_or(0.0)
-}
-
-fn audit_after_seq() -> TestResult<i64> {
-    let snapshot = op_audit_snapshot(&json!({}), DispatchContext::empty())?;
-    Ok(snapshot["snapshot"]["daemon"]["next_seq"]
-        .as_i64()
-        .unwrap_or(0)
-        - 1)
-}
-
-fn layer_stack_events_after(after_seq: i64, invocation_id: &str) -> TestResult<Vec<Value>> {
-    let pulled = op_audit_pull(
-        &json!({"after_seq": after_seq, "limit": 128}),
-        DispatchContext::empty(),
-    )?;
-    Ok(pulled["events"]
-        .as_array()
-        .ok_or("events array")?
-        .iter()
-        .filter(|event| {
-            event["payload"]["layer_stack"]["operation_id"].as_str() == Some(invocation_id)
-        })
-        .cloned()
-        .collect())
-}
-
-fn event_types(events: &[Value]) -> Vec<&str> {
-    events
-        .iter()
-        .filter_map(|event| event["type"].as_str())
-        .collect()
 }
 
 struct Fixture {

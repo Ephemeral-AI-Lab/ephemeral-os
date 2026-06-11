@@ -1,4 +1,4 @@
-//! Op routing: the `OP_TABLE`, envelope validation, and audit wrapping.
+//! Op routing: the `OP_TABLE` and envelope validation.
 //!
 //! The daemon decodes one [`crate::wire::Request`] and routes `op` through the
 //! [`OpTable`]. Handlers return a JSON `Value` response; a failure becomes the
@@ -22,19 +22,12 @@ use crate::wire::{ErrorKind, Request};
 use eos_layerstack::LayerStack;
 
 use super::registry::BUILTIN_OPS;
-use crate::audit::events::emit_dispatch_audit;
-#[cfg(test)]
-use crate::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
-#[cfg(test)]
-use crate::audit::ops::{op_audit_pull, op_audit_snapshot};
-use crate::config::{AuditConfig, FileLimitsConfig};
+use crate::config::FileLimitsConfig;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 use crate::plugins;
 #[cfg(test)]
-use crate::response_timings::{
-    i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
-};
+use crate::response_timings::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 
 /// A synchronous op handler: decoded args -> response value.
 ///
@@ -46,7 +39,6 @@ pub(crate) type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<
 #[derive(Clone, Copy, Default)]
 pub struct DispatchContext<'ctx> {
     invocation_registry: Option<&'ctx InFlightRegistry>,
-    audit_config: Option<&'ctx AuditConfig>,
     file_limits: Option<FileLimitsConfig>,
     read_request_s: Option<f64>,
 }
@@ -57,7 +49,6 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn empty() -> Self {
         Self {
             invocation_registry: None,
-            audit_config: None,
             file_limits: None,
             read_request_s: None,
         }
@@ -68,24 +59,21 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
-            audit_config: None,
             file_limits: None,
             read_request_s: None,
         }
     }
 
-    /// Context carrying the server's invocation registry, audit config, file
-    /// byte limits, and measured request read duration.
+    /// Context carrying the server's invocation registry, file byte limits,
+    /// and measured request read duration.
     #[must_use]
     pub const fn with_runtime_config(
         invocation_registry: &'ctx InFlightRegistry,
-        audit_config: &'ctx AuditConfig,
         file_limits: FileLimitsConfig,
         read_request_s: f64,
     ) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
-            audit_config: Some(audit_config),
             file_limits: Some(file_limits),
             read_request_s: Some(read_request_s),
         }
@@ -93,10 +81,6 @@ impl<'ctx> DispatchContext<'ctx> {
 
     pub(crate) const fn invocation_registry(&self) -> Option<&'ctx InFlightRegistry> {
         self.invocation_registry
-    }
-
-    pub(crate) const fn audit_config(&self) -> Option<&'ctx AuditConfig> {
-        self.audit_config
     }
 
     /// Per-file read/write byte caps, when runtime config was threaded. File ops
@@ -166,13 +150,7 @@ impl OpTable {
         let boot_to_dispatch_s = daemon_uptime_s();
         let read_request_s = context.read_request_s.unwrap_or(0.0);
         let finalize = |response| {
-            finalize_response(
-                request,
-                response,
-                boot_to_dispatch_s,
-                dispatch_start,
-                read_request_s,
-            )
+            finalize_response(response, boot_to_dispatch_s, dispatch_start, read_request_s)
         };
         if request.op.trim().is_empty() {
             return finalize(error_envelope(
@@ -213,11 +191,9 @@ impl OpTable {
     }
 }
 
-/// Attach the dispatch runtime timings to `response` and emit the dispatch
-/// audit event, then return the finalized response. Computes the dispatch
-/// elapsed once and shares it between the timings and the audit record.
+/// Attach the dispatch runtime timings to `response` and return the finalized
+/// response.
 fn finalize_response(
-    request: &Request,
     mut response: Value,
     boot_to_dispatch_s: f64,
     dispatch_start: Instant,
@@ -230,7 +206,6 @@ fn finalize_response(
         dispatch_s,
         read_request_s,
     );
-    emit_dispatch_audit(request, &response, dispatch_s);
     response
 }
 

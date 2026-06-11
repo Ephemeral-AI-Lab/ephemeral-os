@@ -17,4 +17,5 @@ pub fn tail_lines(text: &str, last_n_lines: usize) -> String {
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/tail.rs"]
 mod tests;

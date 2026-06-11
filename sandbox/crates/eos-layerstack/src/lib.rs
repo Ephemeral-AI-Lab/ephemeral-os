@@ -59,6 +59,7 @@ pub mod squash;
 pub mod stack;
 pub mod storage_lock;
 #[cfg(test)]
+#[path = "../tests/unit/test_fixture.rs"]
 mod test_fixture;
 pub mod workspace_base;
 pub mod workspace_binding;

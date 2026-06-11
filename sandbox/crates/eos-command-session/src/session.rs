@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(test)]
+#[path = "../tests/unit/session.rs"]
 mod tests;
 
 #[cfg(target_os = "linux")]

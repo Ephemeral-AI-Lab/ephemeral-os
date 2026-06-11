@@ -30,6 +30,7 @@ mod lifecycle;
 mod persistence;
 mod resources;
 #[cfg(test)]
+#[path = "../tests/unit/sessions.rs"]
 mod tests;
 
 pub use handle::WorkspaceHandle;

@@ -434,4 +434,5 @@ pub fn cache_snapshot() -> Value {
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/service.rs"]
 mod tests;

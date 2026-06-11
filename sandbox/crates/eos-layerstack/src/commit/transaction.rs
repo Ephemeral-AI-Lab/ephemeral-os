@@ -467,4 +467,5 @@ fn manifest_version_u64_optional(version: i64) -> Option<u64> {
 }
 
 #[cfg(test)]
+#[path = "../../tests/unit/commit/transaction.rs"]
 mod tests;

@@ -50,7 +50,7 @@ pub enum Route {
 /// One catalog entry's routing metadata (the ONLY per-op data the router reads).
 #[derive(Debug)]
 pub struct OpEntry {
-    /// Canonical name (for error messages and audit).
+    /// Canonical name (for error messages and logs).
     pub name: String,
     /// Routing target.
     pub route: Route,

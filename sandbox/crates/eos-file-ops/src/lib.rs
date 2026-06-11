@@ -541,4 +541,5 @@ fn apply_search_replace(
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/lib.rs"]
 mod tests;

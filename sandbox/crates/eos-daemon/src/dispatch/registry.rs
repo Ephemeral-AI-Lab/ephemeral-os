@@ -2,7 +2,6 @@
 
 use crate::wire::ops as protocol_ops;
 
-use crate::audit::ops as audit_ops;
 use crate::checkpoint::ops as checkpoint_ops;
 use crate::dispatcher::Handler;
 use crate::workspace::files::ops as file_ops;
@@ -56,18 +55,6 @@ pub(crate) const BUILTIN_OPS: &[BuiltinOp] = &[
     BuiltinOp {
         spec: protocol_ops::BuiltinDaemonOp::WorkspaceBinding.spec(),
         handler: checkpoint_ops::op_workspace_binding,
-    },
-    BuiltinOp {
-        spec: protocol_ops::BuiltinDaemonOp::AuditPull.spec(),
-        handler: audit_ops::op_audit_pull,
-    },
-    BuiltinOp {
-        spec: protocol_ops::BuiltinDaemonOp::AuditSnapshot.spec(),
-        handler: audit_ops::op_audit_snapshot,
-    },
-    BuiltinOp {
-        spec: protocol_ops::BuiltinDaemonOp::AuditResetFloor.spec(),
-        handler: audit_ops::op_audit_reset_floor,
     },
     BuiltinOp {
         spec: protocol_ops::BuiltinDaemonOp::ReadFile.spec(),

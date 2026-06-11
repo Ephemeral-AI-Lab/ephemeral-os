@@ -26,7 +26,7 @@ boundary, and `cargo run -p xtask -- check-contract` is the drift gate.
   hashes **only** the `layers` array, never `version`/`schema_version`, so the
   schema version can change without invalidating existing layer hashes — but a
   reader that does not understand a new schema version must refuse to load it.
-- Source of truth: `crates/eos-cas/src/cas.rs` (`MANIFEST_SCHEMA_VERSION`).
+- Source of truth: `crates/eos-layerstack/src/model.rs` (`MANIFEST_SCHEMA_VERSION`).
 
 ## 3. Bump procedure
 

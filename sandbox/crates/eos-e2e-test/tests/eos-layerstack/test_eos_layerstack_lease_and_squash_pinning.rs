@@ -1,9 +1,8 @@
 use std::thread;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use eos_e2e_test::next_invocation_id;
 use serde_json::{json, Value};
 
@@ -17,13 +16,13 @@ fn enter_acquires_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let mut audit = lease.audit_tap()?;
     let enter = lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     assert!(!as_str(&enter, "workspace_handle_id")?.is_empty());
-    audit.collect()?;
-    if audit.any("layer_stack.lease_acquired") {
-        assert!(audit.first("layer_stack.lease_acquired").is_some());
-    }
+    let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    assert!(
+        as_i64(&metrics, "active_leases")? >= 1,
+        "enter should hold a snapshot lease while the workspace is open: {metrics}"
+    );
     let status = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
     assert!(status.get("open").and_then(Value::as_bool).unwrap_or(false));
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
@@ -37,12 +36,7 @@ fn exit_releases_lease() -> Result<()> {
     };
     let lease = pool.acquire()?;
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    let mut audit = lease.audit_tap()?;
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
-    audit.collect()?;
-    if audit.any("layer_stack.lease_released") {
-        assert!(audit.first("layer_stack.lease_released").is_some());
-    }
     let closed = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
     assert!(!closed.get("open").and_then(Value::as_bool).unwrap_or(true));
     let metrics = wait_for_active_leases(&lease, 0)?;
@@ -110,7 +104,6 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
     ];
 
     let outcome: Result<()> = (|| {
-        let mut audit = lease.audit_tap()?;
         let pinned_a = enter_isolated(&lease, &callers[0])?;
         write_public_versions(&lease, 0..2)?;
         let pinned_b = enter_isolated(&lease, &callers[1])?;
@@ -118,7 +111,6 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
         let pinned_c = enter_isolated(&lease, &callers[2])?;
 
         write_public_versions(&lease, 4..8)?;
-        audit.collect()?;
 
         for (caller, pinned) in [
             (callers[0].as_str(), &pinned_a),
@@ -128,37 +120,22 @@ fn squash_keeps_multiple_pinned_statuses_while_live_manifest_collapses() -> Resu
             assert_pinned_status(&lease, caller, pinned)?;
         }
 
-        let completed = audit
-            .all("layer_stack.squash_completed")
-            .into_iter()
-            .last()
-            .context("layer_stack.squash_completed audit event")?;
-        let layer_stack = section(completed, "layer_stack").context("layer_stack section")?;
-        let input_layers = as_i64(layer_stack, "squash_input_layers")?;
-        let result_layers = as_i64(layer_stack, "squash_result_layers")?;
+        // Base + 8 public writes pushes the stack past the squash trigger; the
+        // post-squash active manifest must stay bounded while the three pinned
+        // statuses above remain stable.
         let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
-
-        assert_eq!(
-            input_layers, 9,
-            "test setup should trigger squash at base + 8 public writes: {completed}"
-        );
+        let depth = as_i64(&metrics, "manifest_depth")?;
         assert!(
-            result_layers < input_layers && result_layers <= 8,
-            "post-squash active manifest should stay bounded while pinned statuses remain stable: {completed}"
-        );
-
-        assert_eq!(
-            as_i64(&metrics, "manifest_depth")?,
-            result_layers,
-            "metrics should report the post-squash active manifest depth: {metrics}"
+            depth <= 8,
+            "post-squash active manifest should stay bounded while pinned statuses remain stable: {metrics}"
         );
         assert_eq!(
             as_i64(&metrics, "referenced_layers")?,
-            result_layers,
+            depth,
             "referenced layers should match the active manifest after squash: {metrics}"
         );
         assert!(
-            as_i64(&metrics, "layer_dirs")? <= result_layers + 2,
+            as_i64(&metrics, "layer_dirs")? <= depth + 2,
             "folded gap layers should stay bounded with the active manifest: {metrics}"
         );
         Ok(())

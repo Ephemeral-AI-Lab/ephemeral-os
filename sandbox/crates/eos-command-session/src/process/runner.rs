@@ -382,4 +382,5 @@ fn stdin_backpressure() -> io::Error {
 }
 
 #[cfg(test)]
+#[path = "../../tests/unit/process/runner.rs"]
 mod tests;

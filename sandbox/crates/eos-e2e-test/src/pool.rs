@@ -13,7 +13,6 @@ use anyhow::{bail, Result};
 use eos_daemon::wire::ops;
 use serde_json::{json, Map, Value};
 
-use crate::audit::AuditTap;
 use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode, WorkloadConfig};
 use crate::container::{self, reap_e2e_containers, DaemonContainer};
@@ -276,14 +275,6 @@ impl<'p> NodeLease<'p> {
                 error_kind(&resp).map_or(String::new(), |k| format!(" ({k})"))
             )
         }
-    }
-
-    /// Baseline a fresh audit tap on this lease's daemon.
-    ///
-    /// # Errors
-    /// Returns an error if the baseline pull fails.
-    pub fn audit_tap(&self) -> Result<AuditTap> {
-        AuditTap::baseline(self.client().clone(), self.pool.config.audit_pull_limit)
     }
 
     /// Hard-restart this lease's in-container daemon (kill + respawn), exercising

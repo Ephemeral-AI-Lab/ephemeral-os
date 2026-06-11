@@ -123,4 +123,5 @@ fn offset_suffix(offset: UtcOffset) -> String {
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/transcript.rs"]
 mod tests;

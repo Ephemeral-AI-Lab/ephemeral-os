@@ -46,4 +46,5 @@ where
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/wait.rs"]
 mod tests;

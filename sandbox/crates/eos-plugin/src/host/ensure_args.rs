@@ -372,11 +372,5 @@ fn validate_public_identifier(field: &str, value: &str) -> Result<(), PluginErro
 }
 
 #[cfg(test)]
-mod tests {
-    use super::public_op_name;
-
-    #[test]
-    fn public_op_name_format() {
-        assert_eq!(public_op_name("generic", "hover"), "plugin.generic.hover");
-    }
-}
+#[path = "../../tests/unit/host/ensure_args.rs"]
+mod tests;

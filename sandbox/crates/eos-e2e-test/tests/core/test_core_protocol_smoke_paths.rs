@@ -1,13 +1,12 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use eos_e2e_test::cas::looks_like_sha256;
 use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
-fn setup_readiness_metrics_and_audit_are_protocol_visible() -> Result<()> {
+fn setup_readiness_and_metrics_are_protocol_visible() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -30,31 +29,23 @@ fn setup_readiness_metrics_and_audit_are_protocol_visible() -> Result<()> {
     assert!(as_bool(&metrics, "workspace_bound")?);
     assert_eq!(as_i64(&metrics, "active_leases")?, 0);
 
-    let snapshot = lease.call_ok(ops::API_AUDIT_SNAPSHOT, json!({}))?;
-    assert!(as_bool(&snapshot, "success")?);
-
-    let mut audit = lease.audit_tap()?;
     let ensure = lease.call_ok(
         ops::API_ENSURE_WORKSPACE_BASE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&ensure, "success")?);
-    audit.collect()?;
-    if let Some(event) = audit.first("workspace_base.ensured") {
-        let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-        assert_eq!(
-            layer_stack.get("manifest_version").and_then(Value::as_i64),
-            Some(1),
-            "workspace_base audit should include the active manifest version: {event}"
-        );
-        assert!(
-            layer_stack
-                .get("manifest_root_hash")
-                .and_then(Value::as_str)
-                .is_some_and(looks_like_sha256),
-            "workspace_base audit should include a CAS-shaped manifest hash: {event}"
-        );
-    }
+    let ensured = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    assert_eq!(
+        as_i64(&ensured, "manifest_version")?,
+        1,
+        "a fresh ensured base should report the initial manifest version: {ensured}"
+    );
+    assert!(
+        ensured["base_root_hash"]
+            .as_str()
+            .is_some_and(looks_like_sha256),
+        "the ensured base binding should expose a CAS-shaped root hash: {ensured}"
+    );
     Ok(())
 }
 
@@ -101,28 +92,11 @@ fn commit_to_workspace_survives_protocol_rebuild() -> Result<()> {
         ops::API_V1_WRITE_FILE,
         json!({"path": path, "content": "committed through protocol\n", "overwrite": true}),
     )?;
-    let mut audit = lease.audit_tap()?;
     let commit = lease.call_ok(
         ops::API_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&commit, "success")?);
-    audit.collect()?;
-    if let Some(event) = audit.first("layer_stack.commit_completed") {
-        let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
-        assert_eq!(
-            layer_stack.get("manifest_version").and_then(Value::as_i64),
-            commit.get("manifest_version").and_then(Value::as_i64),
-            "commit audit manifest_version should match response: {event}"
-        );
-        assert!(
-            layer_stack
-                .get("manifest_root_hash")
-                .and_then(Value::as_str)
-                .is_some_and(looks_like_sha256),
-            "commit audit should include a CAS-shaped manifest hash: {event}"
-        );
-    }
 
     let rebuilt = lease.call_ok(
         ops::API_BUILD_WORKSPACE_BASE,

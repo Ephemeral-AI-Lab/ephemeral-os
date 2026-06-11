@@ -18,7 +18,7 @@ This module owns the unified live E2E contract for plugin package setup, daemon-
 - [ ] plugin-lsp-lifecycle: The LSP package uses the generic lifecycle, installs node/pyright dependency roots, connects `plugin.lsp.query_symbols`, and returns live workspace symbols.
 - [ ] plugin-write-allowed: Write-allowed or oneshot plugin operations publish only through daemon-owned OCC paths and report changed paths.
 - [ ] plugin-lsp-apply-and-failures: LSP read-only queries, workspace edit application, stale edit conflict/retry, and structured setup failures are covered through daemon plugin/LSP flows.
-- [ ] plugin-intent-contract: Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable audit and error payloads.
+- [ ] plugin-intent-contract: Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable error payloads.
 - [ ] plugin-reload-dispatch-race: Concurrent plugin dispatches during a package reload each return a structured payload (success, or a structured error through the worker swap window), the reload succeeds and reconnects the route, and the post-reload steady state runs the reloaded digest with a single worker process.
 
 ## Test Case

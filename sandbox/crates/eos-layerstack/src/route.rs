@@ -229,4 +229,5 @@ fn join_rel(prefix: &str, child: &str) -> String {
 }
 
 #[cfg(test)]
+#[path = "../tests/unit/route.rs"]
 mod tests;

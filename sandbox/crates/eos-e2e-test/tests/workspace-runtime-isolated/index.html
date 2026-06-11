@@ -132,7 +132,7 @@
     {
       "id": "isolated_workspace-audit-trail",
       "title": "Isolated Workspace Audit Trail",
-      "description": "Enter, exit, and isolated tool calls emit lifecycle audit fields, teardown timings, discarded-byte counters, and orphan-check evidence.",
+      "description": "Enter, exit, and isolated tool calls keep teardown timings, discarded-byte counters, and no-publish behavior observable through op responses and metrics.",
       "tags": [
         "workspace-runtime-isolated"
       ]
@@ -177,7 +177,7 @@
     {
       "id": "isolated_workspace_lifecycle_gates_and_audit",
       "name": "isolated_workspace_lifecycle_gates_and_audit",
-      "description": "Groups `enter_rejects_active_command_session_and_repeated_enter_reports_already_open` and `isolated_workspace_jsonl_records_lifecycle_and_tool_call_fields`: active command sessions block enter, repeated enter reports already-open, and JSONL lifecycle/tool-call audit records namespace, timing, discarded-byte, cleanup, and no-publish fields.",
+      "description": "Uses `enter_rejects_active_command_session_and_repeated_enter_reports_already_open`: active command sessions block enter and repeated enter reports already-open, with teardown keeping cleanup and no-publish fields response-visible.",
       "command": "cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture",
       "checklist": [
         "isolated_workspace-lifecycle-gates",

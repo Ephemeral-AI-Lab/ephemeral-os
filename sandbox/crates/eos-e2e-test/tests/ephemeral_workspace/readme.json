@@ -76,7 +76,7 @@
     {
       "id": "ephemeral_workspace-route-edges",
       "title": "Route Edges",
-      "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and audit events.",
+      "description": "Multi-path shell capture, command/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and metrics.",
       "tags": [
         "ephemeral_workspace"
       ]

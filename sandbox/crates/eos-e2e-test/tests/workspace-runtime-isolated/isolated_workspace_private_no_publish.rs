@@ -93,7 +93,9 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    let mut audit = lease.audit_tap()?;
+    let version_before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?["manifest_version"]
+        .as_i64()
+        .context("manifest_version before isolated exec")?;
 
     let body = (|| -> Result<()> {
         let exec = lease.call_ok(
@@ -125,16 +127,13 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
             Some(false),
             "isolated exec must not publish to OCC: {exec}"
         );
-        assert!(
-            exec.get("audit").is_none(),
-            "isolated exec audit payload is internal and must not be exposed on the wire: {exec}"
-        );
-
-        audit.collect()?;
-        assert!(
-            !audit.any("occ.publish"),
-            "isolated exec must not emit occ.publish: {:?}",
-            audit.events()
+        let version_after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?
+            ["manifest_version"]
+            .as_i64()
+            .context("manifest_version after isolated exec")?;
+        assert_eq!(
+            version_after, version_before,
+            "isolated exec must not publish a new manifest version"
         );
 
         let read_inside = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;

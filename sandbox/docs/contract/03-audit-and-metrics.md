@@ -5,6 +5,11 @@ reimplementation (`eos-protocol` + `eos-daemon` + `eos-isolated`) MUST reproduce
 every shape here byte-for-byte (CAS / on-disk paths) or canonically-equal (wire
 envelopes per plan AV-1).
 
+> **Superseded 2026-06-11:** both audit channels described here — the daemon ring
+> buffer (`api.audit.*`) and the isolated-workspace JSONL sink — have been removed
+> from the Rust runtime entirely. Only `api.layer_metrics` (§5) remains a live
+> contract. This document is kept as the frozen historical record.
+
 **Plan items covered:** §1 acyclic-severing item 1 (move `daemon/audit_schema.py`
 schema into `eos-protocol`); SF-3 (`api.layer_metrics` frozen in golden fixtures);
 SF-6 (isolated-workspace JSONL schema + `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`).

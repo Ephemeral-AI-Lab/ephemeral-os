@@ -7,8 +7,6 @@ daemon:
   inflight:
     ttl_s: 6
     reaper_interval_s: 0.25
-  audit:
-    allow_floor_reset: true
 
 eos_e2e_test:
   workload:

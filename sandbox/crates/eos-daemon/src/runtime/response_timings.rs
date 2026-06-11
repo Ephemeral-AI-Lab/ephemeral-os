@@ -289,10 +289,5 @@ fn mutation_source(verb: &str) -> &'static str {
 }
 
 #[cfg(test)]
-pub(crate) fn i64_to_f64_saturating(value: i64) -> f64 {
-    u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
-}
-
-#[cfg(test)]
 #[path = "../../tests/unit/response_timings/mod.rs"]
 mod tests;

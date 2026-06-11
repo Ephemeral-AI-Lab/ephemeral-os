@@ -35,7 +35,7 @@ eos-sandbox-host   (lib, host)   owns and reaches sandboxes: registry, lifecycle
    ▼
 eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
                                  stack + OCC), command sessions (PTY), isolated
-                                 workspaces, plugins (PPC), audit, checkpoint.
+                                 workspaces, plugins (PPC), checkpoint.
 ```
 
 | Component | Kind | Job | Must never |
@@ -153,7 +153,7 @@ All other aliases may sunset after consumers migrate.
 | Visibility | Ops | Caller |
 |---|---|---|
 | `internal` | `sandbox.runtime.ready` (alias `api.runtime.ready`) | host recovery machine only |
-| `operator` | `sandbox.checkpoint.{layer_metrics, ensure_base, build_base, commit_to_workspace, commit_to_git, binding}` · `sandbox.audit.{pull, snapshot, reset_floor}` · `sandbox.run.cancel_all` · `sandbox.isolation.list_open` | `eos-api admin <op>` CLI; never the client socket |
+| `operator` | `sandbox.checkpoint.{layer_metrics, ensure_base, build_base, commit_to_workspace, commit_to_git, binding}` · `sandbox.run.cancel_all` · `sandbox.isolation.list_open` | `eos-api admin <op>` CLI; never the client socket |
 | `test` | `sandbox.isolation.test_reset` | test builds only |
 
 ### 4.4 `contract/ops.json` schema

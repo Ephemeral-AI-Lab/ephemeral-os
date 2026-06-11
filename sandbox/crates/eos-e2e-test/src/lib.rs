@@ -13,7 +13,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
 
-pub mod audit;
 pub mod cas;
 pub mod container;
 pub mod pool;

@@ -14,13 +14,12 @@ use serde_json::json;
 use crate::support::live_pool_or_skip;
 
 /// State-toggling ops are skipped: called with injected args they would mutate
-/// the lease (enter isolated mode, reset the audit floor) and perturb the loop.
-/// Their dispatch is proven by the dedicated tier tests instead.
+/// the lease (enter isolated mode) and perturb the loop. Their dispatch is
+/// proven by the dedicated tier tests instead.
 const SKIP: &[BuiltinDaemonOp] = &[
     BuiltinDaemonOp::IsolatedWorkspaceEnter,
     BuiltinDaemonOp::IsolatedWorkspaceExit,
     BuiltinDaemonOp::IsolatedWorkspaceTestReset,
-    BuiltinDaemonOp::AuditResetFloor,
     // Would cancel + discard every workspace run in the shared lease.
     BuiltinDaemonOp::CancelWorkspaceRuns,
 ];

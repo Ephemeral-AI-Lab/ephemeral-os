@@ -21,7 +21,7 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation envelopes, audit pagination/reset, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.audit.pull`, `api.audit.reset_floor`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which enables the audit reset gate and shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
+    "summary": "`daemon` owns the live daemon control-plane contract: in-sandbox identity, dispatch timings, built-in op registration, invocation registry accounting, heartbeat touch semantics, cancellation envelopes, TTL reaping, and dynamic plugin background registry participation. It exercises daemon ops including `api.runtime.ready`, `api.v1.inflight_count`, `api.v1.heartbeat`, `api.v1.cancel`, `api.v1.exec_command`, `api.plugin.ensure`, `api.plugin.status`, dynamic `plugin.daemonplug.query`, and every non-mutating entry in `BUILTIN_DAEMON_OPS`, with state-toggling ops covered by dedicated module tests. Module config: `crates/eos-e2e-test/tests/daemon/config/default.test.yml`, which shortens `daemon.inflight` TTL/reaper timing for bounded live checks.",
     "moduleConfig": "crates/eos-e2e-test/tests/daemon/config/default.test.yml",
     "ops": [
       "api.runtime.ready",
@@ -29,8 +29,6 @@
       "api.v1.heartbeat",
       "api.v1.cancel",
       "api.v1.exec_command",
-      "api.audit.pull",
-      "api.audit.reset_floor",
       "api.plugin.ensure",
       "api.plugin.status",
       "plugin.daemonplug.query"
@@ -81,22 +79,6 @@
       ]
     },
     {
-      "id": "daemon-audit",
-      "title": "Audit",
-      "description": "Audit pull, pagination, cursor/floor behavior, and the config-gated reset hook are explicitly covered without relying on transient global state.",
-      "tags": [
-        "daemon"
-      ]
-    },
-    {
-      "id": "daemon-audit-scope-boundary",
-      "title": "Audit Scope Boundary",
-      "description": "Daemon audit tests cover ring pagination/reset behavior while isolated lifecycle event fields and orphan checks stay owned by isolated workspace tests.",
-      "tags": [
-        "daemon"
-      ]
-    },
-    {
       "id": "daemon-ttl-reaper",
       "title": "Ttl Reaper",
       "description": "Short TTL/reaper daemon config removes stale inflight state and proves cleanup through registry counts.",
@@ -141,16 +123,6 @@
         "daemon-inflight",
         "daemon-heartbeat",
         "daemon-cancel-control"
-      ]
-    },
-    {
-      "id": "daemon-audit-cursor-reset-contract",
-      "name": "daemon-audit-cursor-reset-contract",
-      "description": "Uses `audit_pull_paginates_and_reset_floor_is_enabled_by_config`: audit pulls paginate with `limit=1`, cursor filtering is strictly after the requested sequence, empty future pulls preserve the requested floor, and the module config enables the reset gate.",
-      "command": "cargo test -p eos-e2e-test --features e2e --test daemon audit_pull_paginates_and_reset_floor_is_enabled_by_config -- --nocapture",
-      "checklist": [
-        "daemon-audit",
-        "daemon-ready-identity"
       ]
     },
     {

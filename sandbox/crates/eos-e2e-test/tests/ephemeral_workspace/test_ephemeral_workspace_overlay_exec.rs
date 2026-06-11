@@ -2,7 +2,6 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_daemon::wire::ops;
-use eos_e2e_test::audit::section;
 use eos_e2e_test::{unique_suffix, NodeLease};
 use serde_json::{json, Value};
 
@@ -218,34 +217,17 @@ fn foreground_exec_recycles_overlay_scratch() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let mut audit = lease.audit_tap()?;
     let exec = exec_settled(
         &lease,
         json!({
-            "cmd": "mkdir -p auditscope && printf x > auditscope/a.txt",
+            "cmd": "mkdir -p scratchscope && printf x > scratchscope/a.txt",
             "yield_time_ms": 8000,
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     assert!(exec.get("command_session_id").is_none(), "{exec}");
-    audit.collect()?;
     // The overlay scratch (upperdir + workdir) is torn down on finalize and the
-    // lease is released — observable as the recycle audit + active_leases back to 0.
-    let cleanup = audit
-        .first("overlay_workspace.cleanup")
-        .context("foreground exec must emit overlay_workspace.cleanup")?;
-    assert_eq!(
-        section(cleanup, "overlay_workspace")
-            .and_then(|overlay| overlay.get("scratch_removed"))
-            .and_then(Value::as_bool),
-        Some(true),
-        "overlay scratch must be recycled on finalize: {cleanup}"
-    );
-    assert!(
-        audit.any("layer_stack.lease_released"),
-        "completed overlay exec must release its lease: {:?}",
-        audit.events()
-    );
+    // lease is released — observable as active_leases back to 0.
     let metrics = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
     Ok(())

@@ -45,6 +45,13 @@ export const SLEEPER_BODY = [
   'After it returns, call submit_subagent_outcome with summary "slept".',
 ].join(" ");
 
+/** A subagent that blocks on the `hold` gate until the test releases it. */
+export const HOLDER_BODY = [
+  "You are the holder.",
+  "Immediately call hold.",
+  'After it returns, call submit_subagent_outcome with summary "held".',
+].join(" ");
+
 const ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES = new Set<string>([
   "submit_main_outcome",
   "submit_planner_outcome",
@@ -156,6 +163,52 @@ export function waitTool(): WaitTool {
     }),
     started,
     aborted: () => aborted,
+  };
+}
+
+export interface GateTool {
+  definition: ToolDefinition;
+  /** Resolves when the first hold call begins executing. */
+  started: Promise<void>;
+  /** Settle every in-flight hold call successfully. */
+  release(): void;
+}
+
+/**
+ * A blocking tool the test settles on command: `release()` resolves the
+ * in-flight call, an execution-signal abort settles it as an error. Gives
+ * auto-wait tests a session settlement fired at a test-chosen instant.
+ */
+export function gateTool(): GateTool {
+  let signalStarted!: () => void;
+  const started = new Promise<void>((resolve) => {
+    signalStarted = resolve;
+  });
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    definition: scriptedTool({
+      name: "hold",
+      description: "Block until the operator releases the gate. Takes no arguments.",
+      execute: (_input, ctx) =>
+        new Promise((resolve) => {
+          signalStarted();
+          void released.then(() => {
+            resolve({ content: { held: true } });
+          });
+          ctx.signal.addEventListener(
+            "abort",
+            () => {
+              resolve({ content: "hold aborted", isError: true });
+            },
+            { once: true },
+          );
+        }),
+    }),
+    started,
+    release,
   };
 }
 

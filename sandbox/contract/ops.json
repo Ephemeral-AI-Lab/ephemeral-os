@@ -148,39 +148,6 @@
       "summary": "Inspect the workspace binding for a layer stack root."
     },
     {
-      "name": "sandbox.audit.pull",
-      "aliases": [
-        "api.audit.pull"
-      ],
-      "served_by": "daemon",
-      "visibility": "operator",
-      "family": "Audit",
-      "mutates_state": false,
-      "summary": "Pull audit events after a cursor."
-    },
-    {
-      "name": "sandbox.audit.snapshot",
-      "aliases": [
-        "api.audit.snapshot"
-      ],
-      "served_by": "daemon",
-      "visibility": "operator",
-      "family": "Audit",
-      "mutates_state": false,
-      "summary": "Snapshot audit ring metadata."
-    },
-    {
-      "name": "sandbox.audit.reset_floor",
-      "aliases": [
-        "api.audit.reset_floor"
-      ],
-      "served_by": "daemon",
-      "visibility": "operator",
-      "family": "Audit",
-      "mutates_state": true,
-      "summary": "Reset the audit floor when the daemon-side test gate allows it."
-    },
-    {
       "name": "sandbox.file.read",
       "aliases": [
         "api.v1.read_file"

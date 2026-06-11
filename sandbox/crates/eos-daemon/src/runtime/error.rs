@@ -8,8 +8,8 @@
 
 use thiserror::Error;
 
-/// Failures surfaced by the daemon server, dispatcher, audit ring, and the
-/// injected port implementations.
+/// Failures surfaced by the daemon server, dispatcher, and the injected port
+/// implementations.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum DaemonError {
