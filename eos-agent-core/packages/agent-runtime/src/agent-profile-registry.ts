@@ -66,22 +66,25 @@ export function loadAgentProfileRegistry(
 }
 
 /**
- * Tool selection has exactly one source (§2.8): keep `allowed_tools +
- * terminal_tool` from the available definitions. The registry's startup
- * validation makes this total per run.
+ * Tool selection has exactly one source (§2.8): keep `allowed_tools` plus
+ * the terminal tool when the profile has one — a text-mode profile exposes
+ * no submission definition at all. The registry's startup validation makes
+ * this total per run.
  */
 export function selectProfileDefinitions(
   profile: AgentProfile,
   available: readonly ToolDefinition[],
 ): ToolDefinition[] {
-  const wanted = new Set<string>([...profile.allowed_tools, profile.terminal_tool]);
+  const wanted = new Set<string>(profile.allowed_tools);
+  if (profile.terminal_tool !== undefined) wanted.add(profile.terminal_tool);
   return available.filter((definition) => wanted.has(definition.name));
 }
 
 function validateToolSelection(profile: AgentProfile, known: KnownToolNames): void {
-  if (profile.allowed_tools.includes(profile.terminal_tool)) {
+  const terminal = profile.terminal_tool;
+  if (terminal !== undefined && profile.allowed_tools.includes(terminal)) {
     throw new Error(
-      `agent profile "${profile.name}" lists its terminal_tool "${profile.terminal_tool}" under allowed_tools; the terminal tool is selected separately`,
+      `agent profile "${profile.name}" lists its terminal_tool "${terminal}" under allowed_tools; the terminal tool is selected separately`,
     );
   }
   for (const tool of profile.allowed_tools) {
@@ -91,9 +94,9 @@ function validateToolSelection(profile: AgentProfile, known: KnownToolNames): vo
       );
     }
   }
-  if (!known.terminal.has(profile.terminal_tool)) {
+  if (terminal !== undefined && !known.terminal.has(terminal)) {
     throw new Error(
-      `agent profile "${profile.name}" selects "${profile.terminal_tool}", which is not a known terminal tool`,
+      `agent profile "${profile.name}" selects "${terminal}", which is not a known terminal tool`,
     );
   }
 }

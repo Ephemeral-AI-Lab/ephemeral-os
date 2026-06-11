@@ -79,9 +79,17 @@ export const HELPER_BODY = [
   'exactly "helper finished". Do not call any other tool.',
 ].join(" ");
 
+/** The profile's terminal tool, or `null` for a text-mode profile. */
+function effectiveTerminal(spec: ProfileSpec): string | null {
+  if (spec.terminal === null) return null;
+  return spec.terminal ?? `submit_${spec.kind}_outcome`;
+}
+
 export function advisoryReadyProfile(spec: ProfileSpec): ProfileSpec {
-  const terminal = spec.terminal ?? `submit_${spec.kind}_outcome`;
-  if (!ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(terminal)) return spec;
+  const terminal = effectiveTerminal(spec);
+  if (terminal === null || !ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(terminal)) {
+    return spec;
+  }
   const allowed = spec.allowed ?? [];
   const body = [
     spec.body,
@@ -324,11 +332,10 @@ export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture {
 }
 
 function profilesWithAdvisor(profiles: readonly ProfileSpec[]): readonly ProfileSpec[] {
-  const needsAdvisor = profiles.some((profile) =>
-    ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(
-      profile.terminal ?? `submit_${profile.kind}_outcome`,
-    ),
-  );
+  const needsAdvisor = profiles.some((profile) => {
+    const terminal = effectiveTerminal(profile);
+    return terminal !== null && ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES.has(terminal);
+  });
   if (!needsAdvisor || profiles.some((profile) => profile.name === "advisor")) {
     return profiles;
   }

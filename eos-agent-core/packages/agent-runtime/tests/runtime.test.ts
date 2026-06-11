@@ -342,6 +342,112 @@ describe("agent runtime", () => {
     });
   });
 
+  it("completes a no-terminal run by text over the mock client (U13)", async () => {
+    const client = new MockLlmClient([
+      scriptedTurn([complete(assistantMessage(textBlock("research summary: 42")))]),
+    ]);
+    const { runtime } = runtimeFixture({
+      profiles: [
+        {
+          name: "researcher",
+          kind: "subagent",
+          llmClientId: "researcher_llm",
+          allowed: ["read_agent_run_transcript"],
+          terminal: null,
+        },
+      ],
+      clients: { researcher_llm: client },
+    });
+    const run = runtime.startRun({
+      agentName: "researcher",
+      initialMessages: [userMessage("find the answer")],
+    });
+    const outcome = await run.handle.outcome;
+    if (outcome.status !== "completed") throw new Error("expected completion");
+    expect(outcome.submission, "the final text rides the outcome").toBe(
+      "research summary: 42",
+    );
+    expect(
+      must(client.requests.at(0)).tools.map((tool) => tool.name),
+      "no submit_* spec is exposed to the model",
+    ).toEqual(["read_agent_run_transcript"]);
+
+    await waitForFinished(runtime, "researcher");
+    expect(
+      readResultLines(join(dirname(run.transcriptPath), "result.jsonl")),
+      "the rollup records the text completion",
+    ).toEqual([expect.objectContaining({ run_id: run.runId, status: "completed" })]);
+  });
+
+  it("delivers a text child's settlement summary verbatim to the parent (U14)", async () => {
+    let releaseScout!: () => void;
+    const gate = new Promise<void>((resolve) => (releaseScout = resolve));
+    const scoutClient = new MockLlmClient([
+      gatedTurn(gate, [
+        complete(assistantMessage(textBlock("the codeword is zebra-7"))),
+      ]),
+    ]);
+    const rootClient = new MockLlmClient([
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_spawn", "run_subagent", {
+              agent_name: "scout",
+              prompt: "find the codeword",
+            }),
+          ),
+          "tool_use",
+        ),
+      ]),
+      scriptedTurn([complete(assistantMessage(textBlock("waiting on the scout")))]),
+      scriptedTurn([
+        complete(
+          assistantMessage(
+            toolUseBlock("tu_s", "submit_main_outcome", { summary: "done" }),
+          ),
+          "tool_use",
+        ),
+      ]),
+    ]);
+    const { runtime } = runtimeFixture({
+      profiles: [
+        ROOT,
+        {
+          name: "scout",
+          kind: "subagent",
+          llmClientId: "scout_llm",
+          allowed: [],
+          terminal: null,
+        },
+      ],
+      clients: { root_llm: rootClient, scout_llm: scoutClient },
+    });
+
+    const root = runtime.startRun({
+      agentName: "root",
+      initialMessages: [userMessage("delegate the lookup")],
+    });
+    await vi.waitFor(() => {
+      expect(rootClient.requests, "the parent parked on the scout").toHaveLength(2);
+    });
+    releaseScout();
+    const outcome = await root.handle.outcome;
+    expect(outcome.status).toBe("completed");
+
+    const scout = must(runtime.listRuns().find((run) => run.agent_name === "scout"));
+    expect(
+      must(rootClient.requests.at(2)).messages.at(-1),
+      "the settlement summary is the child's text verbatim, unquoted",
+    ).toEqual(
+      systemNotificationMessage({
+        type: "session_settled",
+        session: { type: "subagent", id: scout.run_id },
+        status: "completed",
+        summary: "the codeword is zebra-7",
+      }),
+    );
+  });
+
   it("runs the subagent round-trip: start by name, park, settle notification, transcript read, submit (§13.5)", async () => {
     let releaseHelper!: () => void;
     const gate = new Promise<void>((resolve) => (releaseHelper = resolve));

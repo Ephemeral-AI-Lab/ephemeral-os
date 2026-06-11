@@ -393,7 +393,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       inbox,
       listBackgroundSessions,
       runSnapshot: () => snapshotRunState(runState),
-      terminalTool: profile.terminal_tool,
+      terminalTool: profile.terminal_tool ?? null,
     });
 
     const handle = startAgentRun({
@@ -408,6 +408,9 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       maxTurns: profile.max_turns,
       signal: params.signal,
       initialMessages: [...params.initialMessages],
+      // Absence is the switch (04.10): a profile without a terminal tool
+      // terminates on text.
+      terminationMode: profile.terminal_tool === undefined ? "text" : "terminal_tool",
     });
 
     for (const message of params.initialMessages) {

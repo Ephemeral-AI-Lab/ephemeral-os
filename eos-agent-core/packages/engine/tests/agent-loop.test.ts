@@ -2,7 +2,12 @@ import { getEventListeners } from "node:events";
 
 import { describe, expect, it } from "vitest";
 
-import { toolUseIdFrom, type ToolCallResult } from "@eos/contracts";
+import {
+  assistantText,
+  toolUseIdFrom,
+  type ContentBlock,
+  type ToolCallResult,
+} from "@eos/contracts";
 import { ProviderError } from "@eos/llm-client";
 import { RunHandle } from "../src/agent-runtime-handle.js";
 import { BackgroundSessionSupervisor } from "@eos/background";
@@ -750,6 +755,267 @@ describe("agent loop", () => {
         initialMessages: [],
       }),
     ).toThrow(TypeError);
+  });
+});
+
+describe("agent loop text termination mode (04.10 §5)", () => {
+  const reasoningBlock = (text: string): ContentBlock => ({ type: "reasoning", text });
+
+  it("completes on a bare-text turn with the text as submission (U1)", async () => {
+    const message = assistantMessage(
+      reasoningBlock("weighing the options"),
+      textBlock("the answer is 42"),
+    );
+    const { client, handle } = startMockRun(
+      [scriptedTurn([complete(message, "end_turn")])],
+      { terminationMode: "text" },
+    );
+    const { events, done } = collectEvents(handle);
+    const outcome = asCompleted(await handle.outcome);
+    expect(client.requests, "one provider call").toHaveLength(1);
+    expect(outcome.turns).toBe(1);
+    expect(outcome.submission).toBe("the answer is 42");
+    expect(outcome.submission).toBe(assistantText(outcome.final_message));
+    expect(outcome.final_message, "the full message, reasoning included").toEqual(message);
+    expect(outcome.stop_reason).toBe("end_turn");
+    await done;
+    expect(must(events.at(-1)).type).toBe("run_finished");
+    expectProviderValid(outcome.llm);
+  });
+
+  it("still round-trips tool calls before the text exit (U2)", async () => {
+    const tools = scriptedExecutor(["calc", () => Promise.resolve({ content: "42" })]);
+    const call = assistantMessage(toolUseBlock("tu_1", "calc", { expr: "6*7" }));
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(call, "tool_use")]),
+        scriptedTurn([complete(assistantMessage(textBlock("computed 42")))]),
+      ],
+      { tools, terminationMode: "text" },
+    );
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns).toBe(2);
+    expect(must(client.requests.at(1)).messages, "turn 2 sees the tool result").toEqual([
+      userText("hi"),
+      call,
+      { role: "user", content: [toolResultBlock("tu_1", "42")] },
+    ]);
+    expect(outcome.submission).toBe("computed 42");
+    expectProviderValid(outcome.llm);
+  });
+
+  it("extends the run when a steer lands during the final text turn (U3)", async () => {
+    const started = deferred();
+    const release = deferred();
+    const { client, handle } = startMockRun(
+      [
+        gatedTurn(started, release.promise, [
+          complete(assistantMessage(textBlock("first answer"))),
+        ]),
+        scriptedTurn([complete(assistantMessage(textBlock("revised answer")))]),
+      ],
+      { terminationMode: "text" },
+    );
+    await started.promise;
+    expect(handle.steer(userText("one more thing"))).toBe(true);
+    release.resolve();
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns, "the steer outranked the bare text").toBe(2);
+    expect(must(client.requests.at(1)).messages).toEqual([
+      userText("hi"),
+      assistantMessage(textBlock("first answer")),
+      userText("one more thing"),
+    ]);
+    expect(outcome.submission).toBe("revised answer");
+    expectProviderValid(outcome.llm);
+  });
+
+  it("parks a bare-text turn on a running session instead of finishing (U4)", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession({ type: "command", id: "c4" }, session.handle);
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("waiting on the build")))]),
+        scriptedTurn([complete(assistantMessage(textBlock("build done, all good")))]),
+      ],
+      { notifications: inbox, background: supervisor, terminationMode: "text" },
+    );
+    let finished = false;
+    void handle.outcome.then(() => {
+      finished = true;
+    });
+    await tick();
+    await tick();
+    expect(client.requests, "parked instead of burning a provider call").toHaveLength(1);
+    expect(finished, "no finish while the session runs").toBe(false);
+    session.settle({ status: "completed", summary: "build ok" });
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns, "the park consumed no turn").toBe(2);
+    expect(outcome.submission).toBe("build done, all good");
+    expect(outcome.llm, "the settlement precedes the final text").toEqual([
+      userText("hi"),
+      assistantMessage(textBlock("waiting on the build")),
+      systemNotificationMessage({
+        type: "session_settled",
+        session: { type: "command", id: "c4" },
+        status: "completed",
+        summary: "build ok",
+      }),
+      assistantMessage(textBlock("build done, all good")),
+    ]);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("blocks the text exit on a settled-but-undelivered session until drained (U5)", async () => {
+    const inbox = new NotificationInbox();
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession({ type: "command", id: "c5" }, session.handle);
+    const started = deferred();
+    const release = deferred();
+    const { client, handle } = startMockRun(
+      [
+        gatedTurn(started, release.promise, [
+          complete(assistantMessage(textBlock("first text"))),
+        ]),
+        scriptedTurn([complete(assistantMessage(textBlock("done after drain")))]),
+      ],
+      { notifications: inbox, background: supervisor, terminationMode: "text" },
+    );
+    await started.promise;
+    // The session settles mid-stream: at the turn boundary it is open but
+    // no longer running (open == 1, running == 0).
+    session.settle({ status: "completed", summary: "built" });
+    await tick();
+    expect(supervisor.backgroundSessionCount(), "running == 0").toBe(0);
+    expect(supervisor.openBackgroundSessionCount(), "open == 1").toBe(1);
+    release.resolve();
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns, "the first text turn did not finish").toBe(2);
+    const settlement = systemNotificationMessage({
+      type: "session_settled",
+      session: { type: "command", id: "c5" },
+      status: "completed",
+      summary: "built",
+    });
+    expect(
+      must(client.requests.at(1)).messages.at(-1),
+      "the next drain delivered the settlement before any exit",
+    ).toEqual(settlement);
+    expect(outcome.submission).toBe("done after drain");
+    expect(outcome.llm).toContainEqual(settlement);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("never announces turnCompleted for the finishing text turn (U6)", async () => {
+    const tools = scriptedExecutor(["echo", () => Promise.resolve({ content: "ok" })]);
+    const started = deferred();
+    const release = deferred();
+    const { observer, calls } = recordingObserver();
+    const { handle } = startMockRun(
+      [
+        gatedTurn(started, release.promise, [
+          complete(assistantMessage(textBlock("draft"))),
+        ]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_1", "echo")), "tool_use"),
+        ]),
+        scriptedTurn([complete(assistantMessage(textBlock("final")))]),
+      ],
+      { tools, observer, terminationMode: "text", maxTurns: 5 },
+    );
+    await started.promise;
+    expect(handle.steer(userText("keep going"))).toBe(true);
+    release.resolve();
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns).toBe(3);
+    expect(outcome.submission).toBe("final");
+    expect(
+      calls,
+      "the steered text turn and the tool turn announce; the finishing text turn does not",
+    ).toEqual([
+      {
+        kind: "turnCompleted",
+        facts: {
+          turn: 1,
+          maxTurns: 5,
+          toolCalls: 0,
+          backgroundSessionCount: 0,
+          hasPendingSteers: true,
+        },
+      },
+      {
+        kind: "turnCompleted",
+        facts: {
+          turn: 2,
+          maxTurns: 5,
+          toolCalls: 1,
+          backgroundSessionCount: 0,
+          hasPendingSteers: false,
+        },
+      },
+    ]);
+  });
+
+  it("defaults terminationMode to terminal_tool: bare text continues, only is_terminal finishes (U7)", async () => {
+    const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
+    const { client, handle } = startMockRun(
+      [
+        scriptedTurn([complete(assistantMessage(textBlock("just text")))]),
+        scriptedTurn([
+          complete(assistantMessage(toolUseBlock("tu_s", "submit")), "tool_use"),
+        ]),
+      ],
+      { tools },
+    );
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.turns, "the bare text turn continued").toBe(2);
+    expect(client.requests).toHaveLength(2);
+    expect(outcome.submission, "the terminal result is the submission").toEqual(
+      SUBMISSION,
+    );
+    expectProviderValid(outcome.llm);
+  });
+
+  it("fails with max_turns when steers keep extending every text turn (U8)", async () => {
+    const firstStarted = deferred();
+    const firstRelease = deferred();
+    const secondStarted = deferred();
+    const secondRelease = deferred();
+    const { handle } = startMockRun(
+      [
+        gatedTurn(firstStarted, firstRelease.promise, [
+          complete(assistantMessage(textBlock("a"))),
+        ]),
+        gatedTurn(secondStarted, secondRelease.promise, [
+          complete(assistantMessage(textBlock("b"))),
+        ]),
+      ],
+      { terminationMode: "text", maxTurns: 2 },
+    );
+    await firstStarted.promise;
+    expect(handle.steer(userText("more")), "steer during turn 1").toBe(true);
+    firstRelease.resolve();
+    await secondStarted.promise;
+    expect(handle.steer(userText("even more")), "steer during turn 2").toBe(true);
+    secondRelease.resolve();
+    const outcome = asFailed(await handle.outcome);
+    expect(outcome.failure.kind).toBe("max_turns");
+    expect(outcome.turns).toBe(2);
+    expectProviderValid(outcome.llm);
+  });
+
+  it("terminates on an empty assistant turn with an empty submission (U9)", async () => {
+    const message = assistantMessage(reasoningBlock("only thinking, no text"));
+    const { handle } = startMockRun([scriptedTurn([complete(message)])], {
+      terminationMode: "text",
+    });
+    const outcome = asCompleted(await handle.outcome);
+    expect(outcome.submission).toBe("");
+    expect(outcome.final_message).toEqual(message);
+    expectProviderValid(outcome.llm);
   });
 });
 

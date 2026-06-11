@@ -73,6 +73,9 @@ function mapSubagentOutcome(outcome: AgentRunOutcome): BackgroundSessionOutcome 
 }
 
 function submissionSummary(submission: JsonValue | undefined): string {
+  // A text-mode child's submission IS its final text (04.10): pass it
+  // through verbatim instead of handing the parent a quoted blob.
+  if (typeof submission === "string") return submission;
   if (
     typeof submission === "object" &&
     submission !== null &&

@@ -18,8 +18,12 @@ export interface AgentProfile {
   agent_kind: AgentKind;
   /** Ordinary non-terminal tools to expose; never inferred from prose. */
   allowed_tools: readonly ToolName[];
-  /** Exactly one terminal tool, separate from the allowlist. */
-  terminal_tool: ToolName;
+  /**
+   * At most one terminal tool, separate from the allowlist. Absent means
+   * the run terminates on a bare-text turn (Phase 04.10); required for
+   * `planner`/`worker` kinds, whose submissions must stay structured.
+   */
+  terminal_tool?: ToolName;
   /**
    * Workflow context composer, required for `planner`/`worker` kinds: a
    * repo-root-relative `.cjs`/`.mjs` path under the workflow scripts root.
@@ -39,7 +43,7 @@ const FrontmatterSchema = z.object({
   max_turns: z.number().int().positive(),
   agent_kind: AgentKindSchema,
   allowed_tools: z.array(ToolNameSchema),
-  terminal_tool: ToolNameSchema,
+  terminal_tool: ToolNameSchema.optional(),
   workflow_context_script: z.string().min(1).optional(),
 });
 
@@ -72,14 +76,21 @@ export function loadAgentProfile(path: string): AgentProfile {
   if (!parsed.success) {
     throw new Error(`agent profile ${path} is invalid: ${zodIssueSummary(parsed.error)}`);
   }
-  const requiresContextScript =
+  const isWorkflowKind =
     parsed.data.agent_kind === "planner" || parsed.data.agent_kind === "worker";
-  if (requiresContextScript && parsed.data.workflow_context_script === undefined) {
+  if (isWorkflowKind && parsed.data.terminal_tool === undefined) {
+    // Workflow transitions consume structured, schema-validated submissions;
+    // a free-text planner/worker outcome would synthesize failures.
+    throw new Error(
+      `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires terminal_tool`,
+    );
+  }
+  if (isWorkflowKind && parsed.data.workflow_context_script === undefined) {
     throw new Error(
       `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires workflow_context_script`,
     );
   }
-  if (!requiresContextScript && parsed.data.workflow_context_script !== undefined) {
+  if (!isWorkflowKind && parsed.data.workflow_context_script !== undefined) {
     throw new Error(
       `agent profile ${path} must omit workflow_context_script for agent_kind ${parsed.data.agent_kind}`,
     );

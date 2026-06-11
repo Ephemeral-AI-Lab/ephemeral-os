@@ -418,6 +418,7 @@ export interface StartMockRunOptions {
   notifications?: NotificationInbox;
   background?: BackgroundSessionSupervisor;
   observer?: LoopObserver;
+  terminationMode?: "terminal_tool" | "text";
 }
 
 /** Start a run over scripted turns with small defaults. */
@@ -437,6 +438,7 @@ export function startMockRun(
     notifications: options.notifications,
     background: options.background,
     observer: options.observer,
+    terminationMode: options.terminationMode,
   });
   return { client, handle };
 }

@@ -18,11 +18,15 @@ if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
 const p = JSON.parse(fs.readFileSync(0, "utf8"));
 const threshold = Math.ceil(p.facts.max_turns * (percent / 100));
 if (p.event === "TurnCompleted" && p.facts.turn === threshold) {
+  const wrapUp =
+    p.terminal_tool === null
+      ? "Wrap up and finish by replying with your final answer as plain text."
+      : `Wrap up and submit via ${p.terminal_tool}.`;
   process.stdout.write(
     JSON.stringify({
       notification:
         `Turn ${p.facts.turn} of ${p.facts.max_turns} (${String(percent)}% of budget). ` +
-        `Wrap up and submit via ${p.terminal_tool}.`,
+        wrapUp,
     }),
   );
 }

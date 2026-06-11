@@ -5,11 +5,14 @@
 // run's terminal tool. The `background_session_count === 0` check is load-bearing: it
 // is the same fact the engine's park gate reads, so script and engine
 // classify the turn identically (background sessions running: the engine
-// parks and idle-wake owns it; none: this script speaks).
+// parks and idle-wake owns it; none: this script speaks). A text-mode run
+// (`terminal_tool === null`) exits on bare text instead of spinning, so
+// there is nothing to rescue and this script stays silent.
 
 const fs = require("node:fs");
 const p = JSON.parse(fs.readFileSync(0, "utf8"));
 if (
+  p.terminal_tool !== null &&
   p.event === "TurnCompleted" &&
   p.facts.tool_calls === 0 &&
   p.facts.background_session_count === 0 &&

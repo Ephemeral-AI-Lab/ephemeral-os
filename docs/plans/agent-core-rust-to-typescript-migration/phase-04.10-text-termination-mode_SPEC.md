@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 04.10 Text Termination Mode
 
-Status: Proposed
+Status: Completed
 Date: 2026-06-12
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -442,10 +442,10 @@ Phase 04.10 is accepted when:
 
 | Step | Status | Required proof |
 | --- | --- | --- |
-| Notification contract widening | Pending | U15 green; `pnpm run typecheck` |
-| Engine mode + text exit + observer skip | Pending | U1-U9 green; pre-existing loop suite green unmodified |
-| Profile contract + runtime wiring | Pending | U10-U13 green |
-| `run_subagent` summary passthrough | Pending | U14 green |
-| Baseline rule scripts | Pending | piped-payload smoke; T1/T4 live |
-| E2e shard | Pending | T1-T4 green live on this machine; clean-skip without credentials |
-| Index updated | Pending | Phase 04.10 row in `index.md` |
+| Notification contract widening | Done | U15 green; `pnpm run typecheck` green |
+| Engine mode + text exit + observer skip | Done | U1-U9 green; pre-existing loop suite green unmodified (54 engine tests) |
+| Profile contract + runtime wiring | Done | U10-U13 green |
+| `run_subagent` summary passthrough | Done | U14 green |
+| Baseline rule scripts | Done | piped-payload smoke (`null` → remind silent, budget speaks text-mode wording); T1/T4 live green |
+| E2e shard | Done | T1-T4 green live on this machine (4/4 in 34.6s); clean-skip without credentials (4 skipped) |
+| Index updated | Done | Phase 04.10 row in `index.md` marked Completed with verification |

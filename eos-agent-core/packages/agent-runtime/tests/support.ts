@@ -197,7 +197,8 @@ export interface ProfileSpec {
   kind: "main" | "planner" | "worker" | "advisor" | "subagent";
   llmClientId: string;
   allowed?: readonly string[];
-  terminal?: string;
+  /** `null` writes no terminal_tool line at all (text-mode profile). */
+  terminal?: string | null;
   maxTurns?: number;
   body?: string;
   /** Required for planner/worker kinds; fixtures usually inject it. */
@@ -207,6 +208,8 @@ export interface ProfileSpec {
 /** Write `<dir>/<name>.md` in the §4 profile format. */
 export function writeProfile(dir: string, spec: ProfileSpec): string {
   const allowed = (spec.allowed ?? []).map((tool) => `  - ${tool}`).join("\n");
+  const terminal =
+    spec.terminal === null ? undefined : (spec.terminal ?? `submit_${spec.kind}_outcome`);
   const content = [
     "---",
     `name: ${spec.name}`,
@@ -215,7 +218,7 @@ export function writeProfile(dir: string, spec: ProfileSpec): string {
     `max_turns: ${String(spec.maxTurns ?? 8)}`,
     `agent_kind: ${spec.kind}`,
     `allowed_tools:${allowed ? `\n${allowed}` : " []"}`,
-    `terminal_tool: ${spec.terminal ?? `submit_${spec.kind}_outcome`}`,
+    ...(terminal === undefined ? [] : [`terminal_tool: ${terminal}`]),
     ...(spec.workflowContextScript
       ? [`workflow_context_script: ${spec.workflowContextScript}`]
       : []),

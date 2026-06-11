@@ -10,7 +10,7 @@ import {
   selectProfileDefinitions,
   type KnownToolNames,
 } from "../src/agent-profile-registry.js";
-import { tempDir, writeProfile } from "./support.js";
+import { tempDir, writeProfile, type ProfileSpec } from "./support.js";
 
 /** The §4 worker example, verbatim frontmatter shape. */
 const WORKER_PROFILE = `---
@@ -175,6 +175,87 @@ describe("agent profile loader and registry", () => {
       body: "",
     });
     expect(loadAgentProfile(path).system_prompt).toBe("");
+  });
+
+  it.each`
+    kind
+    ${"main"}
+    ${"advisor"}
+    ${"subagent"}
+  `("loads a $kind profile that omits terminal_tool (U10)", ({ kind }: { kind: ProfileSpec["kind"] }) => {
+    const dir = join(tempDir("eos-profiles-"), "profiles");
+    mkdirSync(dir, { recursive: true });
+    const path = writeProfile(dir, {
+      name: "textish",
+      kind,
+      llmClientId: "any_llm",
+      allowed: [],
+      terminal: null,
+    });
+    expect(loadAgentProfile(path).terminal_tool).toBeUndefined();
+  });
+
+  it.each`
+    kind
+    ${"planner"}
+    ${"worker"}
+  `("rejects a $kind profile without a terminal tool (U11)", ({ kind }: { kind: ProfileSpec["kind"] }) => {
+    const dir = join(tempDir("eos-profiles-"), "profiles");
+    mkdirSync(dir, { recursive: true });
+    const path = writeProfile(dir, {
+      name: "wf",
+      kind,
+      llmClientId: "any_llm",
+      allowed: [],
+      terminal: null,
+      workflowContextScript: ".eos-agents/workflow/scripts/x.cjs",
+    });
+    expect(() => loadAgentProfile(path)).toThrow(
+      `agent profile ${path} (agent_kind ${kind}) requires terminal_tool`,
+    );
+  });
+
+  it("selects no submission definition for a no-terminal profile while allowed_tools rules hold (U12)", () => {
+    const dir = join(tempDir("eos-profiles-"), "profiles");
+    mkdirSync(dir, { recursive: true });
+    writeProfile(dir, {
+      name: "texty",
+      kind: "subagent",
+      llmClientId: "any_llm",
+      allowed: ["read", "read_agent_run_transcript"],
+      terminal: null,
+    });
+    const registry = loadAgentProfileRegistry(dir, KNOWN);
+    const profile = registry.require("texty");
+    const define = (name: string): ReturnType<typeof scriptedTool> =>
+      scriptedTool({ name, execute: () => Promise.resolve({ content: name }) });
+    const available = [
+      define("read"),
+      define("read_agent_run_transcript"),
+      define("submit_subagent_outcome"),
+      define("submit_main_outcome"),
+    ];
+    const selected = selectProfileDefinitions(profile, available).map(
+      (definition) => definition.name as string,
+    );
+    expect(selected, "no submit_* spec is exposed at all").toEqual([
+      "read",
+      "read_agent_run_transcript",
+    ]);
+
+    const badDir = join(tempDir("eos-profiles-"), "profiles");
+    mkdirSync(badDir, { recursive: true });
+    writeProfile(badDir, {
+      name: "texty",
+      kind: "subagent",
+      llmClientId: "any_llm",
+      allowed: ["teleport"],
+      terminal: null,
+    });
+    expect(
+      () => loadAgentProfileRegistry(badDir, KNOWN),
+      "allowed_tools validation is unchanged for text-mode profiles",
+    ).toThrow(/allows "teleport", which is not a known non-terminal tool/);
   });
 
   it("selects exactly allowed_tools + terminal_tool from the available definitions (§2.8)", () => {
