@@ -11,7 +11,11 @@ use nix::sys::signal::{killpg, Signal};
 use nix::unistd::Pid;
 use rustix::event::{poll, PollFd, PollFlags};
 use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
-use rustix::pty::{grantpt, ioctl_tiocgptpeer, openpt, unlockpt, OpenptFlags};
+#[cfg(target_os = "linux")]
+use rustix::pty::ioctl_tiocgptpeer;
+#[cfg(not(target_os = "linux"))]
+use rustix::pty::ptsname;
+use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 use serde_json::Value;
 
 use crate::transcript::TranscriptTimestampPrefixer;
@@ -360,11 +364,23 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 fn open_pty_pair() -> io::Result<(File, File)> {
-    let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY | OpenptFlags::CLOEXEC;
+    let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY;
+    #[cfg(target_os = "linux")]
+    let flags = flags | OpenptFlags::CLOEXEC;
     let master = openpt(flags).map_err(io::Error::from)?;
     grantpt(&master).map_err(io::Error::from)?;
     unlockpt(&master).map_err(io::Error::from)?;
+
+    #[cfg(target_os = "linux")]
     let slave = ioctl_tiocgptpeer(&master, flags).map_err(io::Error::from)?;
+    #[cfg(not(target_os = "linux"))]
+    let slave = {
+        let slave_name = ptsname(&master, Vec::new()).map_err(io::Error::from)?;
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(slave_name.to_string_lossy().as_ref())?
+    };
 
     Ok((File::from(master), File::from(slave)))
 }

@@ -260,6 +260,7 @@ sandbox/
 │   ├── eos-workspace/              ephemeral + isolated workspace policy
 │   ├── eos-plugin/                 plugin contracts and PPC protocol
 │   ├── eos-operation/
+│   │   ├── operation-core/         shared operation outcome + workspace binding contracts
 │   │   ├── eos-command-ops/        command lifecycle/runtime policy
 │   │   ├── file-ops/               file operation semantics
 │   │   └── plugin-ops/             plugin package/process/dispatch runtime
