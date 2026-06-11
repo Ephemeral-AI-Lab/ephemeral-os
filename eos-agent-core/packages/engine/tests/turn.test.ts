@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { AgentEvent } from "@eos/agent-runtime/agent-run-handle";
 import { ProviderError, type UsageSnapshot } from "@eos/llm-client";
 
 import { Conversation } from "../src/conversation.js";
-import type { AgentEvent } from "../src/events.js";
 import { addUsage, runAssistantTurn, type TurnConfig } from "../src/turn.js";
 import {
   MockLlmClient,

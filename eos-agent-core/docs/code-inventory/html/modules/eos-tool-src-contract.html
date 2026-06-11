@@ -26,7 +26,7 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Symbols</dt><dd>6</dd></div>
           <div><dt>Schemas</dt><dd>1</dd></div>
           <div><dt>Types</dt><dd>1</dd></div>
           <div><dt>Functions</dt><dd>0</dd></div>
@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>AgentKind, AgentRunId, JsonObject, JsonValue, SandboxId, ToolSpec, ToolUseId</td>
+      <td>AgentRunSnapshot, JsonObject, JsonValue, ToolSpec, ToolUseId</td>
       <td>type</td>
       <td>1</td>
     </tr>
@@ -54,7 +54,7 @@
       <td><code>zod</code></td>
       <td>z</td>
       <td>value</td>
-      <td>10</td>
+      <td>8</td>
     </tr>
   </tbody>
           </table>
@@ -84,7 +84,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>contract.ts</code>
-        <small>7 symbols</small>
+        <small>6 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -104,13 +104,6 @@
 
           <li class="tree-symbol search-item">
             <a href="#ToolOutcome"><code>ToolOutcome</code></a>
-            <span>interface</span>
-            <span class="compact-tags">public-api</span>
-          </li>
-
-
-          <li class="tree-symbol search-item">
-            <a href="#AgentRunSnapshot"><code>AgentRunSnapshot</code></a>
             <span>interface</span>
             <span class="compact-tags">public-api</span>
           </li>
@@ -144,7 +137,7 @@
       <div class="symbol-head">
         <div>
           <strong>ToolNameSchema</strong>
-          <span>schema · line 13 · public</span>
+          <span>schema · line 11 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolNameSchema">Module</a>
       </div>
@@ -162,7 +155,7 @@
       <div class="symbol-head">
         <div>
           <strong>ToolName</strong>
-          <span>type · line 14 · public</span>
+          <span>type · line 12 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolName">Module</a>
       </div>
@@ -180,7 +173,7 @@
       <div class="symbol-head">
         <div>
           <strong>ToolOutcome</strong>
-          <span>interface · line 21 · public</span>
+          <span>interface · line 19 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolOutcome">Module</a>
       </div>
@@ -228,91 +221,19 @@ never claims by the tool.</p>
     </article>
 
 
-    <article id="AgentRunSnapshot" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>AgentRunSnapshot</strong>
-          <span>interface · line 36 · public</span>
-        </div>
-        <a href="../modules/eos-tool-src-contract.html#AgentRunSnapshot">Module</a>
-      </div>
-      <pre><code>export interface AgentRunSnapshot</code></pre>
-      <p>Frozen, fully serializable copy of `AgentRunState`: same fields, with
-the one mutable cell collapsed to the batch's snapshot. Built by spread
-+ freeze, so a new run-state fact reaches every tool call and hook
-payload without touching this projection.</p>
-      <div class="tags"><span>exported</span><span>public-api</span></div>
-
-
-    <h3>Fields</h3>
-
-    <div class="table-wrap compact">
-      <table>
-        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
-        <tbody>
-
-            <tr>
-              <td><code>run_id</code></td>
-              <td><code>AgentRunId</code></td>
-              <td>readonly</td>
-            </tr>
-
-
-            <tr>
-              <td><code>kind</code></td>
-              <td><code>AgentKind</code></td>
-              <td>readonly</td>
-            </tr>
-
-
-            <tr>
-              <td><code>parent</code></td>
-              <td><code>AgentRunId</code></td>
-              <td>optional readonly</td>
-            </tr>
-
-
-            <tr>
-              <td><code>sandbox_id</code></td>
-              <td><code>SandboxId</code></td>
-              <td>readonly</td>
-            </tr>
-
-
-            <tr>
-              <td><code>transcript_path</code></td>
-              <td><code>string</code></td>
-              <td>readonly</td>
-            </tr>
-
-
-            <tr>
-              <td><code>workspace</code></td>
-              <td><code>{ readonly is_isolated: boolean }</code></td>
-              <td>readonly</td>
-            </tr>
-
-        </tbody>
-      </table>
-    </div>
-
-
-
-
-    </article>
-
-
     <article id="ToolCallMeta" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>ToolCallMeta</strong>
-          <span>interface · line 50 · public</span>
+          <span>interface · line 34 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolCallMeta">Module</a>
       </div>
       <pre><code>export interface ToolCallMeta</code></pre>
       <p>Serializable per-call facts; built once per call, frozen, and shared by
-pre-hooks, `execute`, and post-hooks (command hooks eat this as JSON).</p>
+pre-hooks, `execute`, and post-hooks (command hooks eat this as JSON).
+`run` is the contracts-level `AgentRunSnapshot`, built by spread +
+freeze over `AgentRunState`.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
 
@@ -357,7 +278,7 @@ pre-hooks, `execute`, and post-hooks (command hooks eat this as JSON).</p>
       <div class="symbol-head">
         <div>
           <strong>ToolCallContext</strong>
-          <span>interface · line 61 · public</span>
+          <span>interface · line 45 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolCallContext">Module</a>
       </div>
@@ -402,7 +323,7 @@ construction, so neither tools nor hooks ever see a port bag.</p>
       <div class="symbol-head">
         <div>
           <strong>ToolDefinition</strong>
-          <span>interface · line 70 · public</span>
+          <span>interface · line 54 · public</span>
         </div>
         <a href="../modules/eos-tool-src-contract.html#ToolDefinition">Module</a>
       </div>
@@ -441,7 +362,14 @@ centralizes the fail-closed flag defaults and derives `spec`.</p>
 
 
             <tr>
-              <td><code>terminal</code></td>
+              <td><code>isTerminal</code></td>
+              <td><code>boolean</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>isBatchExecutionForbidden</code></td>
               <td><code>boolean</code></td>
               <td>readonly</td>
             </tr>
@@ -451,6 +379,20 @@ centralizes the fail-closed flag defaults and derives `spec`.</p>
               <td><code>availableInIsolatedWorkspace</code></td>
               <td><code>boolean</code></td>
               <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>isAdvisoryRequired</code></td>
+              <td><code>boolean</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>advisorPrompt</code></td>
+              <td><code>string</code></td>
+              <td>optional readonly</td>
             </tr>
 
 
@@ -508,7 +450,7 @@ centralizes the fail-closed flag defaults and derives `spec`.</p>
       <td>imports</td>
       <td><code>@eos/tool/src/contract</code></td>
       <td><code>zod</code></td>
-      <td>10</td>
+      <td>8</td>
     </tr>
 
 
@@ -516,7 +458,7 @@ centralizes the fail-closed flag defaults and derives `spec`.</p>
       <td>schema-infers-type</td>
       <td><code>@eos/tool/src/contract#ToolNameSchema</code></td>
       <td><code>@eos/tool/src/contract#ToolName</code></td>
-      <td>14</td>
+      <td>12</td>
     </tr>
 
 
@@ -524,7 +466,7 @@ centralizes the fail-closed flag defaults and derives `spec`.</p>
       <td>uses-schema</td>
       <td><code>@eos/tool/src/contract#ToolName</code></td>
       <td><code>@eos/tool/src/contract#ToolNameSchema</code></td>
-      <td>14</td>
+      <td>12</td>
     </tr>
   </tbody>
           </table>

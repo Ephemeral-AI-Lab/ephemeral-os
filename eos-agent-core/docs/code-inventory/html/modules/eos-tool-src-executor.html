@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>5</span>
+          <span>4</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>ToolCallResult, ToolSpec, ToolUseId</td>
+      <td>AgentRunSnapshot, ToolCallResult, ToolSpec, ToolUseId</td>
       <td>type</td>
       <td>1</td>
     </tr>
@@ -54,15 +54,7 @@
       <td><code>@eos/engine</code></td>
       <td>AgentEvent, ToolExecutor, ToolUseBlock</td>
       <td>type</td>
-      <td>2</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./contract.js</code></td>
-      <td>AgentRunSnapshot</td>
-      <td>type</td>
-      <td>4</td>
+      <td>7</td>
     </tr>
 
 
@@ -70,7 +62,7 @@
       <td><code>./pipeline.js</code></td>
       <td>projectContent, type BoundTool</td>
       <td>value</td>
-      <td>5</td>
+      <td>9</td>
     </tr>
 
 
@@ -78,7 +70,7 @@
       <td><code>./run-state.js</code></td>
       <td>snapshotRunState, type AgentRunState</td>
       <td>value</td>
-      <td>6</td>
+      <td>10</td>
     </tr>
   </tbody>
           </table>
@@ -134,7 +126,7 @@
 
 
           <li class="tree-symbol search-item">
-            <a href="#terminalBatchRejection"><code>terminalBatchRejection</code></a>
+            <a href="#forbiddenBatchRejection"><code>forbiddenBatchRejection</code></a>
             <span>function</span>
             <span class="compact-tags">internal</span>
           </li>
@@ -175,7 +167,7 @@
       <div class="symbol-head">
         <div>
           <strong>MAX_TOOL_CONCURRENCY</strong>
-          <span>const · line 9 · internal</span>
+          <span>const · line 13 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#MAX_TOOL_CONCURRENCY">Module</a>
       </div>
@@ -193,7 +185,7 @@
       <div class="symbol-head">
         <div>
           <strong>ToolBatchExecutorInput</strong>
-          <span>interface · line 11 · public</span>
+          <span>interface · line 15 · public</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#ToolBatchExecutorInput">Module</a>
       </div>
@@ -236,7 +228,7 @@
       <div class="symbol-head">
         <div>
           <strong>toolBatchExecutor</strong>
-          <span>function · line 25 · public</span>
+          <span>function · line 30 · public</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#toolBatchExecutor">Module</a>
       </div>
@@ -245,8 +237,9 @@
 workspace mode; `executeBatch` keeps the Phase 03 runner semantics -
 fully concurrent under a cap of 8, results in `tool_use` order, thrown
 errors and unknown names mapped to `is_error` results, abort settling
-with straggler-emit suppression - and adds the terminal-solo policy: a
-terminal call with any sibling rejects the WHOLE batch undispatched.</p>
+with straggler-emit suppression - and adds the batch-execution-forbidden
+policy: a batch-forbidden call (e.g. a terminal submission) with any
+sibling rejects the WHOLE batch undispatched.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
 
@@ -255,18 +248,19 @@ terminal call with any sibling rejects the WHOLE batch undispatched.</p>
     </article>
 
 
-    <article id="terminalBatchRejection" class="symbol-card search-item">
+    <article id="forbiddenBatchRejection" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>terminalBatchRejection</strong>
-          <span>function · line 99 · internal</span>
+          <strong>forbiddenBatchRejection</strong>
+          <span>function · line 105 · internal</span>
         </div>
-        <a href="../modules/eos-tool-src-executor.html#terminalBatchRejection">Module</a>
+        <a href="../modules/eos-tool-src-executor.html#forbiddenBatchRejection">Module</a>
       </div>
-      <pre><code>function terminalBatchRejection( calls: ToolUseBlock[], byName: Map&lt;string, BoundTool&gt;, ): string | undefined</code></pre>
-      <p>Terminal-solo policy (Rust `reject_terminal_batch` parity): a batch with
-a terminal call plus any sibling rejects every call; a solo terminal
-call dispatches normally.</p>
+      <pre><code>function forbiddenBatchRejection( calls: ToolUseBlock[], byName: Map&lt;string, BoundTool&gt;, ): string | undefined</code></pre>
+      <p>Batch-execution-forbidden policy (generalizes the Rust
+`reject_terminal_batch` terminal-solo rule): a batch with a flagged call
+plus any sibling rejects every call; a solo flagged call dispatches
+normally.</p>
       <div class="tags"><span>internal</span></div>
 
 
@@ -279,7 +273,7 @@ call dispatches normally.</p>
       <div class="symbol-head">
         <div>
           <strong>executeCall</strong>
-          <span>function · line 115 · internal</span>
+          <span>function · line 121 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#executeCall">Module</a>
       </div>
@@ -297,7 +291,7 @@ call dispatches normally.</p>
       <div class="symbol-head">
         <div>
           <strong>errorResult</strong>
-          <span>function · line 136 · internal</span>
+          <span>function · line 142 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#errorResult">Module</a>
       </div>
@@ -315,7 +309,7 @@ call dispatches normally.</p>
       <div class="symbol-head">
         <div>
           <strong>isAborted</strong>
-          <span>function · line 149 · internal</span>
+          <span>function · line 155 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#isAborted">Module</a>
       </div>
@@ -333,7 +327,7 @@ call dispatches normally.</p>
       <div class="symbol-head">
         <div>
           <strong>settledOrAborted</strong>
-          <span>function · line 154 · internal</span>
+          <span>function · line 160 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-executor.html#settledOrAborted">Module</a>
       </div>
@@ -367,15 +361,7 @@ call dispatches normally.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/executor</code></td>
       <td><code>@eos/engine</code></td>
-      <td>2</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/tool/src/executor</code></td>
-      <td><code>@eos/tool/src/contract</code></td>
-      <td>4</td>
+      <td>7</td>
     </tr>
 
 
@@ -383,7 +369,7 @@ call dispatches normally.</p>
       <td>imports</td>
       <td><code>@eos/tool/src/executor</code></td>
       <td><code>@eos/tool/src/pipeline</code></td>
-      <td>5</td>
+      <td>9</td>
     </tr>
 
 
@@ -391,7 +377,7 @@ call dispatches normally.</p>
       <td>imports</td>
       <td><code>@eos/tool/src/executor</code></td>
       <td><code>@eos/tool/src/run-state</code></td>
-      <td>6</td>
+      <td>10</td>
     </tr>
   </tbody>
           </table>

@@ -7,9 +7,12 @@ import {
   type StopReason,
   type UsageSnapshot,
 } from "@eos/llm-client";
+import type {
+  AgentEvent,
+  PartialReason,
+} from "@eos/agent-runtime/agent-run-handle";
 
-import type { Conversation, PartialReason } from "./conversation.js";
-import type { AgentEvent } from "./events.js";
+import type { Conversation } from "./conversation.js";
 
 /** Per-run provider-call configuration, fixed at `startAgentRun`. */
 export interface TurnConfig {

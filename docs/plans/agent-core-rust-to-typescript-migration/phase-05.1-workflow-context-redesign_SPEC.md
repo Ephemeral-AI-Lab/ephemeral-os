@@ -688,7 +688,7 @@ beyond `delegate` crosses the tool boundary:
 function workflowTools(
   delegate: (input: DelegateWorkflowInput,
              parent: AgentRunId) => Promise<DelegatedWorkflow>,
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition[];
 
 interface DelegatedWorkflow {
@@ -717,7 +717,7 @@ execute: async (input, ctx) => {
 ```
 
 Registration precedes the tool result, exactly the subagent pattern:
-`openCount()` covers the workflow before the model's next token,
+`openBackgroundSessionCount()` covers the workflow before the model's next token,
 settlement publishes one `session_settled` notification, auto-wait parks
 an idle caller, the submission guard holds the caller past an unseen
 settlement, and `supervisor.dispose` on caller finish cancels through the

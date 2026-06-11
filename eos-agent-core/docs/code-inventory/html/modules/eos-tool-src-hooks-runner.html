@@ -26,7 +26,7 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>10</dd></div>
+          <div><dt>Symbols</dt><dd>9</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>0</dd></div>
           <div><dt>Functions</dt><dd>6</dd></div>
@@ -43,18 +43,10 @@
             <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
-      <td><code>node:child_process</code></td>
-      <td>spawn</td>
-      <td>value</td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
       <td><code>zod</code></td>
       <td>z</td>
       <td>type</td>
-      <td>2</td>
+      <td>1</td>
     </tr>
 
 
@@ -62,7 +54,15 @@
       <td><code>./protocol.js</code></td>
       <td>HookOutputSchema, combineHookOutputs, type CombinedHookOutcome, type HookCommand, type HookConfigEntry, type HookOutput, type HookPayload</td>
       <td>value</td>
-      <td>4</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../spawn.js</code></td>
+      <td>spawnJsonCommand</td>
+      <td>value</td>
+      <td>12</td>
     </tr>
   </tbody>
           </table>
@@ -92,16 +92,9 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>runner.ts</code>
-        <small>10 symbols</small>
+        <small>9 symbols</small>
       </div>
       <ul class="tree-symbols">
-
-          <li class="tree-symbol search-item">
-            <a href="#DEFAULT_HOOK_TIMEOUT_MS"><code>DEFAULT_HOOK_TIMEOUT_MS</code></a>
-            <span>const</span>
-            <span class="compact-tags">internal</span>
-          </li>
-
 
           <li class="tree-symbol search-item">
             <a href="#HookRunResult"><code>HookRunResult</code></a>
@@ -169,29 +162,11 @@
     </nav>
 
           <div class="symbol-stack">
-    <article id="DEFAULT_HOOK_TIMEOUT_MS" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>DEFAULT_HOOK_TIMEOUT_MS</strong>
-          <span>const · line 14 · internal</span>
-        </div>
-        <a href="../modules/eos-tool-src-hooks-runner.html#DEFAULT_HOOK_TIMEOUT_MS">Module</a>
-      </div>
-      <pre><code>const DEFAULT_HOOK_TIMEOUT_MS = 60_000</code></pre>
-
-      <div class="tags"><span>internal</span></div>
-
-
-
-
-    </article>
-
-
     <article id="HookRunResult" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>HookRunResult</strong>
-          <span>interface · line 17 · internal</span>
+          <span>interface · line 15 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#HookRunResult">Module</a>
       </div>
@@ -234,7 +209,7 @@
       <div class="symbol-head">
         <div>
           <strong>HookRunSummary</strong>
-          <span>interface · line 23 · public</span>
+          <span>interface · line 21 · public</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#HookRunSummary">Module</a>
       </div>
@@ -273,7 +248,7 @@
       <div class="symbol-head">
         <div>
           <strong>HookEngine</strong>
-          <span>class · line 35 · public</span>
+          <span>class · line 33 · public</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#HookEngine">Module</a>
       </div>
@@ -331,7 +306,7 @@ JSON), model feedback (exit 2 stderr), operator warning (everything else).</p>
       <div class="symbol-head">
         <div>
           <strong>passthrough</strong>
-          <span>function · line 65 · internal</span>
+          <span>function · line 63 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#passthrough">Module</a>
       </div>
@@ -349,7 +324,7 @@ JSON), model feedback (exit 2 stderr), operator warning (everything else).</p>
       <div class="symbol-head">
         <div>
           <strong>runHook</strong>
-          <span>function · line 69 · internal</span>
+          <span>function · line 67 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#runHook">Module</a>
       </div>
@@ -367,17 +342,17 @@ JSON), model feedback (exit 2 stderr), operator warning (everything else).</p>
       <div class="symbol-head">
         <div>
           <strong>runCommandHook</strong>
-          <span>function · line 95 · internal</span>
+          <span>function · line 93 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#runCommandHook">Module</a>
       </div>
-      <pre><code>function runCommandHook( command: Extract&lt;HookCommand,</code></pre>
-      <p>The JS-script pluggability: spawn with `shell: true`, payload JSON +
-newline on stdin, per-hook timeout derived from the call's signal (a
-cancelled run kills its hooks). Exit 0 stdout parses as `HookOutput`
-(mismatch = passthrough + warning); exit 2 denies with stderr as the
-model-visible reason; anything else is passthrough + warning.</p>
-      <div class="tags"><span>internal</span></div>
+      <pre><code>async function runCommandHook( command: Extract&lt;HookCommand,</code></pre>
+      <p>The JS-script pluggability over the shared spawn core: per-hook timeout
+derived from the call's signal (a cancelled run kills its hooks). Exit 0
+stdout parses as `HookOutput` (mismatch = passthrough + warning); exit 2
+denies with stderr as the model-visible reason; anything else is
+passthrough + warning.</p>
+      <div class="tags"><span>async</span><span>internal</span></div>
 
 
 
@@ -389,7 +364,7 @@ model-visible reason; anything else is passthrough + warning.</p>
       <div class="symbol-head">
         <div>
           <strong>validateHookOutput</strong>
-          <span>function · line 163 · internal</span>
+          <span>function · line 132 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#validateHookOutput">Module</a>
       </div>
@@ -407,7 +382,7 @@ model-visible reason; anything else is passthrough + warning.</p>
       <div class="symbol-head">
         <div>
           <strong>invalidHookOutput</strong>
-          <span>function · line 168 · internal</span>
+          <span>function · line 137 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#invalidHookOutput">Module</a>
       </div>
@@ -425,7 +400,7 @@ model-visible reason; anything else is passthrough + warning.</p>
       <div class="symbol-head">
         <div>
           <strong>errorMessage</strong>
-          <span>function · line 179 · internal</span>
+          <span>function · line 148 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-hooks-runner.html#errorMessage">Module</a>
       </div>
@@ -451,7 +426,7 @@ model-visible reason; anything else is passthrough + warning.</p>
       <td>extends</td>
       <td><code>@eos/tool/src/hooks/runner#HookRunSummary</code></td>
       <td><code>CombinedHookOutcome</code></td>
-      <td>23</td>
+      <td>21</td>
     </tr>
 
 
@@ -459,15 +434,15 @@ model-visible reason; anything else is passthrough + warning.</p>
       <td>imports</td>
       <td><code>@eos/tool/src/hooks/runner</code></td>
       <td><code>@eos/tool/src/hooks/protocol</code></td>
-      <td>4</td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/tool/src/hooks/runner</code></td>
-      <td><code>node:child_process</code></td>
-      <td>1</td>
+      <td><code>@eos/tool/src/spawn</code></td>
+      <td>12</td>
     </tr>
 
 
@@ -475,7 +450,7 @@ model-visible reason; anything else is passthrough + warning.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/hooks/runner</code></td>
       <td><code>zod</code></td>
-      <td>2</td>
+      <td>1</td>
     </tr>
   </tbody>
           </table>

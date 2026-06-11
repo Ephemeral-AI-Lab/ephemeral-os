@@ -238,7 +238,7 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
       });
 
       await until(
-        "the idler to park on the live session",
+        "the idler to park on the background session",
         () => parkedOnBareText(run.transcriptPath),
         120_000,
       );

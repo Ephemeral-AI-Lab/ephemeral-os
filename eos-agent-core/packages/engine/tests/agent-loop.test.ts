@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 
 import { toolUseIdFrom, type ToolCallResult } from "@eos/contracts";
 import { ProviderError } from "@eos/llm-client";
+import { RunHandle } from "@eos/agent-runtime/agent-run-handle";
 
-import { BackgroundSupervisor } from "../src/background/supervisor.js";
-import { RunHandle } from "../src/run-handle.js";
+import { BackgroundSessionSupervisor } from "../src/background/background-session-supervisor.js";
 import {
   NotificationInbox,
   systemNotificationMessage,
@@ -32,7 +32,7 @@ import {
   recordingObserver,
   scriptedExecutor,
   scriptedTurn,
-  sessionHandle,
+  backgroundSessionHandle,
   startMockRun,
   submitHandler,
   textBlock,
@@ -149,11 +149,11 @@ describe("agent loop", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("parks on live sessions after a bare text turn and wakes on the settlement (§15.3)", async () => {
+  it("parks on background sessions after a bare text turn and wakes on the settlement (§15.3)", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register(
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession(
       { type: "command", id: "c1" },
       session.handle,
     );
@@ -183,15 +183,15 @@ describe("agent loop", () => {
         summary: "build ok",
       }),
     ]);
-    expect(supervisor.openCount(), "the drain marked the session delivered").toBe(0);
+    expect(supervisor.openBackgroundSessionCount(), "the drain marked the session delivered").toBe(0);
     expectProviderValid(outcome.llm);
   });
 
   it("wakes the parked loop on a steer, draining steers above notifications (§15.3, §15.5)", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register(
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession(
       { type: "command", id: "c9" },
       session.handle,
     );
@@ -666,9 +666,9 @@ describe("agent loop", () => {
 
   it("leaves no abort listener on the run signal across repeated park/wake cycles", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register(
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession(
       { type: "command", id: "c1" },
       session.handle,
     );
@@ -706,14 +706,14 @@ describe("agent loop", () => {
 
   it("tears down running sessions on finish without awaiting teardown (§15.22)", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const first = sessionHandle({ cancelMode: "hang" });
-    const second = sessionHandle({ cancelMode: "hang" });
-    supervisor.register(
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const first = backgroundSessionHandle({ cancelMode: "hang" });
+    const second = backgroundSessionHandle({ cancelMode: "hang" });
+    supervisor.registerBackgroundSession(
       { type: "command", id: "c1" },
       first.handle,
     );
-    supervisor.register(
+    supervisor.registerBackgroundSession(
       { type: "subagent", id: "r2" },
       second.handle,
     );
@@ -723,15 +723,15 @@ describe("agent loop", () => {
     );
     await tick();
     await tick();
-    expect(client.requests, "parked on the live sessions").toHaveLength(1);
+    expect(client.requests, "parked on the background sessions").toHaveLength(1);
     handle.interrupt("user stop");
     const outcome = asCancelled(await handle.outcome);
     expect(outcome.reason).toBe("user stop");
     await tick();
     expect(first.cancelled, "first session torn down").toEqual(["run finished"]);
     expect(second.cancelled, "second session torn down").toEqual(["run finished"]);
-    const late = sessionHandle();
-    supervisor.register(
+    const late = backgroundSessionHandle();
+    supervisor.registerBackgroundSession(
       { type: "command", id: "late" },
       late.handle,
     );
@@ -780,15 +780,33 @@ describe("agent loop observer announcements (04.9 §4)", () => {
     expect(calls, "every turn shape announces, including the submitting batch").toEqual([
       {
         kind: "turnCompleted",
-        facts: { turn: 1, maxTurns: 5, toolCalls: 0, liveSessions: 0, hasPendingSteers: false },
+        facts: {
+          turn: 1,
+          maxTurns: 5,
+          toolCalls: 0,
+          backgroundSessionCount: 0,
+          hasPendingSteers: false,
+        },
       },
       {
         kind: "turnCompleted",
-        facts: { turn: 2, maxTurns: 5, toolCalls: 1, liveSessions: 0, hasPendingSteers: false },
+        facts: {
+          turn: 2,
+          maxTurns: 5,
+          toolCalls: 1,
+          backgroundSessionCount: 0,
+          hasPendingSteers: false,
+        },
       },
       {
         kind: "turnCompleted",
-        facts: { turn: 3, maxTurns: 5, toolCalls: 2, liveSessions: 0, hasPendingSteers: false },
+        facts: {
+          turn: 3,
+          maxTurns: 5,
+          toolCalls: 2,
+          backgroundSessionCount: 0,
+          hasPendingSteers: false,
+        },
       },
     ]);
   });
@@ -847,11 +865,11 @@ describe("agent loop observer announcements (04.9 §4)", () => {
     expectProviderValid(outcome.llm);
   });
 
-  it("brackets the park with idleStarted/idleEnded and reports live sessions in the facts", async () => {
+  it("brackets the park with idleStarted/idleEnded and reports background sessions in the facts", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register({ type: "command", id: "c1" }, session.handle);
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession({ type: "command", id: "c1" }, session.handle);
     const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
     const { observer, calls } = recordingObserver();
     const { handle } = startMockRun(
@@ -868,7 +886,13 @@ describe("agent loop observer announcements (04.9 §4)", () => {
     expect(calls, "parked: announced and idle, not yet ended").toEqual([
       {
         kind: "turnCompleted",
-        facts: { turn: 1, maxTurns: 4, toolCalls: 0, liveSessions: 1, hasPendingSteers: false },
+        facts: {
+          turn: 1,
+          maxTurns: 4,
+          toolCalls: 0,
+          backgroundSessionCount: 1,
+          hasPendingSteers: false,
+        },
       },
       { kind: "idleStarted" },
     ]);
@@ -882,9 +906,9 @@ describe("agent loop observer announcements (04.9 §4)", () => {
 
   it("calls idleEnded when an abort wakes the park", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register({ type: "command", id: "c1" }, session.handle);
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession({ type: "command", id: "c1" }, session.handle);
     const { observer, calls } = recordingObserver();
     const { handle } = startMockRun(
       [scriptedTurn([complete(assistantMessage(textBlock("waiting")))])],
@@ -904,9 +928,9 @@ describe("agent loop observer announcements (04.9 §4)", () => {
 
   it("skips the idle bracket when a steer is already pending at the boundary", async () => {
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
-    const session = sessionHandle();
-    supervisor.register({ type: "command", id: "c1" }, session.handle);
+    const supervisor = new BackgroundSessionSupervisor(inbox);
+    const session = backgroundSessionHandle();
+    supervisor.registerBackgroundSession({ type: "command", id: "c1" }, session.handle);
     const started = deferred();
     const release = deferred();
     const tools = scriptedExecutor(["submit", submitHandler(SUBMISSION)]);
@@ -928,7 +952,7 @@ describe("agent loop observer announcements (04.9 §4)", () => {
     asCompleted(await handle.outcome);
     expect(must(calls.at(0))).toMatchObject({
       kind: "turnCompleted",
-      facts: { toolCalls: 0, liveSessions: 1, hasPendingSteers: true },
+      facts: { toolCalls: 0, backgroundSessionCount: 1, hasPendingSteers: true },
     });
     expect(
       calls.map((call) => call.kind),

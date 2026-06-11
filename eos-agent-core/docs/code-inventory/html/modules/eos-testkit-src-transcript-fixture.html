@@ -125,8 +125,8 @@
       <pre><code>export function writeTranscriptFixture( lines: JsonObject[], name = &quot;transcript.jsonl&quot;, ): string</code></pre>
       <p>Write an append-only JSONL transcript fixture and return its path. Hooks
 infer state through `run.transcript_path` and never receive live
-objects; until Phase 04.5 ships the real writer, suites point hooks at
-one of these.</p>
+objects; the real writer lives above this package in `@eos/agent-runtime`,
+so tool-level suites point hooks at one of these.</p>
       <div class="tags"><span>exported</span><span>json-boundary</span><span>public-api</span></div>
 
 

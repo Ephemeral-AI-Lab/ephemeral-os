@@ -138,13 +138,13 @@ omissions:
     run.** `delegate_workflow` registers
     `{ type: "workflow", id: workflowId }` with the caller's supervisor
     and returns the id immediately (Phase 04 decision 2). The
-    `SessionHandle` maps the workflow terminal onto `SessionOutcome`
+    `BackgroundSessionHandle` maps the workflow terminal onto `BackgroundSessionOutcome`
     (`Success -> completed`, `Failed -> failed`,
     `Cancelled -> cancelled`); `cancel` is the workflow API. The
     workflow's internal planner/worker runs are *not* sessions of the
     caller - the caller sees one session, one `session_settled`
     notification, and pulls detail through the context read tools (Phase
-    04 decision 14). Auto-wait, the `openCount()` submission guard, and
+    04 decision 14). Auto-wait, the `openBackgroundSessionCount()` submission guard, and
     `list_background_sessions` all apply to workflows with zero engine
     change.
 11. **Workflows die with the delegating run.** Child runs are launched
@@ -153,7 +153,7 @@ omissions:
     cancel cascade: interrupt every live child run, await their outcomes,
     mark all non-terminal entities `Cancelled` in one transaction, resolve
     the terminal. `supervisor.dispose` on caller finish therefore tears
-    the whole workflow down depth-first through one `SessionHandle`.
+    the whole workflow down depth-first through one `BackgroundSessionHandle`.
     Detached workflows that outlive their caller are a different ownership
     model, deferred with restart recovery (§11).
 12. **At most one open workflow per run.** The guard Phase 04 decision 5
@@ -162,7 +162,7 @@ omissions:
     or undelivered), the call returns an error result. Sub-delegation by
     workers composes naturally: a worker that delegates cannot submit
     until its own workflow session settles and is delivered
-    (`openCount()` guard, already shipped).
+    (`openBackgroundSessionCount()` guard, already shipped).
 13. **Renderers are depth-parametric pure functions; two combinators own
     the cross-cutting rules.** Each entity gets `renderSpec` /
     `renderBrief` as plain functions over the frozen aggregate, receiving
@@ -558,7 +558,7 @@ interface ContextSearch {
 
 interface DelegatedWorkflow {
   workflowId: WorkflowId;
-  terminal: Promise<WorkflowTerminal>;   // the SessionHandle watch surface
+  terminal: Promise<WorkflowTerminal>;   // the BackgroundSessionHandle watch surface
   describe(): string;                    // goal one-liner
 }
 ```
@@ -587,7 +587,7 @@ function workflowTools(
     search(id: WorkflowId, params: { keywords: readonly string[];
                                      scope?: string }): Promise<ContextSearch>;
   },
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition[];
 ```
 
@@ -616,7 +616,7 @@ execute: async (input, ctx) => {
 },
 ```
 
-Registration precedes the tool result, so `openCount()` covers the
+Registration precedes the tool result, so `openBackgroundSessionCount()` covers the
 workflow before the model's next token. The supervisor's existing
 machinery does the rest: settlement publishes one `session_settled`
 notification, auto-wait parks an idle caller, the submission guard blocks
@@ -676,7 +676,7 @@ Phase 04.5 worker pattern of routing `ask_advisor` at the exact terminal
 payload - summary fidelity included - before submission.
 
 Disposal needs no new wiring: the caller's engine-triggered
-`supervisor.dispose` reaches the workflow `SessionHandle.cancel`, which is
+`supervisor.dispose` reaches the workflow `BackgroundSessionHandle.cancel`, which is
 `WorkflowService.cancel` - the §8 cascade. Scheduler-originated interrupts
 use the fixed reason `workflow_cancelled`; child transcripts record it as
 `interrupt_reason` (Phase 04.5 §8 parity).
@@ -827,7 +827,7 @@ Phase 05 is accepted when:
 - a delegated workflow is exactly one supervisor session of the delegating
   run: settlement notification, auto-wait, the submission guard, model
   cancellation, and the caller disposal cascade all work through the one
-  registered `SessionHandle`, and child runs take no caller signal,
+  registered `BackgroundSessionHandle`, and child runs take no caller signal,
 - the one-open-workflow guard holds inside `delegate_workflow`,
 - the §14 suite passes under `pnpm run check` with the workflow package
   suite engine-free over the scripted launch port,

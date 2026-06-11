@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/src/hook-config Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/src/hook-config</h1>
+          <p class="lede">packages/agent-runtime/src/hook-config.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>2</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>3</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>HookConfigEntrySchema, type HookConfigEntry</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./config-file.js</code></td>
+      <td>loadEntriesFile, withDefaultCwd</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>hook-config.ts</code>
+        <small>2 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#DEFAULT_HOOK_CONFIG_PATH"><code>DEFAULT_HOOK_CONFIG_PATH</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#loadHookConfig"><code>loadHookConfig</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="DEFAULT_HOOK_CONFIG_PATH" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>DEFAULT_HOOK_CONFIG_PATH</strong>
+          <span>const · line 6 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-hook-config.html#DEFAULT_HOOK_CONFIG_PATH">Module</a>
+      </div>
+      <pre><code>const DEFAULT_HOOK_CONFIG_PATH = &quot;.eos-agents/hooks.json&quot;</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="loadHookConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>loadHookConfig</strong>
+          <span>function · line 12 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-hook-config.html#loadHookConfig">Module</a>
+      </div>
+      <pre><code>export function loadHookConfig(path = DEFAULT_HOOK_CONFIG_PATH): HookConfigEntry[]</code></pre>
+      <p>Load the operator hook config: a JSON array of `HookConfigEntry`
+(tool events only; notification trigger rules live in their own file).</p>
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/hook-config</code></td>
+      <td><code>@eos/agent-runtime/src/config-file</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/hook-config</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/hook-config</code></td>
+      <td><code>zod</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

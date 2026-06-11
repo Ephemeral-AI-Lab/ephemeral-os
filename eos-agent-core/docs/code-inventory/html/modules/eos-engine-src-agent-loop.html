@@ -26,10 +26,10 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Symbols</dt><dd>9</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>0</dd></div>
-          <div><dt>Functions</dt><dd>6</dd></div>
+          <div><dt>Functions</dt><dd>7</dd></div>
         </dl>
       </section>
 
@@ -59,10 +59,26 @@
 
 
     <tr class="search-item">
-      <td><code>./background/supervisor.js</code></td>
-      <td>BackgroundSupervisor</td>
+      <td><code>@eos/notifications</code></td>
+      <td>systemNotificationMessage, type LoopObserver, type NotificationInbox</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/agent-runtime/agent-run-handle</code></td>
+      <td>AgentRunFailure, AgentRunStatus, RunHandle</td>
       <td>type</td>
-      <td>4</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./background/background-session-supervisor.js</code></td>
+      <td>BackgroundSessionSupervisor</td>
+      <td>type</td>
+      <td>14</td>
     </tr>
 
 
@@ -70,23 +86,7 @@
       <td><code>./conversation.js</code></td>
       <td>Conversation, ToolResultBlock</td>
       <td>type</td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./notification-inbox.js</code></td>
-      <td>NotificationInbox</td>
-      <td>type</td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./run-handle.js</code></td>
-      <td>AgentRunFailure, AgentRunStatus, RunHandle</td>
-      <td>type</td>
-      <td>7</td>
+      <td>15</td>
     </tr>
 
 
@@ -94,7 +94,7 @@
       <td><code>./tool-executor.js</code></td>
       <td>ToolExecutor, ToolUseBlock</td>
       <td>type</td>
-      <td>8</td>
+      <td>16</td>
     </tr>
 
 
@@ -102,7 +102,7 @@
       <td><code>./turn.js</code></td>
       <td>addUsage, runAssistantTurn, type TurnConfig</td>
       <td>value</td>
-      <td>9</td>
+      <td>17</td>
     </tr>
   </tbody>
           </table>
@@ -132,9 +132,16 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>agent-loop.ts</code>
-        <small>7 symbols</small>
+        <small>9 symbols</small>
       </div>
       <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#RUN_FINISHED_DISPOSE_REASON"><code>RUN_FINISHED_DISPOSE_REASON</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
 
           <li class="tree-symbol search-item">
             <a href="#AgentLoopContext"><code>AgentLoopContext</code></a>
@@ -165,6 +172,13 @@
 
 
           <li class="tree-symbol search-item">
+            <a href="#publishHookContexts"><code>publishHookContexts</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
             <a href="#projectToolResult"><code>projectToolResult</code></a>
             <span>function</span>
             <span class="compact-tags">internal</span>
@@ -188,11 +202,29 @@
     </nav>
 
           <div class="symbol-stack">
+    <article id="RUN_FINISHED_DISPOSE_REASON" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RUN_FINISHED_DISPOSE_REASON</strong>
+          <span>const · line 24 · public</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#RUN_FINISHED_DISPOSE_REASON">Module</a>
+      </div>
+      <pre><code>export const RUN_FINISHED_DISPOSE_REASON = &quot;run finished&quot;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
     <article id="AgentLoopContext" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>AgentLoopContext</strong>
-          <span>interface · line 12 · public</span>
+          <span>interface · line 27 · public</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#AgentLoopContext">Module</a>
       </div>
@@ -252,7 +284,14 @@
 
             <tr>
               <td><code>background</code></td>
-              <td><code>BackgroundSupervisor</code></td>
+              <td><code>BackgroundSessionSupervisor</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>observer</code></td>
+              <td><code>LoopObserver</code></td>
               <td>optional</td>
             </tr>
 
@@ -270,7 +309,7 @@
       <div class="symbol-head">
         <div>
           <strong>runAgentLoop</strong>
-          <span>function · line 34 · public</span>
+          <span>function · line 52 · public</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#runAgentLoop">Module</a>
       </div>
@@ -282,7 +321,8 @@ block as its decision so a late steer is never accepted-but-dropped.
 
 Run completion is exclusively a terminal tool result; bare text never
 terminates (`maxTurns` backstops spin), and the engine appends no
-reminder on a text turn — that nudge is a future notification rule.</p>
+reminder on a text turn — that nudge is a notification trigger rule
+behind the `LoopObserver` port (Phase 04.9).</p>
       <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
 
 
@@ -295,12 +335,15 @@ reminder on a text turn — that nudge is a future notification rule.</p>
       <div class="symbol-head">
         <div>
           <strong>waitForWake</strong>
-          <span>function · line 115 · internal</span>
+          <span>function · line 154 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#waitForWake">Module</a>
       </div>
       <pre><code>async function waitForWake(ctx: AgentLoopContext): Promise&lt;void&gt;</code></pre>
-      <p>Race the inbox against the steer queue; both waits resolve on abort.</p>
+      <p>Race the inbox against the steer queue; both waits resolve on abort.
+The race loser would otherwise stay registered (waker + abort listener)
+until an unrelated wake event, so a race-scoped signal unhooks it as
+soon as the winner settles.</p>
       <div class="tags"><span>async</span><span>internal</span></div>
 
 
@@ -313,7 +356,7 @@ reminder on a text turn — that nudge is a future notification rule.</p>
       <div class="symbol-head">
         <div>
           <strong>normalizeBatch</strong>
-          <span>function · line 126 · internal</span>
+          <span>function · line 171 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#normalizeBatch">Module</a>
       </div>
@@ -329,11 +372,31 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
     </article>
 
 
+    <article id="publishHookContexts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>publishHookContexts</strong>
+          <span>function · line 196 · internal</span>
+        </div>
+        <a href="../modules/eos-engine-src-agent-loop.html#publishHookContexts">Module</a>
+      </div>
+      <pre><code>function publishHookContexts( results: ToolCallResult[], notifications: NotificationInbox | undefined, ): void</code></pre>
+      <p>The one publisher of hook `additionalContext` (Phase 04.5 decision 11):
+each `metadata.hook_contexts` entry becomes a `hook_context` notification
+as the result is appended, drained at the next loop boundary.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
     <article id="projectToolResult" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>projectToolResult</strong>
-          <span>function · line 147 · internal</span>
+          <span>function · line 218 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#projectToolResult">Module</a>
       </div>
@@ -351,7 +414,7 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <div class="symbol-head">
         <div>
           <strong>classifyLoopError</strong>
-          <span>function · line 159 · internal</span>
+          <span>function · line 230 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#classifyLoopError">Module</a>
       </div>
@@ -369,7 +432,7 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <div class="symbol-head">
         <div>
           <strong>isAborted</strong>
-          <span>function · line 171 · internal</span>
+          <span>function · line 242 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-agent-loop.html#isAborted">Module</a>
       </div>
@@ -392,6 +455,14 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
             <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/contracts</code></td>
@@ -402,8 +473,8 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>4</td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>14</td>
     </tr>
 
 
@@ -411,23 +482,7 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/engine/src/conversation</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td>7</td>
+      <td>15</td>
     </tr>
 
 
@@ -435,7 +490,7 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/engine/src/tool-executor</code></td>
-      <td>8</td>
+      <td>16</td>
     </tr>
 
 
@@ -443,7 +498,7 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <td>imports</td>
       <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/engine/src/turn</code></td>
-      <td>9</td>
+      <td>17</td>
     </tr>
 
 
@@ -452,6 +507,14 @@ missing result becomes a synthetic error; no event is emitted for it.</p>
       <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/llm-client</code></td>
       <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>3</td>
     </tr>
   </tbody>
           </table>

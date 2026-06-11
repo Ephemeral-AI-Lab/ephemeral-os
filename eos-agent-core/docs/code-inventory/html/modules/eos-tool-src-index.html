@@ -49,7 +49,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Exports</h2>
-          <span>8</span>
+          <span>10</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -57,9 +57,9 @@
             <tbody>
     <tr class="search-item">
       <td><code>./contract.js</code></td>
-      <td>AgentRunSnapshot, ToolCallContext, ToolCallMeta, ToolDefinition, ToolName, ToolOutcome</td>
-      <td>type</td>
-      <td>5</td>
+      <td>ToolNameSchema, type ToolCallContext, type ToolCallMeta, type ToolDefinition, type ToolName, type ToolOutcome</td>
+      <td>value</td>
+      <td>6</td>
     </tr>
 
 
@@ -67,15 +67,15 @@
       <td><code>./define.js</code></td>
       <td>defineTool, type ToolDefinitionInit</td>
       <td>value</td>
-      <td>13</td>
+      <td>14</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>./hooks/protocol.js</code></td>
-      <td>HookConfigEntrySchema, HookEventSchema, HookOutputSchema, type HookCommand, type HookConfigEntry, type HookEvent, type HookOutput, type HookPayload</td>
+      <td>HookConfigEntrySchema, HookEventSchema, HookOutputSchema, type HookAdvisoryRequirement, type HookCommand, type HookConfigEntry, type HookEvent, type HookOutput, type HookPayload</td>
       <td>value</td>
-      <td>14</td>
+      <td>15</td>
     </tr>
 
 
@@ -83,39 +83,55 @@
       <td><code>./hooks/runner.js</code></td>
       <td>HookEngine</td>
       <td>value</td>
-      <td>24</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./run-state.js</code></td>
-      <td>type AgentRunState</td>
-      <td>value</td>
-      <td>25</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./toolset.js</code></td>
-      <td>AGENT_TOOLSET, buildToolExecutor, type BuildToolExecutorInput</td>
-      <td>value</td>
       <td>26</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./tools/background/index.js</code></td>
-      <td>backgroundTools</td>
+      <td><code>./trigger-runner.js</code></td>
+      <td>runTriggerCommand</td>
       <td>value</td>
-      <td>31</td>
+      <td>27</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./run-state.js</code></td>
+      <td>snapshotRunState, type AgentRunState</td>
+      <td>value</td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./toolset.js</code></td>
+      <td>buildToolExecutor, type BuildToolExecutorInput</td>
+      <td>value</td>
+      <td>29</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./tools/agent/index.js</code></td>
+      <td>ADVISOR_AGENT_NAME, AGENT_TOOL_NAMES, agentTools, type AgentRunCalls, type AgentToolTranscriptRead, type AgentToolUserMessage, type StartAgentToolRunParams, type StartedAgentToolRun</td>
+      <td>value</td>
+      <td>30</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./tools/background/index.js</code></td>
+      <td>BACKGROUND_TOOL_NAMES, backgroundTools</td>
+      <td>value</td>
+      <td>40</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>./tools/submission/index.js</code></td>
-      <td>submissionTool</td>
+      <td>TERMINAL_TOOL_NAMES, terminalToolDefinitions</td>
       <td>value</td>
-      <td>32</td>
+      <td>44</td>
     </tr>
   </tbody>
           </table>
@@ -140,10 +156,10 @@
             <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
-      <td>reexports <small>type</small></td>
+      <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>5</td>
+      <td>6</td>
     </tr>
 
 
@@ -151,14 +167,6 @@
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/define</code></td>
-      <td>13</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/tool/src/index</code></td>
-      <td><code>@eos/tool/src/hooks/protocol</code></td>
       <td>14</td>
     </tr>
 
@@ -166,8 +174,16 @@
     <tr class="search-item">
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
+      <td><code>@eos/tool/src/hooks/protocol</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/hooks/runner</code></td>
-      <td>24</td>
+      <td>26</td>
     </tr>
 
 
@@ -175,7 +191,15 @@
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/run-state</code></td>
-      <td>25</td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/tool/src/index</code></td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td>30</td>
     </tr>
 
 
@@ -183,7 +207,7 @@
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/tools/background/index</code></td>
-      <td>31</td>
+      <td>40</td>
     </tr>
 
 
@@ -191,7 +215,7 @@
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/tools/submission/index</code></td>
-      <td>32</td>
+      <td>44</td>
     </tr>
 
 
@@ -199,7 +223,15 @@
       <td>reexports</td>
       <td><code>@eos/tool/src/index</code></td>
       <td><code>@eos/tool/src/toolset</code></td>
-      <td>26</td>
+      <td>29</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/tool/src/index</code></td>
+      <td><code>@eos/tool/src/trigger-runner</code></td>
+      <td>27</td>
     </tr>
   </tbody>
           </table>

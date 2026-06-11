@@ -26,10 +26,10 @@
           <div class="tags"><span>contracts</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Modules</dt><dd>7</dd></div>
-          <div><dt>Source</dt><dd>6</dd></div>
+          <div><dt>Modules</dt><dd>9</dd></div>
+          <div><dt>Source</dt><dd>8</dd></div>
           <div><dt>Tests</dt><dd>1</dd></div>
-          <div><dt>Symbols</dt><dd>31</dd></div>
+          <div><dt>Symbols</dt><dd>35</dd></div>
         </dl>
       </section>
 
@@ -56,6 +56,33 @@
           <span class="tree-label">src</span>
         </summary>
         <div class="tree-children">
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
+        <a href="../modules/eos-contracts-src-advisory.html"><code>advisory.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-contracts-src-advisory.html#AdvisoryVerdictSchema"><code>AdvisoryVerdictSchema</code></a>
+          <span>schema</span>
+          <span class="compact-tags">contract public-api schema:zod</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-contracts-src-advisory.html#AdvisoryVerdict"><code>AdvisoryVerdict</code></a>
+          <span>type</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="../modules/eos-contracts-src-agents.html"><code>agents.ts</code></a>
@@ -323,6 +350,33 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
+        <a href="../modules/eos-contracts-src-run-snapshot.html"><code>run-snapshot.ts</code></a>
+        <small>source · 2 symbols</small>
+      </div>
+      <div class="tags"><span>source</span></div>
+
+    <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-contracts-src-run-snapshot.html#AgentRunSnapshot"><code>AgentRunSnapshot</code></a>
+          <span>interface</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-contracts-src-run-snapshot.html#BackgroundSessionSnapshot"><code>BackgroundSessionSnapshot</code></a>
+          <span>interface</span>
+          <span class="compact-tags">contract public-api</span>
+        </li>
+
+    </ul>
+
+    </div>
+
+
+    <div class="tree-file search-item">
+      <div class="tree-file-row">
         <a href="../modules/eos-contracts-src-tool-calls.html"><code>tool-calls.ts</code></a>
         <small>source · 2 symbols</small>
       </div>
@@ -369,11 +423,27 @@
       </section>
 
       <section class="panel">
-        <div class="panel-head"><h2>Relations</h2><span>44</span></div>
+        <div class="panel-head"><h2>Relations</h2><span>53</span></div>
         <div class="table-wrap relation-table">
           <table>
             <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
             <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/advisory</code></td>
+      <td><code>@eos/contracts/src/json</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/contracts/src/advisory</code></td>
+      <td><code>zod</code></td>
+      <td>1</td>
+    </tr>
+
+
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/contracts/src/agents</code></td>
@@ -419,6 +489,22 @@
       <td><code>@eos/contracts/src/messages</code></td>
       <td><code>zod</code></td>
       <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/contracts/src/run-snapshot</code></td>
+      <td><code>@eos/contracts/src/agents</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/contracts/src/run-snapshot</code></td>
+      <td><code>@eos/contracts/src/ids</code></td>
+      <td>2</td>
     </tr>
 
 
@@ -473,6 +559,14 @@
     <tr class="search-item">
       <td>reexports</td>
       <td><code>@eos/contracts/src/index</code></td>
+      <td><code>@eos/contracts/src/advisory</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/contracts/src/index</code></td>
       <td><code>@eos/contracts/src/agents</code></td>
       <td>1</td>
     </tr>
@@ -482,7 +576,7 @@
       <td>reexports</td>
       <td><code>@eos/contracts/src/index</code></td>
       <td><code>@eos/contracts/src/ids</code></td>
-      <td>8</td>
+      <td>12</td>
     </tr>
 
 
@@ -490,7 +584,7 @@
       <td>reexports</td>
       <td><code>@eos/contracts/src/index</code></td>
       <td><code>@eos/contracts/src/json</code></td>
-      <td>2</td>
+      <td>6</td>
     </tr>
 
 
@@ -498,7 +592,15 @@
       <td>reexports</td>
       <td><code>@eos/contracts/src/index</code></td>
       <td><code>@eos/contracts/src/messages</code></td>
-      <td>20</td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports <small>type</small></td>
+      <td><code>@eos/contracts/src/index</code></td>
+      <td><code>@eos/contracts/src/run-snapshot</code></td>
+      <td>39</td>
     </tr>
 
 
@@ -506,7 +608,15 @@
       <td>reexports</td>
       <td><code>@eos/contracts/src/index</code></td>
       <td><code>@eos/contracts/src/tool-calls</code></td>
-      <td>35</td>
+      <td>43</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>schema-infers-type</td>
+      <td><code>@eos/contracts/src/advisory#AdvisoryVerdictSchema</code></td>
+      <td><code>@eos/contracts/src/advisory#AdvisoryVerdict</code></td>
+      <td>11</td>
     </tr>
 
 
@@ -595,6 +705,22 @@
       <td><code>@eos/contracts/tests/contracts.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/contracts/src/advisory#AdvisoryVerdict</code></td>
+      <td><code>@eos/contracts/src/advisory#AdvisoryVerdictSchema</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/contracts/src/advisory#AdvisoryVerdictSchema</code></td>
+      <td><code>@eos/contracts/src/advisory#JsonObjectSchema</code></td>
+      <td>5</td>
     </tr>
 
 

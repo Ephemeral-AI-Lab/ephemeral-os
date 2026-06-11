@@ -1,32 +1,30 @@
 import { DEFAULT_MAX_TOKENS, type Message } from "@eos/contracts";
 import type { LlmClient, ReasoningEffort } from "@eos/llm-client";
 import type { LoopObserver, NotificationInbox } from "@eos/notifications";
+import { RunHandle, type AgentRunHandle } from "@eos/agent-runtime/agent-run-handle";
 
 import { runAgentLoop } from "./agent-loop.js";
-import type { BackgroundSupervisor } from "./background/supervisor.js";
+import type { BackgroundSessionSupervisor } from "./background/background-session-supervisor.js";
 import { Conversation } from "./conversation.js";
-import { RunHandle, type AgentRunHandle } from "./run-handle.js";
 import type { ToolExecutor } from "./tool-executor.js";
 
 export { RUN_FINISHED_DISPOSE_REASON } from "./agent-loop.js";
 export type {
-  SessionHandle,
-  SessionOutcome,
-  SessionRef,
-  SessionRow,
-  SessionStatus,
-} from "./background/session.js";
-export { BackgroundSupervisor } from "./background/supervisor.js";
+  BackgroundSessionHandle,
+  BackgroundSessionOutcome,
+  BackgroundSessionRef,
+  BackgroundSessionRow,
+  BackgroundSessionStatus,
+} from "./background/background-session.js";
+export { BackgroundSessionSupervisor } from "./background/background-session-supervisor.js";
 export type {
-  DisplayedMessage,
-  PartialReason,
-} from "./conversation.js";
-export type { AgentEvent } from "./events.js";
-export type {
+  AgentEvent,
   AgentRunFailure,
   AgentRunHandle,
   AgentRunOutcome,
-} from "./run-handle.js";
+  DisplayedMessage,
+  PartialReason,
+} from "@eos/agent-runtime/agent-run-handle";
 export type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 
 /** Loop-turn budget when the caller does not pass `maxTurns`. */
@@ -57,11 +55,11 @@ export interface StartAgentRunInput {
    */
   notifications?: NotificationInbox;
   /**
-   * Session lifecycle = loop lifecycle: backs the auto-wait gate and is
-   * disposed on every finish. A supervisor implies `notifications` (it
+   * Background-session lifecycle = loop lifecycle: backs the auto-wait
+   * gate and is disposed on every finish. A supervisor implies `notifications` (it
    * publishes settlements there).
    */
-  background?: BackgroundSupervisor;
+  background?: BackgroundSessionSupervisor;
   /**
    * Loop-lifecycle announcement port (Phase 04.9): awaited after every
    * committed assistant turn; `idleStarted`/`idleEnded` bracket each

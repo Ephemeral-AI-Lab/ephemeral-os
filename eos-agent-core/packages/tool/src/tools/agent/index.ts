@@ -1,5 +1,5 @@
 import type { AgentRunId, Message } from "@eos/contracts";
-import type { AgentRunHandle, BackgroundSupervisor } from "@eos/engine";
+import type { AgentRunHandle, BackgroundSessionSupervisor } from "@eos/engine";
 
 import type { ToolDefinition } from "../../contract.js";
 import { askAdvisorTool } from "./ask-advisor.js";
@@ -53,7 +53,7 @@ export interface AgentRunCalls {
 /** The agent family, one bound definition per `AGENT_TOOL_NAMES` entry. */
 export function agentTools(
   calls: AgentRunCalls,
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition[] {
   return [
     runSubagentTool(calls, supervisor),

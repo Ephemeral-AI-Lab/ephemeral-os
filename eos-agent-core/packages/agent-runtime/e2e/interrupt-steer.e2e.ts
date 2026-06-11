@@ -144,7 +144,7 @@ describe.skipIf(!codex.available)("interrupt, wake, and steering over live codex
   );
 
   it(
-    "wakes a run parked on a live session with a steer: cancel the sleeper, then submit",
+    "wakes a run parked on a background session with a steer: cancel the sleeper, then submit",
     { timeout: 300_000 },
     async () => {
       const wait = waitTool();
@@ -187,10 +187,10 @@ describe.skipIf(!codex.available)("interrupt, wake, and steering over live codex
       });
 
       // The park is observable as a bare-text assistant turn after the spawn:
-      // with a live session and no steers, the loop waits instead of calling
+      // with a background session and no steers, the loop waits instead of calling
       // the provider again (auto-wait), so the steer below is the wake.
       await until(
-        "the watcher to park on the live session",
+        "the watcher to park on the background session",
         () => {
           try {
             const assistants = readTranscriptLines(run.transcriptPath).filter(

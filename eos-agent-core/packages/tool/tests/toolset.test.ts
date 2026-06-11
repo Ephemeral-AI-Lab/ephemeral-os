@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BackgroundSupervisor } from "@eos/engine";
+import { BackgroundSessionSupervisor } from "@eos/engine";
 import { NotificationInbox } from "@eos/notifications";
 import { scriptedRunState, scriptedTool } from "@eos/testkit";
 
@@ -13,8 +13,8 @@ import {
 } from "../src/index.js";
 import { live, must, toolUse } from "./support.js";
 
-function supervisor(): BackgroundSupervisor {
-  return new BackgroundSupervisor(new NotificationInbox());
+function supervisor(): BackgroundSessionSupervisor {
+  return new BackgroundSessionSupervisor(new NotificationInbox());
 }
 
 describe("toolset assembly", () => {

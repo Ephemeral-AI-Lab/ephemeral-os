@@ -46,10 +46,10 @@ live; nothing under `agent-core/` changes.
 1. **One pair per run.** The notification inbox and supervisor (both
    engine classes, Phase 04 §2.12) are constructed here per agent run,
    never shared: notifications target exactly one conversation,
-   `liveCount()` backs exactly one run's submission guard, and disposal
+   `backgroundSessionCount()` backs exactly one run's submission guard, and disposal
    must not touch a sibling run's sessions. Subagent and advisor runs get
    their own pair via the same factory; the caller's subagent
-   `SessionHandle` just watches that run's outcome.
+   `BackgroundSessionHandle` just watches that run's outcome.
 2. **The wiring order is the spec.** The §4 `startRun` sketch is the
    order; no second normative copy is kept. Each step is a real
    dependency, and the order lives in one function so neither
@@ -330,7 +330,7 @@ function startRun(params: StartRunParams, context: StartRunContext = {}): Starte
 
   const runId = mintAgentRunId();
   const inbox = new NotificationInbox();
-  const supervisor = new BackgroundSupervisor(inbox);
+  const supervisor = new BackgroundSessionSupervisor(inbox);
   const transcriptPath = runTranscriptPath(dependencies.dataDir, runId);
 
   const runState: AgentRunState = {
@@ -398,7 +398,7 @@ hold a run without a handle or a run that will never finish. The
 `outcome.finally` flush is the one authoritative flush trigger (§6 defers
 to it). Session teardown needs no wiring here: the engine loop triggers
 `supervisor.dispose(reason)` on every finish (Phase 04 §2.17), cancelling
-stragglers through each start site's `SessionHandle`; the final
+stragglers through each start site's `BackgroundSessionHandle`; the final
 `registry.finish` subscription is pure bookkeeping. Drain order needs no
 wiring either: the engine already drains steers before inbox notifications
 at the loop boundary (user input outranks system notices).
@@ -449,7 +449,7 @@ const advisorOutcome = await advisor.handle.outcome;
 return mapAdvisorOutcome(advisorOutcome);
 
 // run_subagent: background session; returns immediately with the run
-// reference while `SessionHandle.settled` carries the mapped outcome.
+// reference while `BackgroundSessionHandle.settled` carries the mapped outcome.
 // Deliberately passes NO signal: a detached run gets a fresh abort root
 // and never dies with the caller's turn (the bug class the Claude Code
 // study designs out) - cancellation reaches it only through the §8
@@ -515,11 +515,11 @@ per-call payload carries all identity).
 | Trigger | Effect |
 | --- | --- |
 | run finishes (any status) | the ENGINE triggers `supervisor.dispose` (Phase 04 §2.17); the runtime only marks the registry terminal |
-| caller run disposed with live subagent | the subagent `SessionHandle.cancel` -> `handle.interrupt('caller_disposed')` -> that run's own engine dispose cascades |
+| caller run disposed with background subagent | the subagent `BackgroundSessionHandle.cancel` -> `handle.interrupt('caller_disposed')` -> that run's own engine dispose cascades |
 | caller `signal` aborts | engine cancels (Phase 03 semantics) and disposes on finish |
 | `cancel_background_session` on a subagent | same subagent interrupt path, model-initiated |
 
-The cascade is depth-first through session handles; no global kill switch
+The cascade is depth-first through background-session handles; no global kill switch
 exists - each run only ever touches sessions it registered.
 
 Runtime-originated interrupts use fixed reason strings - `caller_disposed`
@@ -646,7 +646,7 @@ network, real files only under a temp `dataDir`.
 | 4 | Submission end-to-end | scripted main run calls `submit_main_outcome`; `outcome.submission` carries the payload; transcript `run_finished` line matches |
 | 5 | Subagent round-trip | main starts a subagent run by agent name, idles -> auto-wait, `session_settled` notification arrives, caller reads the subagent transcript via the tool, then submits |
 | 6 | Advisor ask | `ask_advisor` blocks, advisor run submits, answer returns in the tool result; caller abort mid-ask cancels the advisor run |
-| 7 | Disposal cascade | interrupting the caller cancels the live subagent run; both registry entries reach `finished` and the subagent `run_finished` line records `interrupt_reason: 'caller_disposed'` |
+| 7 | Disposal cascade | interrupting the caller cancels the background subagent run; both registry entries reach `finished` and the subagent `run_finished` line records `interrupt_reason: 'caller_disposed'` |
 | 8 | Hook script over transcript | a real spawned node hook denies a call based on `transcript_path` contents (read-before-write style assertion), and a hook's `additionalContext` reaches the conversation as a `hook_context` notification at the next loop boundary (decision 11, end to end) |
 | 9 | Transcript completeness | the writer records every conversation-shaping event including `run_finished`; `read_agent_run_transcript` sees the flushed file once `outcome` settles; offset reads return increments |
 

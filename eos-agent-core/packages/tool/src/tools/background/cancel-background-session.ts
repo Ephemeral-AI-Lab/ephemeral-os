@@ -1,4 +1,4 @@
-import type { BackgroundSupervisor } from "@eos/engine";
+import type { BackgroundSessionSupervisor } from "@eos/engine";
 import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
@@ -14,7 +14,7 @@ const CancelInputSchema = z.object({
 
 /** Cancel by native `(type, id)` ref - no minted session-id namespace. */
 export function cancelBackgroundSessionTool(
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition {
   return defineTool({
     name: "cancel_background_session",
@@ -23,7 +23,7 @@ export function cancelBackgroundSessionTool(
     input: CancelInputSchema,
     execute: async ({ type, id, reason }) => {
       const row = supervisor
-        .list()
+        .listBackgroundSessions()
         .find((candidate) => candidate.type === type && candidate.id === id);
       if (!row) {
         return { content: `no background session ${type}:${id}`, isError: true };
@@ -33,7 +33,7 @@ export function cancelBackgroundSessionTool(
           content: `background session ${type}:${id} already settled (${row.status}); nothing to cancel`,
         };
       }
-      const cancelled = await supervisor.cancel(
+      const cancelled = await supervisor.cancelBackgroundSession(
         { type, id },
         reason ?? "cancelled by request",
       );

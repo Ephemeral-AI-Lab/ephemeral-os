@@ -29,7 +29,7 @@
           <div><dt>Symbols</dt><dd>8</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>0</dd></div>
-          <div><dt>Functions</dt><dd>4</dd></div>
+          <div><dt>Functions</dt><dd>5</dd></div>
         </dl>
       </section>
 
@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>vitest</code></td>
-      <td>describe</td>
+      <td>describe, expect, it</td>
       <td>value</td>
       <td>1</td>
     </tr>
@@ -60,7 +60,7 @@
 
     <tr class="search-item">
       <td><code>../src/index.js</code></td>
-      <td>buildLlmRequest, createLlmClient, SecretString, type LlmClient</td>
+      <td>buildLlmRequest, type LlmClient, type LlmRequestInit</td>
       <td>value</td>
       <td>5</td>
     </tr>
@@ -70,15 +70,15 @@
       <td><code>../tests/contract/llm-client-contract.js</code></td>
       <td>describeLlmClientContract</td>
       <td>value</td>
-      <td>11</td>
+      <td>10</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./support/codex-auth.js</code></td>
-      <td>loadCodexAuth</td>
+      <td><code>./support/llm-clients-config.js</code></td>
+      <td>loadConfiguredCodexClient</td>
       <td>value</td>
-      <td>12</td>
+      <td>11</td>
     </tr>
   </tbody>
           </table>
@@ -113,16 +113,9 @@
       <ul class="tree-symbols">
 
           <li class="tree-symbol search-item">
-            <a href="#auth"><code>auth</code></a>
+            <a href="#codex"><code>codex</code></a>
             <span>const</span>
-            <span class="compact-tags">internal</span>
-          </li>
-
-
-          <li class="tree-symbol search-item">
-            <a href="#MODEL"><code>MODEL</code></a>
-            <span>const</span>
-            <span class="compact-tags">internal</span>
+            <span class="compact-tags">config internal</span>
           </li>
 
 
@@ -134,16 +127,9 @@
 
 
           <li class="tree-symbol search-item">
-            <a href="#token"><code>token</code></a>
+            <a href="#config"><code>config</code></a>
             <span>function</span>
-            <span class="compact-tags">internal</span>
-          </li>
-
-
-          <li class="tree-symbol search-item">
-            <a href="#corruptedToken"><code>corruptedToken</code></a>
-            <span>function</span>
-            <span class="compact-tags">internal</span>
+            <span class="compact-tags">config internal</span>
           </li>
 
 
@@ -151,6 +137,20 @@
             <a href="#liveClient"><code>liveClient</code></a>
             <span>function</span>
             <span class="compact-tags">internal provider-client</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#corruptedClient"><code>corruptedClient</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal provider-client</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#request"><code>request</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
           </li>
 
 
@@ -171,35 +171,17 @@
     </nav>
 
           <div class="symbol-stack">
-    <article id="auth" class="symbol-card search-item">
+    <article id="codex" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>auth</strong>
-          <span>const · line 14 · internal</span>
+          <strong>codex</strong>
+          <span>const · line 13 · internal</span>
         </div>
-        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#auth">Module</a>
+        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#codex">Module</a>
       </div>
-      <pre><code>const auth = loadCodexAuth()</code></pre>
+      <pre><code>const codex = loadConfiguredCodexClient()</code></pre>
 
-      <div class="tags"><span>internal</span></div>
-
-
-
-
-    </article>
-
-
-    <article id="MODEL" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>MODEL</strong>
-          <span>const · line 16 · internal</span>
-        </div>
-        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#MODEL">Module</a>
-      </div>
-      <pre><code>const MODEL = process.env.CODEX_E2E_MODEL ?? &quot;gpt-5.5&quot;</code></pre>
-
-      <div class="tags"><span>internal</span></div>
+      <div class="tags"><span>config</span><span>internal</span></div>
 
 
 
@@ -211,7 +193,7 @@
       <div class="symbol-head">
         <div>
           <strong>SYSTEM_PROMPT</strong>
-          <span>const · line 18 · internal</span>
+          <span>const · line 15 · internal</span>
         </div>
         <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#SYSTEM_PROMPT">Module</a>
       </div>
@@ -225,35 +207,17 @@
     </article>
 
 
-    <article id="token" class="symbol-card search-item">
+    <article id="config" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>token</strong>
-          <span>function · line 24 · internal</span>
+          <strong>config</strong>
+          <span>function · line 21 · internal</span>
         </div>
-        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#token">Module</a>
+        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#config">Module</a>
       </div>
-      <pre><code>function token(): SecretString</code></pre>
+      <pre><code>function config()</code></pre>
 
-      <div class="tags"><span>internal</span></div>
-
-
-
-
-    </article>
-
-
-    <article id="corruptedToken" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>corruptedToken</strong>
-          <span>function · line 32 · internal</span>
-        </div>
-        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#corruptedToken">Module</a>
-      </div>
-      <pre><code>function corruptedToken(): SecretString</code></pre>
-      <p>The real token with its signature destroyed: claims parse, the edge 401s.</p>
-      <div class="tags"><span>internal</span></div>
+      <div class="tags"><span>config</span><span>internal</span></div>
 
 
 
@@ -265,13 +229,49 @@
       <div class="symbol-head">
         <div>
           <strong>liveClient</strong>
-          <span>function · line 37 · internal</span>
+          <span>function · line 28 · internal</span>
         </div>
         <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#liveClient">Module</a>
       </div>
-      <pre><code>function liveClient(accessToken: SecretString): LlmClient</code></pre>
+      <pre><code>function liveClient(): LlmClient</code></pre>
 
       <div class="tags"><span>internal</span><span>provider-client</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="corruptedClient" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>corruptedClient</strong>
+          <span>function · line 32 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#corruptedClient">Module</a>
+      </div>
+      <pre><code>function corruptedClient(): LlmClient</code></pre>
+
+      <div class="tags"><span>internal</span><span>provider-client</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="request" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>request</strong>
+          <span>function · line 36 · internal</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#request">Module</a>
+      </div>
+      <pre><code>function request(init: Omit&lt;LlmRequestInit, &quot;model&quot;&gt;)</code></pre>
+
+      <div class="tags"><span>internal</span></div>
 
 
 
@@ -283,7 +283,7 @@
       <div class="symbol-head">
         <div>
           <strong>user</strong>
-          <span>function · line 44 · internal</span>
+          <span>function · line 45 · internal</span>
         </div>
         <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#user">Module</a>
       </div>
@@ -301,7 +301,7 @@
       <div class="symbol-head">
         <div>
           <strong>ECHO_TOOL</strong>
-          <span>const · line 48 · internal</span>
+          <span>const · line 49 · internal</span>
         </div>
         <a href="../modules/eos-llm-client-e2e-codex-coding-plan-e2e.html#ECHO_TOOL">Module</a>
       </div>
@@ -334,8 +334,8 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
-      <td><code>@eos/llm-client/e2e/support/codex-auth</code></td>
-      <td>12</td>
+      <td><code>@eos/llm-client/e2e/support/llm-clients-config</code></td>
+      <td>11</td>
     </tr>
 
 
@@ -351,7 +351,7 @@
       <td>imports</td>
       <td><code>@eos/llm-client/e2e/codex-coding-plan.e2e</code></td>
       <td><code>@eos/llm-client/tests/contract/llm-client-contract</code></td>
-      <td>11</td>
+      <td>10</td>
     </tr>
 
 

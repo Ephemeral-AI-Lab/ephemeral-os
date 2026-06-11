@@ -1,6 +1,5 @@
 import type { ContentBlock, ToolCallResult, ToolSpec } from "@eos/contracts";
-
-import type { AgentEvent } from "./events.js";
+import type { AgentEvent } from "@eos/agent-runtime/agent-run-handle";
 
 /** A model-emitted `tool_use` block, the unit of batch dispatch. */
 export type ToolUseBlock = Extract<ContentBlock, { type: "tool_use" }>;

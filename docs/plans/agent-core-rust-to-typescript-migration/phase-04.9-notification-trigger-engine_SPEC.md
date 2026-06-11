@@ -46,8 +46,8 @@ The seam is anticipated but absent:
 
 | Surface | Current behavior |
 | --- | --- |
-| `packages/engine/src/agent-loop.ts` | The loop doc comment defers exactly this: "the engine appends no reminder on a text turn - that nudge is a future notification rule." A bare-text turn with no live sessions loops with an unchanged conversation until `max_turns` fails the run. |
-| `packages/notifications/src/inbox.ts` | The inbox doc comment anticipates new publishers: "trigger rules and agent-to-agent messages later, with no inbox change." Publishers today: `BackgroundSupervisor` (`session_settled`) and the loop's hook-context publisher. |
+| `packages/engine/src/agent-loop.ts` | The loop doc comment defers exactly this: "the engine appends no reminder on a text turn - that nudge is a future notification rule." A bare-text turn with no background sessions loops with an unchanged conversation until `max_turns` fails the run. |
+| `packages/notifications/src/inbox.ts` | The inbox doc comment anticipates new publishers: "trigger rules and agent-to-agent messages later, with no inbox change." Publishers today: `BackgroundSessionSupervisor` (`session_settled`) and the loop's hook-context publisher. |
 | `packages/tool/src/hooks/protocol.ts` | `HookEventSchema` is strictly tool-scoped: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`. A bare-text turn has no tool call, so no existing hook can observe any of this phase's triggers. |
 | `packages/engine/src/agent-loop.ts` `waitForWake` | The park races the steer queue against `inbox.waitForNext`; any publish wakes it. A trigger publish needs no park changes. |
 | `packages/agent-runtime/e2e/auto-wait.e2e.ts` | The trigger-off baseline is already pinned live: park with zero provider calls across a measured window, working-while-session-runs, and the bare-text spin to `failed: max_turns` with exactly one user message. |
@@ -118,7 +118,7 @@ The seam is anticipated but absent:
 /**
  * Loop facts announced to the runtime after each committed assistant
  * turn; in-process camelCase. Two axes: the SHAPE of the turn that just
- * committed (`toolCalls`, `liveSessions`, `hasPendingSteers`) and the
+ * committed (`toolCalls`, `backgroundSessionCount`, `hasPendingSteers`) and the
  * run's BUDGET position (`turn`, `maxTurns`).
  */
 export interface TurnFacts {
@@ -129,7 +129,7 @@ export interface TurnFacts {
   /** Shape axis: `tool_use` blocks in this turn; 0 means bare text. */
   toolCalls: number;
   /** Shape axis: running background sessions at this boundary. */
-  liveSessions: number;
+  backgroundSessionCount: number;
   /** Shape axis: a user steer is already queued at this boundary. */
   hasPendingSteers: boolean;
 }
@@ -153,7 +153,7 @@ ignores the other:
 
 | Fields | Axis | Read by |
 | --- | --- | --- |
-| `toolCalls`, `liveSessions`, `hasPendingSteers` | shape of this turn | `remind-terminal-submission.cjs`: `tool_calls === 0 && live_sessions === 0 && !has_pending_steers` |
+| `toolCalls`, `backgroundSessionCount`, `hasPendingSteers` | shape of this turn | `remind-terminal-submission.cjs`: `tool_calls === 0 && background_session_count === 0 && !has_pending_steers` |
 | `turn`, `maxTurns` | run budget position | `budget-reminder.cjs`: `turn === ceil(max_turns * 0.8)` |
 
 `StartAgentRunInput` and `AgentLoopContext` gain `observer?: LoopObserver`.
@@ -166,11 +166,11 @@ await ctx.observer?.turnCompleted({
   turn: turns,
   maxTurns: ctx.maxTurns,
   toolCalls: calls.length,
-  liveSessions: ctx.background?.liveCount() ?? 0,
+  backgroundSessionCount: ctx.background?.backgroundSessionCount() ?? 0,
   hasPendingSteers: handle.hasPendingSteers(),
 });
 if (calls.length === 0) {
-  if (!handle.hasPendingSteers() && (ctx.background?.liveCount() ?? 0) > 0) {
+  if (!handle.hasPendingSteers() && (ctx.background?.backgroundSessionCount() ?? 0) > 0) {
     ctx.observer?.idleStarted();
     try {
       await waitForWake(ctx);
@@ -269,7 +269,7 @@ export interface TurnCompletedFacts {
   /** Shape axis; 0 means bare text. */
   tool_calls: number;
   /** Shape axis. */
-  live_sessions: number;
+  background_session_count: number;
   /** Shape axis. */
   has_pending_steers: boolean;
 }
@@ -314,7 +314,7 @@ export class NotificationTriggerEngine implements LoopObserver {
     inbox: NotificationInbox;
     // Session list at fire time, not park time; the runtime projects its
     // supervisor so the package stays engine-free.
-    listSessions: () => readonly BackgroundSessionSnapshot[];
+    listBackgroundSessions: () => readonly BackgroundSessionSnapshot[];
     runSnapshot: () => AgentRunSnapshot;
     terminalTool: string;
   });
@@ -359,7 +359,7 @@ flowchart TD
 ## 8. Reference Scripts
 
 `.eos-agents/notification-rules/remind-terminal-submission.cjs` - the spin
-rescue. The `live_sessions === 0` check is load-bearing: it is the same fact
+rescue. The `background_session_count === 0` check is load-bearing: it is the same fact
 the engine's park gate reads, so script and engine classify the turn
 identically (sessions live: the engine parks and `idle-wake` owns it; none:
 this script speaks).
@@ -370,7 +370,7 @@ const p = JSON.parse(fs.readFileSync(0, "utf8"));
 if (
   p.event === "TurnCompleted" &&
   p.facts.tool_calls === 0 &&
-  p.facts.live_sessions === 0 &&
+  p.facts.background_session_count === 0 &&
   !p.facts.has_pending_steers
 ) {
   process.stdout.write(JSON.stringify({

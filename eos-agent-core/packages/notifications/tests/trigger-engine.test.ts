@@ -30,7 +30,7 @@ const FACTS: TurnFacts = {
   turn: 3,
   maxTurns: 10,
   toolCalls: 0,
-  liveSessions: 0,
+  backgroundSessionCount: 0,
   hasPendingSteers: false,
 };
 
@@ -57,7 +57,7 @@ function reminder(source: "TurnCompleted" | "IdleTimeout", text: string) {
 interface Fixture {
   engine: NotificationTriggerEngine;
   inbox: NotificationInbox;
-  /** Mutable: what `listSessions` answers at fire time. */
+  /** Mutable: what `listBackgroundSessions` answers at fire time. */
   sessions: BackgroundSessionSnapshot[];
   /** One entry per runCommand call: the command string and its payload. */
   ran: { command: string; payload: TriggerPayload }[];
@@ -81,7 +81,7 @@ function fixture(
     rules,
     runCommand,
     inbox,
-    listSessions: () => [...sessions],
+    listBackgroundSessions: () => [...sessions],
     runSnapshot: () => SNAPSHOT,
     terminalTool: "finish_task",
   });
@@ -115,7 +115,7 @@ describe("notification trigger engine", () => {
         turn: 3,
         max_turns: 10,
         tool_calls: 0,
-        live_sessions: 0,
+        background_session_count: 0,
         has_pending_steers: false,
       },
       run: SNAPSHOT,

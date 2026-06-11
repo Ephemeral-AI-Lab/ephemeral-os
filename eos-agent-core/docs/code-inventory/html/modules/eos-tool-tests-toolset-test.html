@@ -51,16 +51,16 @@
 
 
     <tr class="search-item">
-      <td><code>@eos/contracts</code></td>
-      <td>AgentKindSchema, type AgentKind</td>
+      <td><code>@eos/engine</code></td>
+      <td>BackgroundSessionSupervisor</td>
       <td>value</td>
       <td>3</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>@eos/engine</code></td>
-      <td>BackgroundSupervisor, NotificationInbox, type ToolExecutor</td>
+      <td><code>@eos/notifications</code></td>
+      <td>NotificationInbox</td>
       <td>value</td>
       <td>4</td>
     </tr>
@@ -70,7 +70,7 @@
       <td><code>@eos/testkit</code></td>
       <td>scriptedRunState, scriptedTool</td>
       <td>value</td>
-      <td>9</td>
+      <td>5</td>
     </tr>
 
 
@@ -78,23 +78,23 @@
       <td><code>../src/contract.js</code></td>
       <td>ToolDefinition</td>
       <td>type</td>
-      <td>11</td>
+      <td>7</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>../src/toolset.js</code></td>
-      <td>AGENT_TOOLSET, buildToolExecutor</td>
+      <td>buildToolExecutor</td>
       <td>value</td>
-      <td>12</td>
+      <td>8</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>../src/index.js</code></td>
-      <td>backgroundTools, submissionTool</td>
+      <td>TERMINAL_TOOL_NAMES, backgroundTools, terminalToolDefinitions</td>
       <td>value</td>
-      <td>13</td>
+      <td>9</td>
     </tr>
 
 
@@ -137,7 +137,7 @@
       <ul class="tree-symbols">
 
           <li class="tree-symbol search-item">
-            <a href="#assemble"><code>assemble</code></a>
+            <a href="#supervisor"><code>supervisor</code></a>
             <span>function</span>
             <span class="compact-tags">internal test-only</span>
           </li>
@@ -146,15 +146,15 @@
     </nav>
 
           <div class="symbol-stack">
-    <article id="assemble" class="symbol-card search-item">
+    <article id="supervisor" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>assemble</strong>
+          <strong>supervisor</strong>
           <span>function · line 16 · internal</span>
         </div>
-        <a href="../modules/eos-tool-tests-toolset-test.html#assemble">Module</a>
+        <a href="../modules/eos-tool-tests-toolset-test.html#supervisor">Module</a>
       </div>
-      <pre><code>function assemble(kind: AgentKind):</code></pre>
+      <pre><code>function supervisor(): BackgroundSessionSupervisor</code></pre>
 
       <div class="tags"><span>internal</span><span>test-only</span></div>
 
@@ -175,7 +175,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
-      <td><code>@eos/contracts</code></td>
+      <td><code>@eos/engine</code></td>
       <td>3</td>
     </tr>
 
@@ -183,7 +183,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
-      <td><code>@eos/engine</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>4</td>
     </tr>
 
@@ -192,7 +192,7 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/testkit</code></td>
-      <td>9</td>
+      <td>5</td>
     </tr>
 
 
@@ -200,7 +200,7 @@
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>11</td>
+      <td>7</td>
     </tr>
 
 
@@ -208,7 +208,7 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/index</code></td>
-      <td>13</td>
+      <td>9</td>
     </tr>
 
 
@@ -216,7 +216,7 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/toolset</code></td>
-      <td>12</td>
+      <td>8</td>
     </tr>
 
 
@@ -239,7 +239,7 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
-      <td><code>@eos/contracts</code></td>
+      <td><code>@eos/engine</code></td>
       <td>3</td>
     </tr>
 
@@ -247,7 +247,7 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
-      <td><code>@eos/engine</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>4</td>
     </tr>
 
@@ -256,7 +256,7 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/testkit</code></td>
-      <td>9</td>
+      <td>5</td>
     </tr>
 
 
@@ -264,7 +264,7 @@
       <td>tests <small>type</small></td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>11</td>
+      <td>7</td>
     </tr>
 
 
@@ -272,7 +272,7 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/index</code></td>
-      <td>13</td>
+      <td>9</td>
     </tr>
 
 
@@ -280,7 +280,7 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/toolset.test</code></td>
       <td><code>@eos/tool/src/toolset</code></td>
-      <td>12</td>
+      <td>8</td>
     </tr>
 
 

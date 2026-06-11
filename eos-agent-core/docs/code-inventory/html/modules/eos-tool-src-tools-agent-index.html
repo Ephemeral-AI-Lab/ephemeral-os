@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/tool/src/tools/agent/index Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-tool.html">@eos/tool</a></p>
+          <h1>@eos/tool/src/tools/agent/index</h1>
+          <p class="lede">packages/tool/src/tools/agent/index.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>1</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>AgentRunId, Message</td>
+      <td>type</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>AgentRunHandle, BackgroundSessionSupervisor</td>
+      <td>type</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../contract.js</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./ask-advisor.js</code></td>
+      <td>askAdvisorTool</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./read-agent-run-transcript.js</code></td>
+      <td>readAgentRunTranscriptTool</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./run-subagent.js</code></td>
+      <td>runSubagentTool</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>1</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>./ask-advisor.js</code></td>
+      <td>ADVISOR_AGENT_NAME</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>index.ts</code>
+        <small>7 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#AGENT_TOOL_NAMES"><code>AGENT_TOOL_NAMES</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentToolUserMessage"><code>AgentToolUserMessage</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#StartAgentToolRunParams"><code>StartAgentToolRunParams</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#StartedAgentToolRun"><code>StartedAgentToolRun</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentToolTranscriptRead"><code>AgentToolTranscriptRead</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentRunCalls"><code>AgentRunCalls</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#agentTools"><code>agentTools</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="AGENT_TOOL_NAMES" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AGENT_TOOL_NAMES</strong>
+          <span>const · line 12 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#AGENT_TOOL_NAMES">Module</a>
+      </div>
+      <pre><code>export const AGENT_TOOL_NAMES = [ &quot;run_subagent&quot;, &quot;ask_advisor&quot;, &quot;read_agent_run_transcript&quot;, ] as const</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentToolUserMessage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentToolUserMessage</strong>
+          <span>type · line 18 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#AgentToolUserMessage">Module</a>
+      </div>
+      <pre><code>export type AgentToolUserMessage = Message &amp;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="StartAgentToolRunParams" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>StartAgentToolRunParams</strong>
+          <span>interface · line 20 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#StartAgentToolRunParams">Module</a>
+      </div>
+      <pre><code>export interface StartAgentToolRunParams</code></pre>
+
+      <div class="tags"><span>di-boundary</span><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>agentName</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>initialMessages</code></td>
+              <td><code>readonly [AgentToolUserMessage, ...AgentToolUserMessage[]]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>signal</code></td>
+              <td><code>AbortSignal</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="StartedAgentToolRun" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>StartedAgentToolRun</strong>
+          <span>interface · line 26 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#StartedAgentToolRun">Module</a>
+      </div>
+      <pre><code>export interface StartedAgentToolRun</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>handle</code></td>
+              <td><code>AgentRunHandle</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentToolTranscriptRead" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentToolTranscriptRead</strong>
+          <span>interface · line 31 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#AgentToolTranscriptRead">Module</a>
+      </div>
+      <pre><code>export interface AgentToolTranscriptRead</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>data</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>next_offset</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>eof</code></td>
+              <td><code>boolean</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentRunCalls" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentRunCalls</strong>
+          <span>interface · line 38 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#AgentRunCalls">Module</a>
+      </div>
+      <pre><code>export interface AgentRunCalls</code></pre>
+      <p>Narrow bound runtime calls - never a service object (§5).</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>startRun</code></td>
+              <td><code>startRun(params: StartAgentToolRunParams): StartedAgentToolRun;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>transcriptPathOf</code></td>
+              <td><code>transcriptPathOf(runId: AgentRunId): string | undefined;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>readTranscriptFile</code></td>
+              <td><code>readTranscriptFile(
+    path: string,
+    offset: number,
+    maxBytes: number,
+  ): Promise&lt;AgentToolTranscriptRead&gt;;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>advisorPromptFor</code></td>
+              <td><code>advisorPromptFor(toolName: string): string | undefined;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="agentTools" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>agentTools</strong>
+          <span>function · line 54 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-agent-index.html#agentTools">Module</a>
+      </div>
+      <pre><code>export function agentTools( calls: AgentRunCalls, supervisor: BackgroundSessionSupervisor, ): ToolDefinition[]</code></pre>
+      <p>The agent family, one bound definition per `AGENT_TOOL_NAMES` entry.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/tool/src/contract</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/tool/src/tools/agent/ask-advisor</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/tool/src/tools/agent/read-agent-run-transcript</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/tool/src/tools/agent/run-subagent</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/tool/src/tools/agent/index</code></td>
+      <td><code>@eos/tool/src/tools/agent/ask-advisor</code></td>
+      <td>9</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

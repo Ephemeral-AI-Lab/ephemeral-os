@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/src/transcript Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/src/transcript</h1>
+          <p class="lede">packages/agent-runtime/src/transcript.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>12</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>5</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>6</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>mkdirSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:fs/promises</code></td>
+      <td>appendFile, readFile</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>join</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>AgentKind, AgentRunId, JsonValue, Message, ToolCallResult, ToolUseId</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>cacheHitRate, type ReasoningEffort, type UsageSnapshot</td>
+      <td>value</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./agent-run-handle.js</code></td>
+      <td>AgentEvent, AgentRunOutcome</td>
+      <td>type</td>
+      <td>15</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>transcript.ts</code>
+        <small>12 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#runTranscriptPath"><code>runTranscriptPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SequencedLine"><code>SequencedLine</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TranscriptEntry"><code>TranscriptEntry</code></a>
+            <span>type</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TranscriptLine"><code>TranscriptLine</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#EventEntry"><code>EventEntry</code></a>
+            <span>type</span>
+            <span class="compact-tags">event internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#EventLine"><code>EventLine</code></a>
+            <span>type</span>
+            <span class="compact-tags">event public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ResultLine"><code>ResultLine</code></a>
+            <span>type</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunLogMeta"><code>RunLogMeta</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RunLog"><code>RunLog</code></a>
+            <span>class</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runFinishedTranscriptEntry"><code>runFinishedTranscriptEntry</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TranscriptRead"><code>TranscriptRead</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#readTranscriptFile"><code>readTranscriptFile</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="runTranscriptPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runTranscriptPath</strong>
+          <span>function · line 18 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#runTranscriptPath">Module</a>
+      </div>
+      <pre><code>export function runTranscriptPath(dataDir: string, runId: string): string</code></pre>
+      <p>Where one run's transcript lives under the runtime's data dir.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SequencedLine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SequencedLine</strong>
+          <span>interface · line 22 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#SequencedLine">Module</a>
+      </div>
+      <pre><code>interface SequencedLine</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>seq</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>ts</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="TranscriptEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TranscriptEntry</strong>
+          <span>type · line 28 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#TranscriptEntry">Module</a>
+      </div>
+      <pre><code>type TranscriptEntry = |</code></pre>
+      <p>One conversation-shaping entry, before the writer stamps `seq`/`ts`.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ kind: &quot;user&quot;; origin: &quot;initial&quot; | &quot;steer&quot;; message: Message }</code></li>
+
+
+        <li><code>{ kind: &quot;assistant&quot;; message: Message }</code></li>
+
+
+        <li><code>{ kind: &quot;tool_result&quot;; result: ToolCallResult }</code></li>
+
+
+        <li><code>{ kind: &quot;notification&quot;; text: string }</code></li>
+
+
+        <li><code>{ kind: &quot;run_finished&quot;; outcome_status: string; interrupt_reason?: string; su...</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="TranscriptLine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TranscriptLine</strong>
+          <span>type · line 41 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#TranscriptLine">Module</a>
+      </div>
+      <pre><code>export type TranscriptLine = SequencedLine &amp; TranscriptEntry</code></pre>
+      <p>One JSONL line; snake_case: serialized.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="EventEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>EventEntry</strong>
+          <span>type · line 43 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#EventEntry">Module</a>
+      </div>
+      <pre><code>type EventEntry = |</code></pre>
+
+      <div class="tags"><span>event</span><span>internal</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ type: &quot;run_started&quot;; run_id: AgentRunId; agent_name: string; agent_kind: Ag...</code></li>
+
+
+        <li><code>{ type: &quot;turn_started&quot;; turn: number }</code></li>
+
+
+        <li><code>{ type: &quot;turn_completed&quot;; turn: number; stop_reason?: string; usage: UsageSna...</code></li>
+
+
+        <li><code>{ type: &quot;tool_started&quot;; turn: number; tool_use_id: ToolUseId; name: string }</code></li>
+
+
+        <li><code>{ type: &quot;tool_completed&quot;; turn: number; tool_use_id: ToolUseId; name: string;...</code></li>
+
+
+        <li><code>{ type: &quot;run_finished&quot;; status: &quot;completed&quot; | &quot;cancelled&quot; | &quot;failed&quot; }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="EventLine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>EventLine</strong>
+          <span>type · line 76 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#EventLine">Module</a>
+      </div>
+      <pre><code>export type EventLine = SequencedLine &amp; EventEntry</code></pre>
+      <p>One audit lifecycle line; snake_case: serialized.</p>
+      <div class="tags"><span>event</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ResultLine" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ResultLine</strong>
+          <span>type · line 78 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#ResultLine">Module</a>
+      </div>
+      <pre><code>export type ResultLine = SequencedLine &amp;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RunLogMeta" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunLogMeta</strong>
+          <span>interface · line 97 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#RunLogMeta">Module</a>
+      </div>
+      <pre><code>export interface RunLogMeta</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>run_id</code></td>
+              <td><code>AgentRunId</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>agent_name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>agent_kind</code></td>
+              <td><code>AgentKind</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>parent</code></td>
+              <td><code>AgentRunId</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>llm_client_id</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>model_id</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reasoning_effort</code></td>
+              <td><code>ReasoningEffort</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>max_turns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="RunLog" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RunLog</strong>
+          <span>class · line 115 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#RunLog">Module</a>
+      </div>
+      <pre><code>export class RunLog</code></pre>
+      <p>Per-run JSONL writer: one ordered append queue, fed by the runtime's
+event subscriber. `events.jsonl` records lifecycle facts, `transcript.jsonl`
+keeps the Phase 04.5 conversation artifact, and `result.jsonl` receives one
+terminal rollup line. A failed write latches and resurfaces on every later
+`flush()`.</p>
+      <div class="tags"><span>exported</span><span>public-api</span><span>stateful</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>transcriptPath</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#eventsPath</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#resultPath</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#meta</code></td>
+              <td><code>RunLogMeta</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#runDir</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#startedAt</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#startedMs</code></td>
+              <td><code>number</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
+              <td><code>#seq</code></td>
+              <td><code>0</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#turn</code></td>
+              <td><code>0</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#queue</code></td>
+              <td><code>Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#directoryReady</code></td>
+              <td><code>false</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#failure</code></td>
+              <td><code>Error | undefined</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>append</code></td>
+              <td><code>append(event: AgentEvent): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>appendUser</code></td>
+              <td><code>appendUser(origin: &quot;initial&quot; | &quot;steer&quot;, message: Message): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>flush</code></td>
+              <td><code>flush(): Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#appendEvent</code></td>
+              <td><code>#appendEvent(entry: EventEntry): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#appendTranscript</code></td>
+              <td><code>#appendTranscript(entry: TranscriptEntry): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#appendResult</code></td>
+              <td><code>#appendResult(entry: Omit&lt;ResultLine, &quot;seq&quot; | &quot;ts&quot;&gt;): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#enqueue</code></td>
+              <td><code>#enqueue(path: string, entry: object): void</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#resultEntry</code></td>
+              <td><code>#resultEntry(outcome: AgentRunOutcome): Omit&lt;ResultLine, &quot;seq&quot; | &quot;ts&quot;&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>#write</code></td>
+              <td><code>async #write(path: string, line: SequencedLine &amp; object): Promise&lt;void&gt;</code></td>
+              <td>async</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="runFinishedTranscriptEntry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runFinishedTranscriptEntry</strong>
+          <span>function · line 287 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#runFinishedTranscriptEntry">Module</a>
+      </div>
+      <pre><code>function runFinishedTranscriptEntry(outcome: AgentRunOutcome): TranscriptEntry</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="TranscriptRead" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TranscriptRead</strong>
+          <span>interface · line 298 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#TranscriptRead">Module</a>
+      </div>
+      <pre><code>export interface TranscriptRead</code></pre>
+      <p>One byte-offset read of a transcript file.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>data</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>next_offset</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>eof</code></td>
+              <td><code>boolean</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="readTranscriptFile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>readTranscriptFile</strong>
+          <span>function · line 310 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-transcript.html#readTranscriptFile">Module</a>
+      </div>
+      <pre><code>export async function readTranscriptFile( path: string, offset: number, maxBytes: number, ): Promise&lt;TranscriptRead&gt;</code></pre>
+      <p>Byte-offset reader with a per-call cap. Offsets are byte positions by
+contract: callers resume from `next_offset`, so a chunk boundary may
+split a line (or a multibyte character) and concatenation restores it.</p>
+      <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>@eos/agent-runtime/src/agent-run-handle</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>node:fs</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/transcript</code></td>
+      <td><code>node:path</code></td>
+      <td>3</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

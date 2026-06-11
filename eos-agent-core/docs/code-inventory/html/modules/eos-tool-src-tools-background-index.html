@@ -26,7 +26,7 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>1</dd></div>
+          <div><dt>Symbols</dt><dd>2</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>0</dd></div>
           <div><dt>Functions</dt><dd>1</dd></div>
@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/engine</code></td>
-      <td>BackgroundSupervisor</td>
+      <td>BackgroundSessionSupervisor</td>
       <td>type</td>
       <td>1</td>
     </tr>
@@ -100,9 +100,16 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>index.ts</code>
-        <small>1 symbols</small>
+        <small>2 symbols</small>
       </div>
       <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#BACKGROUND_TOOL_NAMES"><code>BACKGROUND_TOOL_NAMES</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
 
           <li class="tree-symbol search-item">
             <a href="#backgroundTools"><code>backgroundTools</code></a>
@@ -114,15 +121,33 @@
     </nav>
 
           <div class="symbol-stack">
+    <article id="BACKGROUND_TOOL_NAMES" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BACKGROUND_TOOL_NAMES</strong>
+          <span>const · line 8 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-tools-background-index.html#BACKGROUND_TOOL_NAMES">Module</a>
+      </div>
+      <pre><code>export const BACKGROUND_TOOL_NAMES = [ &quot;list_background_sessions&quot;, &quot;cancel_background_session&quot;, ] as const</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
     <article id="backgroundTools" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>backgroundTools</strong>
-          <span>function · line 8 · public</span>
+          <span>function · line 14 · public</span>
         </div>
         <a href="../modules/eos-tool-src-tools-background-index.html#backgroundTools">Module</a>
       </div>
-      <pre><code>export function backgroundTools(supervisor: BackgroundSupervisor): ToolDefinition[]</code></pre>
+      <pre><code>export function backgroundTools(supervisor: BackgroundSessionSupervisor): ToolDefinition[]</code></pre>
       <p>The background family: list + cancel, closed over the supervisor.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 

@@ -40,7 +40,7 @@ function llmClientsPath(): string {
   return codex.llmClientsPath;
 }
 
-/** Park = a bare-text assistant turn after the spawn, with the session live. */
+/** Park = a bare-text assistant turn after the spawn, with the background session running. */
 async function untilParked(transcriptPath: string, label: string): Promise<void> {
   await until(
     label,

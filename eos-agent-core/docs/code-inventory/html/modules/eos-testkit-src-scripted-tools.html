@@ -103,21 +103,21 @@
 
 
           <li class="tree-symbol search-item">
-            <a href="#ScriptedSessionOutcome"><code>ScriptedSessionOutcome</code></a>
+            <a href="#ScriptedBackgroundSessionOutcome"><code>ScriptedBackgroundSessionOutcome</code></a>
             <span>interface</span>
             <span class="compact-tags">public-api</span>
           </li>
 
 
           <li class="tree-symbol search-item">
-            <a href="#ScriptedSessionHandle"><code>ScriptedSessionHandle</code></a>
+            <a href="#ScriptedBackgroundSessionHandle"><code>ScriptedBackgroundSessionHandle</code></a>
             <span>interface</span>
             <span class="compact-tags">public-api run-handle</span>
           </li>
 
 
           <li class="tree-symbol search-item">
-            <a href="#scriptedSessionHandle"><code>scriptedSessionHandle</code></a>
+            <a href="#scriptedBackgroundSessionHandle"><code>scriptedBackgroundSessionHandle</code></a>
             <span>function</span>
             <span class="compact-tags">public-api run-handle</span>
           </li>
@@ -148,7 +148,7 @@
       <div class="symbol-head">
         <div>
           <strong>scriptedRunState</strong>
-          <span>function · line 35 · public</span>
+          <span>function · line 37 · public</span>
         </div>
         <a href="../modules/eos-testkit-src-scripted-tools.html#scriptedRunState">Module</a>
       </div>
@@ -162,18 +162,19 @@
     </article>
 
 
-    <article id="ScriptedSessionOutcome" class="symbol-card search-item">
+    <article id="ScriptedBackgroundSessionOutcome" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>ScriptedSessionOutcome</strong>
-          <span>interface · line 53 · public</span>
+          <strong>ScriptedBackgroundSessionOutcome</strong>
+          <span>interface · line 57 · public</span>
         </div>
-        <a href="../modules/eos-testkit-src-scripted-tools.html#ScriptedSessionOutcome">Module</a>
+        <a href="../modules/eos-testkit-src-scripted-tools.html#ScriptedBackgroundSessionOutcome">Module</a>
       </div>
-      <pre><code>export interface ScriptedSessionOutcome</code></pre>
-      <p>Structurally a `@eos/engine` `SessionOutcome`/`SessionHandle` pair
-(testkit deliberately depends only on contracts + tool, so the shapes
-are declared here and checked structurally at the registration site).</p>
+      <pre><code>export interface ScriptedBackgroundSessionOutcome</code></pre>
+      <p>Structurally a `@eos/engine` `BackgroundSessionOutcome` /
+`BackgroundSessionHandle` pair. Testkit deliberately depends only on
+contracts + tool, so the shapes are declared here and checked structurally
+at the registration site.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
 
@@ -207,15 +208,15 @@ are declared here and checked structurally at the registration site).</p>
     </article>
 
 
-    <article id="ScriptedSessionHandle" class="symbol-card search-item">
+    <article id="ScriptedBackgroundSessionHandle" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>ScriptedSessionHandle</strong>
-          <span>interface · line 58 · public</span>
+          <strong>ScriptedBackgroundSessionHandle</strong>
+          <span>interface · line 62 · public</span>
         </div>
-        <a href="../modules/eos-testkit-src-scripted-tools.html#ScriptedSessionHandle">Module</a>
+        <a href="../modules/eos-testkit-src-scripted-tools.html#ScriptedBackgroundSessionHandle">Module</a>
       </div>
-      <pre><code>export interface ScriptedSessionHandle</code></pre>
+      <pre><code>export interface ScriptedBackgroundSessionHandle</code></pre>
 
       <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span></div>
 
@@ -230,7 +231,7 @@ are declared here and checked structurally at the registration site).</p>
             <tr>
               <td><code>handle</code></td>
               <td><code>{
-    settled: Promise&lt;ScriptedSessionOutcome&gt;;
+    settled: Promise&lt;ScriptedBackgroundSessionOutcome&gt;;
     cancel(reason: string): Promise&lt;void&gt;;
     describe?(): string;
   }</code></td>
@@ -259,7 +260,7 @@ are declared here and checked structurally at the registration site).</p>
 
             <tr>
               <td><code>settle</code></td>
-              <td><code>settle(outcome: ScriptedSessionOutcome): void;</code></td>
+              <td><code>settle(outcome: ScriptedBackgroundSessionOutcome): void;</code></td>
               <td></td>
             </tr>
 
@@ -279,15 +280,15 @@ are declared here and checked structurally at the registration site).</p>
     </article>
 
 
-    <article id="scriptedSessionHandle" class="symbol-card search-item">
+    <article id="scriptedBackgroundSessionHandle" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>scriptedSessionHandle</strong>
-          <span>function · line 73 · public</span>
+          <strong>scriptedBackgroundSessionHandle</strong>
+          <span>function · line 77 · public</span>
         </div>
-        <a href="../modules/eos-testkit-src-scripted-tools.html#scriptedSessionHandle">Module</a>
+        <a href="../modules/eos-testkit-src-scripted-tools.html#scriptedBackgroundSessionHandle">Module</a>
       </div>
-      <pre><code>export function scriptedSessionHandle(describe?: string): ScriptedSessionHandle</code></pre>
+      <pre><code>export function scriptedBackgroundSessionHandle( describe?: string, ): ScriptedBackgroundSessionHandle</code></pre>
       <p>A push-settled capability handle for supervisor and family suites.</p>
       <div class="tags"><span>exported</span><span>public-api</span><span>run-handle</span></div>
 

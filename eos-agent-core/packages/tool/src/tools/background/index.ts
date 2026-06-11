@@ -1,4 +1,4 @@
-import type { BackgroundSupervisor } from "@eos/engine";
+import type { BackgroundSessionSupervisor } from "@eos/engine";
 
 import type { ToolDefinition } from "../../contract.js";
 import { cancelBackgroundSessionTool } from "./cancel-background-session.js";
@@ -11,7 +11,7 @@ export const BACKGROUND_TOOL_NAMES = [
 ] as const;
 
 /** The background family: list + cancel, closed over the supervisor. */
-export function backgroundTools(supervisor: BackgroundSupervisor): ToolDefinition[] {
+export function backgroundTools(supervisor: BackgroundSessionSupervisor): ToolDefinition[] {
   return [
     listBackgroundSessionsTool(supervisor),
     cancelBackgroundSessionTool(supervisor),

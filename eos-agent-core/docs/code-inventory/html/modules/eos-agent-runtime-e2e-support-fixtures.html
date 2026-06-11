@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/e2e/support/fixtures Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/e2e/support/fixtures</h1>
+          <p class="lede">packages/agent-runtime/e2e/support/fixtures.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>34</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>18</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>12</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>mkdirSync, writeFileSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>dirname, join</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:url</code></td>
+      <td>fileURLToPath</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>assistantText, type JsonObject, type Message</td>
+      <td>value</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/engine</code></td>
+      <td>AgentRunOutcome</td>
+      <td>type</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/testkit</code></td>
+      <td>scriptedTool</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>defineTool, type HookConfigEntry, type ToolDefinition</td>
+      <td>value</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/hook-config.js</code></td>
+      <td>loadHookConfig</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/run-registry.js</code></td>
+      <td>RunSummary</td>
+      <td>type</td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/runtime.js</code></td>
+      <td>createAgentRuntime, type AgentRuntime</td>
+      <td>value</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../tests/support.js</code></td>
+      <td>tempDir, writeProfile, type ProfileSpec</td>
+      <td>value</td>
+      <td>14</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>fixtures.ts</code>
+        <small>34 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#TERSE_BODY"><code>TERSE_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#PARALLEL_BODY"><code>PARALLEL_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ADVISOR_BODY"><code>ADVISOR_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#SLEEPER_BODY"><code>SLEEPER_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HOLDER_BODY"><code>HOLDER_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES"><code>ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#rootHookConfigPath"><code>rootHookConfigPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#rootNotificationRulesPath"><code>rootNotificationRulesPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HELPER_BODY"><code>HELPER_BODY</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#advisoryReadyProfile"><code>advisoryReadyProfile</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CODEWORD"><code>CODEWORD</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#LookupCodewordTool"><code>LookupCodewordTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#lookupCodewordTool"><code>lookupCodewordTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#WaitTool"><code>WaitTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#waitTool"><code>waitTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#GateTool"><code>GateTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#gateTool"><code>gateTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ProbeWindow"><code>ProbeWindow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ProbeTool"><code>ProbeTool</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#probeTool"><code>probeTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#finishTaskTool"><code>finishTaskTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RuntimeFixtureOptions"><code>RuntimeFixtureOptions</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RuntimeFixture"><code>RuntimeFixture</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runtimeFixture"><code>runtimeFixture</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#profilesWithAdvisor"><code>profilesWithAdvisor</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#until"><code>until</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runOf"><code>runOf</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#finishedRun"><code>finishedRun</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#userMessageIndex"><code>userMessageIndex</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#sessionSettledMessages"><code>sessionSettledMessages</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ToolResultView"><code>ToolResultView</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#toolResultsIn"><code>toolResultsIn</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#unansweredToolUses"><code>unansweredToolUses</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#submissionOf"><code>submissionOf</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="TERSE_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TERSE_BODY</strong>
+          <span>const · line 19 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#TERSE_BODY">Module</a>
+      </div>
+      <pre><code>export const TERSE_BODY = [ &quot;You are a terse test agent.&quot;, &quot;Follow the user's numbered instructions exactly and in order.&quot;, &quot;Make at most one tool call per assistant turn and write no prose.&quot;, ].join(&quot; &quot;)</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="PARALLEL_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>PARALLEL_BODY</strong>
+          <span>const · line 26 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#PARALLEL_BODY">Module</a>
+      </div>
+      <pre><code>export const PARALLEL_BODY = [ &quot;You are a terse test agent.&quot;, &quot;Follow the user's numbered instructions exactly and in order.&quot;, &quot;Write no prose.&quot;, ].join(&quot; &quot;)</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ADVISOR_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ADVISOR_BODY</strong>
+          <span>const · line 32 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#ADVISOR_BODY">Module</a>
+      </div>
+      <pre><code>export const ADVISOR_BODY = [ &quot;You are the advisor.&quot;, &quot;Read the caller transcript, then read the final JSON object on the last line of the next message.&quot;, &quot;Call submit_advisor_outcome exactly once.&quot;, 'Use summary &quot;pas...</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="SLEEPER_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>SLEEPER_BODY</strong>
+          <span>const · line 42 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#SLEEPER_BODY">Module</a>
+      </div>
+      <pre><code>export const SLEEPER_BODY = [ &quot;You are the sleeper.&quot;, 'Immediately call wait with {&quot;ms&quot;: 120000}.', 'After it returns, call submit_subagent_outcome with summary &quot;slept&quot;.', ].join(&quot; &quot;)</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="HOLDER_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HOLDER_BODY</strong>
+          <span>const · line 49 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#HOLDER_BODY">Module</a>
+      </div>
+      <pre><code>export const HOLDER_BODY = [ &quot;You are the holder.&quot;, &quot;Immediately call hold.&quot;, 'After it returns, call submit_subagent_outcome with summary &quot;held&quot;.', ].join(&quot; &quot;)</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES</strong>
+          <span>const · line 55 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES">Module</a>
+      </div>
+      <pre><code>const ADVISORY_REQUIRED_SUBMISSION_TOOL_NAMES = new Set&lt;string&gt;([ &quot;submit_main_outcome&quot;, &quot;submit_planner_outcome&quot;, &quot;submit_worker_outcome&quot;, ])</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="rootHookConfigPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>rootHookConfigPath</strong>
+          <span>function · line 61 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#rootHookConfigPath">Module</a>
+      </div>
+      <pre><code>export function rootHookConfigPath(): string</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="rootNotificationRulesPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>rootNotificationRulesPath</strong>
+          <span>function · line 68 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#rootNotificationRulesPath">Module</a>
+      </div>
+      <pre><code>export function rootNotificationRulesPath(): string</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="HELPER_BODY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HELPER_BODY</strong>
+          <span>const · line 76 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#HELPER_BODY">Module</a>
+      </div>
+      <pre><code>export const HELPER_BODY = [ &quot;You are the helper.&quot;, &quot;Immediately call submit_subagent_outcome exactly once with summary set to&quot;, 'exactly &quot;helper finished&quot;. Do not call any other tool.', ].join(&quot; &quot;)</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="advisoryReadyProfile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>advisoryReadyProfile</strong>
+          <span>function · line 82 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#advisoryReadyProfile">Module</a>
+      </div>
+      <pre><code>export function advisoryReadyProfile(spec: ProfileSpec): ProfileSpec</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="CODEWORD" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CODEWORD</strong>
+          <span>const · line 104 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#CODEWORD">Module</a>
+      </div>
+      <pre><code>export const CODEWORD = &quot;zebra-7&quot;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="LookupCodewordTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>LookupCodewordTool</strong>
+          <span>interface · line 106 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#LookupCodewordTool">Module</a>
+      </div>
+      <pre><code>export interface LookupCodewordTool</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>definition</code></td>
+              <td><code>ToolDefinition</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>calls</code></td>
+              <td><code>calls(): number;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="lookupCodewordTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>lookupCodewordTool</strong>
+          <span>function · line 113 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#lookupCodewordTool">Module</a>
+      </div>
+      <pre><code>export function lookupCodewordTool(): LookupCodewordTool</code></pre>
+      <p>A deterministic lookup the live model is told to call and echo back.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="WaitTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>WaitTool</strong>
+          <span>interface · line 129 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#WaitTool">Module</a>
+      </div>
+      <pre><code>export interface WaitTool</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>definition</code></td>
+              <td><code>ToolDefinition</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>started</code></td>
+              <td><code>Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>aborted</code></td>
+              <td><code>aborted(): number;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="waitTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>waitTool</strong>
+          <span>function · line 142 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#waitTool">Module</a>
+      </div>
+      <pre><code>export function waitTool(): WaitTool</code></pre>
+      <p>A blocking tool that gives interrupt/steer tests a deterministic mid-run
+window: it resolves after `ms` or settles early (as an error result) when
+the call's execution signal aborts.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="GateTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>GateTool</strong>
+          <span>interface · line 176 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#GateTool">Module</a>
+      </div>
+      <pre><code>export interface GateTool</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>definition</code></td>
+              <td><code>ToolDefinition</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>started</code></td>
+              <td><code>Promise&lt;void&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>release</code></td>
+              <td><code>release(): void;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="gateTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>gateTool</strong>
+          <span>function · line 189 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#gateTool">Module</a>
+      </div>
+      <pre><code>export function gateTool(): GateTool</code></pre>
+      <p>A blocking tool the test settles on command: `release()` resolves the
+in-flight call, an execution-signal abort settles it as an error. Gives
+auto-wait tests a session settlement fired at a test-chosen instant.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ProbeWindow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ProbeWindow</strong>
+          <span>interface · line 222 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#ProbeWindow">Module</a>
+      </div>
+      <pre><code>export interface ProbeWindow</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>start</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>end</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ProbeTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ProbeTool</strong>
+          <span>interface · line 228 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#ProbeTool">Module</a>
+      </div>
+      <pre><code>export interface ProbeTool</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>definition</code></td>
+              <td><code>ToolDefinition</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>windows</code></td>
+              <td><code>windows(): readonly ProbeWindow[];</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="probeTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>probeTool</strong>
+          <span>function · line 240 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#probeTool">Module</a>
+      </div>
+      <pre><code>export function probeTool( name: string, delayMs: number, options:</code></pre>
+      <p>A slow deterministic tool whose recorded execution windows expose batch
+behavior: overlapping windows prove concurrent dispatch, an empty list
+proves a call was rejected undispatched. `exclusive` sets
+`isBatchExecutionForbidden` for the policy scenarios.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="finishTaskTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>finishTaskTool</strong>
+          <span>function · line 267 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#finishTaskTool">Module</a>
+      </div>
+      <pre><code>export function finishTaskTool(): ToolDefinition</code></pre>
+      <p>A terminal stand-in for engine-direct runs. A real `summary` schema (not
+the permissive scripted-tool object) so the live model sees the field in
+the tool spec and the submission stays assertable.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RuntimeFixtureOptions" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RuntimeFixtureOptions</strong>
+          <span>interface · line 280 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#RuntimeFixtureOptions">Module</a>
+      </div>
+      <pre><code>export interface RuntimeFixtureOptions</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>llmClientsPath</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>profiles</code></td>
+              <td><code>readonly ProfileSpec[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>baseTools</code></td>
+              <td><code>ToolDefinition[]</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>hookEntries</code></td>
+              <td><code>readonly HookConfigEntry[]</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="RuntimeFixture" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RuntimeFixture</strong>
+          <span>interface · line 289 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#RuntimeFixture">Module</a>
+      </div>
+      <pre><code>export interface RuntimeFixture</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runtime</code></td>
+              <td><code>AgentRuntime</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>dataDir</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="runtimeFixture" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runtimeFixture</strong>
+          <span>function · line 299 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#runtimeFixture">Module</a>
+      </div>
+      <pre><code>export function runtimeFixture(options: RuntimeFixtureOptions): RuntimeFixture</code></pre>
+      <p>Temp profiles + data dir over the configured llm clients. Notification
+rules are NOT customizable here: every fixture runtime runs the repo
+baseline `.eos-agents/notification_rules.json`, exactly like production.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="profilesWithAdvisor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>profilesWithAdvisor</strong>
+          <span>function · line 326 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#profilesWithAdvisor">Module</a>
+      </div>
+      <pre><code>function profilesWithAdvisor(profiles: readonly ProfileSpec[]): readonly ProfileSpec[]</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="until" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>until</strong>
+          <span>function · line 353 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#until">Module</a>
+      </div>
+      <pre><code>export async function until( label: string, check: () =&gt; boolean, timeoutMs = 60_000, ): Promise&lt;void&gt;</code></pre>
+      <p>Poll `check` until true; live settle times are network-bound.</p>
+      <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runOf" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runOf</strong>
+          <span>function · line 367 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#runOf">Module</a>
+      </div>
+      <pre><code>export function runOf(runtime: AgentRuntime, agentName: string): RunSummary | undefined</code></pre>
+      <p>The registry row for one agent name, if that run was ever started.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="finishedRun" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>finishedRun</strong>
+          <span>function · line 372 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#finishedRun">Module</a>
+      </div>
+      <pre><code>export async function finishedRun( runtime: AgentRuntime, agentName: string, timeoutMs = 60_000, ): Promise&lt;RunSummary&gt;</code></pre>
+      <p>Wait until the named run is registered and finished, then return its row.</p>
+      <div class="tags"><span>async</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="userMessageIndex" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>userMessageIndex</strong>
+          <span>function · line 390 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#userMessageIndex">Module</a>
+      </div>
+      <pre><code>export function userMessageIndex(llm: readonly Message[], needle: string): number</code></pre>
+      <p>Index of the first user message whose text contains `needle`, or -1.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="sessionSettledMessages" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>sessionSettledMessages</strong>
+          <span>function · line 397 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#sessionSettledMessages">Module</a>
+      </div>
+      <pre><code>export function sessionSettledMessages(llm: readonly Message[]): Message[]</code></pre>
+      <p>Every drained `session_settled` notification message, in arrival order.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ToolResultView" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ToolResultView</strong>
+          <span>interface · line 405 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#ToolResultView">Module</a>
+      </div>
+      <pre><code>export interface ToolResultView</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>tool_use_id</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>content</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>is_error</code></td>
+              <td><code>boolean</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="toolResultsIn" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>toolResultsIn</strong>
+          <span>function · line 412 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#toolResultsIn">Module</a>
+      </div>
+      <pre><code>export function toolResultsIn(llm: readonly Message[]): ToolResultView[]</code></pre>
+      <p>Every `tool_result` block across the provider history, in order.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="unansweredToolUses" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>unansweredToolUses</strong>
+          <span>function · line 429 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#unansweredToolUses">Module</a>
+      </div>
+      <pre><code>export function unansweredToolUses(llm: readonly Message[]): string[]</code></pre>
+      <p>`tool_use` ids with no answering `tool_result`; must be empty at finish.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="submissionOf" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>submissionOf</strong>
+          <span>function · line 443 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-fixtures.html#submissionOf">Module</a>
+      </div>
+      <pre><code>export function submissionOf(outcome: AgentRunOutcome): JsonObject</code></pre>
+      <p>Narrow a completed outcome's submission to its object payload.</p>
+      <div class="tags"><span>exported</span><span>json-boundary</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/agent-runtime/src/hook-config</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/agent-runtime/src/run-registry</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/agent-runtime/src/runtime</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/agent-runtime/tests/support</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/engine</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>node:path</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>node:url</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td><code>zod</code></td>
+      <td>9</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -2,8 +2,8 @@ import type { JsonValue } from "@eos/contracts";
 import {
   RUN_FINISHED_DISPOSE_REASON,
   type AgentRunOutcome,
-  type BackgroundSupervisor,
-  type SessionOutcome,
+  type BackgroundSessionSupervisor,
+  type BackgroundSessionOutcome,
 } from "@eos/engine";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ const RunSubagentInputSchema = z.object({
 
 export function runSubagentTool(
   calls: AgentRunCalls,
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition {
   return defineTool({
     name: "run_subagent",
@@ -37,7 +37,7 @@ export function runSubagentTool(
         agentName: input.agent_name,
         initialMessages: [userText(input.prompt)],
       });
-      supervisor.register(
+      supervisor.registerBackgroundSession(
         { type: "subagent", id: subagent.runId },
         {
           settled: subagent.handle.outcome.then(mapSubagentOutcome),
@@ -59,7 +59,7 @@ export function runSubagentTool(
   });
 }
 
-function mapSubagentOutcome(outcome: AgentRunOutcome): SessionOutcome {
+function mapSubagentOutcome(outcome: AgentRunOutcome): BackgroundSessionOutcome {
   switch (outcome.status) {
     case "completed":
       return { status: "completed", summary: submissionSummary(outcome.submission) };

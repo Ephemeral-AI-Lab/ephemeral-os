@@ -74,7 +74,7 @@ function sleepMs(ms: number): Promise<void> {
 // pins every settlement to a test-chosen instant, so the park windows are
 // measured wall-clock intervals and no assertion depends on model prose.
 // The pair contrasts what one turn shape means in two contexts: a
-// no-tool-call turn with live background work parks the loop (auto-wait);
+// no-tool-call turn with background work parks the loop (auto-wait);
 // dispatching background work never parks - the agent keeps working while
 // its session runs. Both park well inside the baseline 60s idle rule, so
 // the registered notification rules (04.9; applied to every agent, never
@@ -129,7 +129,7 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
       });
 
       await until(
-        "the idler to park on the live session",
+        "the idler to park on the background session",
         () => parkedOnBareText(run.transcriptPath),
         120_000,
       );
@@ -138,7 +138,7 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
       await sleepMs(4_000);
       expect(
         assistantTurns(run.transcriptPath),
-        "the park is event-driven: a 4s live window adds zero provider calls",
+        "the park is event-driven: a 4s background window adds zero provider calls",
       ).toBe(turnsAtPark);
 
       gate.release();
@@ -208,12 +208,12 @@ describe.skipIf(!codex.available)("auto-wait contrast over live codex (e2e)", ()
         ],
       });
 
-      // The background session is live from the spawn until the test
+      // The background session is running from the spawn until the test
       // releases the gate, so all the work below happens while background
       // work is running.
       await gate.started;
       await until(
-        "both lookups to run while the background session is live",
+        "both lookups to run while the background session is running",
         () => lookup.calls() >= 2,
         120_000,
       );

@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/e2e/support/codex-runtime Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/e2e/support/codex-runtime</h1>
+          <p class="lede">packages/agent-runtime/e2e/support/codex-runtime.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>8</dd></div>
+          <div><dt>Schemas</dt><dd>3</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>existsSync, readFileSync, writeFileSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>join, resolve</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../../src/llm-client-registry.js</code></td>
+      <td>loadLlmClientRegistry, type LlmClientBinding</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>codex-runtime.ts</code>
+        <small>8 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#CODEX_CLIENT_ID"><code>CODEX_CLIENT_ID</code></a>
+            <span>const</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ConfiguredCodexRuntime"><code>ConfiguredCodexRuntime</code></a>
+            <span>type</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#defaultConfigPath"><code>defaultConfigPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#loadConfiguredCodexRuntime"><code>loadConfiguredCodexRuntime</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AuthFileSchema"><code>AuthFileSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#CodexEntrySchema"><code>CodexEntrySchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#ClientsConfigSchema"><code>ClientsConfigSchema</code></a>
+            <span>schema</span>
+            <span class="compact-tags">config internal schema:zod</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#writeCorruptedCodexConfig"><code>writeCorruptedCodexConfig</code></a>
+            <span>function</span>
+            <span class="compact-tags">config public-api</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="CODEX_CLIENT_ID" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CODEX_CLIENT_ID</strong>
+          <span>const · line 12 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#CODEX_CLIENT_ID">Module</a>
+      </div>
+      <pre><code>export const CODEX_CLIENT_ID = &quot;codex_coding_plan&quot;</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span><span>typed-id</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="ConfiguredCodexRuntime" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ConfiguredCodexRuntime</strong>
+          <span>type · line 14 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#ConfiguredCodexRuntime">Module</a>
+      </div>
+      <pre><code>export type ConfiguredCodexRuntime = |</code></pre>
+
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    <h3>Variants</h3>
+
+    <ul class="variant-list">
+
+        <li><code>{ available: true; llmClientsPath: string; binding: LlmClientBinding }</code></li>
+
+
+        <li><code>{ available: false; reason: string }</code></li>
+
+    </ul>
+
+
+    </article>
+
+
+    <article id="defaultConfigPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>defaultConfigPath</strong>
+          <span>function · line 18 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#defaultConfigPath">Module</a>
+      </div>
+      <pre><code>function defaultConfigPath(env: NodeJS.ProcessEnv): string</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="loadConfiguredCodexRuntime" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>loadConfiguredCodexRuntime</strong>
+          <span>function · line 35 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#loadConfiguredCodexRuntime">Module</a>
+      </div>
+      <pre><code>export function loadConfiguredCodexRuntime( env: NodeJS.ProcessEnv = process.env, ): ConfiguredCodexRuntime</code></pre>
+      <p>Probe the codex coding-plan entry through the runtime's own loader
+(`.eos-agents/llm_clients.json` + codex CLI auth file). Loading is local -
+config parsing and JWT-claim validation, no network - so a missing or
+stale credential becomes a suite skip carrying the loader's startup
+error, never a test failure.</p>
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="AuthFileSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AuthFileSchema</strong>
+          <span>schema · line 50 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#AuthFileSchema">Module</a>
+      </div>
+      <pre><code>const AuthFileSchema = z.object({ tokens: z.object({ access_token: z.string() }), })</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>tokens</code></td>
+              <td><code>z.object({ access_token: z.string() })</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="CodexEntrySchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>CodexEntrySchema</strong>
+          <span>schema · line 54 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#CodexEntrySchema">Module</a>
+      </div>
+      <pre><code>const CodexEntrySchema = z.object({ id: z.string().min(1), provider: z.literal(&quot;codex_coding_plan&quot;), model_id: z.string().min(1), reasoning_effort: z.string().optional(), base_url: z.string().optional(), auth: z.objec...</code></pre>
+
+      <div class="tags"><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>id</code></td>
+              <td><code>z.string().min(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>provider</code></td>
+              <td><code>z.literal(&quot;codex_coding_plan&quot;)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>model_id</code></td>
+              <td><code>z.string().min(1)</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reasoning_effort</code></td>
+              <td><code>z.string().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>base_url</code></td>
+              <td><code>z.string().optional()</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>auth</code></td>
+              <td><code>z.object({ kind: z.literal(&quot;codex_cli_auth_file&quot;), path: z.string().min(1), })</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="ClientsConfigSchema" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>ClientsConfigSchema</strong>
+          <span>schema · line 66 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#ClientsConfigSchema">Module</a>
+      </div>
+      <pre><code>const ClientsConfigSchema = z.object({ clients: z.array(CodexEntrySchema).min(1), })</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span><span>schema:object</span><span>schema:zod</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>clients</code></td>
+              <td><code>z.array(CodexEntrySchema).min(1)</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="writeCorruptedCodexConfig" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>writeCorruptedCodexConfig</strong>
+          <span>function · line 76 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-support-codex-runtime.html#writeCorruptedCodexConfig">Module</a>
+      </div>
+      <pre><code>export function writeCorruptedCodexConfig(dir: string, llmClientsPath: string): string</code></pre>
+      <p>Write a one-client copy of the configured codex entry into `dir` whose
+JWT signature is tampered. The claims stay intact, so the runtime's local
+startup validation passes and the bad credential surfaces live, inside
+the run, as a provider authentication rejection.</p>
+      <div class="tags"><span>config</span><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td><code>@eos/agent-runtime/src/llm-client-registry</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td><code>node:path</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td><code>zod</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>uses-schema</td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime#ClientsConfigSchema</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime#CodexEntrySchema</code></td>
+      <td>66</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

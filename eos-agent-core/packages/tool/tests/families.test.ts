@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { toolUseIdFrom } from "@eos/contracts";
-import { BackgroundSupervisor } from "@eos/engine";
+import { BackgroundSessionSupervisor } from "@eos/engine";
 import { NotificationInbox } from "@eos/notifications";
-import { scriptedRunState, scriptedSessionHandle } from "@eos/testkit";
+import { scriptedRunState, scriptedBackgroundSessionHandle } from "@eos/testkit";
 
 import {
   ToolNameSchema,
@@ -17,12 +17,12 @@ import { live, must, tick } from "./support.js";
 
 function setup(): {
   inbox: NotificationInbox;
-  supervisor: BackgroundSupervisor;
+  supervisor: BackgroundSessionSupervisor;
   list: ToolDefinition;
   cancel: ToolDefinition;
 } {
   const inbox = new NotificationInbox();
-  const supervisor = new BackgroundSupervisor(inbox);
+  const supervisor = new BackgroundSessionSupervisor(inbox);
   const [list, cancel] = backgroundTools(supervisor);
   return { inbox, supervisor, list, cancel };
 }
@@ -37,13 +37,13 @@ const ctx = (): ToolCallContext => ({
 });
 
 const register = (
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
   type: string,
   id: string,
   describe?: string,
-): ReturnType<typeof scriptedSessionHandle> => {
-  const session = scriptedSessionHandle(describe);
-  supervisor.register({ type, id }, session.handle);
+): ReturnType<typeof scriptedBackgroundSessionHandle> => {
+  const session = scriptedBackgroundSessionHandle(describe);
+  supervisor.registerBackgroundSession({ type, id }, session.handle);
   return session;
 };
 

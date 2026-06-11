@@ -21,7 +21,7 @@ const PAYLOAD: TriggerPayload = {
     turn: 1,
     max_turns: 4,
     tool_calls: 0,
-    live_sessions: 0,
+    background_session_count: 0,
     has_pending_steers: false,
   },
   run: snapshotRunState(scriptedRunState("main")),

@@ -26,9 +26,9 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>4</dd></div>
+          <div><dt>Symbols</dt><dd>2</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
-          <div><dt>Types</dt><dd>2</dd></div>
+          <div><dt>Types</dt><dd>1</dd></div>
           <div><dt>Functions</dt><dd>0</dd></div>
         </dl>
       </section>
@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>1</span>
+          <span>2</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -47,6 +47,14 @@
       <td>ContentBlock, Message</td>
       <td>type</td>
       <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/agent-runtime/agent-run-handle</code></td>
+      <td>DisplayedMessage, PartialReason</td>
+      <td>type</td>
+      <td>2</td>
     </tr>
   </tbody>
           </table>
@@ -76,27 +84,13 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>conversation.ts</code>
-        <small>4 symbols</small>
+        <small>2 symbols</small>
       </div>
       <ul class="tree-symbols">
 
           <li class="tree-symbol search-item">
-            <a href="#PartialReason"><code>PartialReason</code></a>
-            <span>type</span>
-            <span class="compact-tags">public-api</span>
-          </li>
-
-
-          <li class="tree-symbol search-item">
             <a href="#ToolResultBlock"><code>ToolResultBlock</code></a>
             <span>type</span>
-            <span class="compact-tags">public-api</span>
-          </li>
-
-
-          <li class="tree-symbol search-item">
-            <a href="#DisplayedMessage"><code>DisplayedMessage</code></a>
-            <span>interface</span>
             <span class="compact-tags">public-api</span>
           </li>
 
@@ -111,41 +105,11 @@
     </nav>
 
           <div class="symbol-stack">
-    <article id="PartialReason" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>PartialReason</strong>
-          <span>type · line 4 · public</span>
-        </div>
-        <a href="../modules/eos-engine-src-conversation.html#PartialReason">Module</a>
-      </div>
-      <pre><code>export type PartialReason = &quot;interrupted&quot; | &quot;provider_error&quot;</code></pre>
-      <p>Why a salvaged partial assistant message never completed.</p>
-      <div class="tags"><span>exported</span><span>public-api</span></div>
-
-
-
-
-    <h3>Variants</h3>
-
-    <ul class="variant-list">
-
-        <li><code>&quot;interrupted&quot;</code></li>
-
-
-        <li><code>&quot;provider_error&quot;</code></li>
-
-    </ul>
-
-
-    </article>
-
-
     <article id="ToolResultBlock" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>ToolResultBlock</strong>
-          <span>type · line 7 · public</span>
+          <span>type · line 8 · public</span>
         </div>
         <a href="../modules/eos-engine-src-conversation.html#ToolResultBlock">Module</a>
       </div>
@@ -159,68 +123,11 @@
     </article>
 
 
-    <article id="DisplayedMessage" class="symbol-card search-item">
-      <div class="symbol-head">
-        <div>
-          <strong>DisplayedMessage</strong>
-          <span>interface · line 10 · public</span>
-        </div>
-        <a href="../modules/eos-engine-src-conversation.html#DisplayedMessage">Module</a>
-      </div>
-      <pre><code>export interface DisplayedMessage</code></pre>
-      <p>One entry of the user-facing transcript.</p>
-      <div class="tags"><span>exported</span><span>public-api</span></div>
-
-
-    <h3>Fields</h3>
-
-    <div class="table-wrap compact">
-      <table>
-        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
-        <tbody>
-
-            <tr>
-              <td><code>seq</code></td>
-              <td><code>number</code></td>
-              <td></td>
-            </tr>
-
-
-            <tr>
-              <td><code>created_at</code></td>
-              <td><code>string</code></td>
-              <td></td>
-            </tr>
-
-
-            <tr>
-              <td><code>message</code></td>
-              <td><code>Message</code></td>
-              <td></td>
-            </tr>
-
-
-            <tr>
-              <td><code>partial</code></td>
-              <td><code>PartialReason</code></td>
-              <td>optional</td>
-            </tr>
-
-        </tbody>
-      </table>
-    </div>
-
-
-
-
-    </article>
-
-
     <article id="Conversation" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>Conversation</strong>
-          <span>class · line 28 · public</span>
+          <span>class · line 18 · public</span>
         </div>
         <a href="../modules/eos-engine-src-conversation.html#Conversation">Module</a>
       </div>
@@ -346,6 +253,14 @@ output is displayed-only, and a future compaction phase rewrites
           <table>
             <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
             <tbody>
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>2</td>
+    </tr>
+
+
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/conversation</code></td>

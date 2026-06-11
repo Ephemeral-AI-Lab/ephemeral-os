@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/e2e/notification-triggers.e2e Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/e2e/notification-triggers.e2e</h1>
+          <p class="lede">packages/agent-runtime/e2e/notification-triggers.e2e.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>4</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>7</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>assistantText, toolUses, type Message</td>
+      <td>value</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/testkit</code></td>
+      <td>scriptedTool</td>
+      <td>value</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../tests/support.js</code></td>
+      <td>asString, must, readTranscriptLines, userMessage</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/codex-runtime.js</code></td>
+      <td>CODEX_CLIENT_ID, loadConfiguredCodexRuntime</td>
+      <td>value</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/fixtures.js</code></td>
+      <td>HOLDER_BODY, TERSE_BODY, gateTool, runtimeFixture, submissionOf, until, userMessageIndex</td>
+      <td>value</td>
+      <td>17</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>notification-triggers.e2e.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#codex"><code>codex</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#llmClientsPath"><code>llmClientsPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#parkedOnBareText"><code>parkedOnBareText</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#reminderTexts"><code>reminderTexts</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#probeStepTool"><code>probeStepTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="codex" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codex</strong>
+          <span>const · line 27 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-notification-triggers-e2e.html#codex">Module</a>
+      </div>
+      <pre><code>const codex = loadConfiguredCodexRuntime()</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="llmClientsPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>llmClientsPath</strong>
+          <span>function · line 33 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-notification-triggers-e2e.html#llmClientsPath">Module</a>
+      </div>
+      <pre><code>function llmClientsPath(): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="parkedOnBareText" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>parkedOnBareText</strong>
+          <span>function · line 41 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-notification-triggers-e2e.html#parkedOnBareText">Module</a>
+      </div>
+      <pre><code>function parkedOnBareText(transcriptPath: string): boolean</code></pre>
+      <p>The park probe from E2E-09/45: a bare-text last assistant turn.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="reminderTexts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>reminderTexts</strong>
+          <span>function · line 56 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-notification-triggers-e2e.html#reminderTexts">Module</a>
+      </div>
+      <pre><code>function reminderTexts(llm: readonly Message[]): string[]</code></pre>
+      <p>Every drained `{type:&quot;reminder&quot;}` notification text, in arrival order.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="probeStepTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>probeStepTool</strong>
+          <span>function · line 64 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-notification-triggers-e2e.html#probeStepTool">Module</a>
+      </div>
+      <pre><code>function probeStepTool(name: string): ToolDefinition</code></pre>
+      <p>A deterministic no-arg tool: each distinct name buys one reliable turn.</p>
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/agent-runtime/tests/support</code></td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/notification-triggers.e2e</code></td>
+      <td><code>vitest</code></td>
+      <td>1</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

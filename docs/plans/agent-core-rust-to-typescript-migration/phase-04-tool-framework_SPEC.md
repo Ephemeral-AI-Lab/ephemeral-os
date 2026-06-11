@@ -29,7 +29,7 @@ the Phase 03 engine seams it needs:
   -> stamping) plus a batch executor that together absorb the engine's
   Phase 03 tool seam: `tools.ts` and `tool-runner.ts` leave `@eos/engine`,
   which keeps one injected `ToolExecutor` port,
-- an engine-owned `BackgroundSupervisor` (session lifecycle is loop
+- an engine-owned `BackgroundSessionSupervisor` (session lifecycle is loop
   lifecycle: registration by native id, capability-handle watching,
   teardown on every finish), with tools as its registering clients,
 - an engine-owned, fully generic `NotificationInbox` drained at the loop
@@ -47,7 +47,7 @@ the Phase 03 engine seams it needs:
 A tool family that wraps a service is constructed with exactly that
 service; none of those services exist yet, so none of those families are
 built here. This phase verifies the framework against scripted tool
-definitions and test session handles.
+definitions and test background-session handles.
 
 This phase is additive plus a bounded engine restructure at the tool
 boundary. The Rust engine remains the live implementation; nothing under
@@ -74,7 +74,7 @@ omissions:
    is unchanged.
 3. **No minted session ids.** The supervisor keys sessions by the native ids
    the model already holds (`agent_run_id`, `workflow_run_id`,
-   `command_id`) via a discriminated `SessionRef`. Cancellation input is
+   `command_id`) via a discriminated `BackgroundSessionRef`. Cancellation input is
    `{ type, id }`, not a parallel session-id namespace.
 4. **Workspace-mode flips apply at the next turn boundary.** A mode change
    recorded by `enter_isolated_workspace` / `exit_isolated_workspace` does
@@ -142,7 +142,7 @@ omissions:
     mailbox of already-rendered `Message`s with opaque `key`/`tag` fields
     — any holder of the reference can publish (supervisor settlements and
     hook context today; trigger rules and agent-to-agent messages later,
-    with no inbox change). The `BackgroundSupervisor` is generic over
+    with no inbox change). The `BackgroundSessionSupervisor` is generic over
     `{ type: string, id: string }` refs and publishes its own
     `session_settled` notifications; session-type narrowing is a
     tool-side refinement (an open string this phase — the enum arrives
@@ -180,7 +180,7 @@ omissions:
     synthetic error result, so provider-history validity (Phase 03 §7)
     never depends on executor correctness.
 17. **Background sessions are loop lifecycle, owned by the engine.** The
-    auto-wait gate reads `background.liveCount()` directly, and the
+    auto-wait gate reads `background.backgroundSessionCount()` directly, and the
     loop's exit path triggers `background.dispose(reason)` on every
     finish — interruption tears all running sessions down with no
     composition wiring. Disposal is fire-and-forget: `run_finished` does
@@ -191,7 +191,7 @@ omissions:
     cancelled via its own handle instead of leaking an unsupervised
     session.
 18. **No per-kind drivers.** The Rust per-kind managers/monitors are not
-    ported. A spawn site registers a `SessionHandle` capability record —
+    ported. A spawn site registers a `BackgroundSessionHandle` capability record —
     `{ settled, cancel, describe? }` — that closes over exactly the right
     port (`exec_command` closes over `killCommand`, `run_subagent` over
     the child run). The supervisor never resolves kind -> behavior; new
@@ -243,13 +243,13 @@ In scope:
 - engine restructure: `tools.ts` and `tool-runner.ts` removed, one
   `ToolExecutor` port added, batch-result normalization, terminal-only
   exit (decision 20), the engine-owned `NotificationInbox` and
-  `BackgroundSupervisor` (generic mailbox + generic session lifecycle
+  `BackgroundSessionSupervisor` (generic mailbox + generic session lifecycle
   with dispose-on-finish), and the auto-wait branch; loop tests ported
   to a scripted executor,
 - `@eos/contracts` additions: `AgentKind`, `AgentRunId`, `SandboxId`,
   `ToolCallResult`,
 - `@eos/testkit` first real content: transcript fixture helper, scripted
-  tool-definition and session-handle helpers,
+  tool-definition and background-session-handle helpers,
 - tests per §15.
 
 Out of scope (named seams in §12):
@@ -275,7 +275,7 @@ Out of scope (named seams in §12):
 | `eos-engine/src/tool_call/batch.rs` (terminal batch policy) + Phase 03 `tool-runner.ts` | `packages/tool/src/executor.ts` | Batch dispatch (cap 8, ordering, abort settling) + batch-forbidden solo; lifecycle policy rejected (§2.4) |
 | `eos-tool/src/hooks.rs` + `eos-engine/src/tool_call/hooks.rs` | `packages/tool/src/hooks/` | Redesigned: enum hooks -> external protocol (§2.5) |
 | `eos-engine/src/background/session_runtime.rs` (managers, monitors, statuses) | `packages/engine/src/background/` | Engine-owned generic supervisor; spawn-site capability handles replace per-kind managers/monitors (§2.18) |
-| `eos-engine/src/notifications.rs` | `packages/engine/src/notification-inbox.ts` | Engine-owned generic inbox + `<system_notification>` renderer; rule trait not ported (§2.12) |
+| `eos-engine/src/notifications.rs` | `packages/notifications/src/inbox.ts` | Generic inbox + `<system_notification>` renderer; rule trait not ported (§2.12) |
 | `eos-tool/src/tools/` submission + background portions | `packages/tool/src/tools/` | Two families this phase; the sandbox, command, subagent, and workflow tool modules follow with their services (decision 21) |
 
 ## 5. Tool Contract (`contract.ts`, `define.ts`, family modules)
@@ -352,7 +352,7 @@ exists this phase (decision 21); two rules bind the ones that arrive:
   instead of merely ignoring its result. Methods that create detachable
   work (`startCommandSession`, `spawnSubagent`, `delegate`) and methods
   that tear it down (`killCommand`) deliberately take none — detached
-  work is cancelled through its `SessionHandle`, and teardown must still
+  work is cancelled through its `BackgroundSessionHandle`, and teardown must still
   succeed after the run's signal has already aborted (`dispose`, §9).
 - Ownership rule: a family factory takes exactly its own port (§2.15);
   no port appears in any shared record.
@@ -487,7 +487,7 @@ Rust `reject_terminal_batch`; a solo flagged call dispatches normally.
     conversation.appendUser(...) each              outranks system notices)
 6.  calls.length === 0:
       pending steers                 -> continue   (Phase 03)
-      background?.liveCount() > 0    -> await race(
+      background?.backgroundSessionCount() > 0    -> await race(
         notifications.waitForNext(signal),
         steers.waitForNext(signal)); continue              (auto-wait)
       otherwise                      -> continue   (text never terminates,
@@ -504,7 +504,7 @@ Rust `reject_terminal_batch`; a solo flagged call dispatches normally.
 ```
 
 - There is no completion-on-text and no engine reminder (decision 20): a
-  bare-text turn with no pending steers and no live sessions appends
+  bare-text turn with no pending steers and no background sessions appends
   nothing and re-issues the provider call; `maxTurns` is the backstop
   against spin. The planned text-return notification rule (agent
   package, §12) is the model-facing nudge; the seam it needs —
@@ -530,10 +530,9 @@ Rust `reject_terminal_batch`; a solo flagged call dispatches normally.
   therefore tears down all running sessions with no composition wiring;
   `run_finished` does not wait for teardown.
 
-The `NotificationInbox` (new `packages/engine/src/notification-inbox.ts`)
-is a concrete engine-owned class — the system-side twin of the steer
-queue, drained by the same loop one priority lower. It is deliberately a
-plain mailbox so any publisher can use it (§2.12): the supervisor and
+The `NotificationInbox` (`packages/notifications/src/inbox.ts`) is the
+system-side twin of the steer queue, drained by the loop one priority
+lower. It is deliberately a plain mailbox so any publisher can use it (§2.12): the supervisor and
 hook context today; trigger rules and agent-to-agent messages later, with
 no inbox change:
 
@@ -558,7 +557,7 @@ its own sessions delivered (§9).
 
 `StartAgentRunInput`: `tools: ToolRegistry` is replaced by
 `tools: ToolExecutor`; `notifications?: NotificationInbox` and
-`background?: BackgroundSupervisor` are added — both constructed by the
+`background?: BackgroundSessionSupervisor` are added — both constructed by the
 composition root (the same instances handed to the tool factories) and
 consulted by the loop for drain, the auto-wait gate, and
 dispose-on-finish. `TurnConfig.toolSpecs` becomes a thunk over
@@ -640,9 +639,9 @@ Semantics:
 
 Session lifecycle is loop lifecycle (§2.17), so background management is
 a dedicated engine folder, `packages/engine/src/background/` (Rust
-parity: `background/` is an `eos-engine` module directory) — `session.ts`
-holds the data contracts (`SessionRef`, `SessionStatus`, `SessionOutcome`,
-`SessionHandle`, `SessionRow`), `supervisor.ts` the `BackgroundSupervisor`
+parity: `background/` is an `eos-engine` module directory) — `background-session.ts`
+holds the data contracts (`BackgroundSessionRef`, `BackgroundSessionStatus`, `BackgroundSessionOutcome`,
+`BackgroundSessionHandle`, `BackgroundSessionRow`), `background-session-supervisor.ts` the `BackgroundSessionSupervisor`
 class with its status machine and dispose latch. It is generic: the
 engine never learns what a "subagent" is.
 
@@ -650,31 +649,33 @@ engine never learns what a "subagent" is.
 // Engine-side: type is an open string. The narrow
 // "subagent" | "workflow" | "command" union is a tool-side refinement
 // (cancel_background_session validates it with a Zod enum).
-interface SessionRef { type: string; id: string }
+interface BackgroundSessionRef { type: string; id: string }
 
-type SessionStatus = "running" | "completed" | "failed" | "cancelled"
+type BackgroundSessionStatus = "running" | "completed" | "failed" | "cancelled"
                    | "delivered";
 
-interface SessionOutcome {
+interface BackgroundSessionOutcome {
   status: "completed" | "failed" | "cancelled";
   summary: string;             // one line; detail stays behind read tools
 }
 
 /** Capability record handed over by the spawn site (§2.18). */
-interface SessionHandle {
-  settled: Promise<SessionOutcome>;        // push; resolves exactly once
+interface BackgroundSessionHandle {
+  settled: Promise<BackgroundSessionOutcome>;        // push; resolves exactly once
   cancel(reason: string): Promise<void>;   // closes over the right port
   describe?(): string;                     // for list_background_sessions
 }
 
-class BackgroundSupervisor {
+class BackgroundSessionSupervisor {
   constructor(inbox: NotificationInbox);   // self-subscribes onDrained
-  register(ref: SessionRef, spawnedBy: ToolUseId,
-           handle: SessionHandle): void;
-  cancel(ref: SessionRef, reason: string): Promise<boolean>;
-  list(): SessionRow[];                    // running + undelivered-terminal
-  liveCount(): number;                     // running only: auto-wait gate
-  openCount(): number;                     // running + undelivered-terminal:
+  registerBackgroundSession(
+    ref: BackgroundSessionRef,
+    handle: BackgroundSessionHandle,
+  ): void;
+  cancelBackgroundSession(ref: BackgroundSessionRef, reason: string): Promise<boolean>;
+  listBackgroundSessions(): BackgroundSessionRow[];                    // running + undelivered-terminal
+  backgroundSessionCount(): number;                     // running only: auto-wait gate
+  openBackgroundSessionCount(): number;                     // running + undelivered-terminal:
                                            // submission guard
   dispose(reason: string): Promise<void>;  // cancel all running; latches
 }
@@ -699,10 +700,10 @@ Lifecycle rules:
   via `systemNotificationMessage` (`key = "type:id"`, `tag = ref`); the
   constructor's `onDrained` subscription marks the supervisor's own tags
   delivered — delivery bookkeeping never leaves the class.
-- `liveCount()` counts `running` only and backs the loop's auto-wait gate
-  (§7). `openCount()` adds undelivered-terminal sessions and backs the
+- `backgroundSessionCount()` counts `running` only and backs the loop's auto-wait gate
+  (§7). `openBackgroundSessionCount()` adds undelivered-terminal sessions and backs the
   submission guard: the model cannot submit past a settlement it has not
-  yet seen. Guarding on `liveCount` alone would make submit-vs-settle a
+  yet seen. Guarding on `backgroundSessionCount` alone would make submit-vs-settle a
   race — allowed or denied depending on whether the session settled
   before or after the guard ran, silently dropping the pending
   notification on the allowed side.
@@ -714,7 +715,7 @@ Lifecycle rules:
   every finish (§2.17) — on the success path the submission guard already
   proved zero open sessions, so it is a no-op there.
 
-What each spawn site passes as its `SessionHandle` (no driver classes —
+What each spawn site passes as its `BackgroundSessionHandle` (no driver classes —
 the capabilities close over the right port at the call site, §2.18).
 Every spawn site is deferred with its family (decision 21); the shapes
 are recorded here so the supervisor contract stays sufficient:
@@ -776,7 +777,7 @@ Contracts additions: `AgentKind = "main" | "planner" | "worker" | "advisor"
 
 | Tool | Input schema (Zod sketch) | Flags / notes |
 | --- | --- | --- |
-| `submit_<kind>_outcome` ×5 | `{ summary: string, payload?: JsonObject }` | `terminal: true`; guard: `openCount() > 0` -> error (running + undelivered, §9) |
+| `submit_<kind>_outcome` ×5 | `{ summary: string, payload?: JsonObject }` | `terminal: true`; guard: `openBackgroundSessionCount() > 0` -> error (running + undelivered, §9) |
 | `list_background_sessions` | `{}` | rows `{ type, id, status, started_at, summary? }` (running + undelivered-terminal) |
 | `cancel_background_session` | `{ type: string (non-empty), id, reason? }` | unknown ref -> error result; already-terminal -> noted, no-op; `type` narrows to an enum as the spawning families land (decision 21) |
 
@@ -816,8 +817,8 @@ service(s) that tool uses (`readTool(sandbox)`,
 the per-family aggregate of those per-tool factories (§2.15):
 
 ```ts
-backgroundTools(supervisor: BackgroundSupervisor)
-submissionTool(kind: AgentKind, supervisor: BackgroundSupervisor)
+backgroundTools(supervisor: BackgroundSessionSupervisor)
+submissionTool(kind: AgentKind, supervisor: BackgroundSessionSupervisor)
 // each returns ToolDefinition[] — services are fully absorbed here;
 // the deferred families add sandboxTools(sandbox, supervisor,
 // workspace), agentTools(agents, supervisor), and
@@ -881,15 +882,15 @@ Rejected, not deferred (decisions; no seam kept):
 - `packages/tool/`: new package `@eos/tool` (`dependencies`:
   `@eos/contracts`, `@eos/engine` via `workspace:*`, `zod`).
 - `packages/engine/`: §7 restructure — `tools.ts` and `tool-runner.ts`
-  deleted; `tool-executor.ts`, `notification-inbox.ts`, and the
-  `background/` folder added; runner tests move to `@eos/tool` with the
+  deleted; `tool-executor.ts` and the `background/` folder added;
+  runner tests move to `@eos/tool` with the
   relocated logic; loop tests port to a scripted `ToolExecutor`; inbox
   and supervisor suites are engine tests.
 - `packages/contracts/`: `AgentKind`, two branded ids, `ToolCallResult`
   (additive).
 - `packages/testkit/`: first real content — `@eos/testkit` (`dependencies`:
   `@eos/contracts`, `@eos/tool`): transcript fixture writer for hook
-  tests, scripted tool-definition and session-handle helpers for the
+  tests, scripted tool-definition and background-session-handle helpers for the
   executor and supervisor suites.
 - No new third-party dependencies.
 
@@ -907,13 +908,10 @@ packages/
 ├─ engine/src/
 │  ├─ agent-loop.ts          MOD  §7 branches + normalization + projection
 │  ├─ tool-executor.ts       NEW  ToolExecutor port + ToolUseBlock
-│  ├─ notification-inbox.ts  NEW  NotificationInbox +
-│  │                              systemNotificationMessage() (the steer
-│  │                              queue's system-side twin)
 │  ├─ background/            NEW  dedicated background management (§9)
-│  │  ├─ session.ts               SessionRef, SessionStatus,
-│  │  │                           SessionOutcome, SessionHandle, SessionRow
-│  │  └─ supervisor.ts            BackgroundSupervisor (status machine,
+│  │  ├─ background-session.ts               BackgroundSessionRef, BackgroundSessionStatus,
+│  │  │                           BackgroundSessionOutcome, BackgroundSessionHandle, BackgroundSessionRow
+│  │  └─ background-session-supervisor.ts            BackgroundSessionSupervisor (status machine,
 │  │                              dispose latch)
 │  ├─ turn.ts                MOD  toolSpecs thunk over tools.specs()
 │  ├─ run-handle.ts          MOD  completed arm gains submission?
@@ -956,7 +954,7 @@ packages/
 │                            engine tests
 └─ testkit/src/
    ├─ transcript-fixture.ts  NEW  fixture JSONL for hook tests
-   ├─ scripted-tools.ts      NEW  scripted definitions + session handles
+   ├─ scripted-tools.ts      NEW  scripted definitions + background-session handles
    └─ index.ts               NEW
 ```
 
@@ -973,7 +971,7 @@ services).
 1. Contracts additions (`AgentKind`, ids) -> verify: contracts tests green.
 2. Engine §7 restructure (`ToolExecutor` port, batch normalization,
    terminal-only exit per decision 20, `NotificationInbox` +
-   `BackgroundSupervisor` + auto-wait + dispose-on-finish; loop tests
+   `BackgroundSessionSupervisor` + auto-wait + dispose-on-finish; loop tests
    ported to a scripted executor) -> verify: ported Phase 03 loop suite
    green plus the new loop and supervisor cases (§15 cases 2-7, 21-22).
 3. `@eos/tool` contract + `defineTool` + pipeline + batch executor
@@ -999,10 +997,10 @@ All suites in-process; no network, no real sandbox.
 | --- | --- | --- |
 | 1 | Batch-forbidden solo policy | flagged call (default: `isTerminal`) + sibling batch: every call `is_error`, nothing dispatched; solo flagged call dispatches |
 | 2 | Terminal exit | terminal result finishes `completed` with `submission` = structured content; `final_message` is the submitting assistant message |
-| 3 | Auto-wait | bare-text turn + live sessions: loop awaits, a published notification resumes it, drained at step 3; a steer resumes it identically (and drains first); no turn consumed while waiting |
+| 3 | Auto-wait | bare-text turn + background sessions: loop awaits, a published notification resumes it, drained at step 3; a steer resumes it identically (and drains first); no turn consumed while waiting |
 | 4 | Text never terminates | bare-text turn, no steers, no sessions: nothing appended, loop continues; the run ends only via a terminal result or `maxTurns` (`failed`, no `submission`) |
 | 5 | Steers outrank notifications | both pending at step 3: steers drain first |
-| 6 | Supervisor lifecycle | running -> settled publishes once; drain marks delivered then evicts; double-settle dropped; rejected `settled` -> `failed` with the error as summary; register after dispose -> handle cancelled, nothing registered or published; `liveCount`/`openCount` correct throughout |
+| 6 | Supervisor lifecycle | running -> settled publishes once; drain marks delivered then evicts; double-settle dropped; rejected `settled` -> `failed` with the error as summary; register after dispose -> handle cancelled, nothing registered or published; `backgroundSessionCount`/`openBackgroundSessionCount` correct throughout |
 | 7 | Cancel race | `cancel()` publishes `cancelled`; the handle's late natural settle is ignored |
 | 8 | (moved with the sandbox family) | `exec_command` yield/promotion ships with `SandboxPort` (decision 21); the register-on-abort and single-waiter invariants are §9's recorded shape |
 | 9 | Cancel by `(type, id)` | cancels the right session; unknown ref -> error result; already-terminal -> no-op note |
@@ -1060,7 +1058,7 @@ Phase 04 is accepted when:
 - hooks run only from operator config (no built-ins), with the §8 exit-code
   protocol, precedence kernel, and single-update rule,
 - the engine-owned supervisor is generic over `{ type, id }` refs and
-  spawn-site `SessionHandle`s (no driver classes), with push-only single
+  spawn-site `BackgroundSessionHandle`s (no driver classes), with push-only single
   settles, supervisor-owned rejection mapping, delivery-then-evict, a
   dispose latch on every finish (late registrations auto-cancelled), and
   the §9 spawn-site shapes recorded for the deferred families,
@@ -1080,7 +1078,7 @@ Phase 04 is accepted when:
 | Step | Status | Required proof |
 | --- | --- | --- |
 | Contracts additions | Done | contracts suite green (16 tests) with `AgentKind`, `AgentRunId` mint/adopt, `SandboxId` adopt-only, `ToolCallResult` round-trip |
-| Engine restructure (executor port, inbox, supervisor) | Done | ported Phase 03 loop suite green under a scripted executor + §15 cases 2-7, 21-22 (`agent-loop`, `notification-inbox`, `background-supervisor` suites) |
+| Engine restructure (executor port, inbox, supervisor) | Done | ported Phase 03 loop suite green under a scripted executor + §15 cases 2-7, 21-22 (`agent-loop`, `notification-inbox`, `background-session-supervisor` suites) |
 | Contract + pipeline + executor | Done | §15 cases 1, 10 plus relocated runner suite (cap 8, ordering, abort settling, straggler suppression) and defineTool default tests |
 | Hook protocol + runner | Done | §15 cases 11-13 incl. real spawned `node -e` scripts (exit-2 deny, stdin payload, updatedInput, garbage stdout, timeout, transcript fixture) |
 | Test-handle session registration | Done | §15 case 9 (`families` suite over testkit scripted handles) |

@@ -55,7 +55,7 @@ const SUBAGENT_TERSE = "Make at most one tool call per turn and write no prose."
 // assertions are structural - reasons, parent links, line kinds, ids.
 describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)", () => {
   it(
-    "cascades a parent interrupt through a child with live background work (E2E-49)",
+    "cascades a parent interrupt through a child with background work (E2E-49)",
     { timeout: 240_000 },
     async () => {
       const wait = waitTool();
@@ -238,7 +238,7 @@ describe.skipIf(!codex.available)("recursive cancellation over live codex (e2e)"
           },
           {
             // One spawn turn exhausts the budget: deterministic max_turns
-            // failure while its own background session is still live.
+            // failure while its own background session is still running.
             name: "doomed",
             kind: "subagent",
             llmClientId: CODEX_CLIENT_ID,

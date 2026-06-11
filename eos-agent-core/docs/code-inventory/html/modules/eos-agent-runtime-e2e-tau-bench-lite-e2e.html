@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/e2e/tau-bench-lite.e2e Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/e2e/tau-bench-lite.e2e</h1>
+          <p class="lede">packages/agent-runtime/e2e/tau-bench-lite.e2e.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>29</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>19</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>12</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>mkdirSync, writeFileSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>dirname, join</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObject, JsonValue</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>UsageSnapshot</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>defineTool, type ToolDefinition</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>7</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/llm-client-registry.js</code></td>
+      <td>LlmClientBinding, LlmClientRegistry</td>
+      <td>type</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/runtime.js</code></td>
+      <td>createAgentRuntime, type AgentRuntime</td>
+      <td>value</td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../tests/support.js</code></td>
+      <td>readEventLines, readResultLines, tempDir, userMessage, writeProfile, type ProfileSpec</td>
+      <td>value</td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/codex-runtime.js</code></td>
+      <td>CODEX_CLIENT_ID, loadConfiguredCodexRuntime</td>
+      <td>value</td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/fixtures.js</code></td>
+      <td>finishedRun</td>
+      <td>value</td>
+      <td>27</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>tau-bench-lite.e2e.ts</code>
+        <small>29 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#FINISH_TOOL"><code>FINISH_TOOL</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RETAIL_SYSTEM"><code>RETAIL_SYSTEM</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#codex"><code>codex</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#UserRow"><code>UserRow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#OrderRow"><code>OrderRow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#RefundRow"><code>RefundRow</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#WorldState"><code>WorldState</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TauTask"><code>TauTask</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TauRunMetrics"><code>TauRunMetrics</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#codexBinding"><code>codexBinding</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#retailSeed"><code>retailSeed</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TASKS"><code>TASKS</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#singleClientRegistry"><code>singleClientRegistry</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runtimeForTask"><code>runtimeForTask</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#taskProfile"><code>taskProfile</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#retailTools"><code>retailTools</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#finishTool"><code>finishTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#lookupOrder"><code>lookupOrder</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#lookupUser"><code>lookupUser</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#updateAddress"><code>updateAddress</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cancelOrder"><code>cancelOrder</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#refundOrder"><code>refundOrder</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#listUserOrders"><code>listUserOrders</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runTask"><code>runTask</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#selectedTasks"><code>selectedTasks</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#addUsage"><code>addUsage</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cacheHitRate"><code>cacheHitRate</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#logTaskMetrics"><code>logTaskMetrics</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#formatRate"><code>formatRate</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="FINISH_TOOL" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>FINISH_TOOL</strong>
+          <span>const · line 29 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#FINISH_TOOL">Module</a>
+      </div>
+      <pre><code>const FINISH_TOOL = &quot;finish_tau_bench_task&quot;</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="RETAIL_SYSTEM" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RETAIL_SYSTEM</strong>
+          <span>const · line 31 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#RETAIL_SYSTEM">Module</a>
+      </div>
+      <pre><code>const RETAIL_SYSTEM = [ &quot;You are a retail support agent. Use tools to help the user.&quot;, &quot;Always verify the user's identity with name plus order id before any mutation.&quot;, &quot;Never invent order ids, user ids, emails, statu...</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="codex" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codex</strong>
+          <span>const · line 40 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#codex">Module</a>
+      </div>
+      <pre><code>const codex = loadConfiguredCodexRuntime()</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="UserRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>UserRow</strong>
+          <span>interface · line 46 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#UserRow">Module</a>
+      </div>
+      <pre><code>interface UserRow</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>email</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="OrderRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>OrderRow</strong>
+          <span>interface · line 51 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#OrderRow">Module</a>
+      </div>
+      <pre><code>interface OrderRow</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>userId</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>status</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>address</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>item</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>price</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="RefundRow" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>RefundRow</strong>
+          <span>interface · line 59 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#RefundRow">Module</a>
+      </div>
+      <pre><code>interface RefundRow</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>orderId</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>reason</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>amount</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="WorldState" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>WorldState</strong>
+          <span>interface · line 65 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#WorldState">Module</a>
+      </div>
+      <pre><code>interface WorldState</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>users</code></td>
+              <td><code>Partial&lt;Record&lt;string, UserRow&gt;&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>orders</code></td>
+              <td><code>Partial&lt;Record&lt;string, OrderRow&gt;&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>refunds</code></td>
+              <td><code>Partial&lt;Record&lt;string, RefundRow&gt;&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="TauTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TauTask</strong>
+          <span>interface · line 71 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#TauTask">Module</a>
+      </div>
+      <pre><code>interface TauTask</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>id</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>description</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>userMessage</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>check</code></td>
+              <td><code>check(db: WorldState): boolean;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="TauRunMetrics" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TauRunMetrics</strong>
+          <span>interface · line 78 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#TauRunMetrics">Module</a>
+      </div>
+      <pre><code>interface TauRunMetrics</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>taskId</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>status</code></td>
+              <td><code>&quot;completed&quot; | &quot;cancelled&quot; | &quot;failed&quot;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>pass</code></td>
+              <td><code>boolean</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>turns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolCalls</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>cacheHitRate</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>usage</code></td>
+              <td><code>UsageSnapshot</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="codexBinding" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codexBinding</strong>
+          <span>function · line 88 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#codexBinding">Module</a>
+      </div>
+      <pre><code>function codexBinding(): LlmClientBinding</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="retailSeed" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>retailSeed</strong>
+          <span>function · line 95 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#retailSeed">Module</a>
+      </div>
+      <pre><code>function retailSeed(): WorldState</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="TASKS" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TASKS</strong>
+          <span>const · line 144 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#TASKS">Module</a>
+      </div>
+      <pre><code>const TASKS: readonly TauTask[] = [ { id: &quot;t01_address_happy&quot;, description: &quot;Change the shipping address of a processing order.&quot;, userMessage: &quot;I am Bo Wang, user id u_bo. Change the shipping address on order o_1002 t...</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="singleClientRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>singleClientRegistry</strong>
+          <span>function · line 209 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#singleClientRegistry">Module</a>
+      </div>
+      <pre><code>function singleClientRegistry(binding: LlmClientBinding): LlmClientRegistry</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runtimeForTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runtimeForTask</strong>
+          <span>function · line 220 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#runtimeForTask">Module</a>
+      </div>
+      <pre><code>function runtimeForTask( binding: LlmClientBinding, task: TauTask, db: WorldState, ): AgentRuntime</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="taskProfile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>taskProfile</strong>
+          <span>function · line 240 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#taskProfile">Module</a>
+      </div>
+      <pre><code>function taskProfile(task: TauTask): ProfileSpec</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="retailTools" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>retailTools</strong>
+          <span>function · line 265 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#retailTools">Module</a>
+      </div>
+      <pre><code>function retailTools(db: WorldState): ToolDefinition[]</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="finishTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>finishTool</strong>
+          <span>function · line 311 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#finishTool">Module</a>
+      </div>
+      <pre><code>function finishTool(): ToolDefinition</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="lookupOrder" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>lookupOrder</strong>
+          <span>function · line 321 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#lookupOrder">Module</a>
+      </div>
+      <pre><code>function lookupOrder(db: WorldState, orderId: string): JsonObject</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="lookupUser" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>lookupUser</strong>
+          <span>function · line 326 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#lookupUser">Module</a>
+      </div>
+      <pre><code>function lookupUser(db: WorldState, userId: string): JsonObject</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="updateAddress" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>updateAddress</strong>
+          <span>function · line 331 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#updateAddress">Module</a>
+      </div>
+      <pre><code>function updateAddress( db: WorldState, orderId: string, address: string, ): JsonObject</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="cancelOrder" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cancelOrder</strong>
+          <span>function · line 343 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#cancelOrder">Module</a>
+      </div>
+      <pre><code>function cancelOrder(db: WorldState, orderId: string): JsonObject</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="refundOrder" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>refundOrder</strong>
+          <span>function · line 351 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#refundOrder">Module</a>
+      </div>
+      <pre><code>function refundOrder(db: WorldState, orderId: string, reason: string): JsonObject</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="listUserOrders" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>listUserOrders</strong>
+          <span>function · line 360 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#listUserOrders">Module</a>
+      </div>
+      <pre><code>function listUserOrders(db: WorldState, userId: string): JsonValue[]</code></pre>
+
+      <div class="tags"><span>internal</span><span>json-boundary</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runTask" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runTask</strong>
+          <span>function · line 366 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#runTask">Module</a>
+      </div>
+      <pre><code>async function runTask( binding: LlmClientBinding, task: TauTask, ): Promise&lt;TauRunMetrics&gt;</code></pre>
+
+      <div class="tags"><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="selectedTasks" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>selectedTasks</strong>
+          <span>function · line 398 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#selectedTasks">Module</a>
+      </div>
+      <pre><code>function selectedTasks(env: NodeJS.ProcessEnv = process.env): TauTask[]</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="addUsage" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>addUsage</strong>
+          <span>function · line 409 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#addUsage">Module</a>
+      </div>
+      <pre><code>function addUsage(total: UsageSnapshot, usage: UsageSnapshot): UsageSnapshot</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="cacheHitRate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cacheHitRate</strong>
+          <span>function · line 421 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#cacheHitRate">Module</a>
+      </div>
+      <pre><code>function cacheHitRate(usage: UsageSnapshot): number</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="logTaskMetrics" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>logTaskMetrics</strong>
+          <span>function · line 428 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#logTaskMetrics">Module</a>
+      </div>
+      <pre><code>function logTaskMetrics(metrics: TauRunMetrics): void</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="formatRate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>formatRate</strong>
+          <span>function · line 444 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-tau-bench-lite-e2e.html#formatRate">Module</a>
+      </div>
+      <pre><code>function formatRate(value: number): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td>23</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td>27</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/agent-runtime/src/llm-client-registry</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/agent-runtime/src/runtime</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/agent-runtime/tests/support</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>node:path</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>vitest</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/tau-bench-lite.e2e</code></td>
+      <td><code>zod</code></td>
+      <td>7</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

@@ -59,40 +59,40 @@
 
 
     <tr class="search-item">
-      <td><code>./agent-loop.js</code></td>
-      <td>runAgentLoop</td>
+      <td><code>@eos/notifications</code></td>
+      <td>LoopObserver, NotificationInbox</td>
+      <td>type</td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/agent-runtime/agent-run-handle</code></td>
+      <td>RunHandle, type AgentRunHandle</td>
       <td>value</td>
       <td>4</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./background/supervisor.js</code></td>
-      <td>BackgroundSupervisor</td>
-      <td>type</td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./conversation.js</code></td>
-      <td>Conversation</td>
+      <td><code>./agent-loop.js</code></td>
+      <td>runAgentLoop</td>
       <td>value</td>
       <td>6</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./notification-inbox.js</code></td>
-      <td>NotificationInbox</td>
+      <td><code>./background/background-session-supervisor.js</code></td>
+      <td>BackgroundSessionSupervisor</td>
       <td>type</td>
       <td>7</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./run-handle.js</code></td>
-      <td>RunHandle, type AgentRunHandle</td>
+      <td><code>./conversation.js</code></td>
+      <td>Conversation</td>
       <td>value</td>
       <td>8</td>
     </tr>
@@ -112,57 +112,41 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Exports</h2>
-          <span>7</span>
+          <span>5</span>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
-      <td><code>./background/session.js</code></td>
-      <td>SessionHandle, SessionOutcome, SessionRef, SessionRow, SessionStatus</td>
-      <td>type</td>
+      <td><code>./agent-loop.js</code></td>
+      <td>RUN_FINISHED_DISPOSE_REASON</td>
+      <td>value</td>
       <td>11</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./background/supervisor.js</code></td>
-      <td>BackgroundSupervisor</td>
-      <td>value</td>
-      <td>18</td>
+      <td><code>./background/background-session.js</code></td>
+      <td>BackgroundSessionHandle, BackgroundSessionOutcome, BackgroundSessionRef, BackgroundSessionRow, BackgroundSessionStatus</td>
+      <td>type</td>
+      <td>12</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./conversation.js</code></td>
-      <td>DisplayedMessage, PartialReason</td>
-      <td>type</td>
+      <td><code>./background/background-session-supervisor.js</code></td>
+      <td>BackgroundSessionSupervisor</td>
+      <td>value</td>
       <td>19</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>./events.js</code></td>
-      <td>AgentEvent</td>
+      <td><code>@eos/agent-runtime/agent-run-handle</code></td>
+      <td>AgentEvent, AgentRunFailure, AgentRunHandle, AgentRunOutcome, DisplayedMessage, PartialReason</td>
       <td>type</td>
-      <td>23</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./notification-inbox.js</code></td>
-      <td>NotificationInbox, systemNotificationMessage</td>
-      <td>value</td>
-      <td>24</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./run-handle.js</code></td>
-      <td>AgentRunFailure, AgentRunHandle, AgentRunOutcome</td>
-      <td>type</td>
-      <td>28</td>
+      <td>20</td>
     </tr>
 
 
@@ -170,7 +154,7 @@
       <td><code>./tool-executor.js</code></td>
       <td>ToolExecutor, ToolUseBlock</td>
       <td>type</td>
-      <td>33</td>
+      <td>28</td>
     </tr>
   </tbody>
           </table>
@@ -219,7 +203,7 @@
       <div class="symbol-head">
         <div>
           <strong>DEFAULT_MAX_TURNS</strong>
-          <span>const · line 36 · internal</span>
+          <span>const · line 31 · internal</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#DEFAULT_MAX_TURNS">Module</a>
       </div>
@@ -237,7 +221,7 @@
       <div class="symbol-head">
         <div>
           <strong>StartAgentRunInput</strong>
-          <span>interface · line 39 · public</span>
+          <span>interface · line 34 · public</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#StartAgentRunInput">Module</a>
       </div>
@@ -325,7 +309,14 @@
 
             <tr>
               <td><code>background</code></td>
-              <td><code>BackgroundSupervisor</code></td>
+              <td><code>BackgroundSessionSupervisor</code></td>
+              <td>optional</td>
+            </tr>
+
+
+            <tr>
+              <td><code>observer</code></td>
+              <td><code>LoopObserver</code></td>
               <td>optional</td>
             </tr>
 
@@ -343,7 +334,7 @@
       <div class="symbol-head">
         <div>
           <strong>startAgentRun</strong>
-          <span>function · line 74 · public</span>
+          <span>function · line 76 · public</span>
         </div>
         <a href="../modules/eos-engine-src-index.html#startAgentRun">Module</a>
       </div>
@@ -370,6 +361,14 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/contracts</code></td>
       <td>1</td>
     </tr>
@@ -379,22 +378,6 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -402,7 +385,7 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
       <td>7</td>
     </tr>
 
@@ -410,7 +393,7 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>8</td>
     </tr>
 
@@ -432,25 +415,41 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
 
 
     <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/session</code></td>
-      <td>11</td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>20</td>
     </tr>
 
 
     <tr class="search-item">
       <td>reexports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>18</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td>11</td>
     </tr>
 
 
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/engine/src/background/background-session</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
       <td>19</td>
     </tr>
 
@@ -458,32 +457,8 @@ never throws: every exit resolves `handle.outcome` exactly once and ends
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>23</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>24</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td>28</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/tool-executor</code></td>
-      <td>33</td>
+      <td>28</td>
     </tr>
   </tbody>
           </table>

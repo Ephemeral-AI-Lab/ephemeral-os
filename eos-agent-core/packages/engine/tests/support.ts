@@ -18,9 +18,9 @@ import type {
   UsageSnapshot,
 } from "@eos/llm-client";
 
-import type { SessionOutcome } from "../src/background/session.js";
-import type { BackgroundSupervisor } from "../src/background/supervisor.js";
-import type { AgentEvent } from "../src/events.js";
+import type { BackgroundSessionOutcome } from "../src/background/background-session.js";
+import type { BackgroundSessionSupervisor } from "../src/background/background-session-supervisor.js";
+import type { AgentEvent } from "@eos/agent-runtime/agent-run-handle";
 import type {
   LoopObserver,
   NotificationInbox,
@@ -298,25 +298,25 @@ function settleOrAbort(
 
 // --- background session handles ---------------------------------------------------
 
-export interface TestSessionHandle {
+export interface TestBackgroundSessionHandle {
   handle: {
-    settled: Promise<SessionOutcome>;
+    settled: Promise<BackgroundSessionOutcome>;
     cancel(reason: string): Promise<void>;
     describe?(): string;
   };
-  settle(outcome: SessionOutcome): void;
+  settle(outcome: BackgroundSessionOutcome): void;
   fail(error: Error): void;
   /** Reasons passed to `cancel`, in call order. */
   cancelled: string[];
 }
 
 /** A push-settled capability handle; `cancel` resolves per `cancelMode`. */
-export function sessionHandle(
+export function backgroundSessionHandle(
   options: { describe?: string; cancelMode?: "resolve" | "hang" } = {},
-): TestSessionHandle {
-  let settle!: (outcome: SessionOutcome) => void;
+): TestBackgroundSessionHandle {
+  let settle!: (outcome: BackgroundSessionOutcome) => void;
   let fail!: (error: Error) => void;
-  const settled = new Promise<SessionOutcome>((resolve, reject) => {
+  const settled = new Promise<BackgroundSessionOutcome>((resolve, reject) => {
     settle = resolve;
     fail = reject;
   });
@@ -414,7 +414,7 @@ export interface StartMockRunOptions {
   maxTurns?: number;
   signal?: AbortSignal;
   notifications?: NotificationInbox;
-  background?: BackgroundSupervisor;
+  background?: BackgroundSessionSupervisor;
   observer?: LoopObserver;
 }
 

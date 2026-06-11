@@ -52,7 +52,7 @@
 
     <tr class="search-item">
       <td><code>@eos/engine</code></td>
-      <td>BackgroundSupervisor</td>
+      <td>BackgroundSessionSupervisor</td>
       <td>type</td>
       <td>2</td>
     </tr>
@@ -60,7 +60,7 @@
 
     <tr class="search-item">
       <td><code>@eos/engine</code></td>
-      <td>SessionRow</td>
+      <td>BackgroundSessionRow</td>
       <td>type</td>
       <td>3</td>
     </tr>
@@ -128,7 +128,7 @@
 
 
           <li class="tree-symbol search-item">
-            <a href="#sessionRowContent"><code>sessionRowContent</code></a>
+            <a href="#backgroundSessionRowContent"><code>backgroundSessionRowContent</code></a>
             <span>function</span>
             <span class="compact-tags">internal</span>
           </li>
@@ -145,7 +145,7 @@
         </div>
         <a href="../modules/eos-tool-src-tools-background-list-background-sessions.html#listBackgroundSessionsTool">Module</a>
       </div>
-      <pre><code>export function listBackgroundSessionsTool( supervisor: BackgroundSupervisor, ): ToolDefinition</code></pre>
+      <pre><code>export function listBackgroundSessionsTool( supervisor: BackgroundSessionSupervisor, ): ToolDefinition</code></pre>
       <p>Rows for running plus settled-but-undelivered sessions.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
@@ -155,15 +155,15 @@
     </article>
 
 
-    <article id="sessionRowContent" class="symbol-card search-item">
+    <article id="backgroundSessionRowContent" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
-          <strong>sessionRowContent</strong>
+          <strong>backgroundSessionRowContent</strong>
           <span>function · line 25 · internal</span>
         </div>
-        <a href="../modules/eos-tool-src-tools-background-list-background-sessions.html#sessionRowContent">Module</a>
+        <a href="../modules/eos-tool-src-tools-background-list-background-sessions.html#backgroundSessionRowContent">Module</a>
       </div>
-      <pre><code>function sessionRowContent(row: SessionRow): JsonObject</code></pre>
+      <pre><code>function backgroundSessionRowContent(row: BackgroundSessionRow): JsonObject</code></pre>
 
       <div class="tags"><span>internal</span><span>json-boundary</span></div>
 

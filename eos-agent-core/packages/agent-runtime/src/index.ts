@@ -5,6 +5,14 @@
 // behind createAgentRuntime; the agent tool family is authored by @eos/tool.
 export { ADVISOR_AGENT_NAME } from "@eos/tool";
 export type {
+  AgentEvent,
+  AgentRunFailure,
+  AgentRunHandle,
+  AgentRunOutcome,
+  DisplayedMessage,
+  PartialReason,
+} from "./agent-run-handle.js";
+export type {
   LlmClientBinding,
   LlmClientRegistry,
 } from "./llm-client-registry.js";

@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>8</span>
+          <span>10</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -60,17 +60,25 @@
 
     <tr class="search-item">
       <td><code>@eos/engine</code></td>
-      <td>BackgroundSupervisor, NotificationInbox</td>
+      <td>BackgroundSessionSupervisor</td>
       <td>value</td>
       <td>4</td>
     </tr>
 
 
     <tr class="search-item">
-      <td><code>@eos/testkit</code></td>
-      <td>scriptedRunState, scriptedSessionHandle</td>
+      <td><code>@eos/notifications</code></td>
+      <td>NotificationInbox</td>
       <td>value</td>
       <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/testkit</code></td>
+      <td>scriptedRunState, scriptedBackgroundSessionHandle</td>
+      <td>value</td>
+      <td>6</td>
     </tr>
 
 
@@ -78,7 +86,7 @@
       <td><code>../src/contract.js</code></td>
       <td>ToolNameSchema, type ToolCallContext, type ToolDefinition</td>
       <td>value</td>
-      <td>7</td>
+      <td>8</td>
     </tr>
 
 
@@ -86,15 +94,23 @@
       <td><code>../src/run-state.js</code></td>
       <td>snapshotRunState</td>
       <td>value</td>
-      <td>12</td>
+      <td>13</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>../src/index.js</code></td>
-      <td>backgroundTools, submissionTool</td>
+      <td>backgroundTools</td>
       <td>value</td>
-      <td>13</td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/tools/submission/index.js</code></td>
+      <td>submissionTool</td>
+      <td>value</td>
+      <td>15</td>
     </tr>
 
 
@@ -102,7 +118,7 @@
       <td><code>./support.js</code></td>
       <td>live, must, tick</td>
       <td>value</td>
-      <td>14</td>
+      <td>16</td>
     </tr>
   </tbody>
           </table>
@@ -164,7 +180,7 @@
       <div class="symbol-head">
         <div>
           <strong>setup</strong>
-          <span>function · line 16 · internal</span>
+          <span>function · line 18 · internal</span>
         </div>
         <a href="../modules/eos-tool-tests-families-test.html#setup">Module</a>
       </div>
@@ -182,7 +198,7 @@
       <div class="symbol-head">
         <div>
           <strong>ctx</strong>
-          <span>const · line 28 · internal</span>
+          <span>const · line 30 · internal</span>
         </div>
         <a href="../modules/eos-tool-tests-families-test.html#ctx">Module</a>
       </div>
@@ -200,11 +216,11 @@
       <div class="symbol-head">
         <div>
           <strong>register</strong>
-          <span>const · line 37 · internal</span>
+          <span>const · line 39 · internal</span>
         </div>
         <a href="../modules/eos-tool-tests-families-test.html#register">Module</a>
       </div>
-      <pre><code>const register = ( supervisor: BackgroundSupervisor, type: string, id: string, describe?: string, ): ReturnType&lt;typeof scriptedSessionHandle&gt; =&gt; { const session = scriptedSessionHandle(describe); supervisor.register({...</code></pre>
+      <pre><code>const register = ( supervisor: BackgroundSessionSupervisor, type: string, id: string, describe?: string, ): ReturnType&lt;typeof scriptedBackgroundSessionHandle&gt; =&gt; { const session = scriptedBackgroundSessionHandle(descr...</code></pre>
 
       <div class="tags"><span>internal</span><span>test-only</span></div>
 
@@ -241,7 +257,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/tool/tests/families.test</code></td>
-      <td><code>@eos/testkit</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>5</td>
     </tr>
 
@@ -249,8 +265,16 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/tool/tests/families.test</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>7</td>
+      <td>8</td>
     </tr>
 
 
@@ -258,7 +282,7 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/index</code></td>
-      <td>13</td>
+      <td>14</td>
     </tr>
 
 
@@ -266,7 +290,15 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/run-state</code></td>
-      <td>12</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/tool/tests/families.test</code></td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td>15</td>
     </tr>
 
 
@@ -274,7 +306,7 @@
       <td>imports</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/tests/support</code></td>
-      <td>14</td>
+      <td>16</td>
     </tr>
 
 
@@ -305,7 +337,7 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/tool/tests/families.test</code></td>
-      <td><code>@eos/testkit</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>5</td>
     </tr>
 
@@ -313,8 +345,16 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/tool/tests/families.test</code></td>
+      <td><code>@eos/testkit</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>7</td>
+      <td>8</td>
     </tr>
 
 
@@ -322,7 +362,7 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/index</code></td>
-      <td>13</td>
+      <td>14</td>
     </tr>
 
 
@@ -330,7 +370,15 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/src/run-state</code></td>
-      <td>12</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/tool/tests/families.test</code></td>
+      <td><code>@eos/tool/src/tools/submission/index</code></td>
+      <td>15</td>
     </tr>
 
 
@@ -338,7 +386,7 @@
       <td>tests</td>
       <td><code>@eos/tool/tests/families.test</code></td>
       <td><code>@eos/tool/tests/support</code></td>
-      <td>14</td>
+      <td>16</td>
     </tr>
 
 
@@ -354,7 +402,7 @@
       <td>uses-schema</td>
       <td><code>@eos/tool/tests/families.test#ctx</code></td>
       <td><code>@eos/tool/tests/families.test#ToolNameSchema</code></td>
-      <td>28</td>
+      <td>30</td>
     </tr>
   </tbody>
           </table>

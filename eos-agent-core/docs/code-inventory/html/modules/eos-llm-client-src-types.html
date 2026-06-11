@@ -26,10 +26,10 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>6</dd></div>
+          <div><dt>Symbols</dt><dd>7</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>3</dd></div>
-          <div><dt>Functions</dt><dd>1</dd></div>
+          <div><dt>Functions</dt><dd>2</dd></div>
         </dl>
       </section>
 
@@ -76,7 +76,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>types.ts</code>
-        <small>6 symbols</small>
+        <small>7 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -97,6 +97,13 @@
           <li class="tree-symbol search-item">
             <a href="#UsageSnapshot"><code>UsageSnapshot</code></a>
             <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cacheHitRate"><code>cacheHitRate</code></a>
+            <span>function</span>
             <span class="compact-tags">public-api</span>
           </li>
 
@@ -207,9 +214,9 @@ providers' vocabularies; each encoder clamps to its provider's range.</p>
         <a href="../modules/eos-llm-client-src-types.html#UsageSnapshot">Module</a>
       </div>
       <pre><code>export interface UsageSnapshot</code></pre>
-      <p>Token usage reported by a model provider. The optional cache fields feed
-future cache-aware context management; absent input/output fields decode
-to zero.</p>
+      <p>Token usage reported by a model provider. `input_tokens` counts uncached
+prompt tokens; total prompt tokens are `input_tokens` plus cache read and
+cache creation tokens. Absent input/output fields decode to zero.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
 
@@ -257,11 +264,29 @@ to zero.</p>
     </article>
 
 
+    <article id="cacheHitRate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cacheHitRate</strong>
+          <span>function · line 29 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-src-types.html#cacheHitRate">Module</a>
+      </div>
+      <pre><code>export function cacheHitRate(usage: UsageSnapshot): number</code></pre>
+      <p>cache_read / total prompt tokens; 0 when no prompt tokens were reported.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
     <article id="LlmRequest" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>LlmRequest</strong>
-          <span>interface · line 29 · public</span>
+          <span>interface · line 37 · public</span>
         </div>
         <a href="../modules/eos-llm-client-src-types.html#LlmRequest">Module</a>
       </div>
@@ -339,7 +364,7 @@ to zero.</p>
       <div class="symbol-head">
         <div>
           <strong>LlmRequestInit</strong>
-          <span>type · line 46 · public</span>
+          <span>type · line 54 · public</span>
         </div>
         <a href="../modules/eos-llm-client-src-types.html#LlmRequestInit">Module</a>
       </div>
@@ -357,7 +382,7 @@ to zero.</p>
       <div class="symbol-head">
         <div>
           <strong>buildLlmRequest</strong>
-          <span>function · line 49 · public</span>
+          <span>function · line 57 · public</span>
         </div>
         <a href="../modules/eos-llm-client-src-types.html#buildLlmRequest">Module</a>
       </div>

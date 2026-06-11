@@ -26,10 +26,10 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Symbols</dt><dd>6</dd></div>
           <div><dt>Schemas</dt><dd>2</dd></div>
           <div><dt>Types</dt><dd>1</dd></div>
-          <div><dt>Functions</dt><dd>2</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
         </dl>
       </section>
 
@@ -108,7 +108,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>codex-auth.ts</code>
-        <small>5 symbols</small>
+        <small>6 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -137,6 +137,13 @@
             <a href="#decodeJwtPayload"><code>decodeJwtPayload</code></a>
             <span>function</span>
             <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#loadCodexAuthFromPath"><code>loadCodexAuthFromPath</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
           </li>
 
 
@@ -277,20 +284,37 @@
     </article>
 
 
+    <article id="loadCodexAuthFromPath" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>loadCodexAuthFromPath</strong>
+          <span>function · line 45 · public</span>
+        </div>
+        <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#loadCodexAuthFromPath">Module</a>
+      </div>
+      <pre><code>export function loadCodexAuthFromPath(path: string): CodexAuth</code></pre>
+      <p>Load one Codex CLI credential cache. Missing or stale credentials are a
+skip, never a failure. The raw token goes straight into `SecretString`;
+no token material is logged and nothing is written. Refreshing tokens is
+the Codex CLI's job.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
     <article id="loadCodexAuth" class="symbol-card search-item">
       <div class="symbol-head">
         <div>
           <strong>loadCodexAuth</strong>
-          <span>function · line 46 · public</span>
+          <span>function · line 80 · public</span>
         </div>
         <a href="../modules/eos-llm-client-e2e-support-codex-auth.html#loadCodexAuth">Module</a>
       </div>
       <pre><code>export function loadCodexAuth( env: NodeJS.ProcessEnv = process.env, ): CodexAuth</code></pre>
-      <p>Load the local Codex CLI credential cache: `$CODEX_AUTH_PATH` ??
-`$CODEX_HOME/auth.json` ?? `~/.codex/auth.json`. Missing or stale
-credentials are a skip, never a failure. The raw token goes straight into
-`SecretString`; no token material is logged and nothing is written.
-Refreshing tokens is the Codex CLI's job.</p>
+      <p>Resolve the default local Codex CLI credential cache path.</p>
       <div class="tags"><span>exported</span><span>public-api</span></div>
 
 

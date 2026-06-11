@@ -5,10 +5,14 @@ import {
   type LoopObserver,
   type NotificationInbox,
 } from "@eos/notifications";
+import type {
+  AgentRunFailure,
+  AgentRunStatus,
+  RunHandle,
+} from "@eos/agent-runtime/agent-run-handle";
 
-import type { BackgroundSupervisor } from "./background/supervisor.js";
+import type { BackgroundSessionSupervisor } from "./background/background-session-supervisor.js";
 import type { Conversation, ToolResultBlock } from "./conversation.js";
-import type { AgentRunFailure, AgentRunStatus, RunHandle } from "./run-handle.js";
 import type { ToolExecutor, ToolUseBlock } from "./tool-executor.js";
 import { addUsage, runAssistantTurn, type TurnConfig } from "./turn.js";
 
@@ -28,8 +32,8 @@ export interface AgentLoopContext {
   maxTurns: number;
   /** Drained at the loop boundary, one priority below steers. */
   notifications?: NotificationInbox;
-  /** Auto-wait gate and dispose-on-finish; sessions are loop lifecycle. */
-  background?: BackgroundSupervisor;
+  /** Auto-wait gate and dispose-on-finish; background sessions are loop lifecycle. */
+  background?: BackgroundSessionSupervisor;
   /** Loop-lifecycle announcements (Phase 04.9); never throws or rejects. */
   observer?: LoopObserver;
 }
@@ -84,15 +88,18 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
         turn: turns,
         maxTurns: ctx.maxTurns,
         toolCalls: calls.length,
-        liveSessions: ctx.background?.liveCount() ?? 0,
+        backgroundSessionCount: ctx.background?.backgroundSessionCount() ?? 0,
         hasPendingSteers: handle.hasPendingSteers(),
       });
       if (calls.length === 0) {
-        // Auto-wait: a no-tool-use turn with live sessions parks on the
+        // Auto-wait: a no-tool-use turn with background sessions parks on the
         // next notification OR steer instead of burning provider calls.
         // Waiting consumes no turn; an abort wakes the race and the
         // loop-top check classifies it.
-        if (!handle.hasPendingSteers() && (ctx.background?.liveCount() ?? 0) > 0) {
+        if (
+          !handle.hasPendingSteers() &&
+          (ctx.background?.backgroundSessionCount() ?? 0) > 0
+        ) {
           ctx.observer?.idleStarted();
           try {
             await waitForWake(ctx);
@@ -132,7 +139,7 @@ export async function runAgentLoop(ctx: AgentLoopContext): Promise<void> {
       const failure: AgentRunFailure = { kind: "internal", message: "agent loop exited without finishing" };
       finish({ status: "failed", failure });
     }
-    // Sessions are loop lifecycle: every finish tears them down.
+    // Background sessions are loop lifecycle: every finish tears them down.
     // Fire-and-forget — run_finished never waits on teardown.
     void ctx.background?.dispose(RUN_FINISHED_DISPOSE_REASON);
   }

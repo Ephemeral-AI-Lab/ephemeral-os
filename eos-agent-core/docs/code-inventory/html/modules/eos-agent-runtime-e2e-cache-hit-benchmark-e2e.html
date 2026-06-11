@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</h1>
+          <p class="lede">packages/agent-runtime/e2e/cache-hit-benchmark.e2e.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>22</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>15</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>12</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>mkdirSync, writeFileSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>dirname, join</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/contracts</code></td>
+      <td>JsonObject</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/llm-client</code></td>
+      <td>LlmClient, UsageSnapshot</td>
+      <td>type</td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>defineTool, type ToolDefinition</td>
+      <td>value</td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>zod</code></td>
+      <td>z</td>
+      <td>value</td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>vitest</code></td>
+      <td>describe, expect, it</td>
+      <td>value</td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/llm-client-registry.js</code></td>
+      <td>LlmClientBinding, LlmClientRegistry</td>
+      <td>type</td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../src/runtime.js</code></td>
+      <td>createAgentRuntime, type AgentRuntime</td>
+      <td>value</td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>../tests/support.js</code></td>
+      <td>asString, must, readEventLines, readResultLines, tempDir, userMessage, writeProfile, type ProfileSpec</td>
+      <td>value</td>
+      <td>18</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/codex-runtime.js</code></td>
+      <td>CODEX_CLIENT_ID, loadConfiguredCodexRuntime</td>
+      <td>value</td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./support/fixtures.js</code></td>
+      <td>finishedRun</td>
+      <td>value</td>
+      <td>32</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>cache-hit-benchmark.e2e.ts</code>
+        <small>22 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#DEFAULT_TOOL_CALL_COUNTS"><code>DEFAULT_TOOL_CALL_COUNTS</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#TOOL_DELAY_MS"><code>TOOL_DELAY_MS</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#FINISH_TOOL"><code>FINISH_TOOL</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#EXPECTED_SUMMARY"><code>EXPECTED_SUMMARY</code></a>
+            <span>const</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#codex"><code>codex</code></a>
+            <span>const</span>
+            <span class="compact-tags">config internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#codexBinding"><code>codexBinding</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BenchmarkRuntime"><code>BenchmarkRuntime</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#BenchmarkMetrics"><code>BenchmarkMetrics</code></a>
+            <span>interface</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#singleClientRegistry"><code>singleClientRegistry</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#benchmarkRuntime"><code>benchmarkRuntime</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#benchmarkProfile"><code>benchmarkProfile</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#benchmarkSystemPrompt"><code>benchmarkSystemPrompt</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#stableAnchor"><code>stableAnchor</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cacheProbeTool"><code>cacheProbeTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#finishBenchmarkTool"><code>finishBenchmarkTool</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#runBenchmarkCase"><code>runBenchmarkCase</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#probeStepsFor"><code>probeStepsFor</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#benchmarkToolCallCounts"><code>benchmarkToolCallCounts</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#summaryOf"><code>summaryOf</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#cacheHitRate"><code>cacheHitRate</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#logMetrics"><code>logMetrics</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#formatRate"><code>formatRate</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="DEFAULT_TOOL_CALL_COUNTS" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>DEFAULT_TOOL_CALL_COUNTS</strong>
+          <span>const · line 34 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#DEFAULT_TOOL_CALL_COUNTS">Module</a>
+      </div>
+      <pre><code>const DEFAULT_TOOL_CALL_COUNTS = [10, 25, 50, 100] as const</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="TOOL_DELAY_MS" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>TOOL_DELAY_MS</strong>
+          <span>const · line 35 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#TOOL_DELAY_MS">Module</a>
+      </div>
+      <pre><code>const TOOL_DELAY_MS = Number(process.env.EOS_CACHE_BENCH_TOOL_DELAY_MS ?? &quot;0&quot;)</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="FINISH_TOOL" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>FINISH_TOOL</strong>
+          <span>const · line 36 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#FINISH_TOOL">Module</a>
+      </div>
+      <pre><code>const FINISH_TOOL = &quot;finish_cache_benchmark&quot;</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="EXPECTED_SUMMARY" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>EXPECTED_SUMMARY</strong>
+          <span>const · line 37 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#EXPECTED_SUMMARY">Module</a>
+      </div>
+      <pre><code>const EXPECTED_SUMMARY = &quot;cache bench done&quot;</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="codex" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codex</strong>
+          <span>const · line 39 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#codex">Module</a>
+      </div>
+      <pre><code>const codex = loadConfiguredCodexRuntime()</code></pre>
+
+      <div class="tags"><span>config</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="codexBinding" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>codexBinding</strong>
+          <span>function · line 45 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#codexBinding">Module</a>
+      </div>
+      <pre><code>function codexBinding(): LlmClientBinding</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="BenchmarkRuntime" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BenchmarkRuntime</strong>
+          <span>interface · line 52 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#BenchmarkRuntime">Module</a>
+      </div>
+      <pre><code>interface BenchmarkRuntime</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>runtime</code></td>
+              <td><code>AgentRuntime</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="BenchmarkMetrics" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>BenchmarkMetrics</strong>
+          <span>interface · line 56 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#BenchmarkMetrics">Module</a>
+      </div>
+      <pre><code>interface BenchmarkMetrics</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>label</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>runId</code></td>
+              <td><code>string</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>toolCalls</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>turns</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>turnRates</code></td>
+              <td><code>number[]</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>aggregateRate</code></td>
+              <td><code>number</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>usage</code></td>
+              <td><code>UsageSnapshot</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="singleClientRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>singleClientRegistry</strong>
+          <span>function · line 66 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#singleClientRegistry">Module</a>
+      </div>
+      <pre><code>function singleClientRegistry( binding: LlmClientBinding, client: LlmClient, ): LlmClientRegistry</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="benchmarkRuntime" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>benchmarkRuntime</strong>
+          <span>function · line 80 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#benchmarkRuntime">Module</a>
+      </div>
+      <pre><code>function benchmarkRuntime( label: string, binding: LlmClientBinding, toolCalls: number, ): BenchmarkRuntime</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="benchmarkProfile" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>benchmarkProfile</strong>
+          <span>function · line 102 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#benchmarkProfile">Module</a>
+      </div>
+      <pre><code>function benchmarkProfile(name: string, toolCalls: number): ProfileSpec</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="benchmarkSystemPrompt" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>benchmarkSystemPrompt</strong>
+          <span>function · line 114 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#benchmarkSystemPrompt">Module</a>
+      </div>
+      <pre><code>function benchmarkSystemPrompt(toolCalls: number): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="stableAnchor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>stableAnchor</strong>
+          <span>function · line 129 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#stableAnchor">Module</a>
+      </div>
+      <pre><code>function stableAnchor(): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="cacheProbeTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cacheProbeTool</strong>
+          <span>function · line 136 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#cacheProbeTool">Module</a>
+      </div>
+      <pre><code>function cacheProbeTool(probeSteps: number): ToolDefinition</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="finishBenchmarkTool" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>finishBenchmarkTool</strong>
+          <span>function · line 163 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#finishBenchmarkTool">Module</a>
+      </div>
+      <pre><code>function finishBenchmarkTool(): ToolDefinition</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="runBenchmarkCase" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>runBenchmarkCase</strong>
+          <span>function · line 174 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#runBenchmarkCase">Module</a>
+      </div>
+      <pre><code>async function runBenchmarkCase( toolCalls: number, binding: LlmClientBinding, ): Promise&lt;BenchmarkMetrics&gt;</code></pre>
+
+      <div class="tags"><span>async</span><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="probeStepsFor" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>probeStepsFor</strong>
+          <span>function · line 223 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#probeStepsFor">Module</a>
+      </div>
+      <pre><code>function probeStepsFor(toolCalls: number): number</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="benchmarkToolCallCounts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>benchmarkToolCallCounts</strong>
+          <span>function · line 230 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#benchmarkToolCallCounts">Module</a>
+      </div>
+      <pre><code>function benchmarkToolCallCounts( env: NodeJS.ProcessEnv = process.env, ): number[]</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="summaryOf" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>summaryOf</strong>
+          <span>function · line 244 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#summaryOf">Module</a>
+      </div>
+      <pre><code>function summaryOf(submission: unknown): unknown</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="cacheHitRate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>cacheHitRate</strong>
+          <span>function · line 255 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#cacheHitRate">Module</a>
+      </div>
+      <pre><code>function cacheHitRate(usage: UsageSnapshot): number</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="logMetrics" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>logMetrics</strong>
+          <span>function · line 262 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#logMetrics">Module</a>
+      </div>
+      <pre><code>function logMetrics(metrics: BenchmarkMetrics): void</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="formatRate" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>formatRate</strong>
+          <span>function · line 282 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-e2e-cache-hit-benchmark-e2e.html#formatRate">Module</a>
+      </div>
+      <pre><code>function formatRate(value: number): string</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/codex-runtime</code></td>
+      <td>28</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/agent-runtime/e2e/support/fixtures</code></td>
+      <td>32</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/agent-runtime/src/llm-client-registry</code></td>
+      <td>13</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/agent-runtime/src/runtime</code></td>
+      <td>17</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/agent-runtime/tests/support</code></td>
+      <td>18</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>node:path</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>vitest</code></td>
+      <td>11</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/e2e/cache-hit-benchmark.e2e</code></td>
+      <td><code>zod</code></td>
+      <td>10</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

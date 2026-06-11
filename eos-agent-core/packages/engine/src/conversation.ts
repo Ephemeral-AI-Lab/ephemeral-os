@@ -1,21 +1,11 @@
 import type { ContentBlock, Message } from "@eos/contracts";
-
-/** Why a salvaged partial assistant message never completed. */
-export type PartialReason = "interrupted" | "provider_error";
+import type {
+  DisplayedMessage,
+  PartialReason,
+} from "@eos/agent-runtime/agent-run-handle";
 
 /** A `tool_result` content block, the unit `appendToolResults` wraps. */
 export type ToolResultBlock = Extract<ContentBlock, { type: "tool_result" }>;
-
-/** One entry of the user-facing transcript. */
-export interface DisplayedMessage {
-  /** Monotonic within the run. */
-  seq: number;
-  /** ISO-8601 append time. */
-  created_at: string;
-  message: Message;
-  /** Set only on salvaged partial assistant output (displayed-only). */
-  partial?: PartialReason;
-}
 
 /**
  * The dual transcript: `displayed_messages` for users, `llm_messages` for

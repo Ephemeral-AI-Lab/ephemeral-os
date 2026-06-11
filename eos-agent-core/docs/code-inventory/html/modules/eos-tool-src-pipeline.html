@@ -26,7 +26,7 @@
           <div class="tags"><span>source</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Symbols</dt><dd>7</dd></div>
+          <div><dt>Symbols</dt><dd>8</dd></div>
           <div><dt>Schemas</dt><dd>0</dd></div>
           <div><dt>Types</dt><dd>1</dd></div>
           <div><dt>Functions</dt><dd>4</dd></div>
@@ -44,7 +44,7 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>JsonObject, ToolCallResult</td>
+      <td>AgentRunSnapshot, BackgroundSessionSnapshot, JsonObject, ToolCallResult</td>
       <td>type</td>
       <td>1</td>
     </tr>
@@ -52,9 +52,9 @@
 
     <tr class="search-item">
       <td><code>@eos/engine</code></td>
-      <td>systemNotificationMessage, type NotificationInbox, type ToolUseBlock</td>
-      <td>value</td>
-      <td>2</td>
+      <td>ToolUseBlock</td>
+      <td>type</td>
+      <td>7</td>
     </tr>
 
 
@@ -62,21 +62,21 @@
       <td><code>zod</code></td>
       <td>z</td>
       <td>type</td>
-      <td>7</td>
+      <td>8</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>./contract.js</code></td>
-      <td>AgentRunSnapshot, ToolCallMeta, ToolDefinition, ToolOutcome</td>
+      <td>ToolCallMeta, ToolDefinition, ToolOutcome</td>
       <td>type</td>
-      <td>9</td>
+      <td>10</td>
     </tr>
 
 
     <tr class="search-item">
       <td><code>./hooks/protocol.js</code></td>
-      <td>HookEvent, HookPayload</td>
+      <td>HookAdvisoryRequirement, HookEvent, HookPayload</td>
       <td>type</td>
       <td>15</td>
     </tr>
@@ -86,7 +86,7 @@
       <td><code>./hooks/runner.js</code></td>
       <td>HookEngine, HookRunSummary</td>
       <td>type</td>
-      <td>16</td>
+      <td>20</td>
     </tr>
   </tbody>
           </table>
@@ -116,7 +116,7 @@
     <nav class="symbol-outline">
       <div class="tree-file-row">
         <code>pipeline.ts</code>
-        <small>7 symbols</small>
+        <small>8 symbols</small>
       </div>
       <ul class="tree-symbols">
 
@@ -129,6 +129,13 @@
 
           <li class="tree-symbol search-item">
             <a href="#BindToolDeps"><code>BindToolDeps</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#HookPayloadFacts"><code>HookPayloadFacts</code></a>
             <span>interface</span>
             <span class="compact-tags">public-api</span>
           </li>
@@ -176,7 +183,7 @@
       <div class="symbol-head">
         <div>
           <strong>PipelineResult</strong>
-          <span>type · line 22 · public</span>
+          <span>type · line 26 · public</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#PipelineResult">Module</a>
       </div>
@@ -195,7 +202,7 @@ constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
       <div class="symbol-head">
         <div>
           <strong>BindToolDeps</strong>
-          <span>interface · line 25 · public</span>
+          <span>interface · line 29 · public</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#BindToolDeps">Module</a>
       </div>
@@ -219,8 +226,51 @@ constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
 
 
             <tr>
-              <td><code>inbox</code></td>
-              <td><code>NotificationInbox</code></td>
+              <td><code>advisoryRequirement</code></td>
+              <td><code>HookAdvisoryRequirement</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>hookPayloadFacts</code></td>
+              <td><code>() =&gt; HookPayloadFacts</code></td>
+              <td>optional</td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="HookPayloadFacts" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>HookPayloadFacts</strong>
+          <span>interface · line 35 · public</span>
+        </div>
+        <a href="../modules/eos-tool-src-pipeline.html#HookPayloadFacts">Module</a>
+      </div>
+      <pre><code>export interface HookPayloadFacts</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>background_sessions</code></td>
+              <td><code>readonly BackgroundSessionSnapshot[]</code></td>
               <td>optional</td>
             </tr>
 
@@ -238,7 +288,7 @@ constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
       <div class="symbol-head">
         <div>
           <strong>BoundTool</strong>
-          <span>interface · line 32 · public</span>
+          <span>interface · line 40 · public</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#BoundTool">Module</a>
       </div>
@@ -296,7 +346,7 @@ constructs the `ToolCallResult` - it must pair the `tool_use_id`.</p>
       <div class="symbol-head">
         <div>
           <strong>bindTool</strong>
-          <span>function · line 49 · public</span>
+          <span>function · line 57 · public</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#bindTool">Module</a>
       </div>
@@ -319,7 +369,7 @@ masquerade as slow tools.</p>
       <div class="symbol-head">
         <div>
           <strong>projectContent</strong>
-          <span>function · line 153 · public</span>
+          <span>function · line 165 · public</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#projectContent">Module</a>
       </div>
@@ -337,14 +387,15 @@ masquerade as slow tools.</p>
       <div class="symbol-head">
         <div>
           <strong>stamp</strong>
-          <span>function · line 162 · internal</span>
+          <span>function · line 175 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#stamp">Module</a>
       </div>
-      <pre><code>function stamp( definition: ToolDefinition, outcome: ToolOutcome, startedAt: number, endedAt: number, warnings: string[], ): PipelineResult</code></pre>
-      <p>The pipeline's stamping: `is_terminal = definition.terminal &amp;&amp; !isError`
+      <pre><code>function stamp( definition: ToolDefinition, outcome: ToolOutcome, startedAt: number, endedAt: number, warnings: string[], contexts: string[], ): PipelineResult</code></pre>
+      <p>The pipeline's stamping: `is_terminal = definition.isTerminal &amp;&amp; !isError`
 (a failed submission can never terminate a run) plus the execute-only
-clock and accumulated hook warnings.</p>
+clock and the accumulated hook warnings and contexts (the engine loop
+publishes each `hook_contexts` entry as a `hook_context` notification).</p>
       <div class="tags"><span>internal</span></div>
 
 
@@ -357,7 +408,7 @@ clock and accumulated hook warnings.</p>
       <div class="symbol-head">
         <div>
           <strong>issueSummary</strong>
-          <span>function · line 185 · internal</span>
+          <span>function · line 203 · internal</span>
         </div>
         <a href="../modules/eos-tool-src-pipeline.html#issueSummary">Module</a>
       </div>
@@ -388,10 +439,10 @@ clock and accumulated hook warnings.</p>
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/pipeline</code></td>
       <td><code>@eos/engine</code></td>
-      <td>2</td>
+      <td>7</td>
     </tr>
 
 
@@ -399,7 +450,7 @@ clock and accumulated hook warnings.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/pipeline</code></td>
       <td><code>@eos/tool/src/contract</code></td>
-      <td>9</td>
+      <td>10</td>
     </tr>
 
 
@@ -415,7 +466,7 @@ clock and accumulated hook warnings.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/pipeline</code></td>
       <td><code>@eos/tool/src/hooks/runner</code></td>
-      <td>16</td>
+      <td>20</td>
     </tr>
 
 
@@ -423,7 +474,7 @@ clock and accumulated hook warnings.</p>
       <td>imports <small>type</small></td>
       <td><code>@eos/tool/src/pipeline</code></td>
       <td><code>zod</code></td>
-      <td>7</td>
+      <td>8</td>
     </tr>
   </tbody>
           </table>

@@ -26,10 +26,10 @@
           <div class="tags"><span>runtime</span></div>
         </div>
         <dl class="stat-grid">
-          <div><dt>Modules</dt><dd>17</dd></div>
-          <div><dt>Source</dt><dd>10</dd></div>
-          <div><dt>Tests</dt><dd>7</dd></div>
-          <div><dt>Symbols</dt><dd>85</dd></div>
+          <div><dt>Modules</dt><dd>12</dd></div>
+          <div><dt>Source</dt><dd>7</dd></div>
+          <div><dt>Tests</dt><dd>5</dd></div>
+          <div><dt>Symbols</dt><dd>73</dd></div>
         </dl>
       </section>
 
@@ -40,7 +40,7 @@
         </div>
         <div class="manifest-grid">
           <div><strong>exports</strong><ul><li><code>.</code></li></ul></div>
-          <div><strong>dependencies</strong><ul><li><code>@eos/contracts</code></li><li><code>@eos/llm-client</code></li></ul></div>
+          <div><strong>dependencies</strong><ul><li><code>@eos/agent-runtime</code></li><li><code>@eos/contracts</code></li><li><code>@eos/llm-client</code></li><li><code>@eos/notifications</code></li></ul></div>
           <div><strong>devDependencies</strong><p>none</p></div>
         </div>
       </section>
@@ -63,44 +63,37 @@
         <div class="tree-children">
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="../modules/eos-engine-src-background-session.html"><code>session.ts</code></a>
-        <small>source · 5 symbols</small>
+        <a href="../modules/eos-engine-src-background-background-session-supervisor.html"><code>background-session-supervisor.ts</code></a>
+        <small>source · 4 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
     <ul class="tree-symbols">
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-session.html#SessionRef"><code>SessionRef</code></a>
+          <a href="../modules/eos-engine-src-background-background-session-supervisor.html#BackgroundSessionEntry"><code>BackgroundSessionEntry</code></a>
           <span>interface</span>
-          <span class="compact-tags">public-api</span>
+          <span class="compact-tags">internal</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-session.html#SessionStatus"><code>SessionStatus</code></a>
-          <span>type</span>
-          <span class="compact-tags">public-api</span>
+          <a href="../modules/eos-engine-src-background-background-session-supervisor.html#backgroundSessionKey"><code>backgroundSessionKey</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-session.html#SessionOutcome"><code>SessionOutcome</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api</span>
+          <a href="../modules/eos-engine-src-background-background-session-supervisor.html#isBackgroundSessionRef"><code>isBackgroundSessionRef</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-session.html#SessionHandle"><code>SessionHandle</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api run-handle</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-session.html#SessionRow"><code>SessionRow</code></a>
-          <span>interface</span>
+          <a href="../modules/eos-engine-src-background-background-session-supervisor.html#BackgroundSessionSupervisor"><code>BackgroundSessionSupervisor</code></a>
+          <span>class</span>
           <span class="compact-tags">public-api</span>
         </li>
 
@@ -111,37 +104,44 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="../modules/eos-engine-src-background-supervisor.html"><code>supervisor.ts</code></a>
-        <small>source · 4 symbols</small>
+        <a href="../modules/eos-engine-src-background-background-session.html"><code>background-session.ts</code></a>
+        <small>source · 5 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
     <ul class="tree-symbols">
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-supervisor.html#SessionEntry"><code>SessionEntry</code></a>
+          <a href="../modules/eos-engine-src-background-background-session.html#BackgroundSessionRef"><code>BackgroundSessionRef</code></a>
           <span>interface</span>
-          <span class="compact-tags">internal</span>
+          <span class="compact-tags">public-api</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-supervisor.html#sessionKey"><code>sessionKey</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal</span>
+          <a href="../modules/eos-engine-src-background-background-session.html#BackgroundSessionStatus"><code>BackgroundSessionStatus</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-supervisor.html#isSessionRef"><code>isSessionRef</code></a>
-          <span>function</span>
-          <span class="compact-tags">internal</span>
+          <a href="../modules/eos-engine-src-background-background-session.html#BackgroundSessionOutcome"><code>BackgroundSessionOutcome</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-background-supervisor.html#BackgroundSupervisor"><code>BackgroundSupervisor</code></a>
-          <span>class</span>
+          <a href="../modules/eos-engine-src-background-background-session.html#BackgroundSessionHandle"><code>BackgroundSessionHandle</code></a>
+          <span>interface</span>
+          <span class="compact-tags">public-api run-handle</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-engine-src-background-background-session.html#BackgroundSessionRow"><code>BackgroundSessionRow</code></a>
+          <span>interface</span>
           <span class="compact-tags">public-api</span>
         </li>
 
@@ -154,11 +154,18 @@
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="../modules/eos-engine-src-agent-loop.html"><code>agent-loop.ts</code></a>
-        <small>source · 7 symbols</small>
+        <small>source · 9 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
     <ul class="tree-symbols">
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-engine-src-agent-loop.html#RUN_FINISHED_DISPOSE_REASON"><code>RUN_FINISHED_DISPOSE_REASON</code></a>
+          <span>const</span>
+          <span class="compact-tags">public-api</span>
+        </li>
+
 
         <li class="tree-symbol search-item">
           <a href="../modules/eos-engine-src-agent-loop.html#AgentLoopContext"><code>AgentLoopContext</code></a>
@@ -183,6 +190,13 @@
 
         <li class="tree-symbol search-item">
           <a href="../modules/eos-engine-src-agent-loop.html#normalizeBatch"><code>normalizeBatch</code></a>
+          <span>function</span>
+          <span class="compact-tags">internal</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-engine-src-agent-loop.html#publishHookContexts"><code>publishHookContexts</code></a>
           <span>function</span>
           <span class="compact-tags">internal</span>
         </li>
@@ -216,18 +230,11 @@
     <div class="tree-file search-item">
       <div class="tree-file-row">
         <a href="../modules/eos-engine-src-conversation.html"><code>conversation.ts</code></a>
-        <small>source · 4 symbols</small>
+        <small>source · 2 symbols</small>
       </div>
       <div class="tags"><span>source</span></div>
 
     <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-conversation.html#PartialReason"><code>PartialReason</code></a>
-          <span>type</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
 
         <li class="tree-symbol search-item">
           <a href="../modules/eos-engine-src-conversation.html#ToolResultBlock"><code>ToolResultBlock</code></a>
@@ -237,43 +244,9 @@
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-conversation.html#DisplayedMessage"><code>DisplayedMessage</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
           <a href="../modules/eos-engine-src-conversation.html#Conversation"><code>Conversation</code></a>
           <span>class</span>
           <span class="compact-tags">public-api</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
-        <a href="../modules/eos-engine-src-events.html"><code>events.ts</code></a>
-        <small>source · 2 symbols</small>
-      </div>
-      <div class="tags"><span>event</span><span>source</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-events.html#AgentEvent"><code>AgentEvent</code></a>
-          <span>type</span>
-          <span class="compact-tags">event public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-events.html#EventStream"><code>EventStream</code></a>
-          <span>class</span>
-          <span class="compact-tags">event public-api</span>
         </li>
 
     </ul>
@@ -308,88 +281,6 @@
           <a href="../modules/eos-engine-src-index.html#startAgentRun"><code>startAgentRun</code></a>
           <span>function</span>
           <span class="compact-tags">public-api</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
-        <a href="../modules/eos-engine-src-notification-inbox.html"><code>notification-inbox.ts</code></a>
-        <small>source · 3 symbols</small>
-      </div>
-      <div class="tags"><span>source</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-notification-inbox.html#InboxEntry"><code>InboxEntry</code></a>
-          <span>interface</span>
-          <span class="compact-tags">internal</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-notification-inbox.html#NotificationInbox"><code>NotificationInbox</code></a>
-          <span>class</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-notification-inbox.html#systemNotificationMessage"><code>systemNotificationMessage</code></a>
-          <span>function</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
-        <a href="../modules/eos-engine-src-run-handle.html"><code>run-handle.ts</code></a>
-        <small>source · 5 symbols</small>
-      </div>
-      <div class="tags"><span>source</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-run-handle.html#AgentRunFailure"><code>AgentRunFailure</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-run-handle.html#AgentRunStatus"><code>AgentRunStatus</code></a>
-          <span>type</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-run-handle.html#AgentRunOutcome"><code>AgentRunOutcome</code></a>
-          <span>type</span>
-          <span class="compact-tags">public-api</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-run-handle.html#AgentRunHandle"><code>AgentRunHandle</code></a>
-          <span>interface</span>
-          <span class="compact-tags">public-api run-handle</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-src-run-handle.html#RunHandle"><code>RunHandle</code></a>
-          <span>class</span>
-          <span class="compact-tags">public-api run-handle</span>
         </li>
 
     </ul>
@@ -494,29 +385,22 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="../modules/eos-engine-tests-background-supervisor-test.html"><code>background-supervisor.test.ts</code></a>
-        <small>test · 3 symbols</small>
+        <a href="../modules/eos-engine-tests-background-session-supervisor-test.html"><code>background-session-supervisor.test.ts</code></a>
+        <small>test · 2 symbols</small>
       </div>
       <div class="tags"><span>test</span><span>test-only</span></div>
 
     <ul class="tree-symbols">
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-background-supervisor-test.html#REF"><code>REF</code></a>
+          <a href="../modules/eos-engine-tests-background-session-supervisor-test.html#REF"><code>REF</code></a>
           <span>const</span>
           <span class="compact-tags">internal test-only</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-background-supervisor-test.html#SPAWNED_BY"><code>SPAWNED_BY</code></a>
-          <span>const</span>
-          <span class="compact-tags">internal test-only</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-background-supervisor-test.html#setup"><code>setup</code></a>
+          <a href="../modules/eos-engine-tests-background-session-supervisor-test.html#setup"><code>setup</code></a>
           <span>function</span>
           <span class="compact-tags">internal test-only</span>
         </li>
@@ -548,55 +432,8 @@
 
     <div class="tree-file search-item">
       <div class="tree-file-row">
-        <a href="../modules/eos-engine-tests-events-test.html"><code>events.test.ts</code></a>
-        <small>test · 2 symbols</small>
-      </div>
-      <div class="tags"><span>event</span><span>test</span><span>test-only</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-events-test.html#ping"><code>ping</code></a>
-          <span>function</span>
-          <span class="compact-tags">event internal test-only</span>
-        </li>
-
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-events-test.html#drain"><code>drain</code></a>
-          <span>function</span>
-          <span class="compact-tags">event internal test-only</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
-        <a href="../modules/eos-engine-tests-notification-inbox-test.html"><code>notification-inbox.test.ts</code></a>
-        <small>test · 1 symbols</small>
-      </div>
-      <div class="tags"><span>test</span><span>test-only</span></div>
-
-    <ul class="tree-symbols">
-
-        <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-notification-inbox-test.html#note"><code>note</code></a>
-          <span>const</span>
-          <span class="compact-tags">internal test-only</span>
-        </li>
-
-    </ul>
-
-    </div>
-
-
-    <div class="tree-file search-item">
-      <div class="tree-file-row">
         <a href="../modules/eos-engine-tests-support.html"><code>support.ts</code></a>
-        <small>test-support · 37 symbols</small>
+        <small>test-support · 39 symbols</small>
       </div>
       <div class="tags"><span>test-only</span><span>test-support</span></div>
 
@@ -764,14 +601,14 @@
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-support.html#TestSessionHandle"><code>TestSessionHandle</code></a>
+          <a href="../modules/eos-engine-tests-support.html#TestBackgroundSessionHandle"><code>TestBackgroundSessionHandle</code></a>
           <span>interface</span>
           <span class="compact-tags">public-api run-handle test-only</span>
         </li>
 
 
         <li class="tree-symbol search-item">
-          <a href="../modules/eos-engine-tests-support.html#sessionHandle"><code>sessionHandle</code></a>
+          <a href="../modules/eos-engine-tests-support.html#backgroundSessionHandle"><code>backgroundSessionHandle</code></a>
           <span>function</span>
           <span class="compact-tags">public-api run-handle test-only</span>
         </li>
@@ -800,6 +637,20 @@
 
         <li class="tree-symbol search-item">
           <a href="../modules/eos-engine-tests-support.html#tick"><code>tick</code></a>
+          <span>function</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-engine-tests-support.html#ObserverCall"><code>ObserverCall</code></a>
+          <span>type</span>
+          <span class="compact-tags">public-api test-only</span>
+        </li>
+
+
+        <li class="tree-symbol search-item">
+          <a href="../modules/eos-engine-tests-support.html#recordingObserver"><code>recordingObserver</code></a>
           <span>function</span>
           <span class="compact-tags">public-api test-only</span>
         </li>
@@ -889,79 +740,23 @@
       </section>
 
       <section class="panel">
-        <div class="panel-head"><h2>Relations</h2><span>116</span></div>
+        <div class="panel-head"><h2>Relations</h2><span>96</span></div>
         <div class="table-wrap relation-table">
           <table>
             <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
             <tbody>
     <tr class="search-item">
       <td>implements</td>
-      <td><code>@eos/engine/src/events#EventStream</code></td>
-      <td><code>AsyncIterable</code></td>
-      <td>56</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>implements</td>
-      <td><code>@eos/engine/src/run-handle#RunHandle</code></td>
-      <td><code>AgentRunHandle</code></td>
-      <td>64</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>implements</td>
       <td><code>@eos/engine/tests/support#MockLlmClient</code></td>
       <td><code>LlmClient</code></td>
-      <td>41</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
+      <td>45</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td>7</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/agent-loop</code></td>
-      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>8</td>
     </tr>
 
@@ -969,8 +764,40 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td>16</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
       <td><code>@eos/engine/src/turn</code></td>
-      <td>9</td>
+      <td>17</td>
     </tr>
 
 
@@ -983,31 +810,39 @@
 
 
     <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td><code>@eos/engine/src/background/session</code></td>
-      <td>7</td>
-    </tr>
-
-
-    <tr class="search-item">
       <td>imports</td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td><code>@eos/engine/src/background/background-session</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/conversation</code></td>
       <td><code>@eos/contracts</code></td>
       <td>1</td>
@@ -1015,26 +850,10 @@
 
 
     <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td>imports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td><code>@eos/llm-client</code></td>
-      <td>2</td>
     </tr>
 
 
@@ -1050,22 +869,6 @@
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
       <td><code>@eos/engine/src/agent-loop</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -1073,7 +876,7 @@
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
       <td>7</td>
     </tr>
 
@@ -1081,7 +884,7 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>8</td>
     </tr>
 
@@ -1104,120 +907,64 @@
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
-      <td><code>@eos/llm-client</code></td>
-      <td>2</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-executor</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/tool-executor</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/turn</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/turn</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>11</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/src/turn</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>12</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/src/turn</code></td>
-      <td><code>@eos/llm-client</code></td>
-      <td>2</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td>11</td>
+      <td><code>@eos/notifications</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
+      <td>15</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/src/turn</code></td>
+      <td><code>@eos/llm-client</code></td>
+      <td>2</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>7</td>
     </tr>
 
@@ -1225,8 +972,32 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td>12</td>
+      <td>15</td>
     </tr>
 
 
@@ -1234,53 +1005,61 @@
       <td>imports</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
       <td>6</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/notifications</code></td>
       <td>10</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>node:events</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>vitest</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>3</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td>8</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
     </tr>
@@ -1311,81 +1090,9 @@
 
 
     <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports</td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/background/session</code></td>
-      <td>21</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>22</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/events</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>23</td>
     </tr>
 
@@ -1393,16 +1100,32 @@
     <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td>25</td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>24</td>
+      <td><code>@eos/engine/src/background/background-session</code></td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td>29</td>
     </tr>
 
 
@@ -1415,6 +1138,14 @@
 
 
     <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>imports</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>vitest</code></td>
@@ -1423,17 +1154,17 @@
 
 
     <tr class="search-item">
-      <td>imports</td>
+      <td>imports <small>type</small></td>
       <td><code>@eos/engine/tests/turn.test</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>5</td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>imports <small>type</small></td>
+      <td>imports</td>
       <td><code>@eos/engine/tests/turn.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -1458,7 +1189,7 @@
       <td>imports</td>
       <td><code>@eos/engine/tests/turn.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>3</td>
+      <td>4</td>
     </tr>
 
 
@@ -1467,6 +1198,14 @@
       <td><code>@eos/engine/tests/turn.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>@eos/engine</code></td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td></td>
     </tr>
 
 
@@ -1487,25 +1226,41 @@
 
 
     <tr class="search-item">
+      <td>package-depends-on</td>
+      <td><code>@eos/engine</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td></td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/session</code></td>
-      <td>11</td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>20</td>
     </tr>
 
 
     <tr class="search-item">
       <td>reexports</td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>18</td>
+      <td><code>@eos/engine/src/agent-loop</code></td>
+      <td>11</td>
     </tr>
 
 
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
+      <td><code>@eos/engine/src/background/background-session</code></td>
+      <td>12</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>reexports</td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
       <td>19</td>
     </tr>
 
@@ -1513,63 +1268,15 @@
     <tr class="search-item">
       <td>reexports <small>type</small></td>
       <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>23</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports</td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>24</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/run-handle</code></td>
+      <td><code>@eos/engine/src/tool-executor</code></td>
       <td>28</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>reexports <small>type</small></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td><code>@eos/engine/src/tool-executor</code></td>
-      <td>33</td>
-    </tr>
-
-
-    <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td>11</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/agent-loop.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>7</td>
     </tr>
 
@@ -1577,8 +1284,32 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/contracts</code></td>
+      <td>5</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>9</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td>14</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td>12</td>
+      <td>15</td>
     </tr>
 
 
@@ -1586,7 +1317,23 @@
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>4</td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>10</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/agent-loop.test</code></td>
+      <td><code>node:events</code></td>
+      <td>1</td>
     </tr>
 
 
@@ -1594,45 +1341,37 @@
       <td>tests</td>
       <td><code>@eos/engine/tests/agent-loop.test</code></td>
       <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/contracts</code></td>
       <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>tests</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>5</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>tests</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>6</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td>10</td>
+      <td>8</td>
     </tr>
 
 
     <tr class="search-item">
       <td>tests</td>
-      <td><code>@eos/engine/tests/background-supervisor.test</code></td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/background-session-supervisor.test</code></td>
       <td><code>vitest</code></td>
       <td>1</td>
     </tr>
@@ -1663,81 +1402,9 @@
 
 
     <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td>4</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/events.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>5</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/notification-inbox.test</code></td>
-      <td><code>vitest</code></td>
-      <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests</td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/contracts</code></td>
-      <td>3</td>
-    </tr>
-
-
-    <tr class="search-item">
       <td>tests <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/background/session</code></td>
-      <td>21</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests <small>type</small></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/background/supervisor</code></td>
-      <td>22</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>tests <small>type</small></td>
-      <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/events</code></td>
+      <td><code>@eos/agent-runtime</code></td>
       <td>23</td>
     </tr>
 
@@ -1745,16 +1412,32 @@
     <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/index</code></td>
-      <td>25</td>
+      <td><code>@eos/contracts</code></td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
       <td>tests <small>type</small></td>
       <td><code>@eos/engine/tests/support</code></td>
-      <td><code>@eos/engine/src/notification-inbox</code></td>
-      <td>24</td>
+      <td><code>@eos/engine/src/background/background-session</code></td>
+      <td>21</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/background/background-session-supervisor</code></td>
+      <td>22</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>tests</td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/engine/src/index</code></td>
+      <td>29</td>
     </tr>
 
 
@@ -1767,6 +1450,14 @@
 
 
     <tr class="search-item">
+      <td>tests <small>type</small></td>
+      <td><code>@eos/engine/tests/support</code></td>
+      <td><code>@eos/notifications</code></td>
+      <td>24</td>
+    </tr>
+
+
+    <tr class="search-item">
       <td>tests</td>
       <td><code>@eos/engine/tests/support</code></td>
       <td><code>vitest</code></td>
@@ -1775,17 +1466,17 @@
 
 
     <tr class="search-item">
-      <td>tests</td>
+      <td>tests <small>type</small></td>
       <td><code>@eos/engine/tests/turn.test</code></td>
-      <td><code>@eos/engine/src/conversation</code></td>
-      <td>5</td>
+      <td><code>@eos/agent-runtime</code></td>
+      <td>3</td>
     </tr>
 
 
     <tr class="search-item">
-      <td>tests <small>type</small></td>
+      <td>tests</td>
       <td><code>@eos/engine/tests/turn.test</code></td>
-      <td><code>@eos/engine/src/events</code></td>
+      <td><code>@eos/engine/src/conversation</code></td>
       <td>6</td>
     </tr>
 
@@ -1810,7 +1501,7 @@
       <td>tests</td>
       <td><code>@eos/engine/tests/turn.test</code></td>
       <td><code>@eos/llm-client</code></td>
-      <td>3</td>
+      <td>4</td>
     </tr>
 
 

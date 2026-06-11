@@ -71,7 +71,7 @@ export interface TurnCompletedFacts {
   /** Shape axis; 0 means bare text. */
   tool_calls: number;
   /** Shape axis. */
-  live_sessions: number;
+  background_session_count: number;
   /** Shape axis. */
   has_pending_steers: boolean;
 }

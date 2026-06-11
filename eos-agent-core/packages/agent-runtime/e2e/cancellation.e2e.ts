@@ -311,7 +311,7 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
   );
 
   it(
-    "wakes a run parked on auto-wait with an interrupt and disposes its live session (E2E-45)",
+    "wakes a run parked on auto-wait with an interrupt and disposes its background session (E2E-45)",
     { timeout: 300_000 },
     async () => {
       const wait = waitTool();
@@ -349,9 +349,9 @@ describe.skipIf(!codex.available)("cancellation lifecycle over live codex (e2e)"
         ],
       });
       // Park observed as in E2E-09: a bare-text assistant turn while the
-      // session is live means the loop is in waitForWake, not on the wire.
+      // background session is running means the loop is in waitForWake, not on the wire.
       await until(
-        "the keeper to park on the live session",
+        "the keeper to park on the background session",
         () => {
           try {
             const assistants = readTranscriptLines(run.transcriptPath).filter(

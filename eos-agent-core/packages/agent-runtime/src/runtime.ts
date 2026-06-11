@@ -6,9 +6,8 @@ import {
   type Message,
 } from "@eos/contracts";
 import {
-  BackgroundSupervisor,
+  BackgroundSessionSupervisor,
   startAgentRun,
-  type AgentRunHandle,
 } from "@eos/engine";
 import {
   NotificationInbox,
@@ -42,6 +41,7 @@ import {
   loadLlmClientRegistry,
   type LlmClientRegistry,
 } from "./llm-client-registry.js";
+import type { AgentRunHandle } from "./agent-run-handle.js";
 import { loadNotificationRules } from "./notification-rules-config.js";
 import { RunRegistry, type RunSummary } from "./run-registry.js";
 import {
@@ -187,7 +187,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
 
     const runId = mintAgentRunId();
     const inbox = new NotificationInbox();
-    const supervisor = new BackgroundSupervisor(inbox);
+    const supervisor = new BackgroundSessionSupervisor(inbox);
     const runLog = new RunLog(ctx.dataDir, {
       run_id: runId,
       agent_name: profile.name,
@@ -232,8 +232,8 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
 
     // Both operator-script payload families carry the same projection:
     // hook payloads through the executor, trigger payloads at fire time.
-    const listSessions = (): BackgroundSessionSnapshot[] =>
-      supervisor.list().map(sessionSnapshot);
+    const listBackgroundSessions = (): BackgroundSessionSnapshot[] =>
+      supervisor.listBackgroundSessions().map(backgroundSessionSnapshot);
 
     // No inbox parameter (decision 11): hook context rides result metadata
     // and the engine publishes it; tools and the executor never see the inbox.
@@ -241,7 +241,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       runState,
       definitions,
       hookEngine: ctx.hookEngine,
-      hookPayloadFacts: () => ({ background_sessions: listSessions() }),
+      hookPayloadFacts: () => ({ background_sessions: listBackgroundSessions() }),
     });
 
     const observer = new NotificationTriggerEngine({
@@ -253,7 +253,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       ),
       runCommand: runTriggerCommand,
       inbox,
-      listSessions,
+      listBackgroundSessions,
       runSnapshot: () => snapshotRunState(runState),
       terminalTool: profile.terminal_tool,
     });
@@ -308,8 +308,8 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
   };
 }
 
-/** Explicit projection so a new `SessionRow` field never leaks into payloads. */
-function sessionSnapshot(row: {
+/** Explicit projection so a new `BackgroundSessionRow` field never leaks into payloads. */
+function backgroundSessionSnapshot(row: {
   type: string;
   id: string;
   status: BackgroundSessionSnapshot["status"];

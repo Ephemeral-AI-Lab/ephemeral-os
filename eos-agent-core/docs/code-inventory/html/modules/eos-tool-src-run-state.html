@@ -36,7 +36,7 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Imports</h2>
-          <span>2</span>
+          <span>1</span>
         </div>
         <div class="table-wrap">
           <table>
@@ -44,17 +44,9 @@
             <tbody>
     <tr class="search-item">
       <td><code>@eos/contracts</code></td>
-      <td>AgentKind, AgentRunId, SandboxId</td>
+      <td>AgentKind, AgentRunId, AgentRunSnapshot, SandboxId</td>
       <td>type</td>
       <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td><code>./contract.js</code></td>
-      <td>AgentRunSnapshot</td>
-      <td>type</td>
-      <td>3</td>
     </tr>
   </tbody>
           </table>
@@ -109,7 +101,7 @@
       <div class="symbol-head">
         <div>
           <strong>AgentRunState</strong>
-          <span>interface · line 13 · public</span>
+          <span>interface · line 16 · public</span>
         </div>
         <a href="../modules/eos-tool-src-run-state.html#AgentRunState">Module</a>
       </div>
@@ -152,6 +144,13 @@ frozen `AgentRunSnapshot` instead.</p>
 
 
             <tr>
+              <td><code>agent_name</code></td>
+              <td><code>string</code></td>
+              <td>readonly</td>
+            </tr>
+
+
+            <tr>
               <td><code>sandbox_id</code></td>
               <td><code>SandboxId</code></td>
               <td>readonly</td>
@@ -185,7 +184,7 @@ frozen `AgentRunSnapshot` instead.</p>
       <div class="symbol-head">
         <div>
           <strong>snapshotRunState</strong>
-          <span>function · line 28 · public</span>
+          <span>function · line 33 · public</span>
         </div>
         <a href="../modules/eos-tool-src-run-state.html#snapshotRunState">Module</a>
       </div>
@@ -214,14 +213,6 @@ so a mid-batch mode flip never leaks into queued siblings.</p>
       <td><code>@eos/tool/src/run-state</code></td>
       <td><code>@eos/contracts</code></td>
       <td>1</td>
-    </tr>
-
-
-    <tr class="search-item">
-      <td>imports <small>type</small></td>
-      <td><code>@eos/tool/src/run-state</code></td>
-      <td><code>@eos/tool/src/contract</code></td>
-      <td>3</td>
     </tr>
   </tbody>
           </table>

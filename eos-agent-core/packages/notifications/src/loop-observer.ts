@@ -1,7 +1,7 @@
 /**
  * Loop facts announced to the runtime after each committed assistant
  * turn; in-process camelCase. Two axes: the SHAPE of the turn that just
- * committed (`toolCalls`, `liveSessions`, `hasPendingSteers`) and the
+ * committed (`toolCalls`, `backgroundSessionCount`, `hasPendingSteers`) and the
  * run's BUDGET position (`turn`, `maxTurns`).
  */
 export interface TurnFacts {
@@ -12,7 +12,7 @@ export interface TurnFacts {
   /** Shape axis: `tool_use` blocks in this turn; 0 means bare text. */
   toolCalls: number;
   /** Shape axis: running background sessions at this boundary. */
-  liveSessions: number;
+  backgroundSessionCount: number;
   /** Shape axis: a user steer is already queued at this boundary. */
   hasPendingSteers: boolean;
 }

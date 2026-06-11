@@ -49,23 +49,24 @@ export function scriptedRunState(
 }
 
 /**
- * Structurally a `@eos/engine` `SessionOutcome`/`SessionHandle` pair
- * (testkit deliberately depends only on contracts + tool, so the shapes
- * are declared here and checked structurally at the registration site).
+ * Structurally a `@eos/engine` `BackgroundSessionOutcome` /
+ * `BackgroundSessionHandle` pair. Testkit deliberately depends only on
+ * contracts + tool, so the shapes are declared here and checked structurally
+ * at the registration site.
  */
-export interface ScriptedSessionOutcome {
+export interface ScriptedBackgroundSessionOutcome {
   status: "completed" | "failed" | "cancelled";
   summary: string;
 }
 
-export interface ScriptedSessionHandle {
+export interface ScriptedBackgroundSessionHandle {
   handle: {
-    settled: Promise<ScriptedSessionOutcome>;
+    settled: Promise<ScriptedBackgroundSessionOutcome>;
     cancel(reason: string): Promise<void>;
     describe?(): string;
   };
   /** Resolve the natural settlement. */
-  settle(outcome: ScriptedSessionOutcome): void;
+  settle(outcome: ScriptedBackgroundSessionOutcome): void;
   /** Reject `settled` (supervisor maps it to a failed session). */
   fail(error: Error): void;
   /** Reasons passed to `cancel`, in call order. */
@@ -73,10 +74,12 @@ export interface ScriptedSessionHandle {
 }
 
 /** A push-settled capability handle for supervisor and family suites. */
-export function scriptedSessionHandle(describe?: string): ScriptedSessionHandle {
-  let settle!: (outcome: ScriptedSessionOutcome) => void;
+export function scriptedBackgroundSessionHandle(
+  describe?: string,
+): ScriptedBackgroundSessionHandle {
+  let settle!: (outcome: ScriptedBackgroundSessionOutcome) => void;
   let fail!: (error: Error) => void;
-  const settled = new Promise<ScriptedSessionOutcome>((resolve, reject) => {
+  const settled = new Promise<ScriptedBackgroundSessionOutcome>((resolve, reject) => {
     settle = resolve;
     fail = reject;
   });

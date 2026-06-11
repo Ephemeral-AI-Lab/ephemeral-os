@@ -102,6 +102,9 @@ importers:
 
   packages/engine:
     dependencies:
+      '@eos/agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
       '@eos/contracts':
         specifier: workspace:*
         version: link:../contracts

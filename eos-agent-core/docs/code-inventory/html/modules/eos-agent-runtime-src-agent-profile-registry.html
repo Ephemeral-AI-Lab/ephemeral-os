@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@eos/agent-runtime/src/agent-profile-registry Code Inventory</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+  <script defer src="../assets/inventory-data.js"></script>
+  <script defer src="../assets/inventory.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html">eos-agent-core</a>
+    <nav>
+      <a href="../assets/inventory.json">JSON</a>
+      <a href="../assets/graph.json">Graph</a>
+    </nav>
+  </header>
+  <main>
+
+      <section class="page-head">
+        <div>
+          <p class="eyebrow"><a href="../index.html">Code Inventory</a> / <a href="../packages/eos-agent-runtime.html">@eos/agent-runtime</a></p>
+          <h1>@eos/agent-runtime/src/agent-profile-registry</h1>
+          <p class="lede">packages/agent-runtime/src/agent-profile-registry.ts</p>
+          <div class="tags"><span>source</span></div>
+        </div>
+        <dl class="stat-grid">
+          <div><dt>Symbols</dt><dd>5</dd></div>
+          <div><dt>Schemas</dt><dd>0</dd></div>
+          <div><dt>Types</dt><dd>0</dd></div>
+          <div><dt>Functions</dt><dd>3</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Imports</h2>
+          <span>4</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Source</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td><code>node:fs</code></td>
+      <td>readdirSync</td>
+      <td>value</td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>node:path</code></td>
+      <td>join</td>
+      <td>value</td>
+      <td>2</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>@eos/tool</code></td>
+      <td>ToolDefinition</td>
+      <td>type</td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td><code>./agent-profile-loader.js</code></td>
+      <td>loadAgentProfile, type AgentProfile</td>
+      <td>value</td>
+      <td>6</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Exports</h2>
+          <span>0</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Target</th><th>Names</th><th>Mode</th><th>Line</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Symbol Outline</h2>
+          <input class="search-input" type="search" placeholder="Filter symbols" aria-label="Filter symbols">
+        </div>
+        <div class="module-symbol-layout">
+
+    <nav class="symbol-outline">
+      <div class="tree-file-row">
+        <code>agent-profile-registry.ts</code>
+        <small>5 symbols</small>
+      </div>
+      <ul class="tree-symbols">
+
+          <li class="tree-symbol search-item">
+            <a href="#KnownToolNames"><code>KnownToolNames</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#AgentProfileRegistry"><code>AgentProfileRegistry</code></a>
+            <span>interface</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#loadAgentProfileRegistry"><code>loadAgentProfileRegistry</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#selectProfileDefinitions"><code>selectProfileDefinitions</code></a>
+            <span>function</span>
+            <span class="compact-tags">public-api</span>
+          </li>
+
+
+          <li class="tree-symbol search-item">
+            <a href="#validateToolSelection"><code>validateToolSelection</code></a>
+            <span>function</span>
+            <span class="compact-tags">internal</span>
+          </li>
+
+      </ul>
+    </nav>
+
+          <div class="symbol-stack">
+    <article id="KnownToolNames" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>KnownToolNames</strong>
+          <span>interface · line 13 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-agent-profile-registry.html#KnownToolNames">Module</a>
+      </div>
+      <pre><code>export interface KnownToolNames</code></pre>
+      <p>The static name universe profiles validate against: each runtime-owned
+tool family's exported name constant plus every `baseTools` definition
+name, split by terminality. No service is needed to know a name.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+    <h3>Fields</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>ordinary</code></td>
+              <td><code>ReadonlySet&lt;string&gt;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>terminal</code></td>
+              <td><code>ReadonlySet&lt;string&gt;</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+
+    </article>
+
+
+    <article id="AgentProfileRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>AgentProfileRegistry</strong>
+          <span>interface · line 18 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-agent-profile-registry.html#AgentProfileRegistry">Module</a>
+      </div>
+      <pre><code>export interface AgentProfileRegistry</code></pre>
+
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+    <h3>Methods</h3>
+
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>Name</th><th>Signature</th><th>Flags</th></tr></thead>
+        <tbody>
+
+            <tr>
+              <td><code>require</code></td>
+              <td><code>require(agentName: string): AgentProfile;</code></td>
+              <td></td>
+            </tr>
+
+
+            <tr>
+              <td><code>list</code></td>
+              <td><code>list(): readonly AgentProfile[];</code></td>
+              <td></td>
+            </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+
+
+    </article>
+
+
+    <article id="loadAgentProfileRegistry" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>loadAgentProfileRegistry</strong>
+          <span>function · line 31 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-agent-profile-registry.html#loadAgentProfileRegistry">Module</a>
+      </div>
+      <pre><code>export function loadAgentProfileRegistry( dir: string, known: KnownToolNames, ): AgentProfileRegistry</code></pre>
+      <p>Load `&lt;dir&gt;/*.md` once and perform ALL static validation at startup -
+schema, duplicate names, and the tool-selection rules - so `startRun`
+never re-validates a profile and never registers a run that validation
+could still reject.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="selectProfileDefinitions" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>selectProfileDefinitions</strong>
+          <span>function · line 73 · public</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-agent-profile-registry.html#selectProfileDefinitions">Module</a>
+      </div>
+      <pre><code>export function selectProfileDefinitions( profile: AgentProfile, available: readonly ToolDefinition[], ): ToolDefinition[]</code></pre>
+      <p>Tool selection has exactly one source (§2.8): keep `allowed_tools +
+terminal_tool` from the available definitions. The registry's startup
+validation makes this total per run.</p>
+      <div class="tags"><span>exported</span><span>public-api</span></div>
+
+
+
+
+    </article>
+
+
+    <article id="validateToolSelection" class="symbol-card search-item">
+      <div class="symbol-head">
+        <div>
+          <strong>validateToolSelection</strong>
+          <span>function · line 81 · internal</span>
+        </div>
+        <a href="../modules/eos-agent-runtime-src-agent-profile-registry.html#validateToolSelection">Module</a>
+      </div>
+      <pre><code>function validateToolSelection(profile: AgentProfile, known: KnownToolNames): void</code></pre>
+
+      <div class="tags"><span>internal</span></div>
+
+
+
+
+    </article>
+  </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Relations</h2></div>
+        <div class="table-wrap relation-table">
+          <table>
+            <thead><tr><th>Kind</th><th>From</th><th>To</th><th>Line</th></tr></thead>
+            <tbody>
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/agent-profile-registry</code></td>
+      <td><code>@eos/agent-runtime/src/agent-profile-loader</code></td>
+      <td>6</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports <small>type</small></td>
+      <td><code>@eos/agent-runtime/src/agent-profile-registry</code></td>
+      <td><code>@eos/tool</code></td>
+      <td>4</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/agent-profile-registry</code></td>
+      <td><code>node:fs</code></td>
+      <td>1</td>
+    </tr>
+
+
+    <tr class="search-item">
+      <td>imports</td>
+      <td><code>@eos/agent-runtime/src/agent-profile-registry</code></td>
+      <td><code>node:path</code></td>
+      <td>2</td>
+    </tr>
+  </tbody>
+          </table>
+        </div>
+      </section>
+
+  </main>
+</body>
+</html>

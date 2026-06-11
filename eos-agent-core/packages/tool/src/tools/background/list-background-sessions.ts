@@ -1,6 +1,6 @@
 import type { JsonObject } from "@eos/contracts";
-import type { BackgroundSupervisor } from "@eos/engine";
-import type { SessionRow } from "@eos/engine";
+import type { BackgroundSessionSupervisor } from "@eos/engine";
+import type { BackgroundSessionRow } from "@eos/engine";
 import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
@@ -8,7 +8,7 @@ import { defineTool } from "../../define.js";
 
 /** Rows for running plus settled-but-undelivered sessions. */
 export function listBackgroundSessionsTool(
-  supervisor: BackgroundSupervisor,
+  supervisor: BackgroundSessionSupervisor,
 ): ToolDefinition {
   return defineTool({
     name: "list_background_sessions",
@@ -17,12 +17,12 @@ export function listBackgroundSessionsTool(
     input: z.object({}),
     execute: () =>
       Promise.resolve({
-        content: supervisor.list().map(sessionRowContent),
+        content: supervisor.listBackgroundSessions().map(backgroundSessionRowContent),
       }),
   });
 }
 
-function sessionRowContent(row: SessionRow): JsonObject {
+function backgroundSessionRowContent(row: BackgroundSessionRow): JsonObject {
   return {
     type: row.type,
     id: row.id,

@@ -391,7 +391,7 @@ describe("agent runtime", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(
       rootClient.requests,
-      "the caller parks on the live session instead of spinning",
+      "the caller parks on the background session instead of spinning",
     ).toHaveLength(2);
 
     releaseHelper();
@@ -564,7 +564,7 @@ describe("agent runtime", () => {
     });
   });
 
-  it("cascades disposal: interrupting the caller cancels the live subagent as caller_disposed (§13.7)", async () => {
+  it("cascades disposal: interrupting the caller cancels the background subagent as caller_disposed (§13.7)", async () => {
     let helperStarted!: () => void;
     const started = new Promise<void>((resolve) => (helperStarted = resolve));
     const helperClient = new MockLlmClient([hangingTurn(helperStarted)]);

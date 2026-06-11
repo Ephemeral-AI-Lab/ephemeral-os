@@ -21,8 +21,8 @@ export interface NotificationTriggerEngineDeps {
   /** The spawn-backed `@eos/tool` runner in production; stubbed in unit tests. */
   runCommand: TriggerCommandRunner;
   inbox: NotificationInbox;
-  /** Session list at fire time, not park time (the runtime projects its supervisor). */
-  listSessions: () => readonly BackgroundSessionSnapshot[];
+  /** Background-session list at fire time, not park time. */
+  listBackgroundSessions: () => readonly BackgroundSessionSnapshot[];
   runSnapshot: () => AgentRunSnapshot;
   terminalTool: string;
 }
@@ -65,7 +65,7 @@ export class NotificationTriggerEngine implements LoopObserver {
         turn: facts.turn,
         max_turns: facts.maxTurns,
         tool_calls: facts.toolCalls,
-        live_sessions: facts.liveSessions,
+        background_session_count: facts.backgroundSessionCount,
         has_pending_steers: facts.hasPendingSteers,
       },
     });
@@ -117,7 +117,7 @@ export class NotificationTriggerEngine implements LoopObserver {
         ...occurrence,
         run: this.#deps.runSnapshot(),
         terminal_tool: this.#deps.terminalTool,
-        background_sessions: this.#deps.listSessions(),
+        background_sessions: this.#deps.listBackgroundSessions(),
       };
       runs = await Promise.all(
         commands.map((command) => this.#deps.runCommand(command, payload)),
