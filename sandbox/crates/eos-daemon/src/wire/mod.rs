@@ -12,7 +12,7 @@ pub use envelope::{
     decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
 };
 
-pub const DAEMON_PROTOCOL_VERSION: i64 = eos_operation::core::ops::PROTOCOL_VERSION;
+pub const DAEMON_PROTOCOL_VERSION: i64 = eos_operation::core::catalog::PROTOCOL_VERSION;
 pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
 pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
 pub const CONNECT_FAILED: i32 = 97;

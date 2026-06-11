@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use eos_operation::core::ops::{ServedBy, BUILTIN_OPS};
+use eos_operation::core::catalog::{ServedBy, BUILTIN_OPS};
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};

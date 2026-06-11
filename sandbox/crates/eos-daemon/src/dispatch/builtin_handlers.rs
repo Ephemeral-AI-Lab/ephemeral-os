@@ -1,6 +1,6 @@
 //! Built-in daemon op handler mapping.
 
-use eos_operation::core::ops::BuiltinOp;
+use eos_operation::core::catalog::BuiltinOp;
 
 use crate::dispatcher::Handler;
 use crate::op_adapter::{checkpoint, command, control, files, isolation, plugin, workspace_run};

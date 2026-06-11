@@ -1,4 +1,4 @@
-use crate::core::ops::{BuiltinOp, OpContract};
+use crate::core::catalog::{BuiltinOp, OpContract};
 
 pub const FAMILY_OPS: &[BuiltinOp] = &[BuiltinOp::PluginEnsure, BuiltinOp::PluginStatus];
 

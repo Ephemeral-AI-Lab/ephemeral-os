@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-pub mod ops;
+pub mod catalog;
 mod outcome;
 mod prepare;
 mod registry;

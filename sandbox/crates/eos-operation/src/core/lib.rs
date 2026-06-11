@@ -1,4 +1,4 @@
-pub mod ops;
+pub mod catalog;
 
 mod outcome;
 

@@ -28,7 +28,7 @@ pub mod wire;
 pub(crate) mod workspace_runtime;
 
 pub use context::DispatchContext;
-pub use dispatcher::OpTable;
+
 pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
 pub use runtime_services::RuntimeServices;

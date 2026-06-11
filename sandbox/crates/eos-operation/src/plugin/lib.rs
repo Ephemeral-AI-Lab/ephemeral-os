@@ -14,7 +14,7 @@
 mod callbacks;
 mod dispatch;
 pub mod ensure;
-pub mod ops;
+pub mod catalog;
 mod overlay;
 pub(crate) mod package;
 mod process;
