@@ -24,7 +24,7 @@ async fn cancel_heartbeat_and_count_track_background_task() -> TestResult {
     assert_eq!(registry.count_by_caller("caller-a"), 0);
 
     registry.deregister("bg-1");
-    assert_eq!(registry.metrics(), (0, 0));
+    assert!(!registry.contains("bg-1"));
     Ok(())
 }
 
@@ -53,7 +53,7 @@ async fn control_paths_recover_poisoned_registry_lock() -> TestResult {
     assert!(registry.cancel("bg-poisoned"));
     assert_task_cancelled(task).await?;
     registry.deregister("bg-poisoned");
-    assert_eq!(registry.metrics(), (0, 0));
+    assert!(!registry.contains("bg-poisoned"));
     Ok(())
 }
 
@@ -65,7 +65,7 @@ async fn ttl_sweep_reaps_active_background_task() -> TestResult {
 
     thread::sleep(Duration::from_millis(3));
     registry.ttl_sweep();
-    assert_eq!(registry.metrics(), (1, 1));
+    assert!(registry.contains("bg-ttl"));
     assert_eq!(registry.count_by_caller("caller-a"), 0);
 
     assert_task_cancelled(task).await?;

@@ -28,7 +28,7 @@ use rustix::mount::{
     FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
 };
 
-use crate::error::{OverlayError, Result};
+use crate::{OverlayError, Result};
 
 #[cfg(target_os = "linux")]
 const MAX_UNMOUNT_PEELS: usize = 64;
@@ -36,8 +36,7 @@ const MAX_UNMOUNT_PEELS: usize = 64;
 /// The inputs for one overlay mount.
 ///
 /// `layer_paths` is the leased lower stack in NEWEST-FIRST order (element 0 =
-/// highest-priority lower); `upperdir`/`workdir` are the writable side from
-/// [`crate::writable_dirs`].
+/// highest-priority lower); `upperdir`/`workdir` are the writable side.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayHandle {
     /// Writable upper directory.

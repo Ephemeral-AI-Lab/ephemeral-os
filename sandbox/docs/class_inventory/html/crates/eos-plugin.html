@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-framing-rs.html"><span>framing.rs</span><small>3/2</small></a></li><li><a class="file-link" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/4</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/4</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-plugin--src-wire-rs.html"><span>wire.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="error crates/eos-plugin/src/error.rs PluginError Result">
   <div class="module-head">
     <div>
@@ -63,7 +63,7 @@
     <span class="visibility">pub</span>
   </div>
   <code class="signature">pub enum <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a></code>
-  <p class="docstring">Failures surfaced by plugin contracts and the PPC channel.<br>The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`<br>/ `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum<br>reproduces those failure classes as a typed surface the daemon translates into<br>the wire error envelope. Concrete overlay/OCC failures are daemon-owned.</p>
+  <p class="docstring">Failures surfaced by plugin contracts and the PPC channel.<br>The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`<br>/ `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum<br>reproduces those failure classes as a typed surface the daemon translates into<br>the wire error response. Concrete overlay/OCC failures are daemon-owned.</p>
   <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Registration</td><td><code>0: String</code></td></tr><tr><td>Conflict</td><td><code>0: String</code></td></tr><tr><td>Ensure</td><td><code>0: String</code></td></tr><tr><td>Manifest</td><td><code>0: String</code></td></tr><tr><td>ProjectionStale</td><td><code>0: String</code></td></tr><tr><td>Ppc</td><td><code>0: String</code></td></tr><tr><td>ForbiddenInIsolatedWorkspace</td><td><code></code></td></tr></tbody></table>
 
@@ -87,7 +87,7 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-plugin/src/error.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Error type for plugin registration, manifests, service state, and PPC framing.</span>
+  <pre class="file-source"><code><span class="rs-comment">//! Error type for plugin registration, manifests, service state, and PPC wire messages.</span>
 
 <span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
 
@@ -96,7 +96,7 @@
 <span class="rs-comment">/// The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`</span>
 <span class="rs-comment">/// / `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum</span>
 <span class="rs-comment">/// reproduces those failure classes as a typed surface the daemon translates into</span>
-<span class="rs-comment">/// the wire error envelope. Concrete overlay/OCC failures are daemon-owned.</span>
+<span class="rs-comment">/// the wire error response. Concrete overlay/OCC failures are daemon-owned.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
 #[non_exhaustive]
 <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> {
@@ -123,7 +123,7 @@
     #[error(&quot;plugin projection stale: {0}&quot;)]
     <span class="rs-type">ProjectionStale</span>(<span class="rs-type">String</span>),
 
-    <span class="rs-comment">/// A PPC envelope could not be framed/parsed, or the service process reply</span>
+    <span class="rs-comment">/// A PPC message could not be encoded/parsed, or the service process reply</span>
     <span class="rs-comment">/// carried an unknown / unmatched message id.</span>
     #[error(&quot;ppc channel error: {0}&quot;)]
     <span class="rs-type">Ppc</span>(<span class="rs-type">String</span>),

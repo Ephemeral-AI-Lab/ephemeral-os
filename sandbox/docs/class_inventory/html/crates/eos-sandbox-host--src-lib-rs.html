@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>4</b><span>modules</span></div>
-  <div><b>62</b><span>items</span></div>
-  <div><b>68</b><span>fields</span></div>
-  <div><b>41</b><span>methods</span></div>
+  <div><b>59</b><span>items</span></div>
+  <div><b>69</b><span>fields</span></div>
+  <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/12</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>4/25</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/12</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-sandbox-host/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -64,38 +64,20 @@
     <h2>Source File</h2>
     <p class="path">crates/eos-sandbox-host/src/lib.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! Host-side sandbox engine: owns and reaches sandbox containers.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! # Dependency law (SPEC §2)</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! `eos-sandbox-gateway → eos-sandbox-host → (std + boring externals only)`. This crate</span>
-<span class="rs-comment">//! must NEVER depend on a workspace-internal crate: no compiled code is shared</span>
-<span class="rs-comment">//! across the host/box boundary. The wire vocabulary it speaks ([`protocol`])</span>
-<span class="rs-comment">//! is a deliberate host-side copy of the daemon protocol; drift is caught by the</span>
-<span class="rs-comment">//! conformance tests against `contract/fixtures/`, not by a shared crate.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! # What lives here</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! - [`protocol`] — host-side daemon envelope/client contract.</span>
-<span class="rs-comment">//! - [`host`] — fleet registry, endpoint cache, forwarding, and recovery.</span>
-<span class="rs-comment">//! - [`runtime`] — Docker-backed daemon container lifecycle.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! This crate must never parse op semantics beyond catalog metadata.</span>
-#![forbid(unsafe_code)]
+  <pre class="file-source"><code>#![forbid(unsafe_code)]
 
 <span class="rs-kw">mod</span> host;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> protocol;
 <span class="rs-kw">mod</span> runtime;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> host::{<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-419">ForwardError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-HostConfig-22">HostConfig</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxHost-65">SandboxHost</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxStatus-55">SandboxStatus</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> host::{<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-400">ForwardError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-HostConfig-20">HostConfig</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxHost-61">SandboxHost</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxStatus-52">SandboxStatus</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> protocol::<span class="rs-type">MAX_REQUEST_BYTES</span>;
 
-<span class="rs-comment">/// Explicit support surface for the live E2E harness.</span>
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> e2e_support {
-    <span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::protocol::{error_kind, is_success, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-46">ClientError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-89">ProtocolClient</a>};
+    <span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::protocol::{error_kind, is_success, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-enum-ClientError-16">ClientError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>};
     <span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::{
         container_label, docker_available, remove_labeled_containers, running_container_ids,
-        <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-enum-ContainerLifetime-17">ContainerLifetime</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-ContainerSpec-23">ContainerSpec</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonContainer-48">DaemonContainer</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-35">DaemonSpec</a>,
+        <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-enum-ContainerLifetime-14">ContainerLifetime</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-ContainerSpec-20">ContainerSpec</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonContainer-45">DaemonContainer</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>,
     };
 }
 </code></pre>

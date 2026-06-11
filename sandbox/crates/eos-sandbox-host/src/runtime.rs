@@ -307,7 +307,7 @@ fn await_ready(client: &ProtocolClient, budget: Duration) -> Result<()> {
     }
 }
 
-pub(crate) fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
+fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
     let mut rebuilt: Vec<String> = vec!["exec".to_owned()];
     let mut rest = argv.iter();
     for token in rest.by_ref() {
@@ -376,7 +376,9 @@ pub fn container_label(id: &str, label: &str) -> Result<String> {
     Ok(value)
 }
 
-pub fn container_labels(ids: &[String]) -> Result<Vec<serde_json::Map<String, serde_json::Value>>> {
+pub(crate) fn container_labels(
+    ids: &[String],
+) -> Result<Vec<serde_json::Map<String, serde_json::Value>>> {
     if ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -394,16 +396,11 @@ pub fn container_labels(ids: &[String]) -> Result<Vec<serde_json::Map<String, se
         .collect()
 }
 
-pub(crate) fn copy_file_into(
-    container: &str,
-    dest_dir: &str,
-    remote_name: &str,
-    source: &Path,
-) -> Result<()> {
+fn copy_file_into(container: &str, dest_dir: &str, remote_name: &str, source: &Path) -> Result<()> {
     copy_path_into(container, dest_dir, remote_name, source, 0o755)
 }
 
-pub(crate) fn copy_bytes_into(
+fn copy_bytes_into(
     container: &str,
     dest_dir: &str,
     remote_name: &str,
@@ -414,7 +411,7 @@ pub(crate) fn copy_bytes_into(
     copy_path_into(container, dest_dir, remote_name, upload.path(), mode)
 }
 
-pub(crate) fn path_str(path: &Path) -> Result<String> {
+fn path_str(path: &Path) -> Result<String> {
     path.to_str()
         .map(str::to_owned)
         .with_context(|| format!("container path is not UTF-8: {}", path.display()))
@@ -517,7 +514,7 @@ fn wait_for_published_addr(container: &str, container_port: u16) -> Result<Socke
     }
 }
 
-pub(crate) fn parse_published_addr(output: &str) -> Option<SocketAddr> {
+fn parse_published_addr(output: &str) -> Option<SocketAddr> {
     for line in output.lines() {
         let mapping = line.trim();
         let port = mapping.rsplit(':').next()?.trim();

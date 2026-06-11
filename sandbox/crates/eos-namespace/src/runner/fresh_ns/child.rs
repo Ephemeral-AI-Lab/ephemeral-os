@@ -7,8 +7,6 @@ use std::io::Read;
 #[cfg(target_os = "linux")]
 use std::os::fd::BorrowedFd;
 #[cfg(target_os = "linux")]
-use std::os::unix::process::ExitStatusExt;
-#[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
@@ -17,7 +15,7 @@ use std::time::{Duration, Instant};
 use rustix::process::{getpgrp, kill_process_group, Pid, Signal};
 
 #[cfg(target_os = "linux")]
-use crate::runner::error::RunnerError;
+use crate::runner::RunnerError;
 
 #[cfg(target_os = "linux")]
 const CHILD_WAIT_POLL: Duration = Duration::from_millis(5);
@@ -27,15 +25,10 @@ pub(super) fn wait_for_child(
     child: &mut std::process::Child,
     timeout_seconds: Option<f64>,
 ) -> Result<i32, RunnerError> {
-    let deadline = timeout_seconds
-        .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
-        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds));
+    let deadline = timeout_deadline(timeout_seconds);
     loop {
         if let Some(status) = child.try_wait().map_err(RunnerError::Child)? {
-            return Ok(status
-                .code()
-                .or_else(|| status.signal().map(|sig| -sig))
-                .unwrap_or(128));
+            return Ok(exit_code(status));
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
             let pid = Pid::from_child(child);
@@ -53,21 +46,14 @@ pub(super) fn wait_for_command_execution_scope(
     timeout_seconds: Option<f64>,
     proc_dir: Option<BorrowedFd>,
 ) -> Result<i32, RunnerError> {
-    let deadline = timeout_seconds
-        .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
-        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds));
+    let deadline = timeout_deadline(timeout_seconds);
     let pgid = getpgrp().as_raw_nonzero().get();
     let self_pid = i32::try_from(std::process::id()).unwrap_or(i32::MAX);
     let mut root_exit_code = None;
     loop {
         if root_exit_code.is_none() {
             if let Some(status) = child.try_wait().map_err(RunnerError::Child)? {
-                root_exit_code = Some(
-                    status
-                        .code()
-                        .or_else(|| status.signal().map(|sig| -sig))
-                        .unwrap_or(128),
-                );
+                root_exit_code = Some(exit_code(status));
             }
         }
         if root_exit_code.is_some()
@@ -84,6 +70,23 @@ pub(super) fn wait_for_command_execution_scope(
         }
         thread::sleep(CHILD_WAIT_POLL);
     }
+}
+
+#[cfg(target_os = "linux")]
+fn timeout_deadline(timeout_seconds: Option<f64>) -> Option<Instant> {
+    timeout_seconds
+        .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
+        .map(|seconds| Instant::now() + Duration::from_secs_f64(seconds))
+}
+
+#[cfg(target_os = "linux")]
+fn exit_code(status: std::process::ExitStatus) -> i32 {
+    use std::os::unix::process::ExitStatusExt;
+
+    status
+        .code()
+        .or_else(|| status.signal().map(|sig| -sig))
+        .unwrap_or(128)
 }
 
 /// True when a process other than the runner (`self_pid`) shares `pgid` and is

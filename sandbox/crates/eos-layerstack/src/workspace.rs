@@ -513,45 +513,28 @@ fn update_root_hash(digest: &mut Sha256, entry: &BaseEntry) {
 }
 
 fn record_inventory(timings: &mut BTreeMap<String, f64>, entries: &[BaseEntry]) {
-    timings.insert(
-        "workspace_base.inventory.files".to_owned(),
-        usize_to_f64_lossy(
-            entries
-                .iter()
-                .filter(|entry| matches!(entry, BaseEntry::File { .. }))
-                .count(),
+    let (mut files, mut dirs, mut symlinks, mut bytes) = (0usize, 0usize, 0usize, 0u64);
+    for entry in entries {
+        match entry {
+            BaseEntry::File { size, .. } => {
+                files += 1;
+                bytes += *size;
+            }
+            BaseEntry::Directory { .. } => dirs += 1,
+            BaseEntry::Symlink { .. } => symlinks += 1,
+        }
+    }
+    for (key, value) in [
+        ("workspace_base.inventory.files", usize_to_f64_lossy(files)),
+        ("workspace_base.inventory.dirs", usize_to_f64_lossy(dirs)),
+        (
+            "workspace_base.inventory.symlinks",
+            usize_to_f64_lossy(symlinks),
         ),
-    );
-    timings.insert(
-        "workspace_base.inventory.dirs".to_owned(),
-        usize_to_f64_lossy(
-            entries
-                .iter()
-                .filter(|entry| matches!(entry, BaseEntry::Directory { .. }))
-                .count(),
-        ),
-    );
-    timings.insert(
-        "workspace_base.inventory.symlinks".to_owned(),
-        usize_to_f64_lossy(
-            entries
-                .iter()
-                .filter(|entry| matches!(entry, BaseEntry::Symlink { .. }))
-                .count(),
-        ),
-    );
-    timings.insert(
-        "workspace_base.inventory.bytes".to_owned(),
-        u64_to_f64_lossy(
-            entries
-                .iter()
-                .map(|entry| match entry {
-                    BaseEntry::File { size, .. } => *size,
-                    _ => 0,
-                })
-                .sum::<u64>(),
-        ),
-    );
+        ("workspace_base.inventory.bytes", u64_to_f64_lossy(bytes)),
+    ] {
+        timings.insert(key.to_owned(), value);
+    }
 }
 
 fn usize_to_f64_lossy(value: usize) -> f64 {

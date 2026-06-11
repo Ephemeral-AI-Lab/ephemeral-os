@@ -1,55 +1,53 @@
-//! Namespace runner: the syscalls the kernel forces into a single-threaded caller.
+//! Per-tool namespace runner for fresh namespace and setns execution.
 //!
-//! The runner is the per-tool-call namespace child (`eosd ns-runner`). It relies
-//! on the crate-level invariant — single-threaded, syscall-only, NO tokio —
-//! because `unshare(CLONE_NEWUSER|…)` (fresh-ns mode) and `setns()` into a user
-//! namespace (setns mode) both require the calling process/thread to be the only
-//! thread in the process, or the syscall fails with `EINVAL`. Spawning this work
-//! inline in the multithreaded tokio daemon would break it; instead the daemon
-//! execs a dedicated single-threaded child whose body lives here.
-//!
-//! # Two modes
-//!
-//! 1. **Fresh-ns** ([`RunMode::FreshNs`]): `unshare(CLONE_NEWUSER|CLONE_NEWNS|…)` →
-//!    write `uid_map`/`gid_map` → mount the overlay through
-//!    [`eos_overlay::mount_overlay`] → spawn the tool → construct the result
-//!    JSON → cleanup. One tool call per fresh namespace.
-//! 2. **Setns** ([`RunMode::SetNs`]): per isolated call, `setns()` into the
-//!    ns-holder's pre-opened namespace FDs (`user`, then `mnt`, then `pid`, then
-//!    `net` — order is load-bearing) → `fork` → the child `execvp`s the command.
-//!
-//! # Process group / cancellation
-//!
-//! Both modes start the child in its own session/process group (via `setsid` /
-//! `process_group(0)`) so the daemon can `killpg` the whole group from
-//! outside — cancel kills the entire tree, not just the immediate child.
-//!
-//! # Build-time guarantee
-//!
-//! Linux-only syscall bodies are gated behind `#[cfg(target_os = "linux")]`; the
-//! non-Linux arms return [`RunnerError::Unsupported`] so the workspace stays green
-//! on the macOS dev host. Raw syscall sites carry focused `// SAFETY:` notes, and
-//! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline enforced.
-//!
-//! Internal deps: [`crate::protocol`] (the daemon↔runner wire DTOs [`RunRequest`] /
-//! [`RunResult`] and the verb [`Intent`](crate::protocol::Intent)); `eos-overlay`
-//! (kernel overlay mount and upper-dir capture primitives).
+//! The daemon execs this single-threaded child for namespace syscalls, then the
+//! runner spawns the requested tool in a cancellable process group.
 
 use crate::protocol::{RunMode, RunRequest, RunResult};
+#[cfg(target_os = "linux")]
+use std::ffi::CString;
+#[cfg(target_os = "linux")]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(target_os = "linux")]
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-pub mod error;
 mod fresh_ns;
-#[cfg(target_os = "linux")]
-mod mount_mask;
-#[cfg(target_os = "linux")]
-mod path;
 pub mod setns;
 
 pub mod config {
     pub use eos_config::configs::runner::*;
 }
 
-pub use error::RunnerError;
+/// Failures returned by the namespace runner.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum RunnerError {
+    #[error("namespace syscall failed")]
+    Syscall(#[source] std::io::Error),
+    #[error("invalid namespace runner request: {0}")]
+    InvalidRequest(String),
+    #[error("overlay mount failed")]
+    Overlay(#[source] eos_overlay::OverlayError),
+    #[error("child process failed")]
+    Child(#[source] std::io::Error),
+    #[error("tool call timed out")]
+    TimedOut,
+    #[error("namespace runner is only supported on linux")]
+    Unsupported,
+}
+
+impl From<std::io::Error> for RunnerError {
+    fn from(err: std::io::Error) -> Self {
+        Self::Syscall(err)
+    }
+}
+
+impl From<eos_overlay::OverlayError> for RunnerError {
+    fn from(err: eos_overlay::OverlayError) -> Self {
+        Self::Overlay(err)
+    }
+}
 
 /// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].
 ///
@@ -68,5 +66,48 @@ pub fn run(request: &RunRequest, config: &config::RunnerConfig) -> Result<RunRes
     match request.mode {
         RunMode::FreshNs => fresh_ns::run_fresh_ns(request, config),
         RunMode::SetNs => setns::run_setns(request),
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn mask_model_shell_paths(hidden_paths: &[PathBuf]) -> Result<(), RunnerError> {
+    for path in hidden_paths {
+        if path.exists() {
+            mask_with_empty_tmpfs(path)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn mask_with_empty_tmpfs(path: &Path) -> Result<(), RunnerError> {
+    if !path.is_dir() {
+        return Err(RunnerError::InvalidRequest(format!(
+            "masked path is not a directory: {}",
+            path.display()
+        )));
+    }
+    let target = CString::new(path.as_os_str().as_bytes()).map_err(|err| {
+        RunnerError::InvalidRequest(format!("masked path contains an interior nul byte: {err}"))
+    })?;
+    let tmpfs = CString::new("tmpfs").expect("static string has no nul");
+    let data = CString::new("size=4k,mode=000").expect("static string has no nul");
+    let flags = libc::MS_NOSUID | libc::MS_NODEV | libc::MS_NOEXEC | libc::MS_RDONLY;
+
+    // SAFETY: strings are NUL-terminated for the syscall, and the runner is in
+    // its dedicated mount namespace with CAP_SYS_ADMIN.
+    let rc = unsafe {
+        libc::mount(
+            tmpfs.as_ptr(),
+            target.as_ptr(),
+            tmpfs.as_ptr(),
+            flags,
+            data.as_ptr().cast(),
+        )
+    };
+    if rc == 0 {
+        Ok(())
+    } else {
+        Err(RunnerError::Syscall(std::io::Error::last_os_error()))
     }
 }

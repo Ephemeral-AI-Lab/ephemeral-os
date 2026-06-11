@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::request_args::{
-    optional_path, optional_u64, require_command_string, require_nonempty_string,
+    optional_path, optional_u64, require_command_string, require_nonempty_string, trimmed_string,
 };
 use crate::response::u64_to_f64_saturating;
 use crate::runtime::context::DispatchContext;
@@ -42,7 +42,7 @@ pub(crate) fn op_exec_command(
         },
     )
     .map_err(command_op_error)?;
-    let wire = command_response_to_wire(response);
+    let wire = response.to_wire_value();
     if wire
         .get("status")
         .and_then(Value::as_str)
@@ -60,27 +60,6 @@ fn exec_timeout_seconds(args: &Value, config: &crate::config::CommandSessionConf
             .or_else(|| optional_u64(args, "timeout_seconds"))
             .unwrap_or(config.default_timeout_s),
     )
-}
-
-pub(crate) fn op_command_write_stdin(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    command_session_write_stdin(args)
-}
-
-pub(crate) fn op_command_read_progress(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    command_session_read_progress(args)
-}
-
-pub(crate) fn op_command_cancel(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    command_session_cancel(args)
 }
 
 #[expect(
@@ -108,17 +87,15 @@ pub(crate) fn op_command_session_count(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
+    let caller_id = trimmed_string(args, "caller_id");
     let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
     Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
 }
 
-fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn command_session_write_stdin(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let request = WriteStdin {
         command_session_id: require_command_string(args, "command_session_id")?,
         chars: require_nonempty_string(args, "chars")?,
@@ -128,7 +105,10 @@ fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     command_session_response_to_wire(command_ops().write_stdin(request))
 }
 
-fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn command_session_read_progress(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let last_n_lines = optional_u64(args, "last_n_lines").unwrap_or(50);
     let request = ReadCommandProgress {
         command_session_id: require_command_string(args, "command_session_id")?,
@@ -139,7 +119,10 @@ fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
     command_session_response_to_wire(command_ops().read_command_progress(request))
 }
 
-fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn command_session_cancel(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,
     };
@@ -150,39 +133,21 @@ fn command_session_response_to_wire(
     response: Result<CommandResponse, CommandSessionError>,
 ) -> Result<Value, DaemonError> {
     match response {
-        Ok(response) => Ok(command_response_to_wire(response)),
+        Ok(response) => Ok(response.to_wire_value()),
         Err(CommandSessionError::NotFound(_)) => Ok(command_session_not_found()),
         Err(error) => Err(command_session_error(error)),
     }
 }
 
-fn command_result(
-    status: &str,
-    exit_code: Option<i64>,
-    stdout: &str,
-    stderr: &str,
-    command_session_id: Option<String>,
-) -> Value {
-    let mut response = json!({
-        "status": status,
-        "exit_code": exit_code,
-        "output": {
-            "stdout": stdout,
-            "stderr": stderr,
-        },
-    });
-    if let Some(command_session_id) = command_session_id {
-        response["command_session_id"] = json!(command_session_id);
-    }
-    response
-}
-
 fn command_session_not_found() -> Value {
-    command_result("error", None, "", "command_session_not_found", None)
-}
-
-fn command_response_to_wire(response: CommandResponse) -> Value {
-    response.to_wire_value()
+    json!({
+        "status": "error",
+        "exit_code": null,
+        "output": {
+            "stdout": "",
+            "stderr": "command_session_not_found",
+        },
+    })
 }
 
 fn strip_session_id(mut response: Value) -> Value {
@@ -219,15 +184,10 @@ fn collect_completed_request(args: &Value) -> CollectCompleted {
                 .map(str::to_owned)
                 .collect::<Vec<_>>()
         });
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|caller_id| !caller_id.is_empty())
-        .map(str::to_owned);
+    let caller_id = trimmed_string(args, "caller_id");
     CollectCompleted {
         command_session_ids,
-        caller_id,
+        caller_id: (!caller_id.is_empty()).then_some(caller_id),
     }
 }
 

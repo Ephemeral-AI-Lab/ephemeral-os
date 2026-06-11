@@ -1,6 +1,6 @@
 use std::os::fd::AsRawFd;
 
-use super::{Handshake, HandshakeState};
+use super::Handshake;
 use crate::holder::namespace::HeldNamespaces;
 use crate::holder::{NsHolderError, NS_UP, READY};
 
@@ -21,7 +21,6 @@ fn signal_ns_up_writes_readiness_token() -> TestResult {
     let mut buf = [0_u8; 16];
     let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf)?;
     assert_eq!(&buf[..read], NS_UP);
-    assert_eq!(handshake.state(), HandshakeState::NsUpSent);
     Ok(())
 }
 
@@ -38,7 +37,6 @@ fn await_net_ready_accepts_prefixed_line() -> TestResult {
 
     handshake.await_net_ready()?;
 
-    assert_eq!(handshake.state(), HandshakeState::NetReadyReceived);
     Ok(())
 }
 
@@ -77,6 +75,5 @@ fn finish_ready_writes_ready_token() -> TestResult {
     let mut buf = [0_u8; 16];
     let read = nix::unistd::read(readiness_read.as_raw_fd(), &mut buf)?;
     assert_eq!(&buf[..read], READY);
-    assert_eq!(handshake.state(), HandshakeState::Ready);
     Ok(())
 }

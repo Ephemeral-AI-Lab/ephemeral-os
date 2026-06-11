@@ -5,14 +5,12 @@ use std::collections::BTreeMap;
 #[cfg(target_os = "linux")]
 use std::fs;
 #[cfg(target_os = "linux")]
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 
 #[cfg(target_os = "linux")]
 use crate::protocol::RunRequest;
 #[cfg(target_os = "linux")]
-use crate::runner::error::RunnerError;
-#[cfg(target_os = "linux")]
-use crate::runner::path::normalize_lexical;
+use crate::runner::RunnerError;
 
 #[cfg(target_os = "linux")]
 pub(super) fn plugin_service_argv(request: &RunRequest) -> Result<Vec<String>, RunnerError> {
@@ -105,6 +103,21 @@ pub(super) fn shell_cwd(request: &RunRequest) -> Result<PathBuf, RunnerError> {
     }
     fs::create_dir_all(&resolved).map_err(RunnerError::Child)?;
     Ok(resolved)
+}
+
+#[cfg(target_os = "linux")]
+fn normalize_lexical(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    normalized
 }
 
 #[cfg(target_os = "linux")]

@@ -1,10 +1,5 @@
 #![forbid(unsafe_code)]
 
-#[cfg(test)]
-use base64 as _;
-#[cfg(test)]
-use proptest as _;
-
 mod commit;
 mod error;
 pub(crate) mod fs;

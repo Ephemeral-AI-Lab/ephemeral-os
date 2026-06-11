@@ -34,7 +34,7 @@ pub enum ClientError {
 }
 
 impl ClientError {
-    pub const fn is_connect_failure(&self) -> bool {
+    pub(crate) const fn is_connect_failure(&self) -> bool {
         matches!(self, Self::Connect { .. })
     }
 }
@@ -62,7 +62,7 @@ impl ProtocolClient {
             timeout: self.timeout,
         }
     }
-    pub const fn addr(&self) -> SocketAddr {
+    pub(crate) const fn addr(&self) -> SocketAddr {
         self.addr
     }
 
@@ -77,7 +77,7 @@ impl ProtocolClient {
         self.request_raw(&line)
     }
 
-    pub fn request_unstamped(
+    pub(crate) fn request_unstamped(
         &self,
         op: &str,
         invocation_id: &str,

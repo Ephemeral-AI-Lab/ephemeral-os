@@ -1,138 +1,16 @@
-//! Policy-blind path changes captured from a snapshot overlay, plus the
-//! ONE-WAY conversion into `eos_layerstack::LayerChange`.
+//! Layer changes captured from a snapshot overlay.
 //!
-//! This conversion lives HERE (occ depends on it one-way; overlay has NO occ
-//! dep — the `occ → overlay` edge stays acyclic). The capture half walks ONLY
-//! the overlay `upperdir`: capture + publish is one atomic unit per op, so a
-//! consumer never observes a partial write set. Other agents never see a
-//! half-captured upperdir.
+//! Capture walks ONLY the overlay `upperdir`: capture + publish is one atomic
+//! unit per op, so a consumer never observes a partial write set. Other agents
+//! never see a half-captured upperdir.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use eos_layerstack::{LayerChange, LayerPath};
-use sha2::{Digest, Sha256};
-
-use crate::error::{OverlayError, Result};
+use crate::{LayerChange, LayerPath, OverlayError, Result};
 
 const WHITEOUT_PREFIX: &str = ".wh.";
 const OPAQUE_MARKER: &str = ".wh..wh..opq";
-
-/// The kind of a captured overlay path change.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum OverlayPathChangeKind {
-    /// File content write; `content_path` + `final_hash` required.
-    Write,
-    /// File/dir removal (overlay whiteout).
-    Delete,
-    /// Symlink; `content_path` (link target capture) + `final_hash` required.
-    Symlink,
-    /// Opaque-directory marker (root path allowed).
-    OpaqueDir,
-}
-
-/// A single change captured from the overlay upperdir.
-///
-/// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`
-/// carry a staged `content_path` + `final_hash`, the others carry neither.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct OverlayPathChange {
-    /// Normalized relative layer path (root `""` allowed only for `opaque_dir`).
-    pub path: String,
-    /// The change kind.
-    pub kind: OverlayPathChangeKind,
-    /// Staged content path on disk (`write`/`symlink` only).
-    pub content_path: Option<String>,
-    /// `sha256` hex of the staged content (`write`/`symlink` only).
-    pub final_hash: Option<String>,
-}
-
-impl OverlayPathChange {
-    /// Validate-and-construct: normalize the path (root allowed only for
-    /// `opaque_dir`), require
-    /// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OverlayError::InvalidPathChange`] when path normalization or
-    /// per-kind payload validation fails.
-    pub fn new(
-        path: &str,
-        kind: OverlayPathChangeKind,
-        content_path: Option<String>,
-        final_hash: Option<String>,
-    ) -> Result<Self> {
-        let path = normalize_overlay_path(path, kind == OverlayPathChangeKind::OpaqueDir)?;
-        match kind {
-            OverlayPathChangeKind::Write | OverlayPathChangeKind::Symlink => {
-                if content_path.as_deref().unwrap_or_default().is_empty() {
-                    return Err(OverlayError::InvalidPathChange(format!(
-                        "{kind:?} changes require content_path"
-                    )));
-                }
-                if final_hash.as_deref().unwrap_or_default().is_empty() {
-                    return Err(OverlayError::InvalidPathChange(format!(
-                        "{kind:?} changes require final_hash"
-                    )));
-                }
-            }
-            OverlayPathChangeKind::Delete | OverlayPathChangeKind::OpaqueDir => {
-                if content_path.is_some() {
-                    return Err(OverlayError::InvalidPathChange(format!(
-                        "{kind:?} changes must not carry content_path"
-                    )));
-                }
-                if final_hash.is_some() {
-                    return Err(OverlayError::InvalidPathChange(format!(
-                        "{kind:?} changes must not carry final_hash"
-                    )));
-                }
-            }
-        }
-        Ok(Self {
-            path,
-            kind,
-            content_path,
-            final_hash,
-        })
-    }
-
-    /// Convert this overlay-side change into the storage-level
-    /// `eos_layerstack::LayerChange`. ONE-WAY: occ consumes this; overlay never
-    /// imports occ. `write` threads the precomputed `content_path`/`final_hash`;
-    /// `symlink` reads the link target (`os.readlink`).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`OverlayError`] when the captured path is invalid or when staged
-    /// content/link-target reads fail.
-    pub fn into_layer_change(self) -> Result<LayerChange> {
-        let path = LayerPath::parse(&self.path)?;
-        match self.kind {
-            OverlayPathChangeKind::Write => {
-                let content_path = self.content_path.ok_or_else(|| {
-                    OverlayError::InvalidPathChange("write changes require content_path".to_owned())
-                })?;
-                let content = std::fs::read(content_path).map_err(OverlayError::Capture)?;
-                Ok(LayerChange::Write { path, content })
-            }
-            OverlayPathChangeKind::Delete => Ok(LayerChange::Delete { path }),
-            OverlayPathChangeKind::Symlink => {
-                let content_path = self.content_path.ok_or_else(|| {
-                    OverlayError::InvalidPathChange(
-                        "symlink changes require content_path".to_owned(),
-                    )
-                })?;
-                let source_path = std::fs::read_link(content_path)
-                    .map_err(OverlayError::Capture)?
-                    .to_string_lossy()
-                    .into_owned();
-                Ok(LayerChange::Symlink { path, source_path })
-            }
-            OverlayPathChangeKind::OpaqueDir => Ok(LayerChange::OpaqueDir { path }),
-        }
-    }
-}
 
 /// Walk the overlay `upperdir` and capture the full write set.
 ///
@@ -144,23 +22,20 @@ impl OverlayPathChange {
 /// # Errors
 ///
 /// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr
-/// probing, hashing, or staged content conversion fails.
+/// probing, or content/link-target reads fail.
 pub fn capture_upperdir(upperdir: &Path) -> Result<Vec<LayerChange>> {
     std::fs::create_dir_all(upperdir).map_err(OverlayError::Capture)?;
     let mut emitted_opaque_dirs = HashSet::new();
     let mut changes = Vec::new();
     walk_upperdir(upperdir, upperdir, &mut emitted_opaque_dirs, &mut changes)?;
-    changes
-        .into_iter()
-        .map(OverlayPathChange::into_layer_change)
-        .collect()
+    Ok(changes)
 }
 
 fn walk_upperdir(
     root: &Path,
     dir: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
-    changes: &mut Vec<OverlayPathChange>,
+    changes: &mut Vec<LayerChange>,
 ) -> Result<()> {
     let mut entries = std::fs::read_dir(dir)
         .map_err(OverlayError::Capture)?
@@ -185,14 +60,7 @@ fn walk_upperdir(
     for entry in &dirs {
         if has_overlay_opaque_xattr(entry) {
             let opaque_path = relative_overlay_path(root, entry)?;
-            if emitted_opaque_dirs.insert(opaque_path.clone()) {
-                changes.push(OverlayPathChange::new(
-                    &opaque_path,
-                    OverlayPathChangeKind::OpaqueDir,
-                    None,
-                    None,
-                )?);
-            }
+            push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         }
     }
     for entry in dirs {
@@ -205,7 +73,7 @@ fn capture_file_entry(
     root: &Path,
     entry: &Path,
     emitted_opaque_dirs: &mut HashSet<String>,
-    changes: &mut Vec<OverlayPathChange>,
+    changes: &mut Vec<LayerChange>,
 ) -> Result<()> {
     let rel = relative_path(root, entry)?;
     let name = entry
@@ -214,72 +82,65 @@ fn capture_file_entry(
         .unwrap_or_default();
     if name == OPAQUE_MARKER {
         let opaque_path = rel.parent().map(relative_to_string).unwrap_or_default();
-        if emitted_opaque_dirs.insert(opaque_path.clone()) {
-            changes.push(OverlayPathChange::new(
-                &opaque_path,
-                OverlayPathChangeKind::OpaqueDir,
-                None,
-                None,
-            )?);
-        }
+        push_opaque_dir(opaque_path, emitted_opaque_dirs, changes)?;
         return Ok(());
     }
     if is_whiteout_marker(name) {
         let target = whiteout_target(&rel);
-        changes.push(OverlayPathChange::new(
-            &relative_to_string(&target),
-            OverlayPathChangeKind::Delete,
-            None,
-            None,
-        )?);
+        changes.push(delete_change(&relative_to_string(&target))?);
         return Ok(());
     }
     if is_overlay_whiteout(entry)? {
-        changes.push(OverlayPathChange::new(
-            &relative_to_string(&rel),
-            OverlayPathChangeKind::Delete,
-            None,
-            None,
-        )?);
+        changes.push(delete_change(&relative_to_string(&rel))?);
         return Ok(());
     }
     let meta = std::fs::symlink_metadata(entry).map_err(OverlayError::Capture)?;
     if meta.file_type().is_symlink() {
-        changes.push(content_change(
-            OverlayPathChangeKind::Symlink,
-            &relative_to_string(&rel),
-            entry,
-        )?);
+        changes.push(symlink_change(&relative_to_string(&rel), entry)?);
     } else if meta.is_file() {
-        changes.push(content_change(
-            OverlayPathChangeKind::Write,
-            &relative_to_string(&rel),
-            entry,
-        )?);
+        changes.push(write_change(&relative_to_string(&rel), entry)?);
     }
     Ok(())
 }
 
-fn content_change(
-    kind: OverlayPathChangeKind,
-    path: &str,
-    entry: &Path,
-) -> Result<OverlayPathChange> {
-    OverlayPathChange::new(
-        path,
-        kind,
-        Some(entry.to_string_lossy().into_owned()),
-        Some(content_hash(entry, kind == OverlayPathChangeKind::Symlink)?),
-    )
+fn push_opaque_dir(
+    path: String,
+    emitted_opaque_dirs: &mut HashSet<String>,
+    changes: &mut Vec<LayerChange>,
+) -> Result<()> {
+    if emitted_opaque_dirs.insert(path.clone()) {
+        changes.push(LayerChange::OpaqueDir {
+            path: layer_path(&path)?,
+        });
+    }
+    Ok(())
 }
 
-fn normalize_overlay_path(path: &str, allow_root: bool) -> Result<String> {
-    let raw = path.replace('\\', "/");
-    let raw = raw.trim();
-    if allow_root && (raw.is_empty() || raw == ".") {
-        return Ok(String::new());
-    }
-    Ok(LayerPath::parse(raw)?.as_str().to_owned())
+fn delete_change(path: &str) -> Result<LayerChange> {
+    Ok(LayerChange::Delete {
+        path: layer_path(path)?,
+    })
+}
+
+fn write_change(path: &str, entry: &Path) -> Result<LayerChange> {
+    Ok(LayerChange::Write {
+        path: layer_path(path)?,
+        content: std::fs::read(entry).map_err(OverlayError::Capture)?,
+    })
+}
+
+fn symlink_change(path: &str, entry: &Path) -> Result<LayerChange> {
+    Ok(LayerChange::Symlink {
+        path: layer_path(path)?,
+        source_path: std::fs::read_link(entry)
+            .map_err(OverlayError::Capture)?
+            .to_string_lossy()
+            .into_owned(),
+    })
+}
+
+fn layer_path(path: &str) -> Result<LayerPath> {
+    LayerPath::parse(path).map_err(OverlayError::Path)
 }
 
 fn relative_path(root: &Path, entry: &Path) -> Result<PathBuf> {
@@ -333,21 +194,6 @@ fn is_overlay_whiteout(entry: &Path) -> Result<bool> {
 fn has_overlay_opaque_xattr(entry: &Path) -> bool {
     matches!(xattr_value(entry, "trusted.overlay.opaque"), Ok(Some(value)) if value == b"y")
         || matches!(xattr_value(entry, "user.overlay.opaque"), Ok(Some(value)) if value == b"y")
-}
-
-fn content_hash(path: &Path, symlink: bool) -> Result<String> {
-    let data = if symlink {
-        std::fs::read_link(path)
-            .map_err(OverlayError::Capture)?
-            .to_string_lossy()
-            .into_owned()
-            .into_bytes()
-    } else {
-        std::fs::read(path).map_err(OverlayError::Capture)?
-    };
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    Ok(format!("{:x}", hasher.finalize()))
 }
 
 #[cfg(target_os = "linux")]

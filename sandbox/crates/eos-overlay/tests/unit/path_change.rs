@@ -6,25 +6,6 @@ use super::*;
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
-fn validates_overlay_path_change_fields() {
-    assert!(OverlayPathChange::new(
-        "a.txt",
-        OverlayPathChangeKind::Write,
-        Some("/tmp/a".to_owned()),
-        Some("hash".to_owned()),
-    )
-    .is_ok());
-    assert!(OverlayPathChange::new("a.txt", OverlayPathChangeKind::Write, None, None).is_err());
-    assert!(OverlayPathChange::new(
-        "a.txt",
-        OverlayPathChangeKind::Delete,
-        Some("/tmp/a".to_owned()),
-        None,
-    )
-    .is_err());
-}
-
-#[test]
 fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers() -> TestResult {
     let fixture = Fixture::new("capture_upperdir")?;
     std::fs::create_dir_all(fixture.base.join("dir"))?;

@@ -6,7 +6,7 @@
 //! [`crate::wire::ErrorKind`]. There is NO `ping` op — liveness is
 //! `api.v1.heartbeat`, readiness is `api.runtime.ready`.
 //!
-//! Built-in handlers are described in [`crate::dispatch::registry`]. Dynamic plugin
+//! Built-in handlers are mapped from the wire op catalog below. Dynamic plugin
 //! handlers are intentionally deferred: after a built-in miss, the dispatcher
 //! asks the plugin service registry whether the op was installed at runtime.
 
@@ -17,13 +17,13 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
+use crate::wire::ops::{BuiltinDaemonOp, BUILTIN_DAEMON_OP_SPECS};
 use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
 
-use super::registry::BUILTIN_OPS;
 use crate::error::DaemonError;
-use crate::ops::plugin;
+use crate::ops::{cancel, checkpoint, command, control, files, isolation, plugin};
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};
 use crate::runtime::context::DispatchContext;
@@ -50,8 +50,8 @@ impl OpTable {
     /// `ping`). Every op is registered under its canonical `sandbox.*` name.
     pub fn with_builtins() -> Self {
         let mut table = Self::default();
-        for op in BUILTIN_OPS {
-            table.register_builtin(op.spec.name, op.handler);
+        for spec in BUILTIN_DAEMON_OP_SPECS {
+            table.register_builtin(spec.name, builtin_handler(spec.op));
         }
         table
     }
@@ -130,6 +130,41 @@ impl OpTable {
             Ok(response) => response,
             Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
         })
+    }
+}
+
+const fn builtin_handler(op: BuiltinDaemonOp) -> Handler {
+    match op {
+        BuiltinDaemonOp::RuntimeReady => control::op_runtime_ready,
+        BuiltinDaemonOp::InvocationHeartbeat => control::op_heartbeat,
+        BuiltinDaemonOp::InvocationCancel => control::op_cancel,
+        BuiltinDaemonOp::InflightCount => control::op_inflight_count,
+        BuiltinDaemonOp::LayerMetrics => checkpoint::layer_metrics,
+        BuiltinDaemonOp::EnsureWorkspaceBase => checkpoint::ensure_workspace_base,
+        BuiltinDaemonOp::BuildWorkspaceBase => checkpoint::build_workspace_base,
+        BuiltinDaemonOp::CommitToWorkspace => checkpoint::commit_to_workspace,
+        BuiltinDaemonOp::CommitToGit => checkpoint::commit_to_git,
+        BuiltinDaemonOp::WorkspaceBinding => checkpoint::workspace_binding,
+        BuiltinDaemonOp::ReadFile => files::op_read_file,
+        BuiltinDaemonOp::WriteFile => files::op_write_file,
+        BuiltinDaemonOp::EditFile => files::op_edit_file,
+        BuiltinDaemonOp::PluginEnsure => plugin::op_ensure,
+        BuiltinDaemonOp::PluginStatus => plugin::op_status,
+        BuiltinDaemonOp::IsolatedWorkspaceEnter => isolation::op_enter,
+        BuiltinDaemonOp::IsolatedWorkspaceExit => isolation::op_exit,
+        BuiltinDaemonOp::IsolatedWorkspaceStatus => isolation::op_status,
+        BuiltinDaemonOp::IsolatedWorkspaceListOpen => isolation::op_list_open,
+        BuiltinDaemonOp::IsolatedWorkspaceTestReset => isolation::op_test_reset,
+        BuiltinDaemonOp::ExecCommand => command::op_exec_command,
+        BuiltinDaemonOp::WriteStdin => command::command_session_write_stdin,
+        BuiltinDaemonOp::CommandReadProgress => command::command_session_read_progress,
+        BuiltinDaemonOp::CommandCancel => command::command_session_cancel,
+        BuiltinDaemonOp::CommandCollectCompleted => command::op_command_collect_completed,
+        BuiltinDaemonOp::CommandSessionCount => command::op_command_session_count,
+        BuiltinDaemonOp::CancelWorkspaceRunsByCaller => {
+            cancel::op_cancel_workspace_runs_by_caller_id
+        }
+        BuiltinDaemonOp::CancelWorkspaceRuns => cancel::op_cancel_workspace_runs,
     }
 }
 

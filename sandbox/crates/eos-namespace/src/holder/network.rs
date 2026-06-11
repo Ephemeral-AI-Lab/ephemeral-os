@@ -36,12 +36,7 @@ pub(crate) fn parse_network_config(buf: &[u8]) -> Option<NetworkConfig> {
     })
 }
 
-/// Disable IPv6 router-advertisement acceptance on every interface, shell-free.
-///
-/// Replaces `sysctl -w net.ipv6.conf.{iface}.accept_ra=0` with a write of `"0"`
-/// to `/proc/sys/net/ipv6/conf/{iface}/accept_ra`, iterating
-/// [`IPV6_CONF_ROOT`] (falling back to [`FALLBACK_IPV6_CONF_INTERFACES`]).
-/// Best-effort per iface.
+/// Disable IPv6 router-advertisement acceptance on every interface.
 pub(crate) fn disable_ipv6_ra() {
     let mut interfaces = Vec::new();
     if let Ok(entries) = fs::read_dir(IPV6_CONF_ROOT) {
@@ -67,52 +62,19 @@ pub(crate) fn disable_ipv6_ra() {
     }
 }
 
-/// Bring loopback up through rtnetlink, shell-free.
-///
-/// Replaces `ip link set lo up` with `RTM_NEWLINK` so holder readiness does not
-/// depend on `ip(8)` being present inside the image. Best-effort.
+/// Bring loopback up through rtnetlink.
 #[cfg(target_os = "linux")]
 pub(crate) fn bring_loopback_up() {
-    let Ok(lo) = CString::new("lo") else {
-        return;
-    };
-    // SAFETY: `lo` is a valid NUL-terminated C string and `if_nametoindex`
-    // does not retain the pointer after returning.
-    let index = unsafe { libc::if_nametoindex(lo.as_ptr()) };
-    if index == 0 {
-        return;
+    let index = link_index("lo");
+    if index != 0 {
+        set_link_up(index);
     }
-    let Some(ifi_family) = libc_c_int_to_u8(libc::AF_UNSPEC) else {
-        return;
-    };
-    let Ok(ifi_index) = i32::try_from(index) else {
-        return;
-    };
-    let Some(iff_up) = libc_c_int_to_u32(libc::IFF_UP) else {
-        return;
-    };
-    let msg = IfInfoMsg {
-        ifi_family,
-        ifi_pad: 0,
-        ifi_type: 0,
-        ifi_index,
-        ifi_flags: iff_up,
-        ifi_change: iff_up,
-    };
-    let Some(flags) = netlink_request_flags() else {
-        return;
-    };
-    let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
 }
 
 #[cfg(not(target_os = "linux"))]
 pub(crate) const fn bring_loopback_up() {}
 
 /// Configure the namespace-side veth after the daemon moved it into this netns.
-///
-/// The daemon owns veth creation and host-side bridge attachment. The holder is
-/// already in the target netns, so it configures the peer's link state, address,
-/// and default route without `nsenter(1)` or `ip(8)`. Best-effort.
 #[cfg(target_os = "linux")]
 pub(crate) fn configure_namespace_veth(config: &NetworkConfig) {
     let index = link_index(&config.iface);
@@ -210,11 +172,7 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
     let _ = send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs);
 }
 
-/// Flush the IPv6 default route via rtnetlink, shell-free.
-///
-/// Replaces `ip -6 route flush default` with a netlink `RTM_DELROUTE` (or
-/// dump+delete) so no bridge-side RA can repopulate a v6 default route and
-/// bypass the v4-only MASQUERADE filter. Best-effort.
+/// Flush the IPv6 default route via rtnetlink.
 #[cfg(target_os = "linux")]
 pub(crate) fn flush_ipv6_default_route() {
     let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {

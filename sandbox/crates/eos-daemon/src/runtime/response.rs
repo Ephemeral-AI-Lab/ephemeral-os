@@ -19,7 +19,7 @@ pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
 }
 use serde_json::{json, Value};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct TreeResourceStats {
     exists: f64,
     bytes: f64,
@@ -194,27 +194,13 @@ pub(crate) fn resource_timings(
         "resource.layer_stack.manifest_path_count".to_owned(),
         json!(usize_to_f64_saturating(manifest.layers.len())),
     );
-    for key in [
-        "resource.command_exec.run_dir_tree_exists",
-        "resource.command_exec.run_dir_tree_bytes",
-        "resource.command_exec.run_dir_tree_file_count",
-        "resource.command_exec.run_dir_tree_dir_count",
-        "resource.command_exec.run_dir_tree_entry_count",
-        "resource.command_exec.run_dir_tree_truncated",
-        "resource.command_exec.workspace_tree_exists",
-        "resource.command_exec.workspace_tree_bytes",
-        "resource.command_exec.workspace_tree_file_count",
-        "resource.command_exec.workspace_tree_dir_count",
-        "resource.command_exec.workspace_tree_entry_count",
-        "resource.command_exec.workspace_tree_truncated",
-        "resource.command_exec.upperdir_tree_exists",
-        "resource.command_exec.upperdir_tree_bytes",
-        "resource.command_exec.upperdir_tree_file_count",
-        "resource.command_exec.upperdir_tree_dir_count",
-        "resource.command_exec.upperdir_tree_entry_count",
-        "resource.command_exec.upperdir_tree_truncated",
+    let empty_stats = TreeResourceStats::default();
+    for prefix in [
+        "resource.command_exec.run_dir",
+        "resource.command_exec.workspace",
+        "resource.command_exec.upperdir",
     ] {
-        timings.insert(key.to_owned(), json!(0.0));
+        insert_tree_resource_timings(&mut timings, prefix, &empty_stats);
     }
     insert_cgroup_resource_timings(&mut timings);
     insert_process_resource_timings(&mut timings);

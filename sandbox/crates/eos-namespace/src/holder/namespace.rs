@@ -2,8 +2,6 @@
 use std::ffi::c_void;
 #[cfg(target_os = "linux")]
 use std::fs;
-#[cfg(target_os = "linux")]
-use std::os::fd::{FromRawFd, IntoRawFd};
 use std::os::fd::{OwnedFd, RawFd};
 #[cfg(target_os = "linux")]
 use std::path::Path;
@@ -91,17 +89,8 @@ pub(crate) fn rbind_proc() {
 #[cfg(not(target_os = "linux"))]
 pub(crate) const fn rbind_proc() {}
 
-/// `unshare` the full namespace stack on the calling (single-threaded) task and
-/// pin the resulting `/proc/self/ns/*` FDs.
-///
-/// This consolidates the `unshare(1)` flags of the former launcher that shelled
-/// out to the `unshare` binary. That path spawned the holder process via
-/// `unshare --user --map-root-user --net --pid --mount --fork --kill-child
-/// --propagation private`, so the namespaces were created by the `unshare`
-/// binary, not inside the holder process. The Rust holder owns that step directly:
-/// `unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the
-/// uid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own
-/// `ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].
+/// `unshare` the full namespace stack on the single-threaded holder and pin the
+/// resulting `/proc/self/ns/*` FDs.
 ///
 /// # Safety
 ///
@@ -175,11 +164,9 @@ fn write_if_exists(path: impl AsRef<Path>, value: &[u8]) -> Result<(), NsHolderE
 #[cfg(target_os = "linux")]
 fn open_owned_fd(path: impl AsRef<Path>) -> Result<OwnedFd, NsHolderError> {
     let path = path.as_ref();
-    let file = fs::File::open(path).map_err(|err| setup_io(path, err))?;
-    let raw_fd = file.into_raw_fd();
-    // SAFETY: `raw_fd` came from `File::into_raw_fd`, so this function becomes
-    // the sole owner and closes it through `OwnedFd` drop.
-    Ok(unsafe { OwnedFd::from_raw_fd(raw_fd) })
+    Ok(fs::File::open(path)
+        .map_err(|err| setup_io(path, err))?
+        .into())
 }
 
 #[cfg(target_os = "linux")]

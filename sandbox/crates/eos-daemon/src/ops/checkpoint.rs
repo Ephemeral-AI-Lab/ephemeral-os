@@ -22,7 +22,10 @@ use crate::request_args::{binding_to_value, require_string, timings_to_value_map
 use crate::runtime::context::DispatchContext;
 use eos_layerstack::service::cache_snapshot;
 
-pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn layer_metrics(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let stack = LayerStack::open(root.clone())?;
     let manifest = stack.read_active_manifest()?;
@@ -78,7 +81,10 @@ pub(crate) fn build_workspace_base(
     }))
 }
 
-pub(crate) fn ensure_workspace_base(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn ensure_workspace_base(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
@@ -95,7 +101,10 @@ pub(crate) fn ensure_workspace_base(args: &Value) -> Result<Value, DaemonError> 
     }))
 }
 
-pub(crate) fn workspace_binding(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn workspace_binding(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let binding = require_workspace_binding(&root)?;
     let binding = binding_to_value(&binding)?;
@@ -105,7 +114,10 @@ pub(crate) fn workspace_binding(args: &Value) -> Result<Value, DaemonError> {
     }))
 }
 
-pub(crate) fn commit_to_workspace(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn commit_to_workspace(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
@@ -123,7 +135,10 @@ pub(crate) fn commit_to_workspace(args: &Value) -> Result<Value, DaemonError> {
     }))
 }
 
-pub(crate) fn commit_to_git(args: &Value) -> Result<Value, DaemonError> {
+pub(crate) fn commit_to_git(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
     let layer_stack_root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
     let message = require_string(args, "message")?;
@@ -172,49 +187,6 @@ fn commit_response(outcome: &CommitOutcome) -> Value {
         "worktree_mode": outcome.worktree_mode,
         "timings": Value::Object(timings_to_value_map(&outcome.timings)),
     })
-}
-
-/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
-pub(crate) fn op_layer_metrics(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    layer_metrics(args)
-}
-
-pub(crate) fn op_build_workspace_base(
-    args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    build_workspace_base(args, context)
-}
-
-pub(crate) fn op_ensure_workspace_base(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    ensure_workspace_base(args)
-}
-
-pub(crate) fn op_workspace_binding(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    workspace_binding(args)
-}
-
-pub(crate) fn op_commit_to_workspace(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    commit_to_workspace(args)
-}
-
-pub(crate) fn op_commit_to_git(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    commit_to_git(args)
 }
 
 #[cfg(test)]

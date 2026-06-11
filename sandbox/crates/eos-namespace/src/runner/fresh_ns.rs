@@ -34,7 +34,7 @@ use rustix::thread::{set_thread_gid, set_thread_uid, unshare, UnshareFlags};
 #[cfg(target_os = "linux")]
 use eos_overlay::OverlayHandle;
 
-use super::error::RunnerError;
+use super::RunnerError;
 #[cfg(target_os = "linux")]
 use crate::protocol::RunnerVerb;
 use crate::protocol::{RunRequest, RunResult};
@@ -192,13 +192,6 @@ fn execute_plugin_service(
     if timed_out || !matches!(request.mode, crate::protocol::RunMode::SetNs) {
         let _ = kill_process_group(child_pid, Signal::Kill);
     }
-    let status = if timed_out {
-        "timed_out"
-    } else if exit_code == 0 {
-        "ok"
-    } else {
-        "error"
-    };
     Ok(RunResult {
         exit_code,
         tool_result: serde_json::json!({
@@ -208,7 +201,7 @@ fn execute_plugin_service(
                 "workspace.mount_s": mount_s,
                 "workspace.tool_s": run_start.elapsed().as_secs_f64(),
             },
-            "status": status,
+            "status": result_status(exit_code, timed_out),
         }),
     })
 }
@@ -232,7 +225,7 @@ fn execute_shell(
     )
     .ok();
     if let Some(hidden_paths) = hidden_paths {
-        super::mount_mask::mask_model_shell_paths(hidden_paths)?;
+        super::mask_model_shell_paths(hidden_paths)?;
     }
     let mut command = Command::new(&argv[0]);
     command
@@ -254,13 +247,6 @@ fn execute_shell(
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
-    let status = if timed_out {
-        "timed_out"
-    } else if exit_code == 0 {
-        "ok"
-    } else {
-        "error"
-    };
     Ok(RunResult {
         exit_code,
         tool_result: serde_json::json!({
@@ -276,13 +262,24 @@ fn execute_shell(
             "error": null,
             "changed_path_kinds": {},
             "mutation_source": "",
-            "status": status,
+            "status": result_status(exit_code, timed_out),
             "exit_code": exit_code,
             "stdout": "",
             "stderr": "",
             "warnings": [],
         }),
     })
+}
+
+#[cfg(target_os = "linux")]
+const fn result_status(exit_code: i32, timed_out: bool) -> &'static str {
+    if timed_out {
+        "timed_out"
+    } else if exit_code == 0 {
+        "ok"
+    } else {
+        "error"
+    }
 }
 
 #[cfg(target_os = "linux")]

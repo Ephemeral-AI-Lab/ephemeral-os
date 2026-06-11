@@ -6,12 +6,10 @@
 //! `contract/` (data + prose), and drift is caught by the conformance suites
 //! run by `cargo xtask check-contract`.
 
-pub mod canonical;
 pub mod envelope;
 pub mod ops;
 pub mod version;
 
-pub use canonical::canonicalize;
 pub use envelope::{
     decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
 };

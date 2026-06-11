@@ -1,47 +1,19 @@
-//! Namespace holder: the dedicated single-threaded child that creates and pins
-//! the isolated workspace's namespace stack and runs the readiness handshake.
+//! Isolated-workspace namespace holder.
 //!
-//! # Architecture invariant
-//!
-//! While still single-threaded, this process `unshare`s the full namespace
-//! stack (`CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET`), holds
-//! the resulting namespace FDs open for the daemon to wire into, runs the
-//! readiness/control pipe handshake, then `pause()`s until `SIGTERM`.
-//!
-//! The daemon NEVER enters a namespace itself — it stays multi-threaded (tokio)
-//! and would fail `unshare(CLONE_NEWUSER)` / `setns` into a user namespace,
-//! which the kernel requires the calling task to be single-threaded for. This
-//! dedicated child is the one that crosses that boundary, so the daemon can
-//! later open `/proc/{holder_pid}/ns/{net,pid,mnt,user}` against a stable PID 1
-//! of the pidns.
-//!
-//! # Build-time guarantee
-//!
-//! The handshake tokens are owned here as inline byte literals, and the module
-//! imports nothing internal — the crate-level NO-tokio invariant (see the crate
-//! root) is what makes the single-threaded `unshare(CLONE_NEWUSER)` legal.
-//! Linux-only at runtime; non-Linux hosts still compile because Linux syscall
-//! bodies are gated by `cfg(target_os = "linux")`.
-//!
-//! # Handshake
-//!
-//! 1. write [`NS_UP`] (`"ns-up\n"`) to the readiness FD once we are inside the
-//!    new namespace stack; the daemon then opens our ns symlinks and wires the
-//!    veth/bridge network.
-//! 2. read the control FD until newline and require it to start with
-//!    [`NET_READY`] (`"net-ready"`) — a PREFIX check, not equality.
-//! 3. apply best-effort loopback and IPv6 hardening hooks, then write [`READY`]
-//!    (`"ready\n"`) to the readiness FD.
-//! 4. `pause()` until `SIGTERM`, then exit 0.
-//!
-//! Syscall module — `unsafe` is permitted here for raw libc gaps, and every
-//! `unsafe` block carries a focused `// SAFETY:` note.
+//! The holder unshares the user/mount/pid/net namespace stack, pins namespace
+//! FDs for the daemon, completes the readiness/control pipe handshake, then
+//! pauses until teardown.
 
-mod handshake;
 mod namespace;
 mod network;
 
-pub use handshake::run;
+use std::os::fd::RawFd;
+
+use namespace::{rbind_proc, unshare_namespace_stack, HeldNamespaces};
+use network::{
+    bring_loopback_up, configure_namespace_veth, disable_ipv6_ra, flush_ipv6_default_route,
+    parse_network_config, NetworkConfig,
+};
 
 /// Readiness handshake token (`b"ns-up\n"`) written to the readiness FD once the
 /// holder is inside the new namespace stack.
@@ -107,3 +79,125 @@ impl NsHolderError {
     /// Exit code for the test-only crash knob.
     pub const TEST_CRASH_EXIT: i32 = 7;
 }
+
+#[derive(Debug)]
+struct Handshake {
+    readiness_fd: RawFd,
+    control_fd: RawFd,
+    network_config: Option<NetworkConfig>,
+    _namespaces: HeldNamespaces,
+}
+
+impl Handshake {
+    const fn new(readiness_fd: RawFd, control_fd: RawFd, namespaces: HeldNamespaces) -> Self {
+        Self {
+            readiness_fd,
+            control_fd,
+            network_config: None,
+            _namespaces: namespaces,
+        }
+    }
+
+    fn signal_ns_up(&mut self) -> Result<(), NsHolderError> {
+        write_all_fd(self.readiness_fd, NS_UP)
+    }
+
+    fn await_net_ready(&mut self) -> Result<(), NsHolderError> {
+        let mut buf = [0_u8; 256];
+        let mut offset = 0;
+        while offset < buf.len() {
+            let read = read_fd(self.control_fd, &mut buf[offset..offset + 1])?;
+            if read == 0 {
+                return Err(NsHolderError::ControlPipeClosed);
+            }
+            offset += read;
+            if buf[offset - 1] == b'\n' {
+                break;
+            }
+        }
+        if !buf[..offset].starts_with(NET_READY) {
+            return Err(NsHolderError::UnexpectedToken);
+        }
+        self.network_config = parse_network_config(&buf[..offset]);
+        Ok(())
+    }
+
+    fn finish_ready(&self) -> Result<(), NsHolderError> {
+        bring_loopback_up();
+        if let Some(config) = &self.network_config {
+            configure_namespace_veth(config);
+        }
+        disable_ipv6_ra();
+        flush_ipv6_default_route();
+        write_all_fd(self.readiness_fd, READY)
+    }
+}
+
+/// Run the holder lifecycle over inherited readiness/control pipe FDs.
+///
+/// # Errors
+///
+/// Returns [`NsHolderError`] when namespace setup or the readiness handshake
+/// fails.
+pub fn run(readiness_fd: RawFd, control_fd: RawFd) -> Result<(), NsHolderError> {
+    let namespaces = unshare_namespace_stack(readiness_fd, control_fd)?;
+    rbind_proc();
+    let mut handshake = Handshake::new(readiness_fd, control_fd, namespaces);
+    handshake.signal_ns_up()?;
+    if std::env::var(TEST_HOLDER_CRASH_ENV)
+        .unwrap_or_default()
+        .eq_ignore_ascii_case("true")
+    {
+        return Err(NsHolderError::TestCrash);
+    }
+    handshake.await_net_ready()?;
+    handshake.finish_ready()?;
+    loop {
+        // SAFETY: `pause(2)` has no pointer arguments and simply suspends this
+        // single-threaded holder process until a signal is delivered.
+        unsafe {
+            libc::pause();
+        }
+    }
+}
+
+fn write_all_fd(fd: RawFd, mut bytes: &[u8]) -> Result<(), NsHolderError> {
+    while !bytes.is_empty() {
+        // SAFETY: `bytes.as_ptr()` is valid for `bytes.len()` bytes and the
+        // inherited fd is borrowed for the duration of the syscall.
+        let written = unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
+        if written < 0 {
+            let err = std::io::Error::last_os_error();
+            if err.kind() == std::io::ErrorKind::Interrupted {
+                continue;
+            }
+            return Err(NsHolderError::PipeIo(err));
+        }
+        let written = usize::try_from(written).map_err(|_| {
+            NsHolderError::PipeIo(std::io::Error::other("negative write byte count"))
+        })?;
+        bytes = &bytes[written..];
+    }
+    Ok(())
+}
+
+fn read_fd(fd: RawFd, bytes: &mut [u8]) -> Result<usize, NsHolderError> {
+    loop {
+        // SAFETY: `bytes.as_mut_ptr()` is valid for `bytes.len()` bytes and the
+        // inherited fd is borrowed for the duration of the syscall.
+        let read = unsafe { libc::read(fd, bytes.as_mut_ptr().cast(), bytes.len()) };
+        if read >= 0 {
+            return usize::try_from(read).map_err(|_| {
+                NsHolderError::PipeIo(std::io::Error::other("negative read byte count"))
+            });
+        }
+        let err = std::io::Error::last_os_error();
+        if err.kind() != std::io::ErrorKind::Interrupted {
+            return Err(NsHolderError::PipeIo(err));
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "../../tests/unit/holder/handshake.rs"]
+mod tests;

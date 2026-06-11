@@ -16,10 +16,10 @@
 //! pinned namespace FDs in — it does the namespace syscalls only by delegation.
 //!
 //! Op handlers live under [`ops`], while implementation state lives with the
-//! owning service modules or sibling crates. [`dispatch::registry`] is the
-//! single table binding wire op names to those handlers. Overlay and workspace
-//! helpers live in the sibling crates that own those domains, with daemon code
-//! keeping only service orchestration. Write-capable
+//! owning service modules or sibling crates. [`dispatcher`] binds wire op names
+//! from the catalog to those handlers. Overlay and workspace helpers live in the
+//! sibling crates that own those domains, with daemon code keeping only service
+//! orchestration. Write-capable
 //! shared-workspace operations route through `eos_layerstack::service`, the
 //! per-root single writer shared with the live dispatcher.
 //!

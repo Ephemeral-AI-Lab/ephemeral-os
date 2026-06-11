@@ -3,9 +3,12 @@
 //! for responses. Fixtures are immutable ground truth from the live runtime
 //! (`json.dumps(separators=(",",":")) + "\n"`).
 
-use eos_daemon::wire::canonical::canonicalize;
 use eos_daemon::wire::envelope::{decode, encode, Envelope};
 use serde_json::Value;
+
+mod support;
+
+use support::canonical::canonicalize;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 

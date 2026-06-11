@@ -104,8 +104,10 @@ fn command_session_read_progress_returns_completed_result_when_live_session_is_g
     let id = "cmd_progress_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
-    let response =
-        command_session_read_progress(&json!({"command_session_id": id, "last_n_lines": 1}))?;
+    let response = command_session_read_progress(
+        &json!({"command_session_id": id, "last_n_lines": 1}),
+        DispatchContext::empty(),
+    )?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "written\n");
@@ -122,8 +124,10 @@ fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult 
     let id = "cmd_stdin_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
-    let response =
-        command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
+    let response = command_session_write_stdin(
+        &json!({"command_session_id": id, "chars": "ignored"}),
+        DispatchContext::empty(),
+    )?;
 
     assert_eq!(response["status"], "error");
     assert_eq!(response["output"]["stderr"], "command_session_not_found");
@@ -135,7 +139,8 @@ fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -
     let id = "command_session_cancel_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "already-finished\n"));
 
-    let response = command_session_cancel(&json!({"command_session_id": id}))?;
+    let response =
+        command_session_cancel(&json!({"command_session_id": id}), DispatchContext::empty())?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "already-finished\n");

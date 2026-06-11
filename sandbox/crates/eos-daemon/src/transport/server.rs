@@ -26,8 +26,9 @@ use std::path::PathBuf;
 use std::sync::{mpsc as std_mpsc, Arc};
 use std::time::{Duration, Instant};
 
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, UnixListener};
+use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use crate::wire::{decode_value, encode, Envelope, ErrorKind, Request};
@@ -38,11 +39,14 @@ use eos_config::configs::{
 use eos_isolated_workspace::CurrentExeNsRunnerLauncher;
 use eos_runtime::{maintenance::sweepers, RuntimeServices};
 
-use super::framing::{read_request_line, signal_shutdown, MAX_REQUEST_BYTES};
 use crate::dispatcher::OpTable;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
+use crate::request_args::trimmed_string;
 use crate::runtime::context::DispatchContext;
+
+const MAX_REQUEST_BYTES: usize = crate::wire::MAX_REQUEST_BYTES;
+const REQUEST_READ_TIMEOUT_S: f64 = crate::wire::REQUEST_READ_TIMEOUT_S;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -352,7 +356,7 @@ impl DaemonServer {
 
     async fn dispatch_request(&self, request: Request, read_request_s: f64) -> serde_json::Value {
         let invocation_id = request.invocation_id.clone();
-        let caller_id = caller_id_from_args(&request.args);
+        let caller_id = trimmed_string(&request.args, "caller_id");
         let background = request
             .args
             .get("background")
@@ -434,10 +438,35 @@ fn default_file_limits() -> FileLimitsConfig {
     }
 }
 
-fn caller_id_from_args(args: &serde_json::Value) -> String {
-    args.get("caller_id")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned()
+async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, DaemonError>
+where
+    R: AsyncRead + Unpin,
+{
+    let mut buf = Vec::new();
+    let read = async {
+        let limit = u64::try_from(MAX_REQUEST_BYTES)
+            .unwrap_or(u64::MAX)
+            .saturating_add(1);
+        let mut limited = BufReader::new(reader.take(limit));
+        limited.read_until(b'\n', &mut buf).await?;
+        if buf.len() > MAX_REQUEST_BYTES {
+            return Err(DaemonError::RequestTooLarge {
+                limit: MAX_REQUEST_BYTES,
+            });
+        }
+        Ok::<(), DaemonError>(())
+    };
+    timeout(Duration::from_secs_f64(REQUEST_READ_TIMEOUT_S), read)
+        .await
+        .map_err(|_| {
+            DaemonError::Io(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "daemon request read timed out",
+            ))
+        })??;
+    Ok(buf)
+}
+
+async fn signal_shutdown() {
+    let _ = tokio::signal::ctrl_c().await;
 }

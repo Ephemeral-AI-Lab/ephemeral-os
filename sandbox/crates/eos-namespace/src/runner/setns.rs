@@ -28,7 +28,7 @@ use std::time::Instant;
 #[cfg(target_os = "linux")]
 use eos_overlay::OverlayHandle;
 
-use super::error::RunnerError;
+use super::RunnerError;
 #[cfg(any(test, target_os = "linux"))]
 use crate::protocol::NsFds;
 use crate::protocol::{RunRequest, RunResult};
@@ -112,7 +112,7 @@ pub fn setns_overlay_mount(
         workdir: workdir.clone(),
     };
     let guard = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)?;
-    super::mount_mask::mask_model_shell_paths(&config.mount_mask.hidden_paths)?;
+    super::mask_model_shell_paths(&config.mount_mask.hidden_paths)?;
     // The setns mount helper is a one-shot process. The mounted overlay must
     // outlive this helper and remain pinned by the target mount namespace until
     // isolated teardown, so the unmount-on-drop guard is deliberately leaked.

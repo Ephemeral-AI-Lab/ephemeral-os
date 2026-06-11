@@ -1,7 +1,6 @@
-use super::{plugin_service_argv, shell_argv};
+use super::{normalize_lexical, plugin_service_argv, shell_argv};
 use crate::protocol::Intent;
 use crate::protocol::{RunMode, RunRequest, RunnerVerb, ToolCall, WorkspaceRoot};
-use crate::runner::path::normalize_lexical;
 use std::path::Path;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;

@@ -6589,14 +6589,14 @@
       "path": "crates/eos-daemon",
       "stats": {
         "modules": 26,
-        "items": 160,
+        "items": 157,
         "structs": 16,
         "enums": 6,
         "traits": 0,
-        "functions": 124,
+        "functions": 121,
         "impls": 13,
-        "fields": 83,
-        "methods": 46
+        "fields": 82,
+        "methods": 44
       },
       "modules": [
         {
@@ -7300,38 +7300,6 @@
             },
             {
               "kind": "fn",
-              "name": "optional_u64",
-              "visibility": "private",
-              "signature": "fn optional_u64 (args : & Value , key : & str) -> Option < u64 >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/ops/command.rs",
-              "module": "ops::command",
-              "line": 159
-            },
-            {
-              "kind": "fn",
-              "name": "optional_layer_stack_root",
-              "visibility": "private",
-              "signature": "fn optional_layer_stack_root (args : & Value) -> Option < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/ops/command.rs",
-              "module": "ops::command",
-              "line": 167
-            },
-            {
-              "kind": "fn",
               "name": "command_result",
               "visibility": "private",
               "signature": "fn command_result (status : & str , exit_code : Option < i64 > , stdout : & str , stderr : & str , command_session_id : Option < String > ,) -> Value",
@@ -7344,7 +7312,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 175
+              "line": 159
             },
             {
               "kind": "fn",
@@ -7360,7 +7328,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 196
+              "line": 180
             },
             {
               "kind": "fn",
@@ -7376,7 +7344,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 200
+              "line": 184
             },
             {
               "kind": "fn",
@@ -7392,7 +7360,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 204
+              "line": 188
             },
             {
               "kind": "fn",
@@ -7408,7 +7376,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 211
+              "line": 195
             },
             {
               "kind": "fn",
@@ -7424,7 +7392,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 218
+              "line": 202
             },
             {
               "kind": "fn",
@@ -7440,7 +7408,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 228
+              "line": 212
             },
             {
               "kind": "fn",
@@ -7456,7 +7424,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/command.rs",
               "module": "ops::command",
-              "line": 250
+              "line": 234
             }
           ]
         },
@@ -7637,7 +7605,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 18
+              "line": 16
             },
             {
               "kind": "fn",
@@ -7653,7 +7621,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 34
+              "line": 32
             },
             {
               "kind": "fn",
@@ -7669,7 +7637,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 54
+              "line": 52
             },
             {
               "kind": "fn",
@@ -7685,7 +7653,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 74
+              "line": 72
             },
             {
               "kind": "fn",
@@ -7701,23 +7669,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 86
-            },
-            {
-              "kind": "fn",
-              "name": "optional_layer_stack_root",
-              "visibility": "private",
-              "signature": "fn optional_layer_stack_root (args : & Value) -> Option < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-daemon/src/ops/files.rs",
-              "module": "ops::files",
-              "line": 98
+              "line": 84
             },
             {
               "kind": "fn",
@@ -7733,7 +7685,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 106
+              "line": 96
             },
             {
               "kind": "fn",
@@ -7749,7 +7701,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 123
+              "line": 113
             },
             {
               "kind": "fn",
@@ -7765,7 +7717,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 145
+              "line": 135
             },
             {
               "kind": "fn",
@@ -7781,7 +7733,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 156
+              "line": 146
             },
             {
               "kind": "fn",
@@ -7797,7 +7749,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 173
+              "line": 163
             },
             {
               "kind": "fn",
@@ -7813,7 +7765,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 190
+              "line": 180
             },
             {
               "kind": "fn",
@@ -7829,7 +7781,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 198
+              "line": 188
             },
             {
               "kind": "fn",
@@ -7845,7 +7797,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/files.rs",
               "module": "ops::files",
-              "line": 213
+              "line": 203
             }
           ]
         },
@@ -7867,7 +7819,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 20
+              "line": 19
             },
             {
               "kind": "fn",
@@ -7883,7 +7835,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 52
+              "line": 48
             },
             {
               "kind": "fn",
@@ -7899,7 +7851,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 71
+              "line": 67
             },
             {
               "kind": "fn",
@@ -7915,7 +7867,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 84
+              "line": 80
             },
             {
               "kind": "fn",
@@ -7931,7 +7883,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 92
+              "line": 88
             },
             {
               "kind": "fn",
@@ -7947,7 +7899,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 108
+              "line": 104
             },
             {
               "kind": "fn",
@@ -7963,7 +7915,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 120
+              "line": 116
             },
             {
               "kind": "fn",
@@ -7981,7 +7933,7 @@
               ],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 142
+              "line": 138
             },
             {
               "kind": "fn",
@@ -7997,7 +7949,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 152
+              "line": 148
             },
             {
               "kind": "fn",
@@ -8013,7 +7965,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/isolation.rs",
               "module": "ops::isolation",
-              "line": 181
+              "line": 177
             }
           ]
         },
@@ -8089,7 +8041,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 26
+              "line": 24
             },
             {
               "kind": "fn",
@@ -8105,7 +8057,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 45
+              "line": 43
             },
             {
               "kind": "fn",
@@ -8121,23 +8073,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 63
-            },
-            {
-              "kind": "fn",
-              "name": "ensure_plugin_family_allowed",
-              "visibility": "private",
-              "signature": "fn ensure_plugin_family_allowed (services : & RuntimeServices , args : & Value ,) -> Result < () , DaemonError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "The plugin caller-family gate: validate the caller fields, then refuse the\nwhole `api.plugin.*` + registered-op family for callers inside an isolated\nworkspace. Composed here so the plugin runtime never reaches into\nisolated-workspace state.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/ops/plugin.rs",
-              "module": "ops::plugin",
-              "line": 99
+              "line": 61
             },
             {
               "kind": "fn",
@@ -8153,7 +8089,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 121
+              "line": 97
             },
             {
               "kind": "fn",
@@ -8169,7 +8105,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 142
+              "line": 118
             },
             {
               "kind": "fn",
@@ -8185,7 +8121,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 163
+              "line": 139
             },
             {
               "kind": "fn",
@@ -8201,7 +8137,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 175
+              "line": 151
             },
             {
               "kind": "fn",
@@ -8217,7 +8153,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 198
+              "line": 174
             },
             {
               "kind": "fn",
@@ -8233,7 +8169,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 202
+              "line": 178
             },
             {
               "kind": "fn",
@@ -8249,7 +8185,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 221
+              "line": 197
             },
             {
               "kind": "fn",
@@ -8265,7 +8201,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 225
+              "line": 201
             },
             {
               "kind": "fn",
@@ -8281,7 +8217,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 240
+              "line": 216
             },
             {
               "kind": "fn",
@@ -8297,7 +8233,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 253
+              "line": 229
             },
             {
               "kind": "fn",
@@ -8313,7 +8249,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/ops/plugin.rs",
               "module": "ops::plugin",
-              "line": 320
+              "line": 296
             }
           ]
         },
@@ -8764,11 +8700,6 @@
                   "ty": "bool"
                 },
                 {
-                  "name": "process_group_id",
-                  "visibility": "pub",
-                  "ty": "Option < i32 >"
-                },
-                {
                   "name": "ttl_reaped",
                   "visibility": "pub",
                   "ty": "bool"
@@ -8784,7 +8715,7 @@
               ],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 24
+              "line": 23
             },
             {
               "kind": "struct",
@@ -8818,7 +8749,7 @@
               ],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 43
+              "line": 38
             },
             {
               "kind": "struct",
@@ -8848,7 +8779,7 @@
               ],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 51
+              "line": 46
             },
             {
               "kind": "impl",
@@ -8863,98 +8794,84 @@
                   "signature": "pub fn new (ttl_s : f64 , reaper_interval_s : f64) -> Self",
                   "kind": "constructor",
                   "docs": "Build a registry with explicit timing values.",
-                  "line": 58
+                  "line": 53
                 },
                 {
                   "name": "reaper_interval_s",
                   "signature": "pub const fn reaper_interval_s (& self) -> f64",
                   "kind": "method",
                   "docs": "Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.",
-                  "line": 68
+                  "line": 63
                 },
                 {
                   "name": "lock_state",
                   "signature": "fn lock_state (& self) -> MutexGuard < '_ , RegistryState >",
                   "kind": "method",
                   "docs": null,
-                  "line": 76
+                  "line": 71
                 },
                 {
                   "name": "register",
                   "signature": "pub fn register (& self , invocation_id : & str , abort : AbortHandle , caller_id : & str , background : bool ,)",
                   "kind": "method",
                   "docs": "Register a task under `invocation_id`. Empty ids are ignored.",
-                  "line": 80
-                },
-                {
-                  "name": "register_process_group",
-                  "signature": "pub fn register_process_group (& self , invocation_id : & str , pgid : i32)",
-                  "kind": "method",
-                  "docs": "Attach a process group id to a registered invocation.",
-                  "line": 105
-                },
-                {
-                  "name": "clear_process_group",
-                  "signature": "pub fn clear_process_group (& self , invocation_id : & str)",
-                  "kind": "method",
-                  "docs": "Clear any process group id attached to a registered invocation.",
-                  "line": 112
+                  "line": 75
                 },
                 {
                   "name": "deregister",
                   "signature": "pub fn deregister (& self , invocation_id : & str)",
                   "kind": "method",
                   "docs": "Remove the entry for `invocation_id` (the dispatch `finally` path).",
-                  "line": 119
+                  "line": 99
                 },
                 {
                   "name": "contains",
                   "signature": "pub fn contains (& self , invocation_id : & str) -> bool",
                   "kind": "method",
                   "docs": "Return whether `invocation_id` is still tracked.",
-                  "line": 124
+                  "line": 104
                 },
                 {
                   "name": "cancel",
                   "signature": "pub fn cancel (& self , invocation_id : & str) -> bool",
                   "kind": "method",
                   "docs": "Cancel the task for `invocation_id`; returns whether an entry existed.",
-                  "line": 129
+                  "line": 109
                 },
                 {
                   "name": "wait_for_cleanup",
                   "signature": "pub fn wait_for_cleanup (& self , invocation_id : & str , timeout : Duration) -> bool",
                   "kind": "method",
                   "docs": "Wait briefly for the dispatch finally path to deregister `invocation_id`.",
-                  "line": 147
+                  "line": 124
                 },
                 {
                   "name": "heartbeat",
                   "signature": "pub fn heartbeat (& self , invocation_ids : & [String]) -> usize",
                   "kind": "method",
                   "docs": "Touch `last_seen` for every known id; returns how many were touched.\nBacks `api.v1.heartbeat`.",
-                  "line": 159
+                  "line": 136
                 },
                 {
                   "name": "count_by_caller",
                   "signature": "pub fn count_by_caller (& self , caller_id : & str) -> usize",
                   "kind": "method",
                   "docs": "Count live background invocations for `caller_id`. Backs\n`api.v1.inflight_count`.",
-                  "line": 174
+                  "line": 151
                 },
                 {
                   "name": "ttl_sweep",
                   "signature": "pub fn ttl_sweep (& self)",
                   "kind": "method",
                   "docs": "Cancel every background entry idle past the TTL.",
-                  "line": 189
+                  "line": 166
                 },
                 {
                   "name": "metrics",
                   "signature": "pub fn metrics (& self) -> (usize , u64)",
                   "kind": "method",
                   "docs": "`(active_invocations, ttl_reaped_total)` for diagnostics.",
-                  "line": 205
+                  "line": 181
                 }
               ],
               "impl_target": "InFlightRegistry",
@@ -8965,7 +8882,7 @@
               ],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 57
+              "line": 52
             },
             {
               "kind": "fn",
@@ -8981,7 +8898,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 212
+              "line": 188
             },
             {
               "kind": "fn",
@@ -8997,23 +8914,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
               "module": "runtime::invocation_registry",
-              "line": 220
-            },
-            {
-              "kind": "fn",
-              "name": "terminate_process_group",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn terminate_process_group (process_group_id : Option < i32 >)",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "SIGTERM the process group, give it a brief grace window, then SIGKILL.\nShared by invocation cancel/TTL reaping and plugin service teardown.",
-              "tags": [],
-              "file": "crates/eos-daemon/src/runtime/invocation_registry.rs",
-              "module": "runtime::invocation_registry",
-              "line": 225
+              "line": 196
             }
           ]
         },
@@ -9040,7 +8941,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 8
+              "line": 10
             },
             {
               "kind": "fn",
@@ -9056,7 +8957,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 21
+              "line": 23
             },
             {
               "kind": "fn",
@@ -9072,7 +8973,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 31
+              "line": 33
             },
             {
               "kind": "fn",
@@ -9088,7 +8989,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 43
+              "line": 45
             },
             {
               "kind": "fn",
@@ -9104,7 +9005,39 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 59
+              "line": 61
+            },
+            {
+              "kind": "fn",
+              "name": "optional_u64",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn optional_u64 (args : & Value , key : & str) -> Option < u64 >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/runtime/request_args.rs",
+              "module": "runtime::request_args",
+              "line": 76
+            },
+            {
+              "kind": "fn",
+              "name": "optional_path",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn optional_path (args : & Value , key : & str) -> Option < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-daemon/src/runtime/request_args.rs",
+              "module": "runtime::request_args",
+              "line": 84
             },
             {
               "kind": "fn",
@@ -9120,7 +9053,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 74
+              "line": 92
             },
             {
               "kind": "fn",
@@ -9136,7 +9069,7 @@
               "tags": [],
               "file": "crates/eos-daemon/src/runtime/request_args.rs",
               "module": "runtime::request_args",
-              "line": 78
+              "line": 96
             }
           ]
         },
@@ -16409,14 +16342,14 @@
       "path": "crates/eos-layerstack",
       "stats": {
         "modules": 13,
-        "items": 214,
-        "structs": 39,
+        "items": 212,
+        "structs": 38,
         "enums": 10,
-        "traits": 1,
-        "functions": 131,
-        "impls": 30,
-        "fields": 152,
-        "methods": 96
+        "traits": 0,
+        "functions": 132,
+        "impls": 29,
+        "fields": 151,
+        "methods": 91
       },
       "modules": [
         {
@@ -16519,7 +16452,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 19
+              "line": 18
             },
             {
               "kind": "enum",
@@ -16562,7 +16495,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 52
+              "line": 51
             },
             {
               "kind": "enum",
@@ -16617,7 +16550,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 65
+              "line": 64
             },
             {
               "kind": "impl",
@@ -16632,21 +16565,21 @@
                   "signature": "pub const fn wire_str (self) -> & 'static str",
                   "kind": "method",
                   "docs": null,
-                  "line": 85
+                  "line": 84
                 },
                 {
                   "name": "is_published",
                   "signature": "pub const fn is_published (self) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 98
+                  "line": 97
                 },
                 {
                   "name": "is_success",
                   "signature": "pub const fn is_success (self) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 103
+                  "line": 102
                 }
               ],
               "impl_target": "CommitStatus",
@@ -16657,7 +16590,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 84
+              "line": 83
             },
             {
               "kind": "struct",
@@ -16699,7 +16632,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 109
+              "line": 108
             },
             {
               "kind": "struct",
@@ -16736,7 +16669,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 117
+              "line": 116
             },
             {
               "kind": "impl",
@@ -16751,7 +16684,7 @@
                   "signature": "pub fn conflict_message < 'a > (& 'a self , fallback : & 'a str) -> & 'a str",
                   "kind": "method",
                   "docs": null,
-                  "line": 125
+                  "line": 124
                 }
               ],
               "impl_target": "FileResult",
@@ -16762,7 +16695,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 124
+              "line": 123
             },
             {
               "kind": "struct",
@@ -16798,7 +16731,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 135
+              "line": 134
             },
             {
               "kind": "impl",
@@ -16813,28 +16746,28 @@
                   "signature": "pub fn success (& self) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 143
+                  "line": 142
                 },
                 {
                   "name": "first_conflict",
                   "signature": "pub fn first_conflict (& self) -> Option < & FileResult >",
                   "kind": "method",
                   "docs": null,
-                  "line": 148
+                  "line": 147
                 },
                 {
                   "name": "published_paths",
                   "signature": "pub fn published_paths (& self) -> Vec < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 153
+                  "line": 152
                 },
                 {
                   "name": "published_file_count",
                   "signature": "pub fn published_file_count (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 162
+                  "line": 161
                 }
               ],
               "impl_target": "ChangesetResult",
@@ -16845,54 +16778,23 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 142
-            },
-            {
-              "kind": "trait",
-              "name": "RouteProvider",
-              "visibility": "pub",
-              "signature": "pub trait RouteProvider",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "is_ignored",
-                  "signature": "fn is_ignored (& self , path : & LayerPath) -> Result < bool , CommitError >",
-                  "kind": "required",
-                  "docs": null,
-                  "line": 171
-                },
-                {
-                  "name": "base_hash",
-                  "signature": "fn base_hash (& self , path : & LayerPath) -> Result < Option < String > , CommitError >",
-                  "kind": "required",
-                  "docs": null,
-                  "line": 173
-                }
-              ],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-layerstack/src/commit/mod.rs",
-              "module": "commit",
-              "line": 170
+              "line": 141
             },
             {
               "kind": "struct",
-              "name": "CommitService",
-              "visibility": "pub",
-              "signature": "pub struct CommitService",
+              "name": "CommitWriter",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) struct CommitWriter",
               "fields": [
+                {
+                  "name": "root",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                },
                 {
                   "name": "commit_queue",
                   "visibility": "private",
                   "ty": "CommitQueue"
-                },
-                {
-                  "name": "route_provider",
-                  "visibility": "private",
-                  "ty": "Arc < dyn RouteProvider >"
                 }
               ],
               "variants": [],
@@ -16900,51 +16802,56 @@
               "impl_target": null,
               "trait_name": null,
               "docs": null,
-              "tags": [
-                "port/service"
-              ],
+              "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 176
+              "line": 169
             },
             {
               "kind": "impl",
-              "name": "impl CommitService",
+              "name": "impl CommitWriter",
               "visibility": "private",
-              "signature": "impl CommitService",
+              "signature": "impl CommitWriter",
               "fields": [],
               "variants": [],
               "methods": [
                 {
-                  "name": "with_route_provider",
-                  "signature": "pub fn with_route_provider (mut commit_queue : CommitQueue , route_provider : Arc < dyn RouteProvider > ,) -> Result < Self , CommitError >",
+                  "name": "new",
+                  "signature": "pub(crate) fn new (root : PathBuf) -> Result < Self , CommitError >",
                   "kind": "constructor",
+                  "docs": null,
+                  "line": 175
+                },
+                {
+                  "name": "apply_changeset_with_base_hashes",
+                  "signature": "pub(crate) fn apply_changeset_with_base_hashes (& self , changes : & [LayerChange] , snapshot_version : Option < u64 > , atomic : bool , base_hashes : & [(LayerPath , Option < String >)] ,) -> Result < ChangesetResult , CommitError >",
+                  "kind": "method",
                   "docs": null,
                   "line": 182
                 },
                 {
-                  "name": "apply_changeset_with_base_hashes",
-                  "signature": "pub fn apply_changeset_with_base_hashes (& self , changes : & [LayerChange] , snapshot_version : Option < u64 > , atomic : bool , base_hashes : & [(LayerPath , Option < String >)] ,) -> Result < ChangesetResult , CommitError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 193
-                },
-                {
                   "name": "prepare_changeset_with_base_hashes",
-                  "signature": "pub fn prepare_changeset_with_base_hashes (& self , changes : & [LayerChange] , snapshot_version : Option < u64 > , atomic : bool , base_hashes : & [(LayerPath , Option < String >)] ,) -> Result < PreparedChangeset , CommitError >",
+                  "signature": "fn prepare_changeset_with_base_hashes (& self , changes : & [LayerChange] , snapshot_version : Option < u64 > , atomic : bool , base_hashes : & [(LayerPath , Option < String >)] ,) -> Result < PreparedChangeset , CommitError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 209
+                  "line": 198
                 },
                 {
                   "name": "apply_prepared_changeset",
                   "signature": "fn apply_prepared_changeset (& self , prepared : PreparedChangeset ,) -> Result < ChangesetResult , CommitError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 258
+                  "line": 238
+                },
+                {
+                  "name": "open_stack",
+                  "signature": "fn open_stack (& self) -> Result < LayerStack , CommitError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 257
                 }
               ],
-              "impl_target": "CommitService",
+              "impl_target": "CommitWriter",
               "trait_name": null,
               "docs": null,
               "tags": [
@@ -16952,7 +16859,55 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 181
+              "line": 174
+            },
+            {
+              "kind": "fn",
+              "name": "route_for_path",
+              "visibility": "private",
+              "signature": "fn route_for_path (stack : & LayerStack , path : & LayerPath) -> Result < Route , LayerStackError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/commit/mod.rs",
+              "module": "commit",
+              "line": 263
+            },
+            {
+              "kind": "fn",
+              "name": "drop_message",
+              "visibility": "private",
+              "signature": "fn drop_message (route : Route) -> Option < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/commit/mod.rs",
+              "module": "commit",
+              "line": 274
+            },
+            {
+              "kind": "fn",
+              "name": "stack_base_hash",
+              "visibility": "private",
+              "signature": "fn stack_base_hash (stack : & LayerStack , path : & LayerPath) -> Result < Option < String > , CommitError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/commit/mod.rs",
+              "module": "commit",
+              "line": 278
             },
             {
               "kind": "fn",
@@ -16968,7 +16923,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 278
+              "line": 285
             },
             {
               "kind": "fn",
@@ -16984,13 +16939,13 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 313
+              "line": 320
             },
             {
               "kind": "impl",
-              "name": "impl Drop for CommitService",
+              "name": "impl Drop for CommitWriter",
               "visibility": "private",
-              "signature": "impl Drop for CommitService",
+              "signature": "impl Drop for CommitWriter",
               "fields": [],
               "variants": [],
               "methods": [
@@ -16999,10 +16954,10 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 318
+                  "line": 325
                 }
               ],
-              "impl_target": "CommitService",
+              "impl_target": "CommitWriter",
               "trait_name": "Drop",
               "docs": null,
               "tags": [
@@ -17011,7 +16966,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 317
+              "line": 324
             },
             {
               "kind": "struct",
@@ -17045,65 +17000,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 322
-            },
-            {
-              "kind": "struct",
-              "name": "StackRouteProvider",
-              "visibility": "pub",
-              "signature": "pub struct StackRouteProvider",
-              "fields": [
-                {
-                  "name": "root",
-                  "visibility": "pub",
-                  "ty": "PathBuf"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "derive: Clone"
-              ],
-              "file": "crates/eos-layerstack/src/commit/mod.rs",
-              "module": "commit",
-              "line": 328
-            },
-            {
-              "kind": "impl",
-              "name": "impl RouteProvider for StackRouteProvider",
-              "visibility": "private",
-              "signature": "impl RouteProvider for StackRouteProvider",
-              "fields": [],
-              "variants": [],
-              "methods": [
-                {
-                  "name": "is_ignored",
-                  "signature": "fn is_ignored (& self , path : & LayerPath) -> std :: result :: Result < bool , CommitError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 334
-                },
-                {
-                  "name": "base_hash",
-                  "signature": "fn base_hash (& self , path : & LayerPath) -> std :: result :: Result < Option < String > , CommitError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 341
-                }
-              ],
-              "impl_target": "StackRouteProvider",
-              "trait_name": "RouteProvider",
-              "docs": null,
-              "tags": [
-                "impl",
-                "trait-impl"
-              ],
-              "file": "crates/eos-layerstack/src/commit/mod.rs",
-              "module": "commit",
-              "line": 333
+              "line": 329
             },
             {
               "kind": "fn",
@@ -17119,7 +17016,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 351
+              "line": 335
             },
             {
               "kind": "fn",
@@ -17135,7 +17032,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 371
+              "line": 351
             },
             {
               "kind": "fn",
@@ -17151,7 +17048,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 410
+              "line": 390
             },
             {
               "kind": "fn",
@@ -17167,7 +17064,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 426
+              "line": 406
             },
             {
               "kind": "fn",
@@ -17183,7 +17080,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 438
+              "line": 418
             },
             {
               "kind": "fn",
@@ -17199,7 +17096,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 466
+              "line": 446
             },
             {
               "kind": "fn",
@@ -17215,7 +17112,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 488
+              "line": 468
             },
             {
               "kind": "fn",
@@ -17231,7 +17128,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 495
+              "line": 475
             },
             {
               "kind": "fn",
@@ -17249,7 +17146,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 516
+              "line": 496
             },
             {
               "kind": "fn",
@@ -17267,23 +17164,7 @@
               ],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 524
-            },
-            {
-              "kind": "fn",
-              "name": "hex_lower",
-              "visibility": "private",
-              "signature": "fn hex_lower (bytes : & [u8]) -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-layerstack/src/commit/mod.rs",
-              "module": "commit",
-              "line": 531
+              "line": 504
             },
             {
               "kind": "fn",
@@ -17299,7 +17180,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 542
+              "line": 511
             },
             {
               "kind": "fn",
@@ -17315,7 +17196,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/commit/mod.rs",
               "module": "commit",
-              "line": 546
+              "line": 515
             }
           ]
         },
@@ -17326,27 +17207,27 @@
             {
               "kind": "struct",
               "name": "PreparedChangeset",
-              "visibility": "pub",
-              "signature": "pub struct PreparedChangeset",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct PreparedChangeset",
               "fields": [
                 {
                   "name": "snapshot_version",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "Option < u64 >"
                 },
                 {
                   "name": "path_groups",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "Vec < PublishDecision >"
                 },
                 {
                   "name": "changes",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "Vec < LayerChange >"
                 },
                 {
                   "name": "atomic",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "bool"
                 }
               ],
@@ -17368,12 +17249,12 @@
             {
               "kind": "struct",
               "name": "PublishConflict",
-              "visibility": "pub",
-              "signature": "pub struct PublishConflict",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct PublishConflict",
               "fields": [
                 {
                   "name": "observed_version",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "Option < u64 >"
                 }
               ],
@@ -17458,8 +17339,8 @@
             {
               "kind": "struct",
               "name": "CommitQueue",
-              "visibility": "pub",
-              "signature": "pub struct CommitQueue",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct CommitQueue",
               "fields": [
                 {
                   "name": "sender",
@@ -17564,35 +17445,35 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (transaction : CommitTransaction) -> Self",
+                  "signature": "pub(super) fn new (transaction : CommitTransaction) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 67
                 },
                 {
                   "name": "with_config",
-                  "signature": "pub fn with_config (transaction : CommitTransaction , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -> Self",
+                  "signature": "fn with_config (transaction : CommitTransaction , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
                   "line": 76
                 },
                 {
                   "name": "start",
-                  "signature": "pub fn start (& mut self) -> Result < () , CommitError >",
+                  "signature": "pub(super) fn start (& mut self) -> Result < () , CommitError >",
                   "kind": "method",
                   "docs": null,
                   "line": 95
                 },
                 {
                   "name": "close",
-                  "signature": "pub fn close (& mut self) -> Result < () , CommitError >",
+                  "signature": "pub(super) fn close (& mut self) -> Result < () , CommitError >",
                   "kind": "method",
                   "docs": null,
                   "line": 135
                 },
                 {
                   "name": "submit",
-                  "signature": "pub fn submit (& self , prepared : PreparedChangeset ,) -> Result < mpsc :: Receiver < Result < ChangesetResult , CommitError > > , CommitError >",
+                  "signature": "pub(super) fn submit (& self , prepared : PreparedChangeset ,) -> Result < mpsc :: Receiver < Result < ChangesetResult , CommitError > > , CommitError >",
                   "kind": "method",
                   "docs": null,
                   "line": 149
@@ -17756,12 +17637,12 @@
             {
               "kind": "struct",
               "name": "CommitTransaction",
-              "visibility": "pub",
-              "signature": "pub struct CommitTransaction",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct CommitTransaction",
               "fields": [
                 {
                   "name": "root",
-                  "visibility": "pub",
+                  "visibility": "pub(super)",
                   "ty": "PathBuf"
                 }
               ],
@@ -17787,7 +17668,7 @@
               "methods": [
                 {
                   "name": "revalidate_and_publish",
-                  "signature": "pub fn revalidate_and_publish (& self , combined : & PreparedChangeset ,) -> std :: result :: Result < ChangesetResult , PublishConflict >",
+                  "signature": "pub(super) fn revalidate_and_publish (& self , combined : & PreparedChangeset ,) -> std :: result :: Result < ChangesetResult , PublishConflict >",
                   "kind": "method",
                   "docs": null,
                   "line": 379
@@ -18241,7 +18122,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 12
+              "line": 13
             },
             {
               "kind": "fn",
@@ -18257,7 +18138,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 27
+              "line": 28
             },
             {
               "kind": "fn",
@@ -18273,7 +18154,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 37
+              "line": 38
             },
             {
               "kind": "fn",
@@ -18289,7 +18170,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 41
+              "line": 42
             },
             {
               "kind": "fn",
@@ -18305,7 +18186,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 66
+              "line": 67
             },
             {
               "kind": "fn",
@@ -18321,7 +18202,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 75
+              "line": 76
             },
             {
               "kind": "fn",
@@ -18337,7 +18218,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 90
+              "line": 91
             },
             {
               "kind": "fn",
@@ -18353,7 +18234,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 101
+              "line": 102
             },
             {
               "kind": "fn",
@@ -18369,7 +18250,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 126
+              "line": 127
             },
             {
               "kind": "fn",
@@ -18385,7 +18266,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 140
+              "line": 141
             },
             {
               "kind": "fn",
@@ -18401,7 +18282,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 168
+              "line": 169
             },
             {
               "kind": "fn",
@@ -18417,7 +18298,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 177
+              "line": 178
             },
             {
               "kind": "fn",
@@ -18433,7 +18314,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 182
+              "line": 183
             },
             {
               "kind": "fn",
@@ -18449,7 +18330,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 196
+              "line": 197
             },
             {
               "kind": "fn",
@@ -18465,7 +18346,39 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 245
+              "line": 246
+            },
+            {
+              "kind": "fn",
+              "name": "layer_digest_path",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn layer_digest_path (storage_root : & Path , layer_id : & str) -> PathBuf",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/fs.rs",
+              "module": "fs",
+              "line": 264
+            },
+            {
+              "kind": "fn",
+              "name": "write_layer_digest",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn write_layer_digest (storage_root : & Path , layer_id : & str , digest : & str ,) -> Result < () , LayerStackError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-layerstack/src/fs.rs",
+              "module": "fs",
+              "line": 270
             },
             {
               "kind": "fn",
@@ -18481,7 +18394,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/fs.rs",
               "module": "fs",
-              "line": 263
+              "line": 278
             }
           ]
         },
@@ -19359,8 +19272,8 @@
             {
               "kind": "fn",
               "name": "hex_lower",
-              "visibility": "private",
-              "signature": "fn hex_lower (bytes : & [u8]) -> String",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn hex_lower (bytes : impl AsRef < [u8] >) -> String",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -19386,7 +19299,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/model.rs",
               "module": "model",
-              "line": 235
+              "line": 236
             }
           ]
         },
@@ -19398,7 +19311,7 @@
               "kind": "type",
               "name": "RootService",
               "visibility": "private",
-              "signature": "type RootService = Arc < CommitService >",
+              "signature": "type RootService = Arc < CommitWriter >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -19410,7 +19323,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 16
+              "line": 15
             },
             {
               "kind": "struct",
@@ -19457,7 +19370,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 20
+              "line": 19
             },
             {
               "kind": "impl",
@@ -19472,7 +19385,7 @@
                   "signature": "fn insert_timings (& self , timings : & mut BTreeMap < String , f64 >)",
                   "kind": "method",
                   "docs": null,
-                  "line": 30
+                  "line": 29
                 }
               ],
               "impl_target": "ServiceLookup",
@@ -19483,7 +19396,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 29
+              "line": 28
             },
             {
               "kind": "struct",
@@ -19532,7 +19445,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 67
+              "line": 66
             },
             {
               "kind": "struct",
@@ -19566,7 +19479,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 77
+              "line": 76
             },
             {
               "kind": "impl",
@@ -19581,35 +19494,35 @@
                   "signature": "fn record_lock_wait (& mut self , lock_wait_s : f64)",
                   "kind": "method",
                   "docs": null,
-                  "line": 85
+                  "line": 84
                 },
                 {
                   "name": "get",
                   "signature": "fn get (& mut self , key : & str , lock_wait_s : f64) -> Option < ServiceLookup >",
                   "kind": "method",
                   "docs": null,
-                  "line": 90
+                  "line": 89
                 },
                 {
                   "name": "insert_or_get",
-                  "signature": "pub(crate) fn insert_or_get (& mut self , key : String , service : RootService , lock_wait_s : f64 ,) -> (ServiceLookup , Option < RootService >)",
+                  "signature": "pub(crate) fn insert_or_get (& mut self , key : String , service : RootService , lock_wait_s : f64 ,) -> ServiceLookup",
                   "kind": "method",
                   "docs": null,
-                  "line": 105
+                  "line": 104
                 },
                 {
                   "name": "touch",
                   "signature": "fn touch (& mut self , key : & str)",
                   "kind": "method",
                   "docs": null,
-                  "line": 149
+                  "line": 142
                 },
                 {
                   "name": "evict_oldest",
                   "signature": "fn evict_oldest (& mut self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 156
+                  "line": 149
                 }
               ],
               "impl_target": "ServiceCache",
@@ -19620,7 +19533,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 84
+              "line": 83
             },
             {
               "kind": "fn",
@@ -19636,7 +19549,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 170
+              "line": 163
             },
             {
               "kind": "fn",
@@ -19652,7 +19565,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 175
+              "line": 168
             },
             {
               "kind": "fn",
@@ -19668,7 +19581,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 181
+              "line": 174
             },
             {
               "kind": "fn",
@@ -19684,7 +19597,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 208
+              "line": 189
             },
             {
               "kind": "struct",
@@ -19726,7 +19639,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 215
+              "line": 196
             },
             {
               "kind": "fn",
@@ -19742,7 +19655,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 223
+              "line": 204
             },
             {
               "kind": "fn",
@@ -19758,7 +19671,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 233
+              "line": 214
             },
             {
               "kind": "fn",
@@ -19774,7 +19687,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 237
+              "line": 218
             },
             {
               "kind": "fn",
@@ -19790,7 +19703,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 241
+              "line": 222
             },
             {
               "kind": "fn",
@@ -19806,7 +19719,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 258
+              "line": 239
             },
             {
               "kind": "fn",
@@ -19822,7 +19735,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 287
+              "line": 268
             },
             {
               "kind": "fn",
@@ -19838,7 +19751,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 316
+              "line": 297
             },
             {
               "kind": "fn",
@@ -19856,7 +19769,7 @@
               ],
               "file": "crates/eos-layerstack/src/service.rs",
               "module": "service",
-              "line": 322
+              "line": 303
             }
           ]
         },
@@ -20898,32 +20811,18 @@
                   "line": 603
                 },
                 {
-                  "name": "layer_digest_path",
-                  "signature": "fn layer_digest_path (& self , layer_id : & str) -> PathBuf",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 622
-                },
-                {
                   "name": "head_layer_digest",
                   "signature": "fn head_layer_digest (& self , manifest : & Manifest) -> Result < Option < String > , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 626
-                },
-                {
-                  "name": "write_layer_digest",
-                  "signature": "fn write_layer_digest (& self , layer_id : & str , digest : & str) -> Result < () , LayerStackError >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 638
+                  "line": 622
                 },
                 {
                   "name": "commit_projection_dir",
                   "signature": "fn commit_projection_dir (& self) -> Result < PathBuf , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 643
+                  "line": 634
                 }
               ],
               "impl_target": "LayerStack",
@@ -20950,7 +20849,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 664
+              "line": 655
             },
             {
               "kind": "fn",
@@ -20966,7 +20865,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 678
+              "line": 669
             },
             {
               "kind": "fn",
@@ -20982,23 +20881,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 691
-            },
-            {
-              "kind": "fn",
-              "name": "layer_digest_path_at",
-              "visibility": "private",
-              "signature": "fn layer_digest_path_at (storage_root : & Path , layer_id : & str) -> PathBuf",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-layerstack/src/stack/mod.rs",
-              "module": "stack",
-              "line": 704
+              "line": 682
             },
             {
               "kind": "fn",
@@ -21014,7 +20897,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 710
+              "line": 695
             },
             {
               "kind": "fn",
@@ -21030,7 +20913,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 723
+              "line": 708
             },
             {
               "kind": "fn",
@@ -21046,7 +20929,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 743
+              "line": 728
             },
             {
               "kind": "fn",
@@ -21062,7 +20945,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 786
+              "line": 771
             },
             {
               "kind": "fn",
@@ -21078,7 +20961,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/stack/mod.rs",
               "module": "stack",
-              "line": 793
+              "line": 778
             }
           ]
         },
@@ -21416,7 +21299,7 @@
               ],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 21
+              "line": 22
             },
             {
               "kind": "impl",
@@ -21431,14 +21314,14 @@
                   "signature": "pub fn layer_path_from_relative (& self , path : & str) -> Result < String , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 32
+                  "line": 33
                 },
                 {
                   "name": "layer_path_from_absolute",
                   "signature": "pub fn layer_path_from_absolute (& self , path : & str) -> Result < String , LayerStackError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 47
+                  "line": 48
                 }
               ],
               "impl_target": "WorkspaceBinding",
@@ -21449,7 +21332,7 @@
               ],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 31
+              "line": 32
             },
             {
               "kind": "struct",
@@ -21480,7 +21363,7 @@
               ],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 71
+              "line": 72
             },
             {
               "kind": "enum",
@@ -21552,7 +21435,7 @@
               ],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 77
+              "line": 78
             },
             {
               "kind": "impl",
@@ -21567,14 +21450,14 @@
                   "signature": "fn path (& self) -> & str",
                   "kind": "method",
                   "docs": null,
-                  "line": 95
+                  "line": 96
                 },
                 {
                   "name": "kind",
                   "signature": "const fn kind (& self) -> & 'static str",
                   "kind": "method",
                   "docs": null,
-                  "line": 101
+                  "line": 102
                 }
               ],
               "impl_target": "BaseEntry",
@@ -21585,7 +21468,7 @@
               ],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 94
+              "line": 95
             },
             {
               "kind": "fn",
@@ -21601,7 +21484,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 110
+              "line": 111
             },
             {
               "kind": "fn",
@@ -21617,7 +21500,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 131
+              "line": 132
             },
             {
               "kind": "fn",
@@ -21633,7 +21516,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 144
+              "line": 145
             },
             {
               "kind": "fn",
@@ -21649,7 +21532,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 158
+              "line": 159
             },
             {
               "kind": "fn",
@@ -21665,7 +21548,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 229
+              "line": 230
             },
             {
               "kind": "fn",
@@ -21681,7 +21564,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 252
+              "line": 253
             },
             {
               "kind": "fn",
@@ -21697,7 +21580,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 282
+              "line": 283
             },
             {
               "kind": "fn",
@@ -21713,7 +21596,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 343
+              "line": 344
             },
             {
               "kind": "fn",
@@ -21729,7 +21612,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 352
+              "line": 353
             },
             {
               "kind": "fn",
@@ -21745,7 +21628,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 419
+              "line": 420
             },
             {
               "kind": "fn",
@@ -21761,7 +21644,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 437
+              "line": 438
             },
             {
               "kind": "fn",
@@ -21777,7 +21660,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 460
+              "line": 461
             },
             {
               "kind": "fn",
@@ -21793,23 +21676,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 473
-            },
-            {
-              "kind": "fn",
-              "name": "write_layer_digest",
-              "visibility": "private",
-              "signature": "fn write_layer_digest (stack : & Path , layer_id : & str , digest : & str) -> Result < () , LayerStackError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-layerstack/src/workspace.rs",
-              "module": "workspace",
-              "line": 479
+              "line": 474
             },
             {
               "kind": "fn",
@@ -21825,7 +21692,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 488
+              "line": 480
             },
             {
               "kind": "fn",
@@ -21841,7 +21708,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 502
+              "line": 494
             },
             {
               "kind": "fn",
@@ -21857,7 +21724,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 523
+              "line": 515
             },
             {
               "kind": "fn",
@@ -21873,7 +21740,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 565
+              "line": 557
             },
             {
               "kind": "fn",
@@ -21889,7 +21756,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 569
+              "line": 561
             },
             {
               "kind": "fn",
@@ -21905,7 +21772,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 576
+              "line": 568
             },
             {
               "kind": "fn",
@@ -21921,7 +21788,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 583
+              "line": 575
             },
             {
               "kind": "fn",
@@ -21937,23 +21804,7 @@
               "tags": [],
               "file": "crates/eos-layerstack/src/workspace.rs",
               "module": "workspace",
-              "line": 591
-            },
-            {
-              "kind": "fn",
-              "name": "hex_digest",
-              "visibility": "private",
-              "signature": "fn hex_digest (bytes : impl AsRef < [u8] >) -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-layerstack/src/workspace.rs",
-              "module": "workspace",
-              "line": 600
+              "line": 583
             }
           ]
         }
@@ -24868,13 +24719,13 @@
       "path": "crates/eos-overlay",
       "stats": {
         "modules": 5,
-        "items": 42,
-        "structs": 5,
-        "enums": 2,
+        "items": 47,
+        "structs": 6,
+        "enums": 3,
         "traits": 1,
-        "functions": 29,
+        "functions": 31,
         "impls": 4,
-        "fields": 23,
+        "fields": 33,
         "methods": 6
       },
       "modules": [
@@ -25021,7 +24872,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The inputs for one overlay mount.\n\n`layer_paths` is the leased lower stack in NEWEST-FIRST order (element 0 =\nhighest-priority lower); `upperdir`/`workdir` are the writable side from\n[`crate::writable_dirs`].",
+              "docs": "The inputs for one overlay mount.\n\n`layer_paths` is the leased lower stack in NEWEST-FIRST order (element 0 =\nhighest-priority lower); `upperdir`/`workdir` are the writable side.",
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -25054,7 +24905,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 51
+              "line": 50
             },
             {
               "kind": "impl",
@@ -25069,7 +24920,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 66
+                  "line": 65
                 }
               ],
               "impl_target": "OverlayMount",
@@ -25081,7 +24932,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 65
+              "line": 64
             },
             {
               "kind": "fn",
@@ -25099,7 +24950,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 73
+              "line": 72
             },
             {
               "kind": "fn",
@@ -25117,7 +24968,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 121
+              "line": 120
             },
             {
               "kind": "fn",
@@ -25135,7 +24986,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 137
+              "line": 136
             },
             {
               "kind": "fn",
@@ -25153,7 +25004,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 147
+              "line": 146
             },
             {
               "kind": "struct",
@@ -25197,7 +25048,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 160
+              "line": 159
             },
             {
               "kind": "impl",
@@ -25212,7 +25063,7 @@
                   "signature": "fn open (workspace_root : & Path , handle : & OverlayHandle) -> Result < Self >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 171
+                  "line": 170
                 }
               ],
               "impl_target": "ValidatedMountInputs",
@@ -25224,7 +25075,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 169
+              "line": 168
             },
             {
               "kind": "fn",
@@ -25242,7 +25093,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 227
+              "line": 226
             },
             {
               "kind": "fn",
@@ -25260,7 +25111,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 247
+              "line": 246
             },
             {
               "kind": "fn",
@@ -25278,7 +25129,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 259
+              "line": 258
             },
             {
               "kind": "fn",
@@ -25296,7 +25147,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 264
+              "line": 263
             },
             {
               "kind": "fn",
@@ -25314,7 +25165,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 294
+              "line": 293
             },
             {
               "kind": "fn",
@@ -25332,7 +25183,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 307
+              "line": 306
             },
             {
               "kind": "fn",
@@ -25350,7 +25201,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 322
+              "line": 321
             },
             {
               "kind": "fn",
@@ -25368,7 +25219,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 337
+              "line": 336
             },
             {
               "kind": "trait",
@@ -25383,7 +25234,7 @@
                   "signature": "fn map_mount_syscall (self , context : & 'static str) -> Result < T >",
                   "kind": "required",
                   "docs": null,
-                  "line": 363
+                  "line": 362
                 }
               ],
               "impl_target": null,
@@ -25394,7 +25245,7 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 361
+              "line": 360
             },
             {
               "kind": "impl",
@@ -25409,7 +25260,7 @@
                   "signature": "fn map_mount_syscall (self , context : & 'static str) -> Result < T >",
                   "kind": "method",
                   "docs": null,
-                  "line": 368
+                  "line": 367
                 }
               ],
               "impl_target": "rustix :: io :: Result < T >",
@@ -25422,14 +25273,191 @@
               ],
               "file": "crates/eos-overlay/src/kernel_mount.rs",
               "module": "kernel_mount",
-              "line": 366
+              "line": 365
             }
           ]
         },
         {
           "path": "crates/eos-overlay/src/lib.rs",
           "module": "lib",
-          "items": []
+          "items": [
+            {
+              "kind": "enum",
+              "name": "OverlayError",
+              "visibility": "pub",
+              "signature": "pub enum OverlayError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "WritableRootUnavailable",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "InvalidMountInput",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "MountSyscall",
+                  "fields": [
+                    {
+                      "name": "context",
+                      "visibility": "private",
+                      "ty": "& 'static str"
+                    },
+                    {
+                      "name": "source",
+                      "visibility": "private",
+                      "ty": "io :: Error"
+                    }
+                  ]
+                },
+                {
+                  "name": "Capture",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "io :: Error"
+                    }
+                  ]
+                },
+                {
+                  "name": "Path",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "CasError"
+                    }
+                  ]
+                },
+                {
+                  "name": "InvalidPathChange",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "String"
+                    }
+                  ]
+                },
+                {
+                  "name": "Unsupported",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Failures raised by the overlay kernel-mount and upper-dir capture paths.",
+              "tags": [
+                "derive: Debug",
+                "derive: Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-overlay/src/lib.rs",
+              "module": "lib",
+              "line": 46
+            },
+            {
+              "kind": "type",
+              "name": "Result",
+              "visibility": "pub",
+              "signature": "pub type Result< T > = std :: result :: Result < T , OverlayError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Crate result alias.",
+              "tags": [],
+              "file": "crates/eos-overlay/src/lib.rs",
+              "module": "lib",
+              "line": 83
+            },
+            {
+              "kind": "struct",
+              "name": "OverlayWritableDirs",
+              "visibility": "pub",
+              "signature": "pub struct OverlayWritableDirs",
+              "fields": [
+                {
+                  "name": "run_dir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "upperdir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                },
+                {
+                  "name": "workdir",
+                  "visibility": "pub",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Per-overlay writable directories created beside each other under one run dir.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-overlay/src/lib.rs",
+              "module": "lib",
+              "line": 86
+            },
+            {
+              "kind": "fn",
+              "name": "overlay_writable_root",
+              "visibility": "pub",
+              "signature": "pub fn overlay_writable_root () -> Result < PathBuf >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Return the canonical writable root, creating it if its parent exists.\n\n# Errors\n\nReturns [`OverlayError::Capture`] when directory creation fails, or\n[`OverlayError::WritableRootUnavailable`] when the canonical root is not a\ndirectory.",
+              "tags": [],
+              "file": "crates/eos-overlay/src/lib.rs",
+              "module": "lib",
+              "line": 97
+            },
+            {
+              "kind": "fn",
+              "name": "allocate_overlay_writable_dirs",
+              "visibility": "pub",
+              "signature": "pub fn allocate_overlay_writable_dirs (run_dir : & Path) -> Result < OverlayWritableDirs >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Create and return the `upper`/`work` dirs for one overlay instance.\n\n# Errors\n\nReturns [`OverlayError::Capture`] when either writable directory cannot be\ncreated.",
+              "tags": [],
+              "file": "crates/eos-overlay/src/lib.rs",
+              "module": "lib",
+              "line": 118
+            }
+          ]
         },
         {
           "path": "crates/eos-overlay/src/path_change.rs",
@@ -25968,7 +25996,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Failures surfaced by plugin contracts and the PPC channel.\n\nThe Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`\n/ `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum\nreproduces those failure classes as a typed surface the daemon translates into\nthe wire error envelope. Concrete overlay/OCC failures are daemon-owned.",
+              "docs": "Failures surfaced by plugin contracts and the PPC channel.\n\nThe Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`\n/ `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum\nreproduces those failure classes as a typed surface the daemon translates into\nthe wire error response. Concrete overlay/OCC failures are daemon-owned.",
               "tags": [
                 "derive: Debug",
                 "derive: Error",
@@ -25994,163 +26022,6 @@
               "file": "crates/eos-plugin/src/error.rs",
               "module": "error",
               "line": 49
-            }
-          ]
-        },
-        {
-          "path": "crates/eos-plugin/src/framing.rs",
-          "module": "framing",
-          "items": [
-            {
-              "kind": "enum",
-              "name": "ProtocolError",
-              "visibility": "pub",
-              "signature": "pub enum ProtocolError",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "BadJson",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "serde_json :: Error"
-                    }
-                  ]
-                },
-                {
-                  "name": "NotAnObject",
-                  "fields": []
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Encode/decode failures for the framed PPC channel.",
-              "tags": [
-                "derive: Debug",
-                "derive: Error",
-                "error",
-                "non_exhaustive"
-              ],
-              "file": "crates/eos-plugin/src/framing.rs",
-              "module": "framing",
-              "line": 17
-            },
-            {
-              "kind": "struct",
-              "name": "Request",
-              "visibility": "pub",
-              "signature": "pub struct Request",
-              "fields": [
-                {
-                  "name": "op",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "invocation_id",
-                  "visibility": "pub",
-                  "ty": "String"
-                },
-                {
-                  "name": "args",
-                  "visibility": "pub",
-                  "ty": "Value"
-                }
-              ],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Request frame: `{op, invocation_id, args}` in exactly this key order.",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Deserialize",
-                "derive: Eq",
-                "derive: PartialEq",
-                "derive: Serialize",
-                "dto",
-                "serde"
-              ],
-              "file": "crates/eos-plugin/src/framing.rs",
-              "module": "framing",
-              "line": 29
-            },
-            {
-              "kind": "enum",
-              "name": "Envelope",
-              "visibility": "pub",
-              "signature": "pub enum Envelope",
-              "fields": [],
-              "variants": [
-                {
-                  "name": "Request",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "Request"
-                    }
-                  ]
-                },
-                {
-                  "name": "Other",
-                  "fields": [
-                    {
-                      "name": "0",
-                      "visibility": "private",
-                      "ty": "Value"
-                    }
-                  ]
-                }
-              ],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "One framed PPC message: a request shape, or any other JSON object (a\nnon-request frame is rejected by the PPC layer above).",
-              "tags": [
-                "derive: Clone",
-                "derive: Debug",
-                "derive: Eq",
-                "derive: PartialEq"
-              ],
-              "file": "crates/eos-plugin/src/framing.rs",
-              "module": "framing",
-              "line": 40
-            },
-            {
-              "kind": "fn",
-              "name": "encode",
-              "visibility": "pub",
-              "signature": "pub fn encode (envelope : & Envelope) -> Result < Vec < u8 > , ProtocolError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Serialize an envelope as compact JSON plus a single trailing `\\n`.\n\n# Errors\nReturns [`ProtocolError::BadJson`] when serde cannot serialize the frame.",
-              "tags": [],
-              "file": "crates/eos-plugin/src/framing.rs",
-              "module": "framing",
-              "line": 50
-            },
-            {
-              "kind": "fn",
-              "name": "decode",
-              "visibility": "pub",
-              "signature": "pub fn decode (bytes : & [u8]) -> Result < Envelope , ProtocolError >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": "Decode one framed message; a trailing `\\n` is tolerated.\n\n# Errors\nReturns [`ProtocolError::BadJson`] for invalid JSON and\n[`ProtocolError::NotAnObject`] when the value is not a JSON object.",
-              "tags": [],
-              "file": "crates/eos-plugin/src/framing.rs",
-              "module": "framing",
-              "line": 63
             }
           ]
         },
@@ -26725,9 +26596,9 @@
             },
             {
               "kind": "struct",
-              "name": "PpcEnvelope",
+              "name": "PpcMessage",
               "visibility": "pub",
-              "signature": "pub struct PpcEnvelope",
+              "signature": "pub struct PpcMessage",
               "fields": [
                 {
                   "name": "message_id",
@@ -26754,7 +26625,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "A message-id'd PPC frame.\n\n`op` carries the public op name (`plugin.<p>.<op>`) for a request, or a\nreply/callback sentinel for the return direction. `body` is opaque JSON text\nso PPC does not parse operation-specific payload schemas.",
+              "docs": "A message-id'd PPC message.\n\n`op` carries the public op name (`plugin.<p>.<op>`) for a request, or a\nreply/callback sentinel for the return direction. `body` is opaque JSON text\nso PPC does not parse operation-specific payload schemas.",
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -26767,9 +26638,9 @@
             },
             {
               "kind": "impl",
-              "name": "impl PpcEnvelope",
+              "name": "impl PpcMessage",
               "visibility": "private",
-              "signature": "impl PpcEnvelope",
+              "signature": "impl PpcMessage",
               "fields": [],
               "variants": [],
               "methods": [
@@ -26777,32 +26648,32 @@
                   "name": "encode",
                   "signature": "pub fn encode (& self) -> Result < Vec < u8 > , PluginError >",
                   "kind": "method",
-                  "docs": "Frame this envelope as newline-delimited compact JSON via the SAME\n[`crate::framing::encode`] the daemon uses (no second wire format). The\n`{direction, body}` args object is built by the future port; `message_id`\nmaps to the envelope `invocation_id` and `op` to the envelope `op`.\n\n# Errors\n\nReturns [`PluginError::Ppc`] if shared protocol framing fails.",
+                  "docs": "Encode this message as newline-delimited compact JSON via the SAME\n[`crate::wire::encode`] the daemon uses (no second wire format). The\n`{direction, body}` args object is built by the future port; `message_id`\nmaps to the wire `invocation_id` and `op` to the wire `op`.\n\n# Errors\n\nReturns [`PluginError::Ppc`] if shared wire encoding fails.",
                   "line": 54
                 },
                 {
                   "name": "decode",
                   "signature": "pub fn decode (bytes : & [u8]) -> Result < Self , PluginError >",
                   "kind": "associated-fn",
-                  "docs": "Decode one framed PPC message produced by [`PpcEnvelope::encode`].\n\n# Errors\n\nReturns [`PluginError::Ppc`] if the shared frame is invalid or if it does\nnot contain a PPC request-shaped payload.",
+                  "docs": "Decode one PPC message produced by [`PpcMessage::encode`].\n\n# Errors\n\nReturns [`PluginError::Ppc`] if the shared message is invalid or if it does\nnot contain a PPC request-shaped payload.",
                   "line": 67
                 },
                 {
-                  "name": "to_envelope",
-                  "signature": "fn to_envelope (& self) -> Envelope",
+                  "name": "to_wire_message",
+                  "signature": "fn to_wire_message (& self) -> Message",
                   "kind": "method",
-                  "docs": "Project this frame onto an [`crate::framing::Envelope::Request`], encoding\n`op`/`message_id`/`{direction, body}` into the request shape so the shared\nframing carries it. Body is opaque JSON text wrapped into the args object.",
+                  "docs": "Project this message onto a [`crate::wire::Message::Request`], encoding\n`op`/`message_id`/`{direction, body}` into the request shape so the shared\nwire message carries it. Body is opaque JSON text wrapped into the args object.",
                   "line": 78
                 },
                 {
-                  "name": "from_envelope",
-                  "signature": "fn from_envelope (envelope : Envelope) -> Result < Self , PluginError >",
+                  "name": "from_wire_message",
+                  "signature": "fn from_wire_message (message : Message) -> Result < Self , PluginError >",
                   "kind": "constructor",
-                  "docs": "Recover a PPC frame from a decoded protocol envelope (the request shape).",
+                  "docs": "Recover a PPC message from a decoded request-shaped wire message.",
                   "line": 92
                 }
               ],
-              "impl_target": "PpcEnvelope",
+              "impl_target": "PpcMessage",
               "trait_name": null,
               "docs": null,
               "tags": [
@@ -26846,9 +26717,9 @@
             },
             {
               "kind": "fn",
-              "name": "map_protocol",
+              "name": "map_wire_error",
               "visibility": "private",
-              "signature": "fn map_protocol (err : & ProtocolError) -> PluginError",
+              "signature": "fn map_wire_error (err : & WireError) -> PluginError",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -27570,6 +27441,163 @@
               "line": 42
             }
           ]
+        },
+        {
+          "path": "crates/eos-plugin/src/wire.rs",
+          "module": "wire",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "WireError",
+              "visibility": "pub",
+              "signature": "pub enum WireError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "BadJson",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "serde_json :: Error"
+                    }
+                  ]
+                },
+                {
+                  "name": "NotAnObject",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Encode/decode failures for the PPC wire boundary.",
+              "tags": [
+                "derive: Debug",
+                "derive: Error",
+                "error",
+                "non_exhaustive"
+              ],
+              "file": "crates/eos-plugin/src/wire.rs",
+              "module": "wire",
+              "line": 17
+            },
+            {
+              "kind": "struct",
+              "name": "RequestMessage",
+              "visibility": "pub",
+              "signature": "pub struct RequestMessage",
+              "fields": [
+                {
+                  "name": "op",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "invocation_id",
+                  "visibility": "pub",
+                  "ty": "String"
+                },
+                {
+                  "name": "args",
+                  "visibility": "pub",
+                  "ty": "Value"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Request-shaped wire message: `{op, invocation_id, args}` in exactly this key\norder.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Deserialize",
+                "derive: Eq",
+                "derive: PartialEq",
+                "derive: Serialize",
+                "dto",
+                "serde"
+              ],
+              "file": "crates/eos-plugin/src/wire.rs",
+              "module": "wire",
+              "line": 29
+            },
+            {
+              "kind": "enum",
+              "name": "Message",
+              "visibility": "pub",
+              "signature": "pub enum Message",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Request",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "RequestMessage"
+                    }
+                  ]
+                },
+                {
+                  "name": "Other",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "Value"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One PPC wire message: a request shape, or any other JSON object.\n\nNon-request messages are rejected by the PPC layer above.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-plugin/src/wire.rs",
+              "module": "wire",
+              "line": 41
+            },
+            {
+              "kind": "fn",
+              "name": "encode",
+              "visibility": "pub",
+              "signature": "pub fn encode (message : & Message) -> Result < Vec < u8 > , WireError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Serialize a message as compact JSON plus a single trailing `\\n`.\n\n# Errors\nReturns [`WireError::BadJson`] when serde cannot serialize the message.",
+              "tags": [],
+              "file": "crates/eos-plugin/src/wire.rs",
+              "module": "wire",
+              "line": 52
+            },
+            {
+              "kind": "fn",
+              "name": "decode",
+              "visibility": "pub",
+              "signature": "pub fn decode (bytes : & [u8]) -> Result < Message , WireError >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Decode one newline-delimited message; a trailing `\\n` is tolerated.\n\n# Errors\nReturns [`WireError::BadJson`] for invalid JSON and\n[`WireError::NotAnObject`] when the value is not a JSON object.",
+              "tags": [],
+              "file": "crates/eos-plugin/src/wire.rs",
+              "module": "wire",
+              "line": 65
+            }
+          ]
         }
       ]
     },
@@ -27577,15 +27605,15 @@
       "name": "eos-runtime",
       "path": "crates/eos-runtime",
       "stats": {
-        "modules": 25,
-        "items": 179,
+        "modules": 24,
+        "items": 180,
         "structs": 37,
-        "enums": 8,
+        "enums": 9,
         "traits": 0,
         "functions": 109,
         "impls": 22,
-        "fields": 201,
-        "methods": 80
+        "fields": 203,
+        "methods": 81
       },
       "modules": [
         {
@@ -27690,7 +27718,7 @@
               "kind": "fn",
               "name": "handle_callback_for_root",
               "visibility": "pub(super)",
-              "signature": "pub(super) fn handle_callback_for_root (expected_root : & Path , request : PpcEnvelope ,) -> Result < PpcEnvelope , PluginRuntimeError >",
+              "signature": "pub(super) fn handle_callback_for_root (expected_root : & Path , request : PpcMessage ,) -> Result < PpcMessage , PluginRuntimeError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -27706,7 +27734,7 @@
               "kind": "fn",
               "name": "handle_apply_changeset",
               "visibility": "private",
-              "signature": "fn handle_apply_changeset (expected_root : & Path , request : PpcEnvelope ,) -> Result < PpcEnvelope , PluginRuntimeError >",
+              "signature": "fn handle_apply_changeset (expected_root : & Path , request : PpcMessage ,) -> Result < PpcMessage , PluginRuntimeError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -27996,7 +28024,7 @@
                 },
                 {
                   "name": "response_payload_from_reply",
-                  "signature": "pub(super) fn response_payload_from_reply (& self , reply : & PpcEnvelope ,) -> Result < Option < Value > , PluginRuntimeError >",
+                  "signature": "pub(super) fn response_payload_from_reply (& self , reply : & PpcMessage ,) -> Result < Option < Value > , PluginRuntimeError >",
                   "kind": "method",
                   "docs": null,
                   "line": 83
@@ -28418,11 +28446,6 @@
           ]
         },
         {
-          "path": "crates/eos-runtime/src/plugin/launcher.rs",
-          "module": "plugin::launcher",
-          "items": []
-        },
-        {
           "path": "crates/eos-runtime/src/plugin/mod.rs",
           "module": "plugin",
           "items": [
@@ -28449,7 +28472,7 @@
                     {
                       "name": "0",
                       "visibility": "private",
-                      "ty": "eos_plugin :: framing :: ProtocolError"
+                      "ty": "eos_plugin :: wire :: WireError"
                     }
                   ]
                 },
@@ -28495,7 +28518,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 53
+              "line": 52
             },
             {
               "kind": "enum",
@@ -28606,7 +28629,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 83
+              "line": 82
             },
             {
               "kind": "enum",
@@ -28648,7 +28671,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 125
+              "line": 124
             },
             {
               "kind": "struct",
@@ -28730,7 +28753,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 139
+              "line": 138
             },
             {
               "kind": "struct",
@@ -28782,7 +28805,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 156
+              "line": 155
             },
             {
               "kind": "struct",
@@ -28829,7 +28852,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 167
+              "line": 166
             },
             {
               "kind": "impl",
@@ -28844,14 +28867,14 @@
                   "signature": "pub fn ensure (& self , args : & Value , start_services : bool ,) -> Result < EnsureOutcome , PluginRuntimeError >",
                   "kind": "method",
                   "docs": "Register (or re-confirm) a plugin from its parsed ensure args, ensuring\npackage content and optionally starting its declared service processes.\n\n# Errors\n\nReturns a [`PluginRuntimeError`] when ensure parsing, the package\npipeline, or service process startup fails.",
-                  "line": 178
+                  "line": 177
                 },
                 {
                   "name": "status",
                   "signature": "pub fn status (& self , probe_services : bool , probe_timeout : Option < Duration > ,) -> Result < StatusOutcome , PluginRuntimeError >",
                   "kind": "method",
                   "docs": "Report the loaded-plugin registry, live processes, and (optionally)\nconnected-service health probes. `probe_timeout` defaults to the\nconfigured service probe timeout.\n\n# Errors\n\nReturns a [`PluginRuntimeError`] when the runtime state lock is\npoisoned.",
-                  "line": 266
+                  "line": 265
                 }
               ],
               "impl_target": "PluginRuntime",
@@ -28862,7 +28885,7 @@
               ],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 177
+              "line": 176
             },
             {
               "kind": "fn",
@@ -28878,7 +28901,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/plugin/mod.rs",
               "module": "plugin",
-              "line": 319
+              "line": 318
             }
           ]
         },
@@ -31194,7 +31217,7 @@
                   "name": "new",
                   "signature": "pub fn new (config : PluginRuntimeConfig , launcher : Arc < dyn NsRunnerLauncher >) -> Self",
                   "kind": "constructor",
-                  "docs": "Build a plugin runtime over its typed config and the daemon-provided\nns-runner launcher.",
+                  "docs": "Build a plugin runtime over its typed config and embedding-provided\nns-runner launcher.",
                   "line": 46
                 },
                 {
@@ -31310,7 +31333,7 @@
                 {
                   "name": "writer",
                   "visibility": "private",
-                  "ty": "FrameWriter"
+                  "ty": "MessageWriter"
                 },
                 {
                   "name": "pending",
@@ -31374,21 +31397,21 @@
                 },
                 {
                   "name": "round_trip",
-                  "signature": "pub fn round_trip (& self , request : & PpcEnvelope , timeout : Duration ,) -> Result < PpcEnvelope , PpcError >",
+                  "signature": "pub fn round_trip (& self , request : & PpcMessage , timeout : Duration ,) -> Result < PpcMessage , PpcError >",
                   "kind": "method",
                   "docs": "Send a request and await its reply (no callbacks serviced).",
                   "line": 52
                 },
                 {
                   "name": "round_trip_with_callbacks",
-                  "signature": "pub fn round_trip_with_callbacks < F > (& self , request : & PpcEnvelope , timeout : Duration , handle_callback : F ,) -> Result < PpcEnvelope , PpcError > where F : FnMut (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + 'static ,",
+                  "signature": "pub fn round_trip_with_callbacks < F > (& self , request : & PpcMessage , timeout : Duration , handle_callback : F ,) -> Result < PpcMessage , PpcError > where F : FnMut (PpcMessage) -> Result < PpcMessage , PpcError > + Send + 'static ,",
                   "kind": "method",
                   "docs": "Send a request and await its reply, servicing plugin-originated callback\nrequests with `handle_callback` until the final reply arrives.",
                   "line": 61
                 },
                 {
                   "name": "send_request",
-                  "signature": "fn send_request (& self , request : & PpcEnvelope , timeout : Duration , callback_handler : Option < CallbackHandler > ,) -> Result < PpcEnvelope , PpcError >",
+                  "signature": "fn send_request (& self , request : & PpcMessage , timeout : Duration , callback_handler : Option < CallbackHandler > ,) -> Result < PpcMessage , PpcError >",
                   "kind": "method",
                   "docs": null,
                   "line": 82
@@ -31408,7 +31431,7 @@
               "kind": "fn",
               "name": "spawn_reader_thread",
               "visibility": "private",
-              "signature": "fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -> Result < () , PpcError >",
+              "signature": "fn spawn_reader_thread (mut stream : UnixStream , writer : MessageWriter , pending : PendingCalls ,) -> Result < () , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31424,7 +31447,7 @@
               "kind": "fn",
               "name": "reader_loop",
               "visibility": "private",
-              "signature": "fn reader_loop (stream : & mut UnixStream , writer : & FrameWriter , pending : & PendingCalls)",
+              "signature": "fn reader_loop (stream : & mut UnixStream , writer : & MessageWriter , pending : & PendingCalls)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31440,7 +31463,7 @@
               "kind": "fn",
               "name": "handle_callback",
               "visibility": "private",
-              "signature": "fn handle_callback (frame : PpcEnvelope , writer : & FrameWriter , pending : & PendingCalls)",
+              "signature": "fn handle_callback (message : PpcMessage , writer : & MessageWriter , pending : & PendingCalls)",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31456,7 +31479,7 @@
               "kind": "fn",
               "name": "write_callback_error",
               "visibility": "private",
-              "signature": "fn write_callback_error (writer : & FrameWriter , callback_message_id : & str , message : & str ,) -> Result < () , PpcError >",
+              "signature": "fn write_callback_error (writer : & MessageWriter , callback_message_id : & str , message : & str ,) -> Result < () , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31471,14 +31494,14 @@
           ]
         },
         {
-          "path": "crates/eos-runtime/src/plugin/transport/frame_io.rs",
-          "module": "plugin::transport::frame_io",
+          "path": "crates/eos-runtime/src/plugin/transport/message_io.rs",
+          "module": "plugin::transport::message_io",
           "items": [
             {
               "kind": "struct",
-              "name": "FrameWriter",
+              "name": "MessageWriter",
               "visibility": "pub(super)",
-              "signature": "pub(super) struct FrameWriter",
+              "signature": "pub(super) struct MessageWriter",
               "fields": [
                 {
                   "name": "stream",
@@ -31494,15 +31517,15 @@
               "tags": [
                 "derive: Clone"
               ],
-              "file": "crates/eos-runtime/src/plugin/transport/frame_io.rs",
-              "module": "plugin::transport::frame_io",
+              "file": "crates/eos-runtime/src/plugin/transport/message_io.rs",
+              "module": "plugin::transport::message_io",
               "line": 14
             },
             {
               "kind": "impl",
-              "name": "impl FrameWriter",
+              "name": "impl MessageWriter",
               "visibility": "private",
-              "signature": "impl FrameWriter",
+              "signature": "impl MessageWriter",
               "fields": [],
               "variants": [],
               "methods": [
@@ -31515,41 +31538,41 @@
                 },
                 {
                   "name": "write_with_timeout",
-                  "signature": "pub(super) fn write_with_timeout (& self , frame : & PpcEnvelope , timeout : Duration ,) -> Result < () , PpcError >",
+                  "signature": "pub(super) fn write_with_timeout (& self , message : & PpcMessage , timeout : Duration ,) -> Result < () , PpcError >",
                   "kind": "method",
                   "docs": null,
                   "line": 26
                 },
                 {
                   "name": "write",
-                  "signature": "pub(super) fn write (& self , frame : & PpcEnvelope) -> Result < () , PpcError >",
+                  "signature": "pub(super) fn write (& self , message : & PpcMessage) -> Result < () , PpcError >",
                   "kind": "method",
                   "docs": null,
                   "line": 34
                 },
                 {
                   "name": "write_inner",
-                  "signature": "fn write_inner (& self , frame : & PpcEnvelope , timeout : Option < Duration >) -> Result < () , PpcError >",
+                  "signature": "fn write_inner (& self , message : & PpcMessage , timeout : Option < Duration >) -> Result < () , PpcError >",
                   "kind": "method",
                   "docs": null,
                   "line": 38
                 }
               ],
-              "impl_target": "FrameWriter",
+              "impl_target": "MessageWriter",
               "trait_name": null,
               "docs": null,
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-runtime/src/plugin/transport/frame_io.rs",
-              "module": "plugin::transport::frame_io",
+              "file": "crates/eos-runtime/src/plugin/transport/message_io.rs",
+              "module": "plugin::transport::message_io",
               "line": 19
             },
             {
               "kind": "fn",
-              "name": "read_envelope",
+              "name": "read_message",
               "visibility": "pub(super)",
-              "signature": "pub(super) fn read_envelope (stream : & mut UnixStream) -> Result < PpcEnvelope , PpcError >",
+              "signature": "pub(super) fn read_message (stream : & mut UnixStream) -> Result < PpcMessage , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31557,24 +31580,24 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-runtime/src/plugin/transport/frame_io.rs",
-              "module": "plugin::transport::frame_io",
+              "file": "crates/eos-runtime/src/plugin/transport/message_io.rs",
+              "module": "plugin::transport::message_io",
               "line": 52
             },
             {
               "kind": "fn",
-              "name": "read_frame",
+              "name": "read_message_bytes",
               "visibility": "pub",
-              "signature": "pub fn read_frame (stream : & mut UnixStream) -> Result < Vec < u8 > , PpcError >",
+              "signature": "pub fn read_message_bytes (stream : & mut UnixStream) -> Result < Vec < u8 > , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Read one newline-terminated PPC frame from `stream`, capped at the protocol\nrequest-byte ceiling.",
+              "docs": "Read one newline-terminated PPC message from `stream`, capped at the protocol\nrequest-byte ceiling.",
               "tags": [],
-              "file": "crates/eos-runtime/src/plugin/transport/frame_io.rs",
-              "module": "plugin::transport::frame_io",
+              "file": "crates/eos-runtime/src/plugin/transport/message_io.rs",
+              "module": "plugin::transport::message_io",
               "line": 57
             }
           ]
@@ -31587,7 +31610,7 @@
               "kind": "type",
               "name": "CallbackHandler",
               "visibility": "pub(super)",
-              "signature": "pub(super) type CallbackHandler = Arc < dyn Fn (PpcEnvelope) -> Result < PpcEnvelope , PpcError > + Send + Sync >",
+              "signature": "pub(super) type CallbackHandler = Arc < dyn Fn (PpcMessage) -> Result < PpcMessage , PpcError > + Send + Sync >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31603,7 +31626,7 @@
               "kind": "type",
               "name": "PpcResult",
               "visibility": "pub(super)",
-              "signature": "pub(super) type PpcResult = Result < PpcEnvelope , PpcError >",
+              "signature": "pub(super) type PpcResult = Result < PpcMessage , PpcError >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -31693,7 +31716,7 @@
                 },
                 {
                   "name": "complete_reply",
-                  "signature": "pub(super) fn complete_reply (& self , frame : PpcEnvelope)",
+                  "signature": "pub(super) fn complete_reply (& self , message : PpcMessage)",
                   "kind": "method",
                   "docs": null,
                   "line": 53
@@ -31713,8 +31736,8 @@
                   "line": 80
                 },
                 {
-                  "name": "callback_handler_for_frame",
-                  "signature": "pub(super) fn callback_handler_for_frame (& self , frame : & PpcEnvelope ,) -> Result < (String , CallbackHandler) , String >",
+                  "name": "callback_handler_for_message",
+                  "signature": "pub(super) fn callback_handler_for_message (& self , message : & PpcMessage ,) -> Result < (String , CallbackHandler) , String >",
                   "kind": "method",
                   "docs": null,
                   "line": 95
@@ -31748,7 +31771,7 @@
               "kind": "fn",
               "name": "callback_parent_message_id",
               "visibility": "private",
-              "signature": "fn callback_parent_message_id (frame : & PpcEnvelope) -> Option < String >",
+              "signature": "fn callback_parent_message_id (message : & PpcMessage) -> Option < String >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -32126,7 +32149,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/services/mod.rs",
               "module": "services",
-              "line": 13
+              "line": 17
             },
             {
               "kind": "impl",
@@ -32141,7 +32164,14 @@
                   "signature": "pub fn new (plugin : PluginRuntimeConfig , isolated_workspace : IsolatedWorkspaceConfig , launcher : Arc < dyn NsRunnerLauncher > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Build runtime services from typed config sections and a namespace-runner\nlauncher supplied by the embedding daemon.",
-                  "line": 20
+                  "line": 24
+                },
+                {
+                  "name": "ensure_plugin_family_allowed",
+                  "signature": "pub fn ensure_plugin_family_allowed (& self , args : & Value) -> Result < () , PluginRuntimeError >",
+                  "kind": "method",
+                  "docs": "Validate the plugin caller fields and reject plugin calls from callers\nthat currently own an isolated workspace.\n\n# Errors\n\nReturns [`PluginRuntimeError`] when caller metadata is invalid or the\ncaller is isolated.",
+                  "line": 38
                 }
               ],
               "impl_target": "RuntimeServices",
@@ -32152,7 +32182,7 @@
               ],
               "file": "crates/eos-runtime/src/services/mod.rs",
               "module": "services",
-              "line": 19
+              "line": 23
             }
           ]
         },
@@ -32308,6 +32338,47 @@
               "line": 94
             },
             {
+              "kind": "enum",
+              "name": "WorkspaceEnterError",
+              "visibility": "pub",
+              "signature": "pub enum WorkspaceEnterError",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "ActiveCommandSessions",
+                  "fields": [
+                    {
+                      "name": "active_command_sessions",
+                      "visibility": "private",
+                      "ty": "usize"
+                    }
+                  ]
+                },
+                {
+                  "name": "Isolated",
+                  "fields": [
+                    {
+                      "name": "0",
+                      "visibility": "private",
+                      "ty": "IsolatedError"
+                    }
+                  ]
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Failures from opening an isolated workspace through [`WorkspaceRuntime`].",
+              "tags": [
+                "derive: Debug",
+                "derive: thiserror::Error",
+                "error"
+              ],
+              "file": "crates/eos-runtime/src/workspace/mod.rs",
+              "module": "workspace",
+              "line": 105
+            },
+            {
               "kind": "struct",
               "name": "WorkspaceRuntime",
               "visibility": "pub",
@@ -32332,7 +32403,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/workspace/mod.rs",
               "module": "workspace",
-              "line": 105
+              "line": 119
             },
             {
               "kind": "impl",
@@ -32347,119 +32418,119 @@
                   "signature": "pub fn new (config : IsolatedWorkspaceConfig) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 113
+                  "line": 127
                 },
                 {
                   "name": "enter",
-                  "signature": "pub fn enter (& self , caller_id : & str , root : & Path) -> Result < WorkspaceHandle , IsolatedError >",
+                  "signature": "pub fn enter (& self , caller_id : & str , root : & Path ,) -> Result < WorkspaceHandle , WorkspaceEnterError >",
                   "kind": "method",
-                  "docs": "Open an isolated workspace for `caller_id` on the stack at `root`:\nbind (or rebind) the manager, acquire a snapshot lease, and enter. The\nlease is released again when `enter` fails.\n\n# Errors\n\nReturns [`IsolatedError::FeatureDisabled`] when isolation is disabled,\nand the manager's enter/setup errors otherwise.",
-                  "line": 121
+                  "docs": "Open an isolated workspace for `caller_id` on the stack at `root`:\nbind (or rebind) the manager, acquire a snapshot lease, and enter. The\nlease is released again when `enter` fails.\n\n# Errors\n\nReturns [`WorkspaceEnterError::ActiveCommandSessions`] when the caller\nhas live command sessions, [`IsolatedError::FeatureDisabled`] when\nisolation is disabled, and the manager's enter/setup errors otherwise.",
+                  "line": 135
                 },
                 {
                   "name": "exit",
                   "signature": "pub fn exit (& self , caller_id : & str , grace_s : Option < f64 > ,) -> Result < ExitOutcome , IsolatedError >",
                   "kind": "method",
                   "docs": "Tear down `caller_id`'s isolated workspace if open: namespace/network/\ncgroup, release the lease, discard the upperdir (never published). The\nsingle isolated-teardown primitive shared by the exit op and the\nworkspace-run cancel surface.\n\n# Errors\n\nReturns [`IsolatedError::NotOpen`] when the caller is not isolated (the\ncancel surface treats that as a no-op), and teardown errors otherwise.",
-                  "line": 144
+                  "line": 170
                 },
                 {
                   "name": "status",
                   "signature": "pub fn status (& self , caller_id : & str) -> Result < Option < WorkspaceHandle > , IsolatedError >",
                   "kind": "method",
                   "docs": "The caller's open handle, or `Ok(None)` when no workspace is open.\n\n# Errors\n\nReturns [`IsolatedError::FeatureDisabled`] when isolation is disabled.",
-                  "line": 161
+                  "line": 187
                 },
                 {
                   "name": "list_open",
                   "signature": "pub fn list_open (& self) -> Vec < String >",
                   "kind": "method",
                   "docs": "Caller ids with an open isolated workspace (empty when disabled).",
-                  "line": 170
+                  "line": 196
                 },
                 {
                   "name": "touch",
                   "signature": "pub fn touch (& self , caller_id : & str)",
                   "kind": "method",
                   "docs": "Bump the caller's isolated-workspace TTL liveness (file/command\nactivity).",
-                  "line": 179
+                  "line": 205
                 },
                 {
                   "name": "caller_has_active_handle",
                   "signature": "pub fn caller_has_active_handle (& self , caller_id : & str) -> bool",
                   "kind": "method",
                   "docs": "Whether `caller_id` currently owns an open isolated workspace.",
-                  "line": 188
+                  "line": 214
                 },
                 {
                   "name": "command_binding_for",
                   "signature": "pub fn command_binding_for (& self , caller_id : & str) -> Option < CommandBinding >",
                   "kind": "method",
                   "docs": "The command-session binding for `caller_id`'s open workspace, or `None`\nwhen the caller is not isolated (callers then route ephemerally).",
-                  "line": 202
+                  "line": 228
                 },
                 {
                   "name": "cancel_runs_for_caller",
                   "signature": "pub fn cancel_runs_for_caller (& self , caller_id : & str , grace_s : Option < f64 >) -> CallerCancel",
                   "kind": "method",
                   "docs": "Cancel every workspace run owned by `caller_id`: discard its command\nsession(s), then exit its isolated workspace if open. The order matters\n— sessions are cancelled before the isolated namespace/lease teardown.",
-                  "line": 215
+                  "line": 241
                 },
                 {
                   "name": "cancel_all_runs",
                   "signature": "pub fn cancel_all_runs (& self , grace_s : Option < f64 >) -> (usize , usize)",
                   "kind": "method",
                   "docs": "Cancel every workspace run in the sandbox: discard all command\nsessions, exit every isolated caller, then reap orphaned namespace/\ncgroup/scratch resources. Returns the per-substrate counts as\n`(cancelled_sessions, isolated_callers_exited)`.",
-                  "line": 228
+                  "line": 254
                 },
                 {
                   "name": "exit_all_and_reap",
                   "signature": "fn exit_all_and_reap (& self , grace_s : Option < f64 >) -> usize",
                   "kind": "method",
                   "docs": "Exit every open isolated workspace and reap orphaned resources (the\nwhole-sandbox cancel sweep). Returns the number of callers exited.",
-                  "line": 238
+                  "line": 264
                 },
                 {
                   "name": "ttl_sweep",
                   "signature": "pub fn ttl_sweep (& self) -> usize",
                   "kind": "method",
                   "docs": "Evict idle isolated workspaces past their TTL, releasing their leases.\nCallers that still own a live command session are protected.",
-                  "line": 253
+                  "line": 279
                 },
                 {
                   "name": "test_reset",
                   "signature": "pub fn test_reset (& self) -> Vec < String >",
                   "kind": "method",
                   "docs": "Exit every caller, drop the bound state, and rewrite the persisted\nmanager file (backs `sandbox.isolation.test_reset`). Returns the caller\nids that were exited.",
-                  "line": 276
+                  "line": 302
                 },
                 {
                   "name": "ensure_state",
                   "signature": "fn ensure_state (& self , root : & Path) -> Result < () , IsolatedError >",
                   "kind": "method",
                   "docs": "Bind (or rebind) the isolated manager to `root`, initializing caps from\nthe runtime config and releasing leases orphaned by a prior daemon.",
-                  "line": 299
+                  "line": 325
                 },
                 {
                   "name": "with_state",
                   "signature": "fn with_state < T > (& self , f : impl FnOnce (& mut BoundState) -> Result < T , IsolatedError > ,) -> Result < T , IsolatedError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 350
+                  "line": 376
                 },
                 {
                   "name": "lock_state_cell",
                   "signature": "fn lock_state_cell (& self) -> MutexGuard < '_ , Option < BoundState > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 360
+                  "line": 386
                 },
                 {
                   "name": "reset_test_manager_file",
                   "signature": "fn reset_test_manager_file (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 364
+                  "line": 390
                 }
               ],
               "impl_target": "WorkspaceRuntime",
@@ -32470,7 +32541,7 @@
               ],
               "file": "crates/eos-runtime/src/workspace/mod.rs",
               "module": "workspace",
-              "line": 112
+              "line": 126
             },
             {
               "kind": "fn",
@@ -32486,7 +32557,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/workspace/mod.rs",
               "module": "workspace",
-              "line": 377
+              "line": 403
             },
             {
               "kind": "fn",
@@ -32502,7 +32573,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/workspace/mod.rs",
               "module": "workspace",
-              "line": 394
+              "line": 420
             },
             {
               "kind": "fn",
@@ -32518,7 +32589,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/workspace/mod.rs",
               "module": "workspace",
-              "line": 398
+              "line": 424
             }
           ]
         }
@@ -33419,14 +33490,14 @@
       "path": "crates/eos-sandbox-host",
       "stats": {
         "modules": 4,
-        "items": 62,
-        "structs": 10,
+        "items": 59,
+        "structs": 11,
         "enums": 3,
         "traits": 0,
-        "functions": 41,
-        "impls": 8,
-        "fields": 68,
-        "methods": 41
+        "functions": 35,
+        "impls": 10,
+        "fields": 69,
+        "methods": 43
       },
       "modules": [
         {
@@ -33504,7 +33575,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Engine configuration (one fleet, one image).",
+              "docs": null,
               "tags": [
                 "config",
                 "derive: Clone",
@@ -33512,7 +33583,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 22
+              "line": 20
             },
             {
               "kind": "impl",
@@ -33527,7 +33598,7 @@
                   "signature": "fn daemon_spec (& self , tcp_port : u16) -> DaemonSpec",
                   "kind": "method",
                   "docs": null,
-                  "line": 40
+                  "line": 37
                 }
               ],
               "impl_target": "HostConfig",
@@ -33538,7 +33609,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 39
+              "line": 36
             },
             {
               "kind": "struct",
@@ -33576,13 +33647,13 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Host view of one sandbox (the `sandbox.status` payload source).",
+              "docs": null,
               "tags": [
                 "derive: Debug"
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 55
+              "line": 52
             },
             {
               "kind": "struct",
@@ -33610,11 +33681,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The host engine: owns and reaches sandboxes.",
+              "docs": null,
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 65
+              "line": 61
             },
             {
               "kind": "impl",
@@ -33629,49 +33700,49 @@
                   "signature": "pub fn open (config : HostConfig) -> Result < Self >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 73
+                  "line": 68
                 },
                 {
                   "name": "acquire",
                   "signature": "pub fn acquire (& self) -> Result < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 89
+                  "line": 84
                 },
                 {
                   "name": "release",
                   "signature": "pub fn release (& self , sandbox_id : & str) -> bool",
                   "kind": "method",
                   "docs": null,
-                  "line": 128
+                  "line": 122
                 },
                 {
                   "name": "status",
                   "signature": "pub fn status (& self , sandbox_id : & str) -> Option < SandboxStatus >",
                   "kind": "method",
                   "docs": null,
-                  "line": 136
+                  "line": 129
                 },
                 {
                   "name": "list",
                   "signature": "pub fn list (& self) -> Vec < SandboxStatus >",
                   "kind": "method",
                   "docs": null,
-                  "line": 149
+                  "line": 140
                 },
                 {
                   "name": "forward",
                   "signature": "pub fn forward (& self , sandbox_id : & str , mutates_state : bool , op : & str , invocation_id : & str , args : & Value ,) -> Option < Result < Value , ForwardError > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 164
+                  "line": 154
                 },
                 {
                   "name": "probe_readiness",
                   "signature": "fn probe_readiness (& self , record : & SandboxRecord) -> Value",
                   "kind": "method",
                   "docs": null,
-                  "line": 183
+                  "line": 173
                 }
               ],
               "impl_target": "SandboxHost",
@@ -33682,7 +33753,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 72
+              "line": 67
             },
             {
               "kind": "fn",
@@ -33698,7 +33769,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 204
+              "line": 194
             },
             {
               "kind": "struct",
@@ -33747,7 +33818,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 219
+              "line": 209
             },
             {
               "kind": "impl",
@@ -33762,28 +33833,28 @@
                   "signature": "fn new (sandbox_id : String , container : String , token : String , tcp_port : u16 , created_by : String , endpoint : Option < SocketAddr > ,) -> Self",
                   "kind": "constructor",
                   "docs": null,
-                  "line": 230
+                  "line": 220
                 },
                 {
                   "name": "cached_endpoint",
                   "signature": "fn cached_endpoint (& self) -> Option < SocketAddr >",
                   "kind": "method",
                   "docs": null,
-                  "line": 248
+                  "line": 237
                 },
                 {
                   "name": "cache_endpoint",
                   "signature": "fn cache_endpoint (& self , addr : SocketAddr)",
                   "kind": "method",
                   "docs": null,
-                  "line": 253
+                  "line": 241
                 },
                 {
                   "name": "invalidate_endpoint",
                   "signature": "fn invalidate_endpoint (& self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 257
+                  "line": 245
                 }
               ],
               "impl_target": "SandboxRecord",
@@ -33794,7 +33865,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 229
+              "line": 219
             },
             {
               "kind": "struct",
@@ -33821,7 +33892,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 262
+              "line": 250
             },
             {
               "kind": "impl",
@@ -33836,70 +33907,70 @@
                   "signature": "fn open (state_dir : PathBuf) -> Result < Self >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 268
+                  "line": 256
                 },
                 {
                   "name": "rebuild_from_docker",
                   "signature": "fn rebuild_from_docker (& self) -> usize",
                   "kind": "method",
                   "docs": null,
-                  "line": 284
+                  "line": 272
                 },
                 {
                   "name": "insert",
-                  "signature": "fn insert (& self , record : SandboxRecord) -> Result < Arc < SandboxRecord > >",
+                  "signature": "fn insert (& self , record : SandboxRecord) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 319
+                  "line": 305
                 },
                 {
                   "name": "get",
                   "signature": "fn get (& self , sandbox_id : & str) -> Option < Arc < SandboxRecord > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 327
+                  "line": 311
                 },
                 {
                   "name": "remove",
                   "signature": "fn remove (& self , sandbox_id : & str) -> Option < Arc < SandboxRecord > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 332
+                  "line": 315
                 },
                 {
                   "name": "list",
                   "signature": "fn list (& self) -> Vec < Arc < SandboxRecord > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 340
+                  "line": 322
                 },
                 {
                   "name": "lock",
                   "signature": "fn lock (& self) -> std :: sync :: MutexGuard < '_ , HashMap < String , Arc < SandboxRecord > > >",
                   "kind": "method",
                   "docs": null,
-                  "line": 347
+                  "line": 328
                 },
                 {
                   "name": "token_path",
                   "signature": "fn token_path (& self , sandbox_id : & str) -> PathBuf",
                   "kind": "method",
                   "docs": null,
-                  "line": 351
+                  "line": 332
                 },
                 {
                   "name": "persist_token",
                   "signature": "fn persist_token (& self , sandbox_id : & str , token : & str) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 355
+                  "line": 336
                 },
                 {
                   "name": "load_token",
                   "signature": "fn load_token (& self , sandbox_id : & str) -> Result < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 367
+                  "line": 348
                 }
               ],
               "impl_target": "SandboxRegistry",
@@ -33910,7 +33981,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 267
+              "line": 255
             },
             {
               "kind": "fn",
@@ -33926,7 +33997,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 375
+              "line": 356
             },
             {
               "kind": "fn",
@@ -33942,7 +34013,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 382
+              "line": 363
             },
             {
               "kind": "fn",
@@ -33958,7 +34029,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 397
+              "line": 378
             },
             {
               "kind": "enum",
@@ -33991,7 +34062,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Terminal failure of a forwarded request after recovery.",
+              "docs": null,
               "tags": [
                 "derive: Debug",
                 "derive: thiserror::Error",
@@ -33999,7 +34070,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 419
+              "line": 400
             },
             {
               "kind": "struct",
@@ -34051,7 +34122,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 430
+              "line": 408
             },
             {
               "kind": "fn",
@@ -34067,7 +34138,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 440
+              "line": 418
             },
             {
               "kind": "fn",
@@ -34079,11 +34150,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Best-effort sandbox restoration after an ambiguous mutating-op failure:\none short liveness probe, then an in-place respawn only when the daemon is\nactually unreachable (a healthy-but-slow daemon is never killed).",
+              "docs": null,
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 483
+              "line": 452
             },
             {
               "kind": "fn",
@@ -34099,7 +34170,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 504
+              "line": 470
             },
             {
               "kind": "fn",
@@ -34115,7 +34186,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 524
+              "line": 490
             },
             {
               "kind": "fn",
@@ -34131,7 +34202,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 532
+              "line": 498
             },
             {
               "kind": "fn",
@@ -34143,11 +34214,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "`docker exec <container> eosd daemon --client <socket> <payload>` — the\ndaemon binary as its own thin client over its in-container AF_UNIX socket.\nThe payload is the stamped envelope WITHOUT the auth token (AF_UNIX carries\nno auth), built here so the happy path never pays for it.",
+              "docs": null,
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 555
+              "line": 521
             },
             {
               "kind": "fn",
@@ -34163,7 +34234,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 582
+              "line": 544
             },
             {
               "kind": "fn",
@@ -34179,7 +34250,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/host.rs",
               "module": "host",
-              "line": 587
+              "line": 549
             }
           ]
         },
@@ -34247,7 +34318,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "A transport-level client failure. Daemon error envelopes are NOT errors —\nthey come back as decoded success values.\n\nThe variants are load-bearing for the recovery ladder: a [`Self::Connect`]\nfailure invalidates the cached endpoint, while an ambiguous mid-request\nfailure on a mutating op must fail closed.",
+              "docs": null,
               "tags": [
                 "derive: Debug",
                 "derive: thiserror::Error",
@@ -34255,7 +34326,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 46
+              "line": 16
             },
             {
               "kind": "impl",
@@ -34267,10 +34338,10 @@
               "methods": [
                 {
                   "name": "is_connect_failure",
-                  "signature": "pub const fn is_connect_failure (& self) -> bool",
+                  "signature": "pub(crate) const fn is_connect_failure (& self) -> bool",
                   "kind": "method",
-                  "docs": "Whether the failure happened before the request could have been\ndelivered (safe to re-resolve the endpoint and retry, even mutating).",
-                  "line": 81
+                  "docs": null,
+                  "line": 37
                 }
               ],
               "impl_target": "ClientError",
@@ -34281,7 +34352,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 80
+              "line": 36
             },
             {
               "kind": "struct",
@@ -34309,7 +34380,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "A thin synchronous client for one daemon endpoint.",
+              "docs": null,
               "tags": [
                 "derive: Clone",
                 "derive: Debug",
@@ -34317,7 +34388,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 89
+              "line": 42
             },
             {
               "kind": "impl",
@@ -34331,43 +34402,43 @@
                   "name": "new",
                   "signature": "pub fn new (addr : SocketAddr , auth_token : Option < String > , timeout : Duration) -> Self",
                   "kind": "constructor",
-                  "docs": "Construct a client for `addr`, attaching `auth_token` to every request.",
-                  "line": 98
+                  "docs": null,
+                  "line": 50
                 },
                 {
                   "name": "with_token",
                   "signature": "pub fn with_token (& self , auth_token : Option < String >) -> Self",
                   "kind": "method",
-                  "docs": "A clone of this client with a different auth token (for auth tests).",
-                  "line": 108
+                  "docs": null,
+                  "line": 58
                 },
                 {
                   "name": "addr",
-                  "signature": "pub const fn addr (& self) -> SocketAddr",
+                  "signature": "pub(crate) const fn addr (& self) -> SocketAddr",
                   "kind": "method",
-                  "docs": "The endpoint this client talks to.",
-                  "line": 118
+                  "docs": null,
+                  "line": 65
                 },
                 {
                   "name": "request",
                   "signature": "pub fn request (& self , op : & str , invocation_id : & str , args : & Value ,) -> Result < Value , ClientError >",
                   "kind": "method",
-                  "docs": "Issue one op with the client's configured auth token, stamping the\nprotocol version and `invocation_id` into `args` when absent.\n\nReturns the decoded response `Value` (a success payload OR a daemon\nerror envelope `{success:false, error:{kind,...}}`). Only transport/IO\nfailures surface as `Err`.\n\n# Errors\nReturns an error on connect/write/read failure or undecodable response.",
-                  "line": 124
+                  "docs": null,
+                  "line": 69
                 },
                 {
                   "name": "request_unstamped",
-                  "signature": "pub fn request_unstamped (& self , op : & str , invocation_id : & str , args : & Value ,) -> Result < Value , ClientError >",
+                  "signature": "pub(crate) fn request_unstamped (& self , op : & str , invocation_id : & str , args : & Value ,) -> Result < Value , ClientError >",
                   "kind": "method",
-                  "docs": "Issue one op with `args` passed through verbatim (no protocol-version or\n`invocation_id` stamping) — the shape the frozen readiness fixture pins.\n\n# Errors\nReturns an error on connect/write/read failure or undecodable response.",
-                  "line": 144
+                  "docs": null,
+                  "line": 80
                 },
                 {
                   "name": "request_raw",
                   "signature": "pub fn request_raw (& self , line : & [u8]) -> Result < Value , ClientError >",
                   "kind": "method",
-                  "docs": "Send exact bytes (caller supplies framing) and read one response line.\nFor malformed-frame and oversized-request contract tests.\n\n# Errors\nReturns an error on connect/write/read failure or undecodable response.",
-                  "line": 160
+                  "docs": null,
+                  "line": 91
                 }
               ],
               "impl_target": "ProtocolClient",
@@ -34378,7 +34449,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 97
+              "line": 49
             },
             {
               "kind": "fn",
@@ -34390,13 +34461,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Build the wire envelope bytes (no trailing newline) with host stamping:\n`{op, invocation_id, args, _eos_daemon_auth_token?}` where the protocol\nversion and `invocation_id` are folded into `args` when the caller did not\nset them.",
-              "tags": [
-                "must_use"
-              ],
+              "docs": null,
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 192
+              "line": 117
             },
             {
               "kind": "fn",
@@ -34408,13 +34477,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "Build the wire envelope bytes (no trailing newline) with `args` verbatim.",
-              "tags": [
-                "must_use"
-              ],
+              "docs": null,
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 216
+              "line": 135
             },
             {
               "kind": "fn",
@@ -34426,13 +34493,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "`true` when a decoded response is a success payload (`success != false`).",
-              "tags": [
-                "must_use"
-              ],
+              "docs": null,
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 234
+              "line": 150
             },
             {
               "kind": "fn",
@@ -34444,13 +34509,11 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The daemon error `kind` string, if `response` is an error envelope.",
-              "tags": [
-                "must_use"
-              ],
+              "docs": null,
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/protocol.rs",
               "module": "protocol",
-              "line": 240
+              "line": 153
             }
           ]
         },
@@ -34493,7 +34556,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 17
+              "line": 14
             },
             {
               "kind": "struct",
@@ -34553,7 +34616,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 23
+              "line": 20
             },
             {
               "kind": "struct",
@@ -34618,7 +34681,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 35
+              "line": 32
             },
             {
               "kind": "struct",
@@ -34662,7 +34725,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 48
+              "line": 45
             },
             {
               "kind": "impl",
@@ -34677,77 +34740,70 @@
                   "signature": "pub fn start (container : & ContainerSpec , daemon : & DaemonSpec , auth_token : String ,) -> Result < Self >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 58
+                  "line": 55
                 },
                 {
                   "name": "for_engine",
                   "signature": "pub(crate) fn for_engine (name : String , auth_token : String , daemon : & DaemonSpec , endpoint : Option < SocketAddr > ,) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 140
+                  "line": 126
                 },
                 {
                   "name": "adopt",
                   "signature": "pub fn adopt (id : & str , auth_token : String , daemon : & DaemonSpec) -> Result < Self >",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 150
+                  "line": 135
                 },
                 {
                   "name": "handle",
                   "signature": "fn handle (name : String , auth_token : String , daemon : & DaemonSpec , endpoint : Option < SocketAddr > , keep : bool ,) -> Self",
                   "kind": "associated-fn",
                   "docs": null,
-                  "line": 159
+                  "line": 144
                 },
                 {
                   "name": "bringup",
                   "signature": "fn bringup (& self , daemon : & DaemonSpec) -> Result < ProtocolClient >",
                   "kind": "method",
                   "docs": null,
-                  "line": 183
-                },
-                {
-                  "name": "resolve_addr",
-                  "signature": "fn resolve_addr (& self , container_port : u16) -> Result < SocketAddr >",
-                  "kind": "method",
-                  "docs": null,
-                  "line": 243
+                  "line": 168
                 },
                 {
                   "name": "client",
                   "signature": "pub fn client (& self) -> & ProtocolClient",
                   "kind": "method",
                   "docs": null,
-                  "line": 265
+                  "line": 219
                 },
                 {
                   "name": "exec",
                   "signature": "pub fn exec (& self , argv : & [& str]) -> Result < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 270
+                  "line": 223
                 },
                 {
                   "name": "restart_daemon",
                   "signature": "pub fn restart_daemon (& self , daemon : & DaemonSpec) -> Result < () >",
                   "kind": "method",
                   "docs": null,
-                  "line": 277
+                  "line": 227
                 },
                 {
                   "name": "spawn_daemon",
                   "signature": "fn spawn_daemon (& self , daemon_dir : & str , remote_eosd_path : & str , tcp_port : u16 ,) -> Result < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 291
+                  "line": 241
                 },
                 {
                   "name": "daemon_log",
                   "signature": "fn daemon_log (& self) -> Option < String >",
                   "kind": "method",
                   "docs": null,
-                  "line": 317
+                  "line": 267
                 }
               ],
               "impl_target": "DaemonContainer",
@@ -34758,7 +34814,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 57
+              "line": 54
             },
             {
               "kind": "impl",
@@ -34773,7 +34829,7 @@
                   "signature": "fn drop (& mut self)",
                   "kind": "method",
                   "docs": null,
-                  "line": 331
+                  "line": 281
                 }
               ],
               "impl_target": "DaemonContainer",
@@ -34785,7 +34841,7 @@
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 330
+              "line": 280
             },
             {
               "kind": "fn",
@@ -34801,7 +34857,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 339
+              "line": 289
             },
             {
               "kind": "fn",
@@ -34813,17 +34869,33 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The bring-up ready gate: poll heartbeat until the daemon answers with\nsuccess, with exponential backoff. `sandbox.runtime.ready` cannot gate\nprovisioning — its `control_plane` probe requires a seeded workspace base\n(see [`crate::protocol::HEARTBEAT_OP`]).",
+              "docs": null,
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 343
+              "line": 293
+            },
+            {
+              "kind": "fn",
+              "name": "docker_exec_args",
+              "visibility": "private",
+              "signature": "fn docker_exec_args (container : & str , argv : & [& str]) -> Vec < String >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 310
             },
             {
               "kind": "fn",
               "name": "docker",
               "visibility": "pub(crate)",
-              "signature": "pub(crate) fn docker (args : & [String]) -> Result < String >",
+              "signature": "pub(crate) fn docker < I , S > (args : I) -> Result < String > where I : IntoIterator < Item = S > , S : AsRef < OsStr > ,",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -34833,57 +34905,23 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 364
-            },
-            {
-              "kind": "fn",
-              "name": "docker_exec_args",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn docker_exec_args (container : & str , argv : & [& str]) -> Vec < String >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 368
-            },
-            {
-              "kind": "fn",
-              "name": "docker_str",
-              "visibility": "private",
-              "signature": "fn docker_str (args : & [& str]) -> Result < String >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 384
+              "line": 326
             },
             {
               "kind": "fn",
               "name": "running_container_ids",
               "visibility": "pub",
-              "signature": "pub fn running_container_ids (label_filters : & [String]) -> Vec < String >",
+              "signature": "pub fn running_container_ids < S : AsRef < str > > (label_filters : & [S]) -> Vec < String >",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
               "trait_name": null,
               "docs": null,
-              "tags": [
-                "must_use"
-              ],
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 400
+              "line": 354
             },
             {
               "kind": "fn",
@@ -34899,13 +34937,13 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 413
+              "line": 366
             },
             {
               "kind": "fn",
               "name": "container_labels",
-              "visibility": "pub",
-              "signature": "pub fn container_labels (ids : & [String]) -> Result < Vec < serde_json :: Map < String , serde_json :: Value > > >",
+              "visibility": "pub(crate)",
+              "signature": "pub(crate) fn container_labels (ids : & [String] ,) -> Result < Vec < serde_json :: Map < String , serde_json :: Value > > >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -34915,13 +34953,13 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 426
+              "line": 379
             },
             {
               "kind": "fn",
-              "name": "put_archive_file",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn put_archive_file (container : & str , dest_dir : & str , remote_name : & str , source : & Path , timeout : Duration ,) -> Result < () >",
+              "name": "copy_file_into",
+              "visibility": "private",
+              "signature": "fn copy_file_into (container : & str , dest_dir : & str , remote_name : & str , source : & Path) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -34931,13 +34969,13 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 444
+              "line": 399
             },
             {
               "kind": "fn",
-              "name": "put_archive_bytes",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn put_archive_bytes (container : & str , dest_dir : & str , remote_name : & str , payload : & [u8] , mode : u32 , timeout : Duration ,) -> Result < () >",
+              "name": "copy_bytes_into",
+              "visibility": "private",
+              "signature": "fn copy_bytes_into (container : & str , dest_dir : & str , remote_name : & str , payload : & [u8] , mode : u32 ,) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -34947,13 +34985,13 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 456
+              "line": 403
             },
             {
               "kind": "fn",
               "name": "path_str",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn path_str (path : & Path) -> Result < String >",
+              "visibility": "private",
+              "signature": "fn path_str (path : & Path) -> Result < String >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -34963,125 +35001,153 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 468
+              "line": 414
             },
             {
               "kind": "fn",
-              "name": "docker_put_archive",
+              "name": "copy_path_into",
               "visibility": "private",
-              "signature": "fn docker_put_archive (container : & str , dest_dir : & str , tar_stream : & [u8] , timeout : Duration ,) -> Result < () >",
+              "signature": "fn copy_path_into (container : & str , dest_dir : & str , remote_name : & str , source : & Path , mode : u32 ,) -> Result < () >",
               "fields": [],
               "variants": [],
               "methods": [],
               "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 420
+            },
+            {
+              "kind": "fn",
+              "name": "validate_remote_name",
+              "visibility": "private",
+              "signature": "fn validate_remote_name (remote_name : & str) -> Result < () >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 446
+            },
+            {
+              "kind": "fn",
+              "name": "container_copy_target",
+              "visibility": "private",
+              "signature": "fn container_copy_target (container : & str , dest_dir : & str , remote_name : & str) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 453
+            },
+            {
+              "kind": "fn",
+              "name": "remote_path",
+              "visibility": "private",
+              "signature": "fn remote_path (dest_dir : & str , remote_name : & str) -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 457
+            },
+            {
+              "kind": "struct",
+              "name": "TempUploadFile",
+              "visibility": "private",
+              "signature": "struct TempUploadFile",
+              "fields": [
+                {
+                  "name": "path",
+                  "visibility": "private",
+                  "ty": "PathBuf"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 461
+            },
+            {
+              "kind": "impl",
+              "name": "impl TempUploadFile",
+              "visibility": "private",
+              "signature": "impl TempUploadFile",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "write",
+                  "signature": "fn write (payload : & [u8] , mode : u32) -> Result < Self >",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 466
+                },
+                {
+                  "name": "path",
+                  "signature": "fn path (& self) -> & Path",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 485
+                }
+              ],
+              "impl_target": "TempUploadFile",
               "trait_name": null,
               "docs": null,
               "tags": [
-                "cfg: unix"
+                "impl"
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 474
+              "line": 465
             },
             {
-              "kind": "fn",
-              "name": "docker_put_archive",
+              "kind": "impl",
+              "name": "impl Drop for TempUploadFile",
               "visibility": "private",
-              "signature": "fn docker_put_archive (_container : & str , _dest_dir : & str , _tar_stream : & [u8] , _timeout : Duration ,) -> Result < () >",
+              "signature": "impl Drop for TempUploadFile",
               "fields": [],
               "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
+              "methods": [
+                {
+                  "name": "drop",
+                  "signature": "fn drop (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 491
+                }
+              ],
+              "impl_target": "TempUploadFile",
+              "trait_name": "Drop",
               "docs": null,
               "tags": [
-                "cfg: not"
+                "impl",
+                "trait-impl"
               ],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 530
-            },
-            {
-              "kind": "fn",
-              "name": "docker_socket_path",
-              "visibility": "private",
-              "signature": "fn docker_socket_path () -> Result < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [
-                "cfg: unix"
-              ],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 540
-            },
-            {
-              "kind": "fn",
-              "name": "docker_unix_socket_from_host",
-              "visibility": "private",
-              "signature": "fn docker_unix_socket_from_host (host : & str) -> Option < PathBuf >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 569
-            },
-            {
-              "kind": "fn",
-              "name": "docker_api_version",
-              "visibility": "private",
-              "signature": "fn docker_api_version () -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 576
-            },
-            {
-              "kind": "fn",
-              "name": "docker_http_status",
-              "visibility": "private",
-              "signature": "fn docker_http_status (response : & str) -> Result < u16 >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 583
-            },
-            {
-              "kind": "fn",
-              "name": "percent_encode",
-              "visibility": "private",
-              "signature": "fn percent_encode (value : & str) -> String",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 597
+              "line": 490
             },
             {
               "kind": "fn",
@@ -35097,13 +35163,13 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 609
+              "line": 496
             },
             {
               "kind": "fn",
-              "name": "parse_published_addr",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn parse_published_addr (output : & str) -> Option < SocketAddr >",
+              "name": "wait_for_published_addr",
+              "visibility": "private",
+              "signature": "fn wait_for_published_addr (container : & str , container_port : u16) -> Result < SocketAddr >",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -35113,7 +35179,23 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 621
+              "line": 504
+            },
+            {
+              "kind": "fn",
+              "name": "parse_published_addr",
+              "visibility": "private",
+              "signature": "fn parse_published_addr (output : & str) -> Option < SocketAddr >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-sandbox-host/src/runtime.rs",
+              "module": "runtime",
+              "line": 517
             },
             {
               "kind": "fn",
@@ -35126,12 +35208,10 @@
               "impl_target": null,
               "trait_name": null,
               "docs": null,
-              "tags": [
-                "must_use"
-              ],
+              "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 634
+              "line": 529
             },
             {
               "kind": "fn",
@@ -35147,55 +35227,7 @@
               "tags": [],
               "file": "crates/eos-sandbox-host/src/runtime.rs",
               "module": "runtime",
-              "line": 639
-            },
-            {
-              "kind": "fn",
-              "name": "tar_single_file",
-              "visibility": "pub(crate)",
-              "signature": "pub(crate) fn tar_single_file (name : & str , payload : & [u8] , mode : u32) -> Result < Vec < u8 > >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 656
-            },
-            {
-              "kind": "fn",
-              "name": "write_octal",
-              "visibility": "private",
-              "signature": "fn write_octal (field : & mut [u8] , value : u64) -> Result < () >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 688
-            },
-            {
-              "kind": "fn",
-              "name": "write_checksum",
-              "visibility": "private",
-              "signature": "fn write_checksum (field : & mut [u8] , value : u32) -> Result < () >",
-              "fields": [],
-              "variants": [],
-              "methods": [],
-              "impl_target": null,
-              "trait_name": null,
-              "docs": null,
-              "tags": [],
-              "file": "crates/eos-sandbox-host/src/runtime.rs",
-              "module": "runtime",
-              "line": 705
+              "line": 533
             }
           ]
         }

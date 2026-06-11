@@ -21,8 +21,28 @@ pub(crate) fn op_runtime_ready(
     let mut timings = serde_json::Map::new();
     let probes = vec![
         run_probe("control_plane", || probe_control_plane(&root), &mut timings),
-        run_probe("data_plane", || Ok(probe_data_plane()), &mut timings),
-        run_probe("mutation_gate", || Ok(probe_mutation_gate()), &mut timings),
+        run_probe(
+            "data_plane",
+            || {
+                Ok(json!({
+                    "handlers_services_ready": true,
+                    "shell_services_ready": true,
+                    "workspace_mount_mode": "private_namespace",
+                }))
+            },
+            &mut timings,
+        ),
+        run_probe(
+            "mutation_gate",
+            || {
+                Ok(json!({
+                    "backend_ready": true,
+                    "backend_fields": ["layer_stack", "occ_service", "occ_client", "gitignore", "layer_stack_manager"],
+                    "occ_client_class": "OccClient",
+                }))
+            },
+            &mut timings,
+        ),
     ];
     timings.insert(
         "runtime.ready.total_s".to_owned(),
@@ -103,12 +123,7 @@ pub(crate) fn op_inflight_count(
     args: &Value,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let caller_id = args
-        .get("caller_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
+    let caller_id = trimmed_string(args, "caller_id");
     let count = context
         .invocation_registry()
         .map_or(0, |registry| registry.count_by_caller(&caller_id));
@@ -144,22 +159,6 @@ fn probe_control_plane(root: &str) -> Result<Value, DaemonError> {
         "manifest_depth": manifest.depth(),
         "base_root_hash": binding.base_root_hash,
     }))
-}
-
-fn probe_data_plane() -> Value {
-    json!({
-        "handlers_services_ready": true,
-        "shell_services_ready": true,
-        "workspace_mount_mode": "private_namespace",
-    })
-}
-
-fn probe_mutation_gate() -> Value {
-    json!({
-        "backend_ready": true,
-        "backend_fields": ["layer_stack", "occ_service", "occ_client", "gitignore", "layer_stack_manager"],
-        "occ_client_class": "OccClient",
-    })
 }
 
 const fn error_type(err: &DaemonError) -> &'static str {

@@ -38,15 +38,9 @@ pub(crate) struct InFlightInvocation {
 /// Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.
 #[derive(Debug)]
 pub struct InFlightRegistry {
-    inner: Mutex<RegistryState>,
+    inner: Mutex<HashMap<String, InFlightInvocation>>,
     ttl_s: f64,
     reaper_interval_s: f64,
-}
-
-#[derive(Debug, Default)]
-struct RegistryState {
-    by_invocation: HashMap<String, InFlightInvocation>,
-    ttl_reaped_total: u64,
 }
 
 impl InFlightRegistry {
@@ -54,7 +48,7 @@ impl InFlightRegistry {
     #[must_use]
     pub fn new(ttl_s: f64, reaper_interval_s: f64) -> Self {
         Self {
-            inner: Mutex::new(RegistryState::default()),
+            inner: Mutex::new(HashMap::new()),
             ttl_s: positive_f64(ttl_s, DEFAULT_TTL_S),
             reaper_interval_s: positive_f64(reaper_interval_s, DEFAULT_REAPER_INTERVAL_S),
         }
@@ -68,7 +62,7 @@ impl InFlightRegistry {
     // The registry is best-effort daemon control state. If another task panics
     // while holding the mutex, keep cancellation/heartbeat cleanup available
     // instead of panicking future control operations.
-    fn lock_state(&self) -> MutexGuard<'_, RegistryState> {
+    fn lock_state(&self) -> MutexGuard<'_, HashMap<String, InFlightInvocation>> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
@@ -84,7 +78,7 @@ impl InFlightRegistry {
             return;
         }
         let mut state = self.lock_state();
-        state.by_invocation.insert(
+        state.insert(
             invocation_id.to_owned(),
             InFlightInvocation {
                 abort,
@@ -98,22 +92,19 @@ impl InFlightRegistry {
 
     /// Remove the entry for `invocation_id` (the dispatch `finally` path).
     pub fn deregister(&self, invocation_id: &str) {
-        self.lock_state().by_invocation.remove(invocation_id);
+        self.lock_state().remove(invocation_id);
     }
 
     /// Return whether `invocation_id` is still tracked.
     pub fn contains(&self, invocation_id: &str) -> bool {
-        self.lock_state().by_invocation.contains_key(invocation_id)
+        self.lock_state().contains_key(invocation_id)
     }
 
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
     pub fn cancel(&self, invocation_id: &str) -> bool {
         let Some(abort) = ({
             let state = self.lock_state();
-            state
-                .by_invocation
-                .get(invocation_id)
-                .map(|entry| entry.abort.clone())
+            state.get(invocation_id).map(|entry| entry.abort.clone())
         }) else {
             return false;
         };
@@ -140,7 +131,7 @@ impl InFlightRegistry {
         let now = monotonic_seconds();
         let mut touched = 0;
         for invocation_id in invocation_ids {
-            if let Some(entry) = state.by_invocation.get_mut(invocation_id) {
+            if let Some(entry) = state.get_mut(invocation_id) {
                 entry.last_seen = now;
                 touched += 1;
             }
@@ -152,7 +143,6 @@ impl InFlightRegistry {
     /// `api.v1.inflight_count`.
     pub fn count_by_caller(&self, caller_id: &str) -> usize {
         self.lock_state()
-            .by_invocation
             .values()
             .filter(|entry| {
                 entry.background
@@ -167,21 +157,12 @@ impl InFlightRegistry {
     pub fn ttl_sweep(&self) {
         let mut state = self.lock_state();
         let now = monotonic_seconds();
-        let mut reaped = 0;
-        for entry in state.by_invocation.values_mut() {
+        for entry in state.values_mut() {
             if entry.background && !entry.ttl_reaped && now - entry.last_seen > self.ttl_s {
                 entry.abort.abort();
                 entry.ttl_reaped = true;
-                reaped += 1;
             }
         }
-        state.ttl_reaped_total += reaped;
-    }
-
-    /// `(active_invocations, ttl_reaped_total)` for diagnostics.
-    pub fn metrics(&self) -> (usize, u64) {
-        let state = self.lock_state();
-        (state.by_invocation.len(), state.ttl_reaped_total)
     }
 }
 

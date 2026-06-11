@@ -182,7 +182,7 @@ hot paths first.
 **Provision** (`sandbox.acquire`):
 
 1. `docker run` with labels `eos.sandbox_id`, `eos.tcp_port`, `eos.created_by`.
-2. `put_archive` the `eosd` binary and merged config into the container.
+2. Copy the `eosd` binary and merged config into the container.
 3. `docker exec -d eosd daemon --spawn --socket … --pid-file … --log-file …
    --tcp-host 0.0.0.0 --tcp-port <port> --auth-token <fresh random>`.
 4. Resolve published port via `docker port` (retry ≤ 15 s).
