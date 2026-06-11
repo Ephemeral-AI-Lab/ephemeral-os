@@ -139,9 +139,9 @@ reconcile queue, and the §2.19 in-content stamp do not - §2.7, §2.21).
     runtime-side variable builders produce a versioned, typed snapshot per
     agent kind containing *all* facts - including ones the default policy
     hides (standing `deferred_goal` on retry, superseded declarations).
-    Hiding is policy; the composer decides. The scheduler takes one injected
-    `composeLaunchContext(agentName, input)` function and calls it after
-    commit, before `port.launch`.
+    Hiding is policy; the composer decides. The workflow launcher takes one
+    injected `composeLaunchContext(agentName, input)` function and calls it
+    after commit, before `port.launch`.
 12. **Context scripts are hook-parity subprocesses bound by agent kind.**
     Scripts live in `.eos-agents/workflow/scripts/` and bind by filename:
     `planner.(cjs|mjs)` / `worker.(cjs|mjs)`, falling back to the built-in
@@ -171,7 +171,7 @@ reconcile queue, and the §2.19 in-content stamp do not - §2.7, §2.21).
     directive.
 14. **Compose failures ride the §2.7 uniform rule.** A script that exits
     non-zero, times out, or emits output failing the Zod parse means the
-    launch never happens: the scheduler synthesizes a failed settlement for
+    launch never happens: the workflow service synthesizes a failed settlement for
     the claimed entity, recording `fail_reason: "context_script_error: …"`,
     and the ordinary retry path runs. `max_attempts` bounds the damage from
     a broken user script; nothing can wedge in `Running`.
@@ -216,8 +216,8 @@ reconcile queue, and the §2.19 in-content stamp do not - §2.7, §2.21).
     expanded, so the default policies need no read escalation.
 19. **Submissions validate and mutate in-run through an entity-bound
     seam.** Amends Phase 05 §2.7: `AgentLaunchPort.launch` gains an
-    optional `SubmissionBinding` - `{ kind, submit(payload) }` - built by
-    the scheduler per claimed entity and wired by the runtime into the
+    optional `SubmissionBinding` - `{ kind, submit(payload) }` - built per
+    claimed entity and wired by the runtime into the
     child run's terminal submission tool. `execute` validates (§2.15) and
     awaits `submit`, which runs one DB transaction (mutate + claim), then
     mirrors and launches through guarded claim tokens (§2.21), and returns
@@ -265,14 +265,14 @@ everything not listed is implemented as written there.
 | §13 step 3 renderer tests bind the companion §12 criteria | replaced by the §15 projection/derivation tables | §15 |
 | §14 case 3 rendering assertions | replaced by §15 case 3 | §15 |
 
-| §2.7 submission tools are service-free; the scheduler is the submission's only consumer | workflow-launched runs get entity-bound submission execute - validate + mutate in-run through DB-guarded transitions; settlement consumption reduces to death synthesis against still-`Running` entities | §2.19, §2.21 |
-| §2.16/§8 `AgentLaunchPort.launch(agentName, initialMessages)` | gains an optional `SubmissionBinding` third parameter | §2.19 |
+| §2.7 submission tools are service-free; settlement is the submission consumer | workflow-launched runs get entity-bound submission execute - validate + mutate in-run through DB-guarded transitions; settlement consumption reduces to death synthesis against still-`Running` entities | §2.19, §2.21 |
+| §2.16/§8 `AgentLaunchPort.launch(agentName, initialMessages)` | becomes `launch(agentName, initialMessages, options?)`, where `options` carries `SubmissionBinding` and the workflow cancellation signal | §2.19, §2.21 |
 | §2.17/§9 tool family: `delegate_workflow` + `read_workflow_context` + `query_workflow_context` | the family is `delegate_workflow` alone; cancel rides `cancel_background_session`; the read/query tool surface is deferred to a later discussion | §2.18 |
 | §2.8-§2.9 `WorkflowCell`, `liveRuns`, and per-workflow promise queue | removed; DB rows carry claims, launch tokens, terminal guards, and cancellation generations; `WorkflowService` keeps only active terminal resolvers and workflow abort controllers | §2.21 |
 
 Unchanged and re-affirmed: §2.3 status enum, §2.4 minted IDs, §2.8-2.12
 session machinery, §2.18 bound functions. §2.7 (settlement consumption),
-§2.8-§2.9 (active scheduler shape), §2.16 (port signature), and §2.17
+§2.8-§2.9 (active runtime shape), §2.16 (port signature), and §2.17
 (read tools) are amended by the rows above; the §2.7 synthesis rule itself
 survives as the death path.
 
@@ -296,7 +296,7 @@ Phase 05):
 - `@eos/workflow`: per-field projection + tree listing (replacing
   `render/`), the §2.17 disk mirror, variable builders + default
   composition policy (replacing `context.ts`), the composer seam on the
-  scheduler, materialization-time declaration rules, the §14
+  launcher, materialization-time declaration rules, the §14
   entity-oriented module layout,
 - `@eos/tool`: `tools/workflow/delegate_workflow.ts` (the family's only
   tool, §2.18) with supervisor registration and the one-open guard, the
@@ -546,7 +546,7 @@ for each claimed entity:
   input    = buildPlannerVariables(aggregate, plan)        // or buildWorker…
   messages = composeLaunchContext(agentName, input)        // injected (§2.11)
   guardedStampLaunch(entity, launch_token)                 // still Running?
-  port.launch(agentName, messages, submission, workflowSignal)
+  port.launch(agentName, messages, { submission, signal: workflowSignal })
   launched.outcome.then((s) => onSettlement(entity, s))     // no liveRuns map
 ```
 
@@ -615,8 +615,8 @@ process.stdin.on("end", () => {
 
 Against Phase 05 §8; everything not named is unchanged. The submission
 tools drive every mid-workflow transition through the §2.19 bound seam;
-the scheduler's settlement path contributes only death synthesis and the
-cancel cascade.
+settlement callbacks contribute only death synthesis, and cancellation is
+the background-session handle calling `WorkflowService.cancel`.
 
 ```text
 delegate_workflow(goal)                              caller's run
@@ -724,19 +724,21 @@ interface DelegatedWorkflow {
 }
 
 execute: async (input, ctx) => {
-  if (supervisor.list().some((s) => s.type === "workflow"))
+  if (supervisor.listBackgroundSessions().some((s) => s.type === "workflow"))
     return { content: "a delegated workflow is already open …",
              isError: true };                            // one-open guard
   const wf = await delegate(input, ctx.meta.run.run_id);
-  supervisor.register({ type: "workflow", id: wf.workflowId },
-    ctx.meta.tool_use_id, {
+  supervisor.registerBackgroundSession(
+    { type: "workflow", id: wf.workflowId },
+    {
       settled: wf.terminal.then((t) => ({
         status: t.status === "Success" ? "completed"
               : t.status === "Cancelled" ? "cancelled" : "failed",
         summary: t.summary })),
       cancel: wf.cancel,
       describe: wf.describe,
-    });
+    },
+  );
   return { content: { workflow_id: wf.workflowId } };
 },
 ```
@@ -748,15 +750,16 @@ an idle caller, the submission guard holds the caller past an unseen
 settlement, and `supervisor.dispose` on caller finish cancels through the
 handle. `cancel_background_session`'s `type` union gains `"workflow"` -
 cancelling the session IS cancelling the workflow: the handle's `cancel`
-runs the Phase 05 §8 cascade (interrupt live children, await their
-outcomes, mark all non-terminal entities `Cancelled` in one transaction,
-resolve the terminal `Cancelled`) and resolves only after teardown.
+runs the Phase 05 §8 cascade (abort the workflow signal, mark all
+non-terminal entities `Cancelled` in one transaction, resolve the terminal
+`Cancelled`) and resolves after that durable teardown. Child runs observe
+the shared workflow signal and late settlements no-op against terminal rows.
 
 `tools/submission/submit_planner_outcome.ts` and
 `submit_worker_outcome.ts` keep their §7 per-kind schemas and gain bound
-mutation (§2.19). The scheduler builds a `SubmissionBinding` per claimed
-entity and passes it through the launch port; the runtime wires it into
-the child run's terminal tool:
+mutation (§2.19). The launcher builds a `SubmissionBinding` per claimed
+entity and passes it through the launch port; the runtime wires it into the
+child run's terminal tool:
 
 ```ts
 interface SubmissionBinding {
@@ -764,17 +767,17 @@ interface SubmissionBinding {
   submit(payload: PlannerOutcomePayload | WorkerOutcomePayload):
     Promise<{ ok: true } | { ok: false; error: string }>;
 }
-// AgentLaunchPort.launch(agentName, initialMessages, submission?)
+// AgentLaunchPort.launch(agentName, initialMessages, { submission, signal }?)
 
 execute(payload):
   Zod shape parse                                    → error result
   structure: unique local ids, declared `needs`,
              no cycles                               → error result
-  await binding.submit(payload)                      one job on the
-    materialization rules: first declaration         per-workflow serial
-    present, `agent_name` registered                 queue → { ok:false,
-    mutate + claim in one transaction; commit;         error } in-run
-    project mirror; launch claimed entities          → { ok: true }
+  await binding.submit(payload)                      one DB transaction:
+    materialization rules: first declaration         mutate + claim
+    present, `agent_name` registered                 commit; project mirror;
+    guarded launch claimed entities                  → { ok:false, error }
+                                                     or { ok: true }
   ok → terminal content; error → isError result for in-run correction
 ```
 
@@ -791,10 +794,10 @@ ride `outcome.submission`.
   `.eos-agents/workflow/context/`), passed to the `WorkflowService` for
   the §2.17 mirror.
 - The composer adapter (kind → default resolution; script subprocess when
-  bound, package default otherwise) is injected into the `WorkflowService`
-  scheduler beside the launch-port adapter.
+  bound, package default otherwise) is injected into `WorkflowService` beside
+  the launch-port adapter.
 - The launch-port adapter threads each launch's `SubmissionBinding` into
-  per-run tool assembly: a scheduler-launched child's terminal submission
+  per-run tool assembly: a workflow-launched child's terminal submission
   tool executes against `binding.submit` (§2.19); runs without a binding
   keep the service-free submission tools.
 - Everything else in Phase 05 §10 (workflowDb, per-run `workflowTools`,
@@ -806,6 +809,8 @@ Delta to the Phase 05 §12 layout:
 
 ```text
 packages/workflow/src/
+├─ creation.ts        createWorkflow → createIteration → createAttempt →
+│                    createPlan cascade; package-internal only
 ├─ workflow/
 │  ├─ state.ts         root aggregate state; goal-chain derivation (§8)
 │  ├─ context.ts       original_goal.md / current_goal.md / outcome.md
@@ -841,24 +846,38 @@ packages/workflow/src/
 ├─ context_projection.ts  the §2.17 disk mirror: render-all over archive
 │                      paths, temp-file + atomic-rename writes, prune of
 │                      departed paths
-├─ scheduler.ts        cell, serial reconcile, claims, compose → project →
-│                      launch; declares AgentLaunchPort / LaunchedAgent /
-│                      LaunchSettlement / SubmissionBinding (Phase 05
-│                      §2.16 contract + the §2.19 seam; the standalone
-│                      launch-port.ts file is folded here as the scheduler
-│                      is the contract's only consumer)
-├─ service.ts          delegate / cancel (read/search reserved for the
-│                      deferred context tools; renders from the aggregate,
-│                      never from disk)
-└─ index.ts            public exports (service, port types)
+├─ launcher.ts         claimLaunchable, launch-token guard, post-commit
+│                      compose → mirror → launch; declares AgentLaunchPort /
+│                      LaunchedAgent / LaunchSettlement / SubmissionBinding
+│                      (Phase 05 §2.16 contract + the §2.19/§2.21 seams)
+├─ service.ts          delegate / cancel, active terminal resolver map, active
+│                      workflow AbortControllers, settlement callbacks, and
+│                      read/search reserved for deferred context tools
+└─ index.ts            the only public package surface: service and port types
 ```
 
 Each entity module owns its slice through one shape - `state.ts` (types +
 §8 derivations), `context.ts` (its §9 field files: verbatim field text
 plus the derived outcome compositions), `transitions.ts` (local status
-mutations over `(trx, aggregate)`);
-the scheduler's reconcile job sequences the cross-entity cascade, keeping
-Phase 05 §2.15's functions-not-classes rule, distributed by owner.
+mutations over `(trx, aggregate)`). `creation.ts` sequences the creation
+cascade in the direction of ownership:
+
+```text
+createWorkflow
+  → createIteration
+    → createAttempt
+      → createPlan
+        → enqueueLaunch(kind='plan')
+```
+
+The cascade functions are package-internal. `iteration/state.ts`,
+`attempt/state.ts`, and the other entity state modules may export helpers
+for sibling workflow modules through relative imports, but `index.ts` must
+not re-export them, and `packages/workflow/package.json` must expose only
+`.` like the adjacent packages. Outside packages can construct workflows
+only through `WorkflowService` and the exported port/DTO types; they cannot
+call `createIteration`, `createAttempt`, consistency predicates, or derived
+state helpers directly.
 
 `@eos/contracts` adds the §7 DTOs; `@eos/db` reshapes the migration and
 `loadAggregate`; `@eos/agent-runtime` adds the `workflow/scripts/` registry
@@ -875,7 +894,7 @@ under the Phase 05 step list with these substitutions.
 | 1 | Contracts: payload focus group, context-script IO DTOs | §16 case 1 | Planned |
 | 2 | `@eos/db`: reshaped schema, derived views in `loadAggregate` | §16 case 2 on `:memory:` | Planned |
 | 3 | Projection: field renders, listings, archives, disk mirror | §16 cases 3 + 13 | Planned |
-| 4 | Lifecycle + scheduler: declaration rules, composer seam, compose-failure synthesis | §16 cases 4-9, engine-free | Planned |
+| 4 | Lifecycle + launcher: declaration rules, composer seam, compose-failure synthesis | §16 cases 4-9, engine-free | Planned |
 | 5 | Service delegate/cancel + the `DelegatedWorkflow` handle | §16 cases 10-11 | Planned |
 | 6 | `@eos/tool`: `delegate_workflow` family + bound submissions | §16 case 11 | Planned |
 | 7 | Runtime: `workflow/scripts/` registry + composer adapter, end-to-end | §16 case 12 | Planned |
@@ -896,12 +915,13 @@ context script fixture.
 | 5 | Submission validation | a valid first payload records the pair and materializes items in-run before the planner terminates; a payload without `focus`, with an unknown `agent_name`, or with dangling/cyclic `needs` returns an in-run error result and the same run corrects and resubmits successfully - no attempt burns for a correctable payload, and the accepted resubmission mutates exactly once |
 | 6 | Keep vs refocus | keep: focus view unchanged, attempt consistent, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, the resolver errors on the old live path naming `archived/` among valid children, the retry directive carries only consistent attempts and omits the standing `deferred_goal` |
 | 7 | Success cascade | unchanged Phase 05 case 6, plus: the next planner's `current_goal` is the promoted deferral; the closing iteration's goal appears under `archived/iteration_<id>/`; no deferral → workflow `Success` with `current_goal.md` still live |
-| 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed`; a failing work item cancels its non-terminal siblings in the same transaction and interrupts their runs (`attempt_failed`, §2.20), and their late settlements no-op with no `Running` rows left |
+| 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed`; a failing work item cancels its non-terminal siblings in the same transaction, advances the workflow abort generation (`attempt_failed`, §2.20), and their late settlements no-op with no `Running` rows left |
 | 9 | Death + compose synthesis | unchanged Phase 05 case 8, plus: a composer that throws/times out/returns garbage synthesizes a failed settlement with `context_script_error` recorded; synthesis keys off the entity still being `Running` - a run whose in-run submission already landed settles as a no-op; no entity stays `Running` |
-| 10 | Serialization + cancel | Phase 05 cases 9-10 re-run against the new model; tool-driven submissions and settlement jobs share the one serial queue (instrumented store sees no interleaved transactions) |
+| 10 | DB guards + cancel | Phase 05 cases 9-10 re-run against the new model; competing tool submissions, settlements, guarded launch stamps, and cancel requests reload fresh state and use terminal/launch-token guards so the instrumented store sees at most one accepted mutation per entity transition and stale launches are skipped |
 | 11 | Tools | `delegate_workflow` registers the session before returning, rejects a second open delegation, and returns the workflow id; submission tools: shape, structure, and materialization error tables each correctable in-run; unbound planner/worker runs keep service-free submissions; `cancel_background_session` accepts `type: "workflow"` and resolves only after the cascade |
 | 12 | Runtime end-to-end | Phase 05 case 12 amended: the caller delegates, auto-waits, drains `session_settled`, and submits; a fixture `workflow/scripts/planner.cjs` composes the planner's complete initial messages (proven by transcript inspection - nothing merged around them); a broken fixture script drives the case-9 synthesis path live; registry load fails fast on a filename naming no agent kind; `cancel_background_session` mid-workflow cascades `workflow_cancelled` into child transcripts and settles the session `cancelled` |
 | 13 | Disk mirror | after each scripted lifecycle step the on-disk tree under the context root equals the rendered universe byte-for-byte; a refocus prunes the old live attempt folder and writes the archived one; a write failure (read-only root) leaves DB state and the run unaffected and the next mutation heals the mirror; tools render identically with the mirror deleted |
+| 14 | Package boundary | `@eos/workflow` exports only `WorkflowService` and port/DTO types from `index.ts`; no `state.ts`, `transitions.ts`, or `creation.ts` helper is re-exported; a repo scan finds no outside-package import of `@eos/workflow/*/state`, `@eos/workflow/creation`, or `packages/workflow/src/**` internals |
 
 Commands (unchanged):
 
@@ -953,9 +973,14 @@ Phase 05.1 is accepted when, in the combined Phase 05 + 05.1 implementation:
   disposal cascade - no `cancel_workflow` exists, and the read/query tools
   are deferred (§2.18),
 - planner and worker submissions validate and mutate in-run through the
-  entity-bound seam on the per-workflow serial queue, settlements reduce
-  to death synthesis against still-`Running` entities, and attempt failure
-  cancels the attempt's remaining work (§2.20),
+  entity-bound seam using DB-guarded transitions, settlements reduce to
+  death synthesis against still-`Running` entities, guarded launch tokens
+  prevent stale post-commit launches, and attempt failure cancels the
+  attempt's remaining work (§2.20),
+- `@eos/workflow` has no public entity-state surface: `index.ts` re-exports
+  only `WorkflowService` and port/DTO types, while `workflow/`, `iteration/`,
+  `attempt/`, `plan/`, and `work_item/` state/transition helpers remain
+  package-internal,
 - Phase 05's orchestration spine passes its suite unmodified except where
   §3 amends it, under `pnpm run check`,
 - the Rust `agent-core/` tree is byte-for-byte unchanged,
