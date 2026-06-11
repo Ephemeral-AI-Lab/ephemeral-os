@@ -1,24 +1,16 @@
-mod connected_ppc;
-mod status;
-mod support;
+//! Plugin op adapter tests: wire arg parsing, response shaping, registered-op
+//! routing through the dispatcher, and the isolated-caller gate. Service
+//! process behavior (start/refresh/restart/health) lives in
+//! `eos-runtime/tests/`.
 
-use super::*;
+mod support;
 
 use support::*;
 
-use super::callbacks as occ_callbacks;
-use super::refresh::WORKSPACE_SNAPSHOT_REFRESH_OP;
 use crate::wire::Request;
-use eos_config::configs::daemon::PluginRuntimeConfig;
-use eos_layerstack::LayerStack;
-use eos_plugin_runtime::ensure::{validate_plugin_caller_fields, MAX_PLUGIN_CALLER_FIELD_CHARS};
-use eos_plugin::{PpcDirection, PpcEnvelope};
-use serde_json::{json, Value};
-use std::io::Write;
+use serde_json::json;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::{mpsc, Arc};
-use std::time::{Duration, Instant};
 
 #[test]
 fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
@@ -302,54 +294,6 @@ fn ensure_reloads_same_digest_when_workspace_root_changes() -> TestResult {
 }
 
 #[test]
-fn build_workspace_base_reset_stops_plugin_service_snapshots_for_layer_root() -> TestResult {
-    let daemon = TestDaemon::new();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("reset-plugin-service")?;
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-reset-service".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest("digest-a", "hover"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-    let _ = attach_service_snapshot_for_tests(daemon.plugin(), "plugin.generic.hover")?;
-    assert_eq!(
-        LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        1
-    );
-
-    let reset = daemon.dispatch(&Request {
-        op: "sandbox.checkpoint.build_base".to_owned(),
-        invocation_id: "workspace-base-reset-stops-service".to_owned(),
-        args: json!({
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "reset": true
-        }),
-    });
-
-    assert_eq!(reset["success"], true, "{reset:?}");
-    assert_eq!(
-        LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
-        0
-    );
-    let status = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-reset-service".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["state"],
-        "stopped"
-    );
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
 fn op_table_registers_plugin_status_and_ensure() -> TestResult {
     let daemon = TestDaemon::new();
     let ensure = daemon.dispatch(&Request {
@@ -377,22 +321,26 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
         op: "sandbox.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": generic_service_manifest("digest-a", "hover"),
+            "manifest": generic_self_managed_manifest("digest-a", "apply"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
     assert_eq!(ensure["success"], true);
+    assert_eq!(
+        ensure["operation_routes"][0]["dispatch_mode"],
+        "self_managed_callback"
+    );
 
     let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-test".to_owned(),
+        op: "plugin.generic.apply".to_owned(),
+        invocation_id: "plugin-apply-test".to_owned(),
         args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], false);
     assert_eq!(routed["status"], "deferred");
     assert_eq!(routed["error"]["kind"], "plugin_dispatch_deferred");
-    assert_eq!(routed["dispatch_mode"], "read_only_service");
+    assert_eq!(routed["dispatch_mode"], "self_managed_callback");
 
     let missing = daemon.dispatch(&Request {
         op: "plugin.generic.missing".to_owned(),
@@ -450,6 +398,105 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
     });
     remove_test_tree(&layer_stack_root)?;
     Ok(())
+}
+
+#[test]
+fn ensure_records_oneshot_overlay_route_without_starting_process() -> TestResult {
+    let daemon = TestDaemon::new();
+    let response = daemon.op_ensure(&json!({
+        "manifest": oneshot_overlay_manifest("digest-a", "write"),
+        "layer_stack_root": "/eos/plugin/layer-stack",
+        "workspace_root": "/eos/plugin/workspace",
+        "start_services": true
+    }))?;
+
+    assert_eq!(response["success"], true);
+    assert_eq!(response["service_processes"], json!([]));
+    assert_eq!(response["service_processes_started"], false);
+    assert_eq!(
+        response["operation_routes"][0]["dispatch_mode"],
+        "write_allowed_oneshot_overlay"
+    );
+    assert_eq!(
+        response["operation_routes"][0]["service_mode"],
+        "oneshot_overlay"
+    );
+    assert_eq!(
+        response["operation_routes"][0]["service_command"],
+        json!(["python3", "/eos/plugin/oneshot.py"])
+    );
+    assert_eq!(
+        response["services"][0]["last_error"],
+        "oneshot overlay worker starts per operation"
+    );
+    Ok(())
+}
+
+#[test]
+fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
+    let daemon = TestDaemon::new();
+    let first = daemon.dispatch(&Request {
+        op: "sandbox.plugin.ensure".to_owned(),
+        invocation_id: "plugin-ensure-a".to_owned(),
+        args: json!({
+            "manifest": generic_service_manifest("digest-a", "hover"),
+            "layer_stack_root": "/eos/plugin/layer-stack",
+            "workspace_root": "/eos/plugin/workspace"
+        }),
+    });
+    assert_eq!(first["registered_ops"], json!(["plugin.generic.hover"]));
+
+    let second = daemon.dispatch(&Request {
+        op: "sandbox.plugin.ensure".to_owned(),
+        invocation_id: "plugin-ensure-b".to_owned(),
+        args: json!({
+            "manifest": generic_service_manifest("digest-b", "diagnostics"),
+            "layer_stack_root": "/eos/plugin/layer-stack",
+            "workspace_root": "/eos/plugin/workspace"
+        }),
+    });
+    assert_eq!(
+        second["registered_ops"],
+        json!(["plugin.generic.diagnostics"])
+    );
+
+    let old = daemon.dispatch(&Request {
+        op: "plugin.generic.hover".to_owned(),
+        invocation_id: "plugin-hover-old".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(old["error"]["kind"], "unknown_op");
+
+    let current = daemon.dispatch(&Request {
+        op: "plugin.generic.diagnostics".to_owned(),
+        invocation_id: "plugin-diagnostics-current".to_owned(),
+        args: json!({}),
+    });
+    assert_eq!(current["error"]["kind"], "plugin_dispatch_deferred");
+    Ok(())
+}
+
+struct TestEnvVar {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl TestEnvVar {
+    fn set(key: &'static str, value: &str) -> Self {
+        let previous = std::env::var(key).ok();
+        std::env::set_var(key, value);
+        Self { key, previous }
+    }
+}
+
+impl Drop for TestEnvVar {
+    fn drop(&mut self) {
+        if let Some(previous) = &self.previous {
+            std::env::set_var(self.key, previous);
+        } else {
+            std::env::remove_var(self.key);
+        }
+    }
 }
 
 struct PackageTestRoots {
@@ -532,766 +579,4 @@ fn package_manifest(digest: &str, setup_digest: &str, command: Vec<&str>) -> ser
         "services": [],
         "operations": []
     })
-}
-
-#[test]
-fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
-    let daemon = TestDaemon::new();
-    let (layer_stack_root, workspace_root) = test_bound_workspace("exited-service")?;
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-exited-service".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest_with_command(
-                "digest-a",
-                "hover",
-                vec!["/bin/sh", "-c", "true"]
-            ),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned()
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-
-    let spec = {
-        let state = daemon.plugin().lock_state()?;
-        some_value(
-            state
-                .loaded
-                .values()
-                .flat_map(|loaded| loaded.service_processes.iter())
-                .next()
-                .cloned(),
-            "service process spec missing",
-        )?
-    };
-    let service_instance_id = spec.service_instance_id();
-    let mut process = super::process::spawn(&spec)?;
-    let deadline = Instant::now() + Duration::from_secs(1);
-    while process.is_running() && Instant::now() < deadline {
-        std::thread::sleep(Duration::from_millis(10));
-    }
-    assert!(!process.is_running());
-    {
-        let mut state = daemon.plugin().lock_state()?;
-        state.service_processes.insert(service_instance_id, process);
-    }
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-exited-service".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], false);
-    assert!(
-        value_str(
-            &routed["error"]["message"],
-            "error message must be a string"
-        )?
-        .contains("process exited before plugin dispatch"),
-        "routed response: {routed:?}"
-    );
-
-    let status = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-exited-service".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["state"],
-        "stopped"
-    );
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn ensure_records_oneshot_overlay_route_without_starting_process() -> TestResult {
-    let daemon = TestDaemon::new();
-    let response = daemon.op_ensure(&json!({
-        "manifest": oneshot_overlay_manifest("digest-a", "write"),
-        "layer_stack_root": "/eos/plugin/layer-stack",
-        "workspace_root": "/eos/plugin/workspace",
-        "start_services": true
-    }))?;
-
-    assert_eq!(response["success"], true);
-    assert_eq!(response["service_processes"], json!([]));
-    assert_eq!(response["service_processes_started"], false);
-    assert_eq!(
-        response["operation_routes"][0]["dispatch_mode"],
-        "write_allowed_oneshot_overlay"
-    );
-    assert_eq!(
-        response["operation_routes"][0]["service_mode"],
-        "oneshot_overlay"
-    );
-    assert_eq!(
-        response["operation_routes"][0]["service_command"],
-        json!(["python3", "/eos/plugin/oneshot.py"])
-    );
-    assert_eq!(
-        response["services"][0]["last_error"],
-        "oneshot overlay worker starts per operation"
-    );
-    Ok(())
-}
-
-#[test]
-fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
-    let daemon = TestDaemon::new();
-    let first = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-a".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest("digest-a", "hover"),
-            "layer_stack_root": "/eos/plugin/layer-stack",
-            "workspace_root": "/eos/plugin/workspace"
-        }),
-    });
-    assert_eq!(first["registered_ops"], json!(["plugin.generic.hover"]));
-
-    let second = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-b".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest("digest-b", "diagnostics"),
-            "layer_stack_root": "/eos/plugin/layer-stack",
-            "workspace_root": "/eos/plugin/workspace"
-        }),
-    });
-    assert_eq!(
-        second["registered_ops"],
-        json!(["plugin.generic.diagnostics"])
-    );
-
-    let old = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-old".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(old["error"]["kind"], "unknown_op");
-
-    let current = daemon.dispatch(&Request {
-        op: "plugin.generic.diagnostics".to_owned(),
-        invocation_id: "plugin-diagnostics-current".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(current["error"]["kind"], "plugin_dispatch_deferred");
-    Ok(())
-}
-
-#[test]
-fn plugin_response_payload_rejects_over_8_mib_body() {
-    let daemon = TestDaemon::new();
-    let max_response_bytes = PluginRuntimeConfig::default().max_response_bytes;
-    let reply = PpcEnvelope {
-        message_id: "plugin-large-reply".to_owned(),
-        direction: PpcDirection::Reply,
-        op: "reply".to_owned(),
-        body: "x".repeat(max_response_bytes + 1),
-    };
-
-    assert!(matches!(
-        daemon.plugin().response_payload_from_reply(&reply),
-        Err(DaemonError::Plugin(PluginError::Ppc(message)))
-            if message.contains("plugin response exceeds")
-    ));
-}
-
-#[test]
-fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
-    assert!(matches!(
-        validate_plugin_caller_fields(&json!({"caller_id": "agent\0plugin"})),
-        Err(PluginError::Ppc(message))
-            if message.contains("contains NUL")
-    ));
-
-    assert!(matches!(
-        validate_plugin_caller_fields(&json!({"caller": {"source_id": "x".repeat(MAX_PLUGIN_CALLER_FIELD_CHARS + 1)}})),
-        Err(PluginError::Ppc(message))
-            if message.contains("exceeds")
-    ));
-
-    assert!(matches!(
-        validate_plugin_caller_fields(&json!({"caller": {"request_id": 42}})),
-        Err(PluginError::Ppc(message))
-            if message.contains("must be a string")
-    ));
-}
-
-#[test]
-fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult {
-    let socket_root = test_socket_root("read-only-refresh");
-    let daemon = TestDaemon::with_ppc_root(&socket_root);
-    let (layer_stack_root, workspace_root) = test_bound_workspace("read-only-refresh")?;
-    let command = vec![
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
-    ];
-    let server = std::thread::spawn({
-        let socket_root = socket_root.clone();
-        move || -> TestResult {
-            let mut server_stream = connect_ppc_socket(&socket_root)?;
-            let mut refresh_types = Vec::new();
-            let mut current_manifest_key = String::new();
-            loop {
-                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-                if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
-                    let body: Value = serde_json::from_str(&request.body)?;
-                    refresh_types.push(
-                        value_str(&body["type"], "refresh type must be a string")?.to_owned(),
-                    );
-                    if let Some(key) = body
-                        .get("target_manifest_key")
-                        .or_else(|| body.get("manifest_key"))
-                        .and_then(Value::as_str)
-                    {
-                        current_manifest_key = key.to_owned();
-                    }
-                    let refresh_reply = json!({
-                            "manifest_key": current_manifest_key,
-                            "accepted": true
-                    });
-                    write_ppc_reply_json_result(
-                        &mut server_stream,
-                        request.message_id,
-                        &refresh_reply,
-                    )?;
-                    continue;
-                }
-
-                assert_eq!(request.message_id, "plugin-hover-after-peer-write");
-                assert_eq!(request.op, "plugin.generic.hover");
-                assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
-                assert!(refresh_types.contains(&"swap_workspace".to_owned()));
-                assert!(refresh_types.contains(&"health".to_owned()));
-                write_ppc_reply_result(
-                    &mut server_stream,
-                    request.message_id,
-                    r#"{"success":true,"after_refresh":true}"#,
-                )?;
-                break Ok(());
-            }
-        }
-    });
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "start_services": true
-        }),
-    });
-    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
-    assert_eq!(ensure["service_processes_started"], true);
-
-    let write = daemon.dispatch(&Request {
-        op: "sandbox.file.write".to_owned(),
-        invocation_id: "peer-write".to_owned(),
-        args: json!({
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "path": workspace_root.join("peer.txt").to_string_lossy().into_owned(),
-            "content": "peer\n"
-        }),
-    });
-    assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-after-peer-write".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], true, "routed response: {routed:?}");
-    assert_eq!(routed["after_refresh"], true);
-
-    let status = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-refresh".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(status["loaded_plugins"][0]["services"][0]["state"], "ready");
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["refresh_count"],
-        1
-    );
-    join_test_thread(server, "server thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult {
-    let socket_root = test_socket_root("read-only-refresh-singleflight");
-    let daemon = Arc::new(TestDaemon::with_ppc_root(&socket_root));
-    let (layer_stack_root, workspace_root) =
-        test_bound_workspace("read-only-refresh-singleflight")?;
-    let command = vec![
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
-    ];
-
-    let (refresh_started_tx, refresh_started_rx) = mpsc::channel();
-    let (continue_refresh_tx, continue_refresh_rx) = mpsc::channel();
-    let server = std::thread::spawn({
-        let socket_root = socket_root.clone();
-        move || -> TestResult {
-            let mut server_stream = connect_ppc_socket(&socket_root)?;
-            let mut refresh_types = Vec::new();
-            let mut current_manifest_key = String::new();
-            let first_op = loop {
-                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-                if request.op != WORKSPACE_SNAPSHOT_REFRESH_OP {
-                    break request;
-                }
-                let body: Value = serde_json::from_str(&request.body)?;
-                let refresh_type =
-                    value_str(&body["type"], "refresh type must be a string")?.to_owned();
-                if refresh_types.is_empty() {
-                    assert_eq!(refresh_type, "prepare_refresh");
-                    refresh_started_tx.send(())?;
-                    continue_refresh_rx.recv_timeout(Duration::from_secs(1))?;
-                }
-                refresh_types.push(refresh_type);
-                if let Some(key) = body
-                    .get("target_manifest_key")
-                    .or_else(|| body.get("manifest_key"))
-                    .and_then(Value::as_str)
-                {
-                    current_manifest_key = key.to_owned();
-                }
-                let refresh_reply = json!({
-                    "manifest_key": current_manifest_key,
-                    "accepted": true
-                });
-                write_ppc_reply_json_result(
-                    &mut server_stream,
-                    request.message_id,
-                    &refresh_reply,
-                )?;
-            };
-            assert_eq!(
-                refresh_types,
-                vec![
-                    "prepare_refresh".to_owned(),
-                    "quiesce".to_owned(),
-                    "swap_workspace".to_owned(),
-                    "notify_refresh".to_owned(),
-                    "resume".to_owned(),
-                    "health".to_owned(),
-                ]
-            );
-
-            let second_op = read_ppc_request(&mut server_stream, "read second plugin request")?;
-            let mut message_ids = vec![first_op.message_id.clone(), second_op.message_id.clone()];
-            message_ids.sort();
-            assert_eq!(
-                message_ids,
-                vec![
-                    "plugin-hover-concurrent-refresh-a".to_owned(),
-                    "plugin-hover-concurrent-refresh-b".to_owned(),
-                ]
-            );
-            assert_eq!(first_op.op, "plugin.generic.hover");
-            assert_eq!(second_op.op, "plugin.generic.hover");
-            write_ppc_reply_result(
-                &mut server_stream,
-                second_op.message_id,
-                r#"{"success":true,"seq":2}"#,
-            )?;
-            write_ppc_reply_result(
-                &mut server_stream,
-                first_op.message_id,
-                r#"{"success":true,"seq":1}"#,
-            )?;
-            Ok(())
-        }
-    });
-
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "start_services": true
-        }),
-    });
-    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
-
-    let write = daemon.dispatch(&Request {
-        op: "sandbox.file.write".to_owned(),
-        invocation_id: "peer-write".to_owned(),
-        args: json!({
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "path": workspace_root.join("peer.txt").to_string_lossy().into_owned(),
-            "content": "peer\n"
-        }),
-    });
-    assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let first_daemon = Arc::clone(&daemon);
-    let first = std::thread::spawn(move || -> Result<Value, TestError> {
-        Ok(first_daemon.dispatch(&Request {
-            op: "plugin.generic.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-refresh-a".to_owned(),
-            args: json!({"caller_id": "caller-plugin", "request": "a"}),
-        }))
-    });
-    refresh_started_rx.recv_timeout(Duration::from_secs(1))?;
-
-    let (second_started_tx, second_started_rx) = mpsc::channel();
-    let second_daemon = Arc::clone(&daemon);
-    let second = std::thread::spawn(move || -> Result<Value, TestError> {
-        second_started_tx.send(())?;
-        Ok(second_daemon.dispatch(&Request {
-            op: "plugin.generic.hover".to_owned(),
-            invocation_id: "plugin-hover-concurrent-refresh-b".to_owned(),
-            args: json!({"caller_id": "caller-plugin", "request": "b"}),
-        }))
-    });
-    second_started_rx.recv_timeout(Duration::from_secs(1))?;
-    continue_refresh_tx.send(())?;
-
-    let first_response = join_value_thread(first, "first dispatch thread panicked")?;
-    let second_response = join_value_thread(second, "second dispatch thread panicked")?;
-    assert_eq!(first_response["success"], true);
-    assert_eq!(second_response["success"], true);
-
-    let status = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-refresh-singleflight".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(status["loaded_plugins"][0]["services"][0]["state"], "ready");
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["refresh_count"],
-        1
-    );
-    join_test_thread(server, "server thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn restart_service_strategy_restarts_after_peer_publish_before_request() -> TestResult {
-    let socket_root = test_socket_root("restart-service");
-    let daemon = TestDaemon::with_ppc_root(&socket_root);
-    let (layer_stack_root, workspace_root) = test_bound_workspace("restart-service")?;
-    let (allow_reconnect_tx, allow_reconnect_rx) = mpsc::channel();
-    let connector = spawn_restart_connector(
-        socket_root.clone(),
-        allow_reconnect_rx,
-        r#"{"success":true,"from_restart_service":true}"#,
-    );
-    let command = vec![
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
-    ];
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-restart-service".to_owned(),
-        args: json!({
-            "manifest": generic_restart_manifest("digest-a", "hover", command),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "start_services": true
-        }),
-    });
-    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
-    assert_eq!(ensure["service_processes_started"], true);
-
-    let status_before = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-before-restart".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(
-        status_before["loaded_plugins"][0]["services"][0]["restart_count"],
-        0
-    );
-    let initial_manifest_key = value_str(
-        &status_before["loaded_plugins"][0]["services"][0]["manifest_key"],
-        "initial manifest key must be a string",
-    )?
-    .to_owned();
-
-    let write = daemon.dispatch(&Request {
-        op: "sandbox.file.write".to_owned(),
-        invocation_id: "peer-write-before-restart".to_owned(),
-        args: json!({
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "path": workspace_root.join("restart-peer.txt").to_string_lossy().into_owned(),
-            "content": "peer restart\n"
-        }),
-    });
-    assert_eq!(write["success"], true, "write response: {write:?}");
-    allow_reconnect_tx.send(())?;
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-after-restart".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], true, "routed response: {routed:?}");
-    assert_eq!(routed["from_restart_service"], true);
-
-    let status_after = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-restart".to_owned(),
-        args: json!({}),
-    });
-    let service = &status_after["loaded_plugins"][0]["services"][0];
-    assert_eq!(service["state"], "ready");
-    assert_eq!(service["refresh_count"], 0);
-    assert_eq!(service["restart_count"], 1);
-    assert_ne!(
-        value_str(
-            &service["manifest_key"],
-            "restarted manifest key must be a string"
-        )?,
-        initial_manifest_key
-    );
-
-    join_test_thread(connector, "connector thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
-    let daemon = TestDaemon::new();
-    let layer_stack_root = test_layer_stack_root("self-managed-callback")?;
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": generic_self_managed_manifest("digest-a", "apply"),
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": "/eos/plugin/workspace"
-        }),
-    });
-    assert_eq!(ensure["success"], true);
-    assert_eq!(
-        ensure["operation_routes"][0]["dispatch_mode"],
-        "self_managed_callback"
-    );
-
-    let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    daemon
-        .plugin()
-        .register_ppc_client_for_tests("plugin.generic.apply", client_stream)?;
-    let callback_root = layer_stack_root.clone();
-    let server = std::thread::spawn(move || -> TestResult {
-        let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-        assert_eq!(request.message_id, "plugin-apply-test");
-        assert_eq!(request.op, "plugin.generic.apply");
-
-        let callback = PpcEnvelope {
-            message_id: "plugin-apply-callback".to_owned(),
-            direction: PpcDirection::Request,
-            op: occ_callbacks::OCC_APPLY_CHANGESET_OP.to_owned(),
-            body: serde_json::to_string(&json!({
-                "layer_stack_root": callback_root.to_string_lossy().into_owned(),
-                "changes": [{
-                    "kind": "write",
-                    "path": "src/main.py",
-                    "content_utf8": "print('from callback')\n"
-                }]
-            }))?,
-        };
-        server_stream.write_all(&callback.encode()?)?;
-        let callback_reply = read_ppc_request(&mut server_stream, "read callback reply")?;
-        assert_eq!(callback_reply.message_id, "plugin-apply-callback");
-        let callback_body: Value = serde_json::from_str(&callback_reply.body)?;
-        assert_eq!(callback_body["success"], true);
-        assert_eq!(callback_body["files"][0]["status"], "committed");
-
-        write_ppc_reply_result(
-            &mut server_stream,
-            request.message_id,
-            r#"{"success":true,"from_self_managed":true}"#,
-        )?;
-        Ok(())
-    });
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.apply".to_owned(),
-        invocation_id: "plugin-apply-test".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], true, "routed response: {routed:?}");
-    assert_eq!(routed["from_self_managed"], true);
-    assert_eq!(
-        read_layer_text(&layer_stack_root, "src/main.py")?,
-        "print('from callback')\n"
-    );
-
-    join_test_thread(server, "server thread panicked")?;
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestResult {
-    let socket_root = test_socket_root("self-managed-refresh");
-    let daemon = TestDaemon::with_ppc_root(&socket_root);
-    let (layer_stack_root, workspace_root) = test_bound_workspace("self-managed-refresh")?;
-    let mut manifest = generic_self_managed_manifest("digest-a", "apply");
-    manifest["services"][0]["command"] = json!([
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
-    ]);
-
-    let server = std::thread::spawn({
-        let socket_root = socket_root.clone();
-        move || -> TestResult {
-            let mut server_stream = connect_ppc_socket(&socket_root)?;
-            let mut refresh_types = Vec::new();
-            let mut current_manifest_key = String::new();
-            loop {
-                let request = read_ppc_request(&mut server_stream, "read ppc request")?;
-                if request.op == WORKSPACE_SNAPSHOT_REFRESH_OP {
-                    let body: Value = serde_json::from_str(&request.body)?;
-                    refresh_types.push(
-                        value_str(&body["type"], "refresh type must be a string")?.to_owned(),
-                    );
-                    if let Some(key) = body
-                        .get("target_manifest_key")
-                        .or_else(|| body.get("manifest_key"))
-                        .and_then(Value::as_str)
-                    {
-                        current_manifest_key = key.to_owned();
-                    }
-                    let refresh_reply = json!({
-                        "manifest_key": current_manifest_key,
-                        "accepted": true
-                    });
-                    write_ppc_reply_json_result(
-                        &mut server_stream,
-                        request.message_id,
-                        &refresh_reply,
-                    )?;
-                    continue;
-                }
-
-                assert_eq!(request.message_id, "plugin-apply-after-peer-write");
-                assert_eq!(request.op, "plugin.generic.apply");
-                assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
-                assert!(refresh_types.contains(&"swap_workspace".to_owned()));
-                assert!(refresh_types.contains(&"health".to_owned()));
-                write_ppc_reply_result(
-                    &mut server_stream,
-                    request.message_id,
-                    r#"{"success":true,"self_managed_after_refresh":true}"#,
-                )?;
-                break Ok(());
-            }
-        }
-    });
-    let ensure = daemon.dispatch(&Request {
-        op: "sandbox.plugin.ensure".to_owned(),
-        invocation_id: "plugin-ensure-test".to_owned(),
-        args: json!({
-            "manifest": manifest,
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "workspace_root": workspace_root.to_string_lossy().into_owned(),
-            "start_services": true
-        }),
-    });
-    assert_eq!(ensure["success"], true, "ensure response: {ensure:?}");
-
-    let write = daemon.dispatch(&Request {
-        op: "sandbox.file.write".to_owned(),
-        invocation_id: "peer-write".to_owned(),
-        args: json!({
-            "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-            "path": workspace_root.join("peer.txt").to_string_lossy().into_owned(),
-            "content": "peer\n"
-        }),
-    });
-    assert_eq!(write["success"], true, "write response: {write:?}");
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.apply".to_owned(),
-        invocation_id: "plugin-apply-after-peer-write".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], true, "routed response: {routed:?}");
-    assert_eq!(routed["self_managed_after_refresh"], true);
-
-    let status = daemon.dispatch(&Request {
-        op: "sandbox.plugin.status".to_owned(),
-        invocation_id: "plugin-status-after-self-managed-refresh".to_owned(),
-        args: json!({}),
-    });
-    assert_eq!(status["loaded_plugins"][0]["services"][0]["state"], "ready");
-    assert_eq!(
-        status["loaded_plugins"][0]["services"][0]["refresh_count"],
-        1
-    );
-    join_test_thread(server, "server thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
-}
-
-#[test]
-fn ensure_can_start_and_status_reports_service_process() -> TestResult {
-    let socket_root = test_socket_root("ensure-start");
-    let daemon = TestDaemon::with_ppc_root(&socket_root);
-    let (layer_stack_root, workspace_root) = test_bound_workspace("ensure-start")?;
-    let connector = spawn_replying_connector(
-        socket_root.clone(),
-        r#"{"success":true,"from_started_service":true}"#,
-    );
-    let command = vec![
-        "/bin/sh",
-        "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
-    ];
-    let response = daemon.op_ensure(&json!({
-        "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
-        "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
-        "workspace_root": workspace_root.to_string_lossy().into_owned(),
-        "start_services": true
-    }))?;
-
-    assert_eq!(response["success"], true);
-    assert_eq!(response["service_processes_started"], true);
-    assert_eq!(
-        response["running_service_processes"][0]["service_id"],
-        "worker"
-    );
-    assert_eq!(response["running_service_processes"][0]["running"], true);
-
-    let status = daemon.op_status(&json!({}))?;
-    assert_eq!(
-        status["running_service_processes"][0]["service_id"],
-        "worker"
-    );
-    assert_eq!(status["running_service_processes"][0]["running"], true);
-
-    let routed = daemon.dispatch(&Request {
-        op: "plugin.generic.hover".to_owned(),
-        invocation_id: "plugin-hover-started-service".to_owned(),
-        args: json!({"caller_id": "caller-plugin"}),
-    });
-    assert_eq!(routed["success"], true, "routed response: {routed:?}");
-    assert_eq!(routed["from_started_service"], true);
-
-    join_test_thread(connector, "connector thread panicked")?;
-    let _ = std::fs::remove_dir_all(socket_root);
-    remove_test_tree(&layer_stack_root)?;
-    Ok(())
 }

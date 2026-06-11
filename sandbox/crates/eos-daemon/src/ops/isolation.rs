@@ -1,13 +1,13 @@
 //! Isolated-workspace op adapters behind `api.isolated_workspace.*`: wire arg
 //! parsing, the command-session entry gate, and response/error shaping over
-//! [`eos_workspace_runtime::WorkspaceRuntime`].
+//! [`eos_runtime::WorkspaceRuntime`].
 
 use std::path::PathBuf;
 #[cfg(test)]
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use eos_isolated_workspace::{IsolatedError, WorkspaceHandle};
-use eos_workspace_runtime::ExitOutcome;
+use eos_runtime::ExitOutcome;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;

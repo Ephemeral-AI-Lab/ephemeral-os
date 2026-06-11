@@ -138,9 +138,43 @@ describe("submission tool family", () => {
   });
 
   it("returns the parsed outcome object as the terminal content", async () => {
+    const submit = submitMainOutcomeTool();
+    const outcome = await submit.execute({ summary: "all done" }, ctx());
+    expect(outcome.content).toEqual({ summary: "all done" });
+  });
+
+  it("an unbound planner submission rides the outcome with its per-kind payload", async () => {
     const submit = submitPlannerOutcomeTool();
-    const outcome = await submit.execute({ summary: "plan ready" }, ctx());
-    expect(outcome.content).toEqual({ summary: "plan ready" });
+    const outcome = await submit.execute(
+      {
+        summary: "plan ready",
+        iteration_focus: "the slice",
+        work_items: [
+          {
+            id: "w1",
+            agent_name: "worker",
+            description: "do it",
+            work_item_spec: "spec",
+            needs: [],
+          },
+        ],
+      },
+      ctx(),
+    );
+    expect(outcome.isError ?? false).toBe(false);
+    expect(outcome.content).toEqual({
+      summary: "plan ready",
+      iteration_focus: "the slice",
+      work_items: [
+        {
+          id: "w1",
+          agent_name: "worker",
+          description: "do it",
+          work_item_spec: "spec",
+          needs: [],
+        },
+      ],
+    });
   });
 
   it("does not own background-session submission policy", async () => {

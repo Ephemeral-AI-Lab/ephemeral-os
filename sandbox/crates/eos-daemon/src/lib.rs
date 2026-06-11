@@ -36,7 +36,6 @@
 pub(crate) mod dispatch;
 pub(crate) mod ops;
 pub(crate) mod runtime;
-pub(crate) mod services;
 pub(crate) mod transport;
 pub mod wire;
 

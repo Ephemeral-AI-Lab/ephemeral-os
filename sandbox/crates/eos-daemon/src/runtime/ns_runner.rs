@@ -13,56 +13,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use eos_namespace::protocol::{RunRequest, RunResult};
+use eos_runtime::{LaunchError, NsRunnerLauncher};
 
-use crate::error::DaemonError;
 use crate::invocation_registry::{terminate_process_group, InFlightRegistry};
-
-/// Launches `ns-runner` children for the plugin runtime. The implementor owns
-/// the binary identity and process mechanics; requests are fully built by the
-/// caller. Exactly the three launch shapes the runtime uses — this is not a
-/// generic process abstraction.
-pub(crate) trait NsRunnerLauncher: Send + Sync {
-    /// Run one ns-runner request to completion (oneshot overlay).
-    fn run(&self, request: &RunRequest) -> Result<RunResult, LaunchError>;
-
-    /// Spawn a long-lived ns-runner child (connected service with overlay).
-    fn spawn_detached(&self, request: &RunRequest) -> Result<Child, LaunchError>;
-
-    /// Re-run a remount request inside an existing child's namespaces.
-    fn remount_in(
-        &self,
-        target_pid: u32,
-        request: &RunRequest,
-        timeout: Duration,
-    ) -> Result<(), LaunchError>;
-}
-
-/// Failures raised by an [`NsRunnerLauncher`]. Message text is preserved
-/// verbatim through the daemon error mapping so wire responses do not drift.
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum LaunchError {
-    /// The request could not be encoded / fed to the child.
-    #[error("{0}")]
-    InvalidRequest(String),
-
-    /// A process / pipe I/O operation failed.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-
-    /// The launch pipeline failed (spawn refusal, bad exit, timeout, output).
-    #[error("{0}")]
-    Failed(String),
-}
-
-impl From<LaunchError> for DaemonError {
-    fn from(err: LaunchError) -> Self {
-        match err {
-            LaunchError::InvalidRequest(message) => Self::InvalidEnvelope(message),
-            LaunchError::Io(source) => Self::Io(source),
-            LaunchError::Failed(message) => Self::OverlayPipeline(message),
-        }
-    }
-}
 
 /// The daemon's launcher: `current_exe` + the `ns-runner` subcommand, `nsenter`
 /// for remounts, and process-group registration against the in-flight

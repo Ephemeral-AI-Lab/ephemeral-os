@@ -2,7 +2,7 @@
 //!
 //! # Dependency law (SPEC §2)
 //!
-//! `eos-api → eos-sandbox-host → (std + boring externals only)`. This crate
+//! `eos-sandbox-gateway → eos-sandbox-host → (std + boring externals only)`. This crate
 //! must NEVER depend on a workspace-internal crate: no compiled code is shared
 //! across the host/box boundary. The wire vocabulary it speaks ([`protocol`])
 //! is a deliberate host-side copy of the daemon protocol; drift is caught by the

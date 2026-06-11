@@ -151,15 +151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "eos-sandbox-host",
- "serde_json",
-]
-
-[[package]]
 name = "eos-checkpoint"
 version = "0.1.0"
 dependencies = [
@@ -221,8 +212,7 @@ dependencies = [
  "eos-namespace",
  "eos-overlay",
  "eos-plugin",
- "eos-plugin-runtime",
- "eos-workspace-runtime",
+ "eos-runtime",
  "nix 0.29.0",
  "proptest",
  "serde",
@@ -330,15 +320,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-plugin-runtime"
+name = "eos-runtime"
 version = "0.1.0"
 dependencies = [
+ "eos-command-ops",
+ "eos-config",
+ "eos-ephemeral-workspace",
+ "eos-isolated-workspace",
+ "eos-layerstack",
  "eos-namespace",
  "eos-plugin",
+ "nix 0.29.0",
+ "serde",
  "serde_json",
  "sha2",
  "thiserror 2.0.18",
  "uuid",
+]
+
+[[package]]
+name = "eos-sandbox-gateway"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "eos-sandbox-host",
+ "serde_json",
 ]
 
 [[package]]
@@ -348,17 +354,6 @@ dependencies = [
  "anyhow",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-workspace-runtime"
-version = "0.1.0"
-dependencies = [
- "eos-command-ops",
- "eos-config",
- "eos-isolated-workspace",
- "eos-layerstack",
- "serde_json",
 ]
 
 [[package]]

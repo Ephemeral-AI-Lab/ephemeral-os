@@ -5,10 +5,12 @@ import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
 import { DESCRIPTION } from "../description_prompts/cancel_background_session_prompt.js";
 
-// `type` is an open string this phase; it narrows to the session-kind
-// enum as the spawning families land.
+// The session-kind union, narrowed as the spawning families land:
+// `command` (sandbox family), `subagent` (agent family), `workflow`
+// (workflow family). Cancelling a workflow session IS cancelling the
+// workflow - the handle's cancel runs the full cascade before resolving.
 const CancelInputSchema = z.object({
-  type: z.string().min(1),
+  type: z.enum(["command", "subagent", "workflow"]),
   id: z.string().min(1),
   reason: z.string().optional(),
 });

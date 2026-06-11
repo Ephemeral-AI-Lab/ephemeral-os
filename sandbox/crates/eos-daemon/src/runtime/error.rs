@@ -93,13 +93,45 @@ impl DaemonError {
     }
 }
 
-impl From<eos_plugin_runtime::PpcError> for DaemonError {
+impl From<eos_runtime::PluginRuntimeError> for DaemonError {
+    /// Fold a plugin runtime failure onto the matching daemon variant,
+    /// preserving variant identity and message text so wire responses do not
+    /// drift.
+    fn from(err: eos_runtime::PluginRuntimeError) -> Self {
+        use eos_runtime::PluginRuntimeError;
+        match err {
+            PluginRuntimeError::Plugin(source) => Self::Plugin(source),
+            PluginRuntimeError::Ppc(source) => Self::from(source),
+            PluginRuntimeError::Launch(source) => Self::from(source),
+            PluginRuntimeError::StateLockPoisoned(what) => Self::StateLockPoisoned(what),
+            PluginRuntimeError::OverlayPipeline(message) => Self::OverlayPipeline(message),
+            PluginRuntimeError::InvalidRequest(message) => Self::InvalidEnvelope(message),
+            PluginRuntimeError::Io(source) => Self::Io(source),
+            PluginRuntimeError::LayerStack(source) => Self::LayerStack(source),
+            PluginRuntimeError::Commit(source) => Self::Commit(source),
+        }
+    }
+}
+
+impl From<eos_runtime::LaunchError> for DaemonError {
+    /// Fold an ns-runner launch failure onto the matching daemon variant.
+    fn from(err: eos_runtime::LaunchError) -> Self {
+        use eos_runtime::LaunchError;
+        match err {
+            LaunchError::InvalidRequest(message) => Self::InvalidEnvelope(message),
+            LaunchError::Io(source) => Self::Io(source),
+            LaunchError::Failed(message) => Self::OverlayPipeline(message),
+        }
+    }
+}
+
+impl From<eos_runtime::PpcError> for DaemonError {
     /// Fold a plugin-host PPC / package failure onto the matching daemon
     /// variant. `Plugin` keeps the inner [`eos_plugin::PluginError`] so
     /// `wire_kind` still classifies `ForbiddenInIsolatedWorkspace`; `Callback`
     /// carries an already-formatted message that re-wraps as a PPC error.
-    fn from(err: eos_plugin_runtime::PpcError) -> Self {
-        use eos_plugin_runtime::PpcError;
+    fn from(err: eos_runtime::PpcError) -> Self {
+        use eos_runtime::PpcError;
         match err {
             PpcError::Plugin(source) => Self::Plugin(source),
             // The plugin channel frames with its own copy of the wire framing

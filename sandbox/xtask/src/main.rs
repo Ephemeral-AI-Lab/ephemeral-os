@@ -107,11 +107,11 @@ fn render_api_doc(root: &Path) -> Result<String> {
         (
             "public",
             "Public ops (client socket)",
-            "The complete public vocabulary served on the `eos-api` client socket.",
+            "The complete public vocabulary served on the `eos-sandbox-gateway` client socket.",
         ),
         (
             "operator",
-            "Operator ops (`eos-api admin`)",
+            "Operator ops (operator socket)",
             "Served only on the operator socket beside the client socket; never the client socket.",
         ),
         (
@@ -122,7 +122,7 @@ fn render_api_doc(root: &Path) -> Result<String> {
         (
             "test",
             "Test ops",
-            "Daemon-side test hooks; refused by `eos-api` and exercised only by direct-daemon test harnesses.",
+            "Daemon-side test hooks; refused by `eos-sandbox-gateway` and exercised only by direct-daemon test harnesses.",
         ),
     ] {
         let Some(rows) = sections.get(key) else {
@@ -210,8 +210,8 @@ const CONFORMANCE_SUITES: &[ConformanceSuite] = &[
         tests: &["contract"],
     },
     ConformanceSuite {
-        package: "eos-api",
-        tests: &["contract"],
+        package: "eos-sandbox-gateway",
+        tests: &[],
     },
 ];
 

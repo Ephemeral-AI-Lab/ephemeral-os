@@ -10,10 +10,9 @@ use std::sync::Arc;
 
 use eos_config::configs::daemon::PluginRuntimeConfig;
 use eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig;
-use eos_workspace_runtime::WorkspaceRuntime;
+use eos_runtime::{NsRunnerLauncher, PluginRuntime, WorkspaceRuntime};
 
-use crate::runtime::ns_runner::{DaemonNsRunnerLauncher, NsRunnerLauncher};
-use crate::services::plugin::PluginRuntime;
+use crate::runtime::ns_runner::DaemonNsRunnerLauncher;
 
 /// Per-server daemon services used by dispatch handlers.
 pub struct Services {

@@ -20,6 +20,12 @@ export interface AgentProfile {
   allowed_tools: readonly ToolName[];
   /** Exactly one terminal tool, separate from the allowlist. */
   terminal_tool: ToolName;
+  /**
+   * Workflow context composer, required for `planner`/`worker` kinds: a
+   * repo-root-relative `.cjs`/`.mjs` path under the workflow scripts root.
+   * Other kinds must omit it.
+   */
+  workflow_context_script?: string;
   /** Markdown body after the frontmatter. */
   system_prompt: string;
   /** Diagnostics only, never API input. */
@@ -34,6 +40,7 @@ const FrontmatterSchema = z.object({
   agent_kind: AgentKindSchema,
   allowed_tools: z.array(ToolNameSchema),
   terminal_tool: ToolNameSchema,
+  workflow_context_script: z.string().min(1).optional(),
 });
 
 /** `---\n<yaml>\n---\n<body>`; the first `---` line must open the file. */
@@ -64,6 +71,18 @@ export function loadAgentProfile(path: string): AgentProfile {
   const parsed = FrontmatterSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(`agent profile ${path} is invalid: ${zodIssueSummary(parsed.error)}`);
+  }
+  const requiresContextScript =
+    parsed.data.agent_kind === "planner" || parsed.data.agent_kind === "worker";
+  if (requiresContextScript && parsed.data.workflow_context_script === undefined) {
+    throw new Error(
+      `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires workflow_context_script`,
+    );
+  }
+  if (!requiresContextScript && parsed.data.workflow_context_script !== undefined) {
+    throw new Error(
+      `agent profile ${path} must omit workflow_context_script for agent_kind ${parsed.data.agent_kind}`,
+    );
   }
   return { ...parsed.data, system_prompt: match[2].trim(), source_path: path };
 }

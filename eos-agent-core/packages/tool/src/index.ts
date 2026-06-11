@@ -41,5 +41,12 @@ export {
 } from "./tools/background/index.js";
 export {
   TERMINAL_TOOL_NAMES,
+  plannerStructureError,
   terminalToolDefinitions,
+  type PlannerSubmissionBinding,
+  type WorkerSubmissionBinding,
 } from "./tools/submission/index.js";
+export {
+  WORKFLOW_TOOL_NAMES,
+  workflowTools,
+} from "./tools/workflow/delegate-workflow.js";

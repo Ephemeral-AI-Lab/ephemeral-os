@@ -1,25 +1,25 @@
 //! Plugin op adapters: wire arg parsing, the caller-family gate, response
-//! shaping over the typed [`crate::services::plugin`] outcomes, and the
+//! shaping over the typed [`eos_runtime`] outcomes, and the
 //! resource-telemetry splice for oneshot overlay runs.
 
 use std::time::Instant;
 
 use eos_layerstack::LayerStack;
 use eos_plugin::PluginError;
-use eos_plugin_runtime::ensure::validate_plugin_caller_fields;
-use eos_plugin_runtime::needs_upload_response;
-use eos_plugin_runtime::route::{PluginOperationRoute, PluginProcessSpec};
-use eos_plugin_runtime::PackageEnsureReport;
+use eos_runtime::ensure::validate_plugin_caller_fields;
+use eos_runtime::needs_upload_response;
+use eos_runtime::route::{PluginOperationRoute, PluginProcessSpec};
+use eos_runtime::PackageEnsureReport;
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::response::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    merge_runner_timings, resource_timings,
+    merge_runner_timings, resource_timings, TreeResourceStats,
 };
 use crate::runtime::context::DispatchContext;
 use crate::runtime::services::Services;
-use crate::services::plugin::{
+use eos_runtime::{
     EnsureOutcome, EnsureReady, LoadedPluginStatus, PluginDispatchOutcome, PluginOverlayOutcome,
     ServiceHealthReport, StatusOutcome,
 };
@@ -31,7 +31,11 @@ pub(crate) fn op_ensure(args: &Value, context: DispatchContext<'_>) -> Result<Va
         .get("start_services")
         .and_then(Value::as_bool)
         .unwrap_or(false);
-    match services.plugin.ensure(args, start_services)? {
+    match services
+        .plugin
+        .ensure(args, start_services)
+        .map_err(DaemonError::from)?
+    {
         EnsureOutcome::NeedsUpload { manifest, report } => {
             Ok(needs_upload_response(&manifest, &report))
         }
@@ -50,7 +54,10 @@ pub(crate) fn op_status(args: &Value, context: DispatchContext<'_>) -> Result<Va
         .get("probe_timeout_ms")
         .and_then(Value::as_u64)
         .map(std::time::Duration::from_millis);
-    let outcome = services.plugin.status(probe_services, probe_timeout)?;
+    let outcome = services
+        .plugin
+        .status(probe_services, probe_timeout)
+        .map_err(DaemonError::from)?;
     Ok(status_response(&outcome))
 }
 
@@ -76,12 +83,16 @@ pub(crate) fn dispatch_registered_op(
     }
     let total_start = Instant::now();
     let outcome = services.plugin.dispatch_registered_op(op, invocation_id, args)?;
-    Some(outcome.and_then(|outcome| match outcome {
-        PluginDispatchOutcome::Response(response) => Ok(response),
-        PluginDispatchOutcome::OneshotOverlay(overlay) => {
-            plugin_overlay_response(&overlay, total_start)
-        }
-    }))
+    Some(
+        outcome
+            .map_err(DaemonError::from)
+            .and_then(|outcome| match outcome {
+                PluginDispatchOutcome::Response(response) => Ok(response),
+                PluginDispatchOutcome::OneshotOverlay(overlay) => {
+                    plugin_overlay_response(&overlay, total_start)
+                }
+            }),
+    )
 }
 
 /// The plugin caller-family gate: validate the caller fields, then refuse the
@@ -248,7 +259,7 @@ fn plugin_overlay_response(
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
-        &overlay.upperdir_stats,
+        &TreeResourceStats::from_ephemeral(&overlay.upperdir_stats),
     );
     timings.insert(
         "layer_stack.acquire_snapshot.total_s".to_owned(),
@@ -329,3 +340,7 @@ fn apply_plugin_overlay_status(
         }
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/plugin/mod.rs"]
+mod tests;

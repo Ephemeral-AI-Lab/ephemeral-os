@@ -76,7 +76,7 @@ fn isolated_route<'ctx>(
     args: &Value,
     context: DispatchContext<'ctx>,
 ) -> Option<(
-    &'ctx eos_workspace_runtime::WorkspaceRuntime,
+    &'ctx eos_runtime::WorkspaceRuntime,
     eos_command_ops::CommandBinding,
 )> {
     let workspace = &context.services()?.workspace;

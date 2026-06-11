@@ -4,11 +4,20 @@ import {
   type AgentRunId,
   type BackgroundSessionSnapshot,
   type Message,
+  type SubmissionBinding,
 } from "@eos/contracts";
+import { createWorkflowDatabase, type WorkflowDb } from "@eos/db";
 import {
   startAgentRun,
   type AgentRunHandle,
+  type AgentRunOutcome,
 } from "@eos/engine";
+import {
+  WorkflowService,
+  type AgentLaunchPort,
+  type ComposeLaunchContext,
+  type LaunchSettlement,
+} from "@eos/workflow";
 import { BackgroundSessionSupervisor } from "@eos/background";
 import {
   NotificationInbox,
@@ -22,11 +31,13 @@ import {
   AGENT_TOOL_NAMES,
   HookEngine,
   TERMINAL_TOOL_NAMES,
+  WORKFLOW_TOOL_NAMES,
   agentTools,
   backgroundTools,
   buildToolExecutor,
   snapshotRunState,
   terminalToolDefinitions,
+  workflowTools,
   type AgentRunState,
   type ToolDefinition,
 } from "@eos/tool";
@@ -42,6 +53,11 @@ import {
   loadLlmClientRegistry,
   type LlmClientRegistry,
 } from "./llm-client-registry.js";
+import {
+  DEFAULT_WORKFLOW_SCRIPTS_DIR,
+  resolveWorkflowContextScripts,
+  workflowContextScriptComposer,
+} from "./workflow-context-scripts.js";
 import { loadNotificationRules } from "./notification-rules-config.js";
 import { RunRegistry, type RunSummary } from "./run-registry.js";
 import {
@@ -66,6 +82,12 @@ export interface AgentRuntimeDependencies {
   notificationRulesPath?: string;
   /** Transcript root. */
   dataDir: string;
+  /** Workflow store; presence enables the workflow family (Phase 05 §10). */
+  workflowDb?: string | WorkflowDb;
+  /** §2.17 mirror root. Default: `.eos-agents/workflow/context`. */
+  workflowContextRoot?: string;
+  /** Context-script root. Default: `.eos-agents/workflow/scripts`. */
+  workflowScriptsDir?: string;
 }
 
 export type UserMessage = Message & { role: "user" };
@@ -103,7 +125,7 @@ export interface AgentRuntime {
 export function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime {
   const agentProfiles = loadAgentProfileRegistry(
     dependencies.agentProfilesDir ?? ".eos-agents/profiles",
-    knownToolNames(dependencies.baseTools ?? []),
+    knownToolNames(dependencies.baseTools ?? [], dependencies.workflowDb !== undefined),
   );
   const llmClients =
     dependencies.llmClients ??
@@ -120,7 +142,56 @@ export function createAgentRuntime(dependencies: AgentRuntimeDependencies): Agen
     llmClients,
     hookEngine: new HookEngine(loadHookConfig(dependencies.hookConfigPath)),
     triggerRules: loadNotificationRules(dependencies.notificationRulesPath),
+    workflow: workflowWiring(dependencies, agentProfiles),
   });
+}
+
+interface WorkflowWiring {
+  db: WorkflowDb;
+  contextRoot: string;
+  compose: ComposeLaunchContext;
+  plannerAgentName: string;
+  isRegisteredWorkerAgent: (agentName: string) => boolean;
+}
+
+/**
+ * Profile-script validation runs whenever planner/worker profiles load -
+ * a broken `workflow_context_script` fails startup, never a launch. The
+ * service itself exists only when `workflowDb` is configured.
+ */
+function workflowWiring(
+  dependencies: AgentRuntimeDependencies,
+  agentProfiles: AgentProfileRegistry,
+): WorkflowWiring | undefined {
+  const scripts = resolveWorkflowContextScripts(
+    agentProfiles.list(),
+    dependencies.workflowScriptsDir ?? DEFAULT_WORKFLOW_SCRIPTS_DIR,
+    dependencies.workflowScriptsDir !== undefined,
+  );
+  if (dependencies.workflowDb === undefined) return undefined;
+  const planners = agentProfiles
+    .list()
+    .filter((profile) => profile.agent_kind === "planner");
+  if (planners.length !== 1) {
+    throw new Error(
+      `workflowDb requires exactly one planner profile; found ${String(planners.length)}`,
+    );
+  }
+  return {
+    db:
+      typeof dependencies.workflowDb === "string"
+        ? createWorkflowDatabase(dependencies.workflowDb)
+        : dependencies.workflowDb,
+    contextRoot: dependencies.workflowContextRoot ?? ".eos-agents/workflow/context",
+    compose: workflowContextScriptComposer(scripts),
+    plannerAgentName: planners[0].name,
+    isRegisteredWorkerAgent: (agentName) =>
+      agentProfiles
+        .list()
+        .some(
+          (profile) => profile.name === agentName && profile.agent_kind === "worker",
+        ),
+  };
 }
 
 /**
@@ -130,8 +201,15 @@ export function createAgentRuntime(dependencies: AgentRuntimeDependencies): Agen
  * base tool) would silently shadow it at selection time, so collisions are
  * a startup error like every other config fault.
  */
-function knownToolNames(baseTools: readonly ToolDefinition[]): KnownToolNames {
-  const ordinary = new Set<string>([...AGENT_TOOL_NAMES, ...BACKGROUND_TOOL_NAMES]);
+function knownToolNames(
+  baseTools: readonly ToolDefinition[],
+  workflowEnabled: boolean,
+): KnownToolNames {
+  const ordinary = new Set<string>([
+    ...AGENT_TOOL_NAMES,
+    ...BACKGROUND_TOOL_NAMES,
+    ...(workflowEnabled ? WORKFLOW_TOOL_NAMES : []),
+  ]);
   const terminal = new Set<string>(TERMINAL_TOOL_NAMES);
   for (const definition of baseTools) {
     const name: string = definition.name;
@@ -154,11 +232,14 @@ interface RuntimeContext {
   hookEngine: HookEngine;
   /** Shared rule list; the trigger engine itself is per run (04.9 §7). */
   triggerRules: readonly TriggerRuleEntry[];
+  workflow?: WorkflowWiring;
 }
 
 interface StartRunContext {
   /** Internal only, never public input. */
   parent?: AgentRunId;
+  /** The §2.19 entity-bound seam for a workflow-launched child's terminal tool. */
+  submission?: SubmissionBinding;
 }
 
 function createRuntime(ctx: RuntimeContext): AgentRuntime {
@@ -174,6 +255,55 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     await transcriptBarriers.get(path)?.();
     return readTranscriptBytes(path, offset, maxBytes);
   };
+
+  // The launch-port adapter over the runtime's own startRun (Phase 05
+  // §10, amended by §2.19/§2.21): the workflow signal becomes the child
+  // run's caller scope, its abort reason becomes the recorded interrupt
+  // label, and the submission binding threads into per-run tool assembly.
+  const workflowLaunchPort: AgentLaunchPort = {
+    launch: (agentName, initialMessages, options) => {
+      // The composer contract guarantees min(1); the service enforces it.
+      const [head, ...rest] = initialMessages;
+      const started = startRun(
+        {
+          agentName,
+          initialMessages: [head, ...rest],
+          ...(options?.signal && { signal: options.signal }),
+        },
+        {
+          ...(options?.parent !== undefined && { parent: options.parent }),
+          ...(options?.submission && { submission: options.submission }),
+        },
+      );
+      if (options?.signal) {
+        const signal = options.signal;
+        const interruptWithReason = (): void => {
+          started.handle.interrupt(
+            typeof signal.reason === "string" ? signal.reason : "workflow_cancelled",
+          );
+        };
+        if (signal.aborted) interruptWithReason();
+        else signal.addEventListener("abort", interruptWithReason, { once: true });
+      }
+      return {
+        runId: started.runId,
+        outcome: started.handle.outcome.then(launchSettlement),
+        interrupt: (reason) => {
+          started.handle.interrupt(reason);
+        },
+      };
+    },
+  };
+  const workflowService = ctx.workflow
+    ? new WorkflowService({
+        db: ctx.workflow.db,
+        port: workflowLaunchPort,
+        compose: ctx.workflow.compose,
+        contextRoot: ctx.workflow.contextRoot,
+        plannerAgentName: ctx.workflow.plannerAgentName,
+        isRegisteredWorkerAgent: ctx.workflow.isRegisteredWorkerAgent,
+      })
+    : undefined;
 
   // The §4 wiring order IS the spec (decision 2): per-run inbox/supervisor
   // pair, profile-resolved engine input, runtime-owned transcript consumer,
@@ -211,7 +341,9 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       workspace: { isIsolated: false },
     };
 
-    const terminalDefinitions = terminalToolDefinitions();
+    const terminalDefinitions = terminalToolDefinitions(
+      context.submission && { submission: context.submission },
+    );
     const advisorPrompts = advisorPromptLookup([...ctx.baseTools, ...terminalDefinitions]);
     const availableDefinitions = [
       ...ctx.baseTools,
@@ -224,6 +356,12 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
         },
         supervisor,
       ),
+      ...(workflowService
+        ? workflowTools(
+            (input, parent) => workflowService.delegate(input, parent),
+            supervisor,
+          )
+        : []),
       ...backgroundTools(supervisor),
       ...terminalDefinitions,
     ];
@@ -306,6 +444,21 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
     startRun: (params) => startRun(params),
     listRuns: () => registry.list(),
   };
+}
+
+/** Map a run outcome onto the port's settlement DTO; reasons stay run-side. */
+function launchSettlement(outcome: AgentRunOutcome): LaunchSettlement {
+  switch (outcome.status) {
+    case "completed":
+      return {
+        status: "completed",
+        ...(outcome.submission !== undefined && { submission: outcome.submission }),
+      };
+    case "cancelled":
+      return { status: "cancelled" };
+    case "failed":
+      return { status: "failed" };
+  }
 }
 
 /** Explicit projection so a new `BackgroundSessionRow` field never leaks into payloads. */

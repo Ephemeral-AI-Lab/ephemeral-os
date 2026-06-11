@@ -52,13 +52,13 @@ impl OpFamily {
     }
 }
 
-/// Caller surface allowed to invoke an op; `eos-api` enforces it at the
+/// Caller surface allowed to invoke an op; `eos-sandbox-gateway` enforces it at the
 /// client socket (`visibility != public` → `forbidden`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum OpVisibility {
     /// Part of the public client vocabulary.
     Public,
-    /// `eos-api admin <op>` CLI only; never the client socket.
+    /// Operator socket only; never the client socket.
     Operator,
     /// Host machinery only (recovery ready-gate).
     Internal,
@@ -207,7 +207,7 @@ declare_builtin_daemon_ops! {
 
 /// One host-served sandbox lifecycle op (`served_by: host`).
 ///
-/// The daemon never serves these; the entries are review-owned by `eos-api`
+/// The daemon never serves these; the entries are review-owned by `eos-sandbox-gateway`
 /// and live here only so `eosd dump-ops` can render the complete catalog.
 /// All host ops are `visibility: public` and family `Sandbox`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

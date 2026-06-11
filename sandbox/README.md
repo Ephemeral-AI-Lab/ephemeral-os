@@ -9,7 +9,7 @@ architecture is `docs/SPEC.md`.
 caller
    │  UDS, newline-delimited JSON, one request per connection
    ▼
-eos-api            (bin, host)   receive → gate → route → return. No fleet logic.
+eos-sandbox-gateway (bin, host) receive → gate → route → return. No fleet logic.
    │ in-process calls
    ▼
 eos-sandbox-host   (lib, host)   owns and reaches sandboxes: host engine,
@@ -23,7 +23,7 @@ eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `eos-api` | bin | decode envelope, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
+| `eos-sandbox-gateway` | bin | decode envelope, enforce visibility, route by catalog, return response | contain fleet logic or per-op branches |
 | `eos-sandbox-host` | lib | host engine, duplicated protocol client, Docker runtime | depend on a workspace-internal crate |
 | `eosd` / `eos-daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
 | `contract/` | data | the protocol: op catalog, fixtures, prose | contain code |
@@ -39,7 +39,8 @@ drift gate.
 - `contract/` — `ops.json` (the op catalog: canonical `sandbox.*` names,
   visibility, routing metadata), `PROTOCOL.md`
   (framing/auth/errors/canonicalization), and the immutable golden fixtures.
-- `crates/` — the workspace. Host side: `eos-api`, `eos-sandbox-host`. Box
+- `crates/` — the workspace. Host side: `eos-sandbox-gateway`,
+  `eos-sandbox-host`. Box
   side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol),
   `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command-session`,
   `eos-command-ops`, `eos-ephemeral-workspace`, `eos-isolated-workspace`,
@@ -67,11 +68,11 @@ cargo run -p xtask -- package
 # live end-to-end suite against real Docker sandboxes
 cargo test -p eos-e2e-test --features e2e
 
-# serve the sandbox API (one client socket + one operator socket beside it)
-cargo run -p eos-api -- serve --listen /tmp/eos-api.sock \
+# serve the sandbox gateway (one client socket + one operator socket beside it)
+cargo run -p eos-sandbox-gateway -- serve --listen /tmp/eos-sandbox.sock \
     --image <docker-image> --platform linux/amd64
-cargo run -p eos-api -- admin sandbox.checkpoint.layer_metrics \
-    --listen /tmp/eos-api.sock --sandbox <sb-id> --args '{"layer_stack_root":"/eos/layer-stack"}'
+printf '%s\n' '{"op":"sandbox.checkpoint.layer_metrics","sandbox_id":"<sb-id>","invocation_id":"probe-1","args":{"layer_stack_root":"/eos/layer-stack"}}' \
+    | socat - UNIX-CONNECT:/tmp/eos-sandbox.sock.operator
 ```
 
 ## Version pins

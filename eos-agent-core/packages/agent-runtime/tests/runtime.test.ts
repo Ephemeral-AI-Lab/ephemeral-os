@@ -32,6 +32,7 @@ import {
   textBlock,
   toolUseBlock,
   userMessage,
+  writeContextScript,
   writeProfile,
   type ProfileSpec,
 } from "./support.js";
@@ -84,7 +85,15 @@ function runtimeFixture(options: FixtureOptions): {
   const root = tempDir("eos-runtime-");
   const dir = join(root, "profiles");
   mkdirSync(dir, { recursive: true });
-  for (const spec of options.profiles) writeProfile(dir, spec);
+  const workflowScriptsDir = join(root, "workflow-scripts");
+  const contextScript = writeContextScript(workflowScriptsDir);
+  for (const spec of options.profiles) {
+    const needsScript = spec.kind === "planner" || spec.kind === "worker";
+    writeProfile(
+      dir,
+      needsScript ? { workflowContextScript: contextScript, ...spec } : spec,
+    );
+  }
   const hookConfigPath = join(root, "hooks.json");
   if (options.hookEntries !== undefined) {
     writeFileSync(hookConfigPath, JSON.stringify(options.hookEntries));
@@ -101,6 +110,7 @@ function runtimeFixture(options: FixtureOptions): {
     hookConfigPath,
     notificationRulesPath,
     dataDir,
+    workflowScriptsDir,
   });
   return { runtime, dataDir };
 }
@@ -154,7 +164,11 @@ describe("agent runtime", () => {
       scriptedTurn([
         complete(
           assistantMessage(
-            toolUseBlock("tu_s", "submit_worker_outcome", { summary: "done" }),
+            toolUseBlock("tu_s", "submit_worker_outcome", {
+              summary: "done",
+              is_pass: true,
+              outcome: "done",
+            }),
           ),
           "tool_use",
         ),
@@ -433,7 +447,7 @@ describe("agent runtime", () => {
               payload: {
                 verdict: "pass",
                 tool_name: "submit_worker_outcome",
-                payload: { summary: "done" },
+                payload: { summary: "done", is_pass: true, outcome: "done" },
                 reason: "matches the transcript",
               },
             }),
@@ -448,7 +462,7 @@ describe("agent runtime", () => {
           assistantMessage(
             toolUseBlock("tu_ask", "ask_advisor", {
               tool_name: "submit_worker_outcome",
-              payload: { summary: "done" },
+              payload: { summary: "done", is_pass: true, outcome: "done" },
             }),
           ),
           "tool_use",
@@ -457,7 +471,11 @@ describe("agent runtime", () => {
       scriptedTurn([
         complete(
           assistantMessage(
-            toolUseBlock("tu_s", "submit_worker_outcome", { summary: "done" }),
+            toolUseBlock("tu_s", "submit_worker_outcome", {
+              summary: "done",
+              is_pass: true,
+              outcome: "done",
+            }),
           ),
           "tool_use",
         ),
@@ -483,7 +501,7 @@ describe("agent runtime", () => {
       payload: {
         verdict: "pass",
         tool_name: "submit_worker_outcome",
-        payload: { summary: "done" },
+        payload: { summary: "done", is_pass: true, outcome: "done" },
         reason: "matches the transcript",
       },
     });
@@ -508,7 +526,7 @@ describe("agent runtime", () => {
     const advisorPrompt = must(workerSubmission.advisorPrompt);
     expect(instruction).toEqual(
       userMessage(
-        `${advisorPrompt} Please verify against the below tool name + payload\n{"payload":{"summary":"done"},"tool_name":"submit_worker_outcome"}`,
+        `${advisorPrompt} Please verify against the below tool name + payload\n{"payload":{"is_pass":true,"outcome":"done","summary":"done"},"tool_name":"submit_worker_outcome"}`,
       ),
     );
 
@@ -528,7 +546,7 @@ describe("agent runtime", () => {
           assistantMessage(
             toolUseBlock("tu_ask", "ask_advisor", {
               tool_name: "submit_worker_outcome",
-              payload: { summary: "done" },
+              payload: { summary: "done", is_pass: true, outcome: "done" },
             }),
           ),
           "tool_use",
@@ -759,7 +777,11 @@ process.stdin.on("end", () => {
       scriptedTurn([
         complete(
           assistantMessage(
-            toolUseBlock("tu_s", "submit_worker_outcome", { summary: "noted" }),
+            toolUseBlock("tu_s", "submit_worker_outcome", {
+              summary: "noted",
+              is_pass: true,
+              outcome: "noted",
+            }),
           ),
           "tool_use",
         ),

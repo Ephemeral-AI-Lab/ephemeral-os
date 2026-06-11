@@ -12,10 +12,13 @@
   "dependencies": {
     "@eos/background": "workspace:*",
     "@eos/contracts": "workspace:*",
+    "@eos/db": "workspace:*",
     "@eos/engine": "workspace:*",
     "@eos/llm-client": "workspace:*",
     "@eos/notification": "workspace:*",
+    "@eos/scripts": "workspace:*",
     "@eos/tool": "workspace:*",
+    "@eos/workflow": "workspace:*",
     "yaml": "^2.8.1",
     "zod": "^4.4.3"
   },
