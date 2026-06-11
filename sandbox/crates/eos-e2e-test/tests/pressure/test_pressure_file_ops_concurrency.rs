@@ -181,12 +181,17 @@ fn write_storm_squash_under_load() -> Result<()> {
             }),
         )?;
         if version % 20 == 0 {
-            let read =
-                lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "pressure/storm.txt"}))?;
+            let read = lease.call_ok(
+                ops::SANDBOX_FILE_READ,
+                json!({"path": "pressure/storm.txt"}),
+            )?;
             assert!(as_str(&read, "content")?.contains("storm"));
         }
     }
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "pressure/storm.txt"}))?;
+    let read = lease.call_ok(
+        ops::SANDBOX_FILE_READ,
+        json!({"path": "pressure/storm.txt"}),
+    )?;
     assert_eq!(as_str(&read, "content")?, "storm-114\n");
     let metrics = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(

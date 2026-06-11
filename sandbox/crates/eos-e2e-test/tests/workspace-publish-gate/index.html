@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace-publish-gate - eos-e2e-test</title>
+<link rel="stylesheet" href="../assets/e2e-readme.css">
+</head>
+<body data-page="module" data-module-json="readme.json">
+<div id="app"></div>
+<script type="application/json" id="readme-module-data">
+{
+  "schemaVersion": 1,
+  "name": "workspace-publish-gate",
+  "displayName": "workspace-publish-gate",
+  "cargoTestName": "workspace-publish-gate",
+  "folder": "workspace-publish-gate",
+  "path": "tests/workspace-publish-gate/mod.rs",
+  "page": "workspace-publish-gate/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, `api.v1.exec_command`, and `api.layer_metrics` against a live `eosd`. The module config is `crates/eos-e2e-test/tests/workspace-publish-gate/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, publish accounting, publish batching, and concurrent publish behavior.",
+    "moduleConfig": "crates/eos-e2e-test/tests/workspace-publish-gate/config/default.test.yml",
+    "ops": [
+      "api.v1.write_file",
+      "api.v1.edit_file",
+      "api.v1.read_file",
+      "api.v1.exec_command",
+      "api.layer_metrics"
+    ],
+    "tags": [
+      "workspace-publish-gate",
+      "workspace",
+      "publish",
+      "gate"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "occ-git-drop",
+      "title": "Occ Git Drop",
+      "description": "`.git/**` writes return a committed success envelope without published paths, stay unreadable, and must not advance manifest-visible state.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-gitignored-direct",
+      "title": "Occ Gitignored Direct",
+      "description": "gitignored paths route direct, bypass stale-base gated OCC checks, and remain whole-payload safe under same-path direct-write races.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-tracked-gated",
+      "title": "Occ Tracked Gated",
+      "description": "non-gitignored paths route gated, publish through OCC, and expose route timing counters.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-disjoint-merge",
+      "title": "Occ Disjoint Merge",
+      "description": "concurrent tracked writes to disjoint paths all commit and remain readable without lost updates.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-conflict-report",
+      "title": "Occ Conflict Report",
+      "description": "concurrent same-path writes surface structured commit, conflict, or error payloads and leave coherent final content from one whole writer.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-edit-anchor-errors",
+      "title": "Occ Edit Anchor Errors",
+      "description": "missing, stale, or ambiguous edit anchors return structured no-op conflict payloads without partial file mutation.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-audit-accounting",
+      "title": "Occ Audit Accounting",
+      "description": "successful publish and conflict/rejection paths emit coherent route accounting signals.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-result-catalog",
+      "title": "Occ Result Catalog",
+      "description": "committed, rejected, dropped, and edit-conflict FileResult statuses keep stable wire names and reasons.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-atomic-changeset-audit",
+      "title": "Occ Atomic Changeset Audit",
+      "description": "Multi-path publishes are all-or-nothing on conflict, and conflict versus publish outcomes are mutually exclusive for one commit.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-multi-write-batch",
+      "title": "Occ Multi Write Batch",
+      "description": "A single overlay operation that writes M disjoint files publishes one batched layer, so manifest depth grows by fewer than M while every captured path is published and readable (the reliably observable form of the CommitQueue batching invariant).",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    },
+    {
+      "id": "occ-concurrent-edit",
+      "title": "Occ Concurrent Edit",
+      "description": "Concurrent `edit_file` operations on disjoint anchors in one file stay atomic and coherent with no torn, duplicated, or lost lines, and concurrent same-anchor edits resolve to exactly one winner with structured conflicts for the rest.",
+      "tags": [
+        "workspace-publish-gate"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "occ-route-gating-and-direct-paths",
+      "name": "occ-route-gating-and-direct-paths",
+      "description": "Covers `git_writes_are_dropped_and_unreadable`, `gitignored_writes_bypass_the_occ_gate`, and `concurrent_gitignored_same_path_direct_writes`: `.git/**` drops stay unreadable, ignored writes route direct, tracked siblings route gated, route counters remain protocol-visible, and same-path ignored races leave one whole writer payload.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate gating -- --nocapture",
+      "checklist": [
+        "occ-git-drop",
+        "occ-gitignored-direct",
+        "occ-tracked-gated",
+        "occ-audit-accounting",
+        "occ-result-catalog"
+      ]
+    },
+    {
+      "id": "occ-concurrent-publish-and-conflict-semantics",
+      "name": "occ-concurrent-publish-and-conflict-semantics",
+      "description": "Covers `concurrent_disjoint_writes`, `concurrent_conflicting_writes`, and `retry_budget_3x_surfaces_coherent_result`: disjoint tracked writes all publish, same-path races return structured outcomes, retry-budget pressure still leaves final content as one whole writer payload.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate merge -- --nocapture",
+      "checklist": [
+        "occ-disjoint-merge",
+        "occ-conflict-report",
+        "occ-result-catalog"
+      ]
+    },
+    {
+      "id": "occ-atomic-changeset-audit",
+      "name": "occ-atomic-changeset-audit",
+      "description": "Uses `atomic_overlay_changeset_drops_all_paths_on_stale_conflict`: a stale multi-path overlay completion conflicts on one path, publishes no paths from the same atomic changeset, preserves newer direct content, and leaves the sibling path absent.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate atomic_overlay_changeset_drops_all_paths_on_stale_conflict -- --nocapture",
+      "checklist": [
+        "occ-atomic-changeset-audit",
+        "occ-conflict-report",
+        "occ-audit-accounting"
+      ]
+    },
+    {
+      "id": "occ-edit-conflict-and-result-catalog",
+      "name": "occ-edit-conflict-and-result-catalog",
+      "description": "Covers `edit_overlap_conflict`, `edit_anchor_errors_do_not_publish_or_advance_manifest`, and `route_fileresult_catalog`: ambiguous and missing edit anchors, create-only rejection, missing edit conflicts, committed writes, rejected writes, no changed paths, unchanged content, unchanged manifest depth, and stable conflict reasons.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate merge -- --nocapture",
+      "checklist": [
+        "occ-edit-anchor-errors",
+        "occ-audit-accounting",
+        "occ-result-catalog"
+      ]
+    },
+    {
+      "id": "occ-publish-audit-accounting",
+      "name": "occ-publish-audit-accounting",
+      "description": "Covers `publish_accounting` plus the route counters from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, advance the manifest version, and surface direct/gated timing counters.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate -- --nocapture",
+      "checklist": [
+        "occ-tracked-gated",
+        "occ-audit-accounting"
+      ]
+    },
+    {
+      "id": "occ-concurrent-edit-and-batch",
+      "name": "occ-concurrent-edit-and-batch",
+      "description": "Covers `single_overlay_exec_batches_multi_file_writes_into_one_layer`, `concurrent_disjoint_anchor_edits_stay_atomic_and_coherent`, and `concurrent_same_anchor_edits_resolve_to_one_winner`: one overlay capture batches M disjoint writes into fewer than M layers; concurrent disjoint-anchor edits leave a coherent single-version file; concurrent same-anchor edits leave exactly one winner with structured losers.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate workspace_publish_concurrent_contention -- --nocapture",
+      "checklist": [
+        "occ-multi-write-batch",
+        "occ-concurrent-edit",
+        "occ-disjoint-merge",
+        "occ-conflict-report",
+        "occ-result-catalog"
+      ]
+    }
+  ]
+}
+</script>
+<script src="../assets/e2e-readme.js"></script>
+</body>
+</html>

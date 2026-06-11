@@ -49,4 +49,3 @@ fn head_readable_after_squash() -> Result<()> {
     assert_eq!(as_str(&read, "content")?, "version-104\n");
     Ok(())
 }
-

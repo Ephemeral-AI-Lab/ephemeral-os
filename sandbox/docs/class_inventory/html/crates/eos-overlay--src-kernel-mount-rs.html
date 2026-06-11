@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>5</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>24</b><span>fields</span></div>
-  <div><b>8</b><span>methods</span></div>
+  <div><b>42</b><span>items</span></div>
+  <div><b>23</b><span>fields</span></div>
+  <div><b>6</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/16</small></a></li><li><a class="file-link" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>3/17</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="kernel_mount crates/eos-overlay/src/kernel_mount.rs OverlayHandle OverlayMount impl Drop for OverlayMount mount_overlay unmount_overlay unmount_overlay mount_overlay ValidatedMountInputs impl ValidatedMountInputs require_existing_dir open_dir_no_follow fd_path peel_unmounts reject_forbidden_chars is_mountpoint normalize_mount_path decode_mountinfo_path MountIo impl MountIo &lt; T &gt; for rustix :: io :: Result &lt; T &gt; TestResult decodes_mountinfo_octal_escapes normalizes_paths_lexically mount_inputs_pin_only_lowerdirs_with_fd_paths test_dir">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>2/15</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="kernel_mount crates/eos-overlay/src/kernel_mount.rs OverlayHandle OverlayMount impl Drop for OverlayMount mount_overlay unmount_overlay unmount_overlay mount_overlay ValidatedMountInputs impl ValidatedMountInputs require_existing_dir open_dir_no_follow fd_path peel_unmounts reject_forbidden_chars is_mountpoint normalize_mount_path decode_mountinfo_path MountIo impl MountIo &lt; T &gt; for rustix :: io :: Result &lt; T &gt;">
   <div class="module-head">
     <div>
       <h2>src/kernel_mount.rs</h2>
@@ -52,7 +52,7 @@
       <span>file owns</span>
       <span>4 types</span>
       <span>3 impls</span>
-      <span>16 fns</span>
+      <span>12 fns</span>
       <span>4 methods</span>
     </div>
   </div>
@@ -171,16 +171,6 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-overlay/src/kernel_mount.rs:361</p>
-</article><div class="group-label">Aliases</div><article id="item-type-TestResult-381" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-overlay/src/kernel_mount.rs  ">
-  <div class="item-head">
-    <span class="kind">type</span>
-    <h3>TestResult</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">type <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt; T = () &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
-  <div class="tags"></div>
-
-  <p class="source">crates/eos-overlay/src/kernel_mount.rs:381</p>
 </article><div class="group-label">Standalone Functions</div><article id="item-fn-mount-overlay-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mount_overlay pub pub fn mount_overlay (workspace_root : &amp; Path , handle : &amp; OverlayHandle) -&gt; Result &lt; OverlayMount &gt; crates/eos-overlay/src/kernel_mount.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
@@ -562,105 +552,6 @@
 </details>
 
   <p class="source">crates/eos-overlay/src/kernel_mount.rs:337</p>
-</article><article id="item-fn-decodes-mountinfo-octal-escapes-383" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_mountinfo_octal_escapes private fn decodes_mountinfo_octal_escapes () crates/eos-overlay/src/kernel_mount.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>decodes_mountinfo_octal_escapes</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-fn-decodes-mountinfo-octal-escapes-383">decodes_mountinfo_octal_escapes</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-decodes-mountinfo-octal-escapes-383">decodes_mountinfo_octal_escapes</a>() {
-        assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-decode-mountinfo-path-337">decode_mountinfo_path</a>(&quot;/tmp/has\\040space&quot;),
-            <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/has space&quot;)
-        );
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-overlay/src/kernel_mount.rs:383</p>
-</article><article id="item-fn-normalizes-paths-lexically-391" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalizes_paths_lexically private fn normalizes_paths_lexically () crates/eos-overlay/src/kernel_mount.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>normalizes_paths_lexically</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-fn-normalizes-paths-lexically-391">normalizes_paths_lexically</a> ()</code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-normalizes-paths-lexically-391">normalizes_paths_lexically</a>() {
-        assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-normalize-mount-path-322">normalize_mount_path</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/./a/../b&quot;)),
-            <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/b&quot;)
-        );
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-overlay/src/kernel_mount.rs:391</p>
-</article><article id="item-fn-mount-inputs-pin-only-lowerdirs-with-fd-paths-399" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mount_inputs_pin_only_lowerdirs_with_fd_paths private fn mount_inputs_pin_only_lowerdirs_with_fd_paths () -&gt; TestResult crates/eos-overlay/src/kernel_mount.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>mount_inputs_pin_only_lowerdirs_with_fd_paths</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-fn-mount-inputs-pin-only-lowerdirs-with-fd-paths-399">mount_inputs_pin_only_lowerdirs_with_fd_paths</a> () -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a></code>
-  <div class="tags"><span>test</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-mount-inputs-pin-only-lowerdirs-with-fd-paths-399">mount_inputs_pin_only_lowerdirs_with_fd_paths</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;workspace-root&quot;)?;
-        <span class="rs-kw">let</span> lower = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;lower&quot;)?;
-        <span class="rs-kw">let</span> upperdir = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;upper&quot;)?;
-        <span class="rs-kw">let</span> workdir = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;work&quot;)?;
-        <span class="rs-kw">let</span> inputs = <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-ValidatedMountInputs-160">ValidatedMountInputs</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-open-171">open</a>(
-            &amp;root,
-            &amp;<a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a> {
-                upperdir: upperdir.clone(),
-                workdir: workdir.clone(),
-                layer_paths: vec![lower],
-            },
-        )?;
-
-        assert!(inputs.layer_paths[0].starts_with(&quot;/proc/<span class="rs-self">self</span>/fd/&quot;));
-        assert_eq!(inputs.upperdir, upperdir);
-        assert_eq!(inputs.workdir, workdir);
-        <span class="rs-type">Ok</span>(())
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-overlay/src/kernel_mount.rs:399</p>
-</article><article id="item-fn-test-dir-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_dir private fn test_dir (name : &amp; str) -&gt; TestResult &lt; PathBuf &gt; crates/eos-overlay/src/kernel_mount.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>test_dir</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a> (name : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> &lt; PathBuf &gt;</code>
-  <div class="tags"></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-        <span class="rs-kw">let</span> path = std::env::temp_dir().join(format!(
-            &quot;eos-overlay-kernel-mount-{name}-{}&quot;,
-            std::process::id()
-        ));
-        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;path);
-        std::fs::create_dir_all(&amp;path)?;
-        <span class="rs-type">Ok</span>(path)
-    }
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-overlay/src/kernel_mount.rs:420</p>
 </article><div class="group-label">Other Implementations</div><article id="item-impl-impl-MountIo---T---for-rustix----io----Result---T---366" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl MountIo &lt; T &gt; for rustix :: io :: Result &lt; T &gt; private impl MountIo &lt; T &gt; for rustix :: io :: Result &lt; T &gt; crates/eos-overlay/src/kernel_mount.rs  map_mount_syscall fn map_mount_syscall (self , context : &amp; 'static str) -&gt; Result &lt; T &gt;">
   <div class="item-head">
     <span class="kind">impl</span>
@@ -1065,59 +956,8 @@
 }
 
 #[cfg(all(test, target_os = &quot;linux&quot;))]
-<span class="rs-kw">mod</span> tests {
-    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{decode_mountinfo_path, normalize_mount_path, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a>, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-ValidatedMountInputs-160">ValidatedMountInputs</a>};
-    <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
-
-    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-decodes-mountinfo-octal-escapes-383">decodes_mountinfo_octal_escapes</a>() {
-        assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-decode-mountinfo-path-337">decode_mountinfo_path</a>(&quot;/tmp/has\\040space&quot;),
-            <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/has space&quot;)
-        );
-    }
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-normalizes-paths-lexically-391">normalizes_paths_lexically</a>() {
-        assert_eq!(
-            <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-normalize-mount-path-322">normalize_mount_path</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/./a/../b&quot;)),
-            <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;/tmp/b&quot;)
-        );
-    }
-
-    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-mount-inputs-pin-only-lowerdirs-with-fd-paths-399">mount_inputs_pin_only_lowerdirs_with_fd_paths</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a> {
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;workspace-root&quot;)?;
-        <span class="rs-kw">let</span> lower = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;lower&quot;)?;
-        <span class="rs-kw">let</span> upperdir = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;upper&quot;)?;
-        <span class="rs-kw">let</span> workdir = <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(&quot;work&quot;)?;
-        <span class="rs-kw">let</span> inputs = <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-ValidatedMountInputs-160">ValidatedMountInputs</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-open-171">open</a>(
-            &amp;root,
-            &amp;<a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a> {
-                upperdir: upperdir.clone(),
-                workdir: workdir.clone(),
-                layer_paths: vec![lower],
-            },
-        )?;
-
-        assert!(inputs.layer_paths[0].starts_with(&quot;/proc/<span class="rs-self">self</span>/fd/&quot;));
-        assert_eq!(inputs.upperdir, upperdir);
-        assert_eq!(inputs.workdir, workdir);
-        <span class="rs-type">Ok</span>(())
-    }
-
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#item-fn-test-dir-420">test_dir</a>(name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-381">TestResult</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
-        <span class="rs-kw">let</span> path = std::env::temp_dir().join(format!(
-            &quot;eos-overlay-kernel-mount-{name}-{}&quot;,
-            std::process::id()
-        ));
-        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;path);
-        std::fs::create_dir_all(&amp;path)?;
-        <span class="rs-type">Ok</span>(path)
-    }
-}
+#[path = &quot;../tests/unit/kernel_mount.rs&quot;]
+<span class="rs-kw">mod</span> tests;
 </code></pre>
 </section>
   <script src="../assets/inventory-data.js"></script>

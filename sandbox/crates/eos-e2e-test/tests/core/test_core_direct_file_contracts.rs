@@ -32,7 +32,10 @@ fn write_read_roundtrip() -> Result<()> {
         ops::SANDBOX_FILE_WRITE,
         json!({"path": "tool/roundtrip.txt", "content": "roundtrip\n", "overwrite": true}),
     )?;
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/roundtrip.txt"}))?;
+    let read = lease.call_ok(
+        ops::SANDBOX_FILE_READ,
+        json!({"path": "tool/roundtrip.txt"}),
+    )?;
     assert!(as_bool(&read, "exists")?);
     assert_eq!(as_str(&read, "content")?, "roundtrip\n");
     assert_eq!(as_str(&read, "encoding")?, "utf-8");
@@ -398,7 +401,10 @@ fn write_above_legacy_two_mib_cap_succeeds() -> Result<()> {
         as_bool(&write, "success")?,
         "3 MiB write should publish under the raised cap: {write}"
     );
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "tool/three-mib.txt"}))?;
+    let read = lease.call_ok(
+        ops::SANDBOX_FILE_READ,
+        json!({"path": "tool/three-mib.txt"}),
+    )?;
     assert_eq!(
         as_str(&read, "content")?.len(),
         size,

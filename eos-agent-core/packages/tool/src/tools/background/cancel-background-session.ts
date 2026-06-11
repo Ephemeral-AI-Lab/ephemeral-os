@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
-import { descriptionPrompt } from "../description_prompts/index.js";
+import { DESCRIPTION } from "../description_prompts/cancel_background_session_prompt.js";
 
 // `type` is an open string this phase; it narrows to the session-kind
 // enum as the spawning families land.
@@ -19,7 +19,7 @@ export function cancelBackgroundSessionTool(
 ): ToolDefinition {
   return defineTool({
     name: "cancel_background_session",
-    description: descriptionPrompt("cancel_background_session"),
+    description: DESCRIPTION,
     input: CancelInputSchema,
     execute: async ({ type, id, reason }) => {
       const row = supervisor

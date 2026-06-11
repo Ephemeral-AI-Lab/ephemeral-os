@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/commit/queue.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>211</b><span>items</span></div>
+  <div><b>152</b><span>fields</span></div>
+  <div><b>98</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-mod-rs.html"><span>mod.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-outcome-rs.html"><span>outcome.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-prepare-rs.html"><span>prepare.rs</span><small>2/2</small></a></li><li><a class="file-link active" href="eos-layerstack--src-commit-queue-rs.html"><span>queue.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-transaction-rs.html"><span>transaction.rs</span><small>2/17</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-metrics-rs.html"><span>metrics.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="eos-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-service-rs.html"><span>service.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="commit::queue crates/eos-layerstack/src/commit/queue.rs PreparedChangeset CommitTransactionPort PublishConflict WorkItem QueueItem CommitQueue CommitWorker impl CommitQueue &lt; T &gt; impl CommitWorker &lt; T &gt; drain_ready disjoint_batches combine_prepared result_files_for_item cas_exhaustion_result">
+  <div class="module-head">
+    <div>
+      <h2>src/commit/queue.rs</h2>
+      <p class="path">module <code>commit::queue</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>7 types</span>
+      <span>2 impls</span>
+      <span>5 fns</span>
+      <span>8 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PreparedChangeset-49" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedChangeset pub pub struct PreparedChangeset crates/eos-layerstack/src/commit/queue.rs snapshot_version Option &lt; u64 &gt; path_groups Vec &lt; PublishDecision &gt; changes Vec &lt; LayerChange &gt; atomic bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PreparedChangeset</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a></code>
+  <p class="docstring">A routed changeset ready for the publish transaction.<br>One [`PublishDecision`] per disjoint normalized path plus the typed changes<br>to apply; `atomic` requires every path to validate before any path lands.<br>The `snapshot_version` pins the base the CAS check revalidates against.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>snapshot_version</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>path_groups</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> &gt;</code></td></tr><tr><td>pub</td><td>changes</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a> &gt;</code></td></tr><tr><td>pub</td><td>atomic</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:49</p>
+</article><article id="item-struct-PublishConflict-86" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishConflict pub pub struct PublishConflict crates/eos-layerstack/src/commit/queue.rs observed_version Option &lt; u64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PublishConflict</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a></code>
+  <p class="docstring">Signals a manifest CAS mismatch (`ManifestConflictError`) so the writer<br>retries against the fresh base.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>error</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>observed_version</td><td><code>Option &lt; u64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:86</p>
+</article><article id="item-struct-CommitQueue-108" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitQueue pub pub struct CommitQueue&lt; T : CommitTransactionPort + 'static &gt; crates/eos-layerstack/src/commit/queue.rs sender mpsc :: Sender &lt; QueueItem &gt; receiver Mutex &lt; Option &lt; mpsc :: Receiver &lt; QueueItem &gt; &gt; &gt; transaction Mutex &lt; Option &lt; T &gt; &gt; handle Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt; max_batch_size usize batch_window_s f64 max_cas_retries u32 closed bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommitQueue</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt; T : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;static &gt;</code>
+  <p class="docstring">Serializes OCC publishes while batching disjoint prepared changesets.<br>Owns the `mpsc` producer half; the consumer half is moved into the spawned<br>`occ-commit-queue` thread on [`CommitQueue::start`].</p>
+  <div class="tags"><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sender</td><td><code>mpsc :: Sender &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>receiver</td><td><code>Mutex &lt; Option &lt; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a> &gt; &gt; &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>Mutex &lt; Option &lt; T &gt; &gt;</code></td></tr><tr><td>private</td><td>handle</td><td><code>Option &lt; std :: thread :: JoinHandle &lt; () &gt; &gt;</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr><tr><td>private</td><td>closed</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-132"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a> (transaction : T) -&gt; Self</code><p class="docstring">Build a queue with default batching/retry tuning.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a queue with default batching/retry tuning.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-with-config-142">with_config</a>(
+            transaction,
+            <span class="rs-type">MAX_BATCH_SIZE</span>,
+            <span class="rs-type">BATCH_WINDOW_S</span>,
+            <span class="rs-type">MAX_OCC_CAS_RETRIES</span>,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-config-142"><td>constructor</td><td>with_config</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-with-config-142">with_config</a> (transaction : T , max_batch_size : usize , batch_window_s : f64 , max_cas_retries : u32 ,) -&gt; Self</code><p class="docstring">Build a queue with explicit batching/retry tuning.<br>Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,<br>`max_cas_retries &gt;= 1`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a queue with explicit batching/retry tuning.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,</span>
+    <span class="rs-comment">/// `max_cas_retries &gt;= 1`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-with-config-142">with_config</a>(
+        transaction: <span class="rs-type">T</span>,
+        max_batch_size: usize,
+        batch_window_s: f64,
+        max_cas_retries: u32,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> (sender, receiver) = mpsc::channel();
+        <span class="rs-self">Self</span> {
+            sender,
+            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(<span class="rs-type">Some</span>(receiver)),
+            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(<span class="rs-type">Some</span>(transaction)),
+            handle: <span class="rs-type">None</span>,
+            max_batch_size: max_batch_size.max(1),
+            batch_window_s: batch_window_s.max(0.0),
+            max_cas_retries: max_cas_retries.max(1),
+            closed: <span class="rs-kw">false</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-165"><td>method</td><td>start</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-start-165">start</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Spawn the single `occ-commit-queue` consumer thread.<br># Errors<br>Returns [`CommitError`] when the queue is closed, has already consumed its<br>startup state, or the worker thread cannot be spawned.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Spawn the single `occ-commit-queue` consumer thread.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when the queue is closed, has already consumed its</span>
+    <span class="rs-comment">/// startup state, or the worker thread cannot be spawned.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-start-165">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>);
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .handle
+            .as_ref()
+            .is_some_and(|handle| !handle.is_finished())
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> receiver = <span class="rs-self">self</span>
+            .receiver
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-145">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;receiver slot&quot;))?
+            .take()
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>)?;
+        <span class="rs-kw">let</span> transaction = <span class="rs-self">self</span>
+            .transaction
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-145">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;transaction slot&quot;))?
+            .take()
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>)?;
+        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitWorker-123">CommitWorker</a> {
+            receiver,
+            transaction,
+            max_batch_size: <span class="rs-self">self</span>.max_batch_size,
+            batch_window_s: <span class="rs-self">self</span>.batch_window_s,
+            max_cas_retries: <span class="rs-self">self</span>.max_cas_retries,
+        };
+        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>()
+            .name(<span class="rs-type">COMMIT_QUEUE_THREAD_NAME</span>.to_owned())
+            .spawn(<span class="rs-kw">move</span> || {
+                worker.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-run-309">run</a>();
+            })
+            .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">WorkerStart</span>(err.to_string()))?;
+        <span class="rs-self">self</span>.handle = <span class="rs-type">Some</span>(handle);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-close-211"><td>method</td><td>close</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-close-211">close</a> (&amp; mut self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Stop the worker after pending queued work drains.<br># Errors<br>Returns [`CommitError::WorkerPanicked`] when the worker thread panicked.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stop the worker after pending queued work drains.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError::WorkerPanicked`] when the worker thread panicked.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-close-211">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-self">self</span>.closed = <span class="rs-kw">true</span>;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handle.is_none() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>);
+        <span class="rs-self">self</span>.handle.take().map_or(<span class="rs-type">Ok</span>(()), |handle| {
+            handle.join().map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">WorkerPanicked</span>)
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-submit-230"><td>method</td><td>submit</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-submit-230">submit</a> (&amp; self , prepared : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; mpsc :: Receiver &lt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt; &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Enqueue a prepared changeset and return a reply receiver to await on.<br>The reply channel is the std analogue of a tokio `oneshot`; the async<br>daemon awaits it off-thread without the queue holding any lock across<br>`.await` (RUST-GUIDANCE §5).<br># Errors<br>Returns [`CommitError::QueueClosed`] if the queue is closed/disconnected and<br>[`CommitError::QueueNotStarted`] if no live worker is available.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enqueue a prepared changeset and return a reply receiver to await on.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The reply channel is the std analogue of a tokio `oneshot`; the async</span>
+    <span class="rs-comment">/// daemon awaits it off-thread without the queue holding any lock across</span>
+    <span class="rs-comment">/// `.await` (RUST-GUIDANCE §5).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError::QueueClosed`] if the queue is closed/disconnected and</span>
+    <span class="rs-comment">/// [`CommitError::QueueNotStarted`] if no live worker is available.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-submit-230">submit</a>(
+        &amp;<span class="rs-self">self</span>,
+        prepared: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>);
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .handle
+            .as_ref()
+            .is_none_or(std::thread::<span class="rs-type">JoinHandle</span>::is_finished)
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>);
+        }
+        <span class="rs-kw">let</span> (reply, receiver) = mpsc::channel();
+        <span class="rs-self">self</span>.sender
+            .send(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> {
+                prepared,
+                reply,
+                enqueued_at: <span class="rs-type">Instant</span>::now(),
+            }))
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>)?;
+        <span class="rs-type">Ok</span>(receiver)
+    }
+</code></pre>
+</details></td></tr><tr id="method-commit-batch-265"><td>associated-fn</td><td>commit_batch</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-commit-batch-265">commit_batch</a> (transaction : &amp; T , batch : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> &gt; , max_cas_retries : u32)</code><p class="docstring">Commit one disjoint batch with the bounded CAS-retry loop, fanning each<br>path's `FileResult` back to its submitter.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Commit one disjoint batch with the bounded CAS-retry loop, fanning each</span>
+    <span class="rs-comment">/// path's `FileResult` back to its submitter.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-commit-batch-265">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;, max_cas_retries: u32) {
+        <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-combine-prepared-383">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempts = 0;
+        <span class="rs-kw">let</span> result = loop {
+            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(&amp;combined) {
+                <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-kw">break</span> result,
+                <span class="rs-type">Err</span>(conflict) =&gt; {
+                    attempts += 1;
+                    <span class="rs-kw">if</span> attempts &gt;= max_cas_retries {
+                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-cas-exhaustion-result-420">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
+                    }
+                }
+            }
+        };
+        <span class="rs-kw">let</span> commit_elapsed_s = commit_start.elapsed().as_secs_f64();
+        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-mod-rs.html#item-fn-usize-to-f64-saturating-94">usize_to_f64_saturating</a>(batch.len());
+        <span class="rs-kw">for</span> item <span class="rs-kw">in</span> batch {
+            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-result-files-for-item-403">result_files_for_item</a>(&amp;result, &amp;item.prepared);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = result.timings.clone();
+            timings.insert(
+                &quot;occ.serial.queue_wait_s&quot;.to_owned(),
+                commit_start.duration_since(item.enqueued_at).as_secs_f64(),
+            );
+            timings.insert(&quot;occ.serial.batch_size&quot;.to_owned(), batch_size);
+            timings.insert(&quot;occ.serial.commit_s&quot;.to_owned(), commit_elapsed_s);
+            timings.insert(
+                &quot;occ.serial.cas_attempts&quot;.to_owned(),
+                f64::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(attempts + 1),
+            );
+            <span class="rs-kw">let</span> _ = item.reply.send(<span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+                files,
+                published_manifest_version: result.published_manifest_version,
+                timings,
+            }));
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:108</p>
+</article><article id="item-trait-CommitTransactionPort-67" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommitTransactionPort pub pub trait CommitTransactionPort crates/eos-layerstack/src/commit/queue.rs  revalidate_and_publish fn revalidate_and_publish (&amp; self , combined : &amp; PreparedChangeset ,) -&gt; Result &lt; ChangesetResult , PublishConflict &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>CommitTransactionPort</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a></code>
+  <p class="docstring">The publish-transaction half of the layer-stack port the queue drives.<br>Defined here as the queue's narrow inverted interface. The daemon injects<br>the layer-stack-backed implementation that revalidates the CAS base and<br>publishes a new manifest version, returning [`PublishConflict`] on a stale<br>base.</p>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-revalidate-and-publish-74"><td>required</td><td>revalidate_and_publish</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-revalidate-and-publish-74">revalidate_and_publish</a> (&amp; self , combined : &amp; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a> &gt;</code><p class="docstring">Revalidate the base hash and atomically publish, or signal a CAS<br>conflict so the queue can retry.<br># Errors<br>Returns [`PublishConflict`] when the manifest CAS base is stale.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Revalidate the base hash and atomically publish, or signal a CAS</span>
+    <span class="rs-comment">/// conflict so the queue can retry.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PublishConflict`] when the manifest CAS base is stale.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+        &amp;<span class="rs-self">self</span>,
+        combined: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:67</p>
+</article><article id="item-struct-WorkItem-94" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkItem private struct WorkItem crates/eos-layerstack/src/commit/queue.rs prepared PreparedChangeset reply mpsc :: Sender &lt; Result &lt; ChangesetResult , CommitError &gt; &gt; enqueued_at Instant ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkItem</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a></code>
+  <p class="docstring">One unit of work on the single-writer queue: a prepared changeset plus the<br>reply channel the submitter awaits.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>prepared</td><td><code><a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a></code></td></tr><tr><td>private</td><td>reply</td><td><code>mpsc :: Sender &lt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>enqueued_at</td><td><code>Instant</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:94</p>
+</article><article id="item-struct-CommitWorker-123" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitWorker private struct CommitWorker&lt; T : CommitTransactionPort + 'static &gt; crates/eos-layerstack/src/commit/queue.rs receiver mpsc :: Receiver &lt; QueueItem &gt; transaction T max_batch_size usize batch_window_s f64 max_cas_retries u32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommitWorker</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitWorker-123">CommitWorker</a>&lt; T : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;static &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>receiver</td><td><code>mpsc :: Receiver &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a> &gt;</code></td></tr><tr><td>private</td><td>transaction</td><td><code>T</code></td></tr><tr><td>private</td><td>max_batch_size</td><td><code>usize</code></td></tr><tr><td>private</td><td>batch_window_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>max_cas_retries</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-run-309"><td>method</td><td>run</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#method-run-309">run</a> (self)</code><p class="docstring">Consumer loop: block for the first item, non-blocking-drain the rest,<br>pay the batch window only with headroom, then commit disjoint batches.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Consumer loop: block for the first item, non-blocking-drain the rest,</span>
+    <span class="rs-comment">/// pay the batch window only with headroom, then commit disjoint batches.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-run-309">run</a>(<span class="rs-self">self</span>) {
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(first) = <span class="rs-self">self</span>.receiver.recv() {
+            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = vec![first];
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            <span class="rs-kw">if</span> !stop_seen &amp;&amp; <span class="rs-self">self</span>.batch_window_s &gt; 0.0 &amp;&amp; items.len() &lt; <span class="rs-self">self</span>.max_batch_size {
+                std::thread::sleep(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-self">self</span>.batch_window_s));
+                stop_seen = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            }
+            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-disjoint-batches-347">disjoint_batches</a>(items) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-commit-batch-265">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
+            }
+            <span class="rs-kw">if</span> stop_seen {
+                <span class="rs-kw">return</span>;
+            }
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:123</p>
+</article><article id="item-enum-QueueItem-102" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum QueueItem private enum QueueItem crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>QueueItem</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">enum <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a></code>
+  <p class="docstring">Either real work or the stop sentinel that drains and exits the worker.</p>
+  <div class="tags"></div>
+  <h4>Variants</h4><table><tbody><tr><td>Work</td><td><code>0: <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a></code></td></tr><tr><td>Stop</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:102</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-drain-ready-332" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn drain_ready private fn drain_ready (receiver : &amp; mpsc :: Receiver &lt; QueueItem &gt; , items : &amp; mut Vec &lt; WorkItem &gt; , max_batch_size : usize ,) -&gt; bool crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>drain_ready</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a> (receiver : &amp; mpsc :: Receiver &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a> &gt; , items : &amp; mut Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> &gt; , max_batch_size : usize ,) -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(
+    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
+    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;,
+    max_batch_size: usize,
+) -&gt; bool {
+    <span class="rs-kw">while</span> items.len() &lt; max_batch_size {
+        <span class="rs-kw">match</span> receiver.try_recv() {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Empty</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+        }
+    }
+    <span class="rs-kw">false</span>
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:332</p>
+</article><article id="item-fn-disjoint-batches-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disjoint_batches private fn disjoint_batches (items : Vec &lt; WorkItem &gt;) -&gt; Vec &lt; Vec &lt; WorkItem &gt; &gt; crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>disjoint_batches</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-fn-disjoint-batches-347">disjoint_batches</a> (items : Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> &gt;) -&gt; Vec &lt; Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> &gt; &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-disjoint-batches-347">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
+        .into_iter()
+        .map(|item| {
+            <span class="rs-kw">let</span> paths = item
+                .prepared
+                .path_groups
+                .iter()
+                .map(|group| group.path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().to_owned())
+                .collect();
+            (item, paths)
+        })
+        .collect();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+    <span class="rs-kw">while</span> !pending.is_empty() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">for</span> (item, paths) <span class="rs-kw">in</span> pending {
+            <span class="rs-kw">if</span> item.prepared.atomic || !used.is_disjoint(&amp;paths) {
+                rest.push((item, paths));
+            } <span class="rs-kw">else</span> {
+                used.extend(paths.iter().cloned());
+                batch.push(item);
+            }
+        }
+        <span class="rs-kw">if</span> batch.is_empty() {
+            <span class="rs-kw">let</span> (item, _) = rest.remove(0);
+            batch.push(item);
+        }
+        batches.push(batch);
+        pending = rest;
+    }
+    batches
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:347</p>
+</article><article id="item-fn-combine-prepared-383" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn combine_prepared private fn combine_prepared &lt; 'a &gt; (items : impl Iterator &lt; Item = &amp; 'a PreparedChangeset &gt; ,) -&gt; Option &lt; PreparedChangeset &gt; crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>combine_prepared</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-fn-combine-prepared-383">combine_prepared</a> &lt; &#x27;a &gt; (items : impl Iterator &lt; Item = &amp; &#x27;a <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> combine_prepared&lt;&#x27;a&gt;(
+    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
+    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; = items.collect();
+    <span class="rs-kw">let</span> first = items.first()?;
+    debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+        snapshot_version: first.snapshot_version,
+        path_groups: items
+            .iter()
+            .flat_map(|prepared| prepared.path_groups.iter().cloned())
+            .collect(),
+        changes: items
+            .iter()
+            .flat_map(|prepared| prepared.changes.iter().cloned())
+            .collect(),
+        atomic: first.atomic,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:383</p>
+</article><article id="item-fn-result-files-for-item-403" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn result_files_for_item private fn result_files_for_item (result : &amp; ChangesetResult , prepared : &amp; PreparedChangeset ,) -&gt; Vec &lt; FileResult &gt; crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>result_files_for_item</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-fn-result-files-for-item-403">result_files_for_item</a> (result : &amp; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , prepared : &amp; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-result-files-for-item-403">result_files_for_item</a>(
+    result: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
+    prepared
+        .path_groups
+        .iter()
+        .filter_map(|group| {
+            result
+                .files
+                .iter()
+                .find(|file| file.path == group.path)
+                .cloned()
+        })
+        .collect()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:403</p>
+</article><article id="item-fn-cas-exhaustion-result-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cas_exhaustion_result private fn cas_exhaustion_result (prepared : &amp; PreparedChangeset , conflict : &amp; PublishConflict , max_cas_retries : u32 ,) -&gt; ChangesetResult crates/eos-layerstack/src/commit/queue.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cas_exhaustion_result</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-fn-cas-exhaustion-result-420">cas_exhaustion_result</a> (prepared : &amp; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> , conflict : &amp; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a> , max_cas_retries : u32 ,) -&gt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-cas-exhaustion-result-420">cas_exhaustion_result</a>(
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    conflict: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a>,
+    max_cas_retries: u32,
+) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-kw">let</span> message = format!(
+        &quot;<span class="rs-type">CAS</span> mismatch retry budget exhausted after {max_cas_retries} attempts: observed version {:?}&quot;,
+        conflict.observed_version
+    );
+    <span class="rs-kw">let</span> files = prepared
+        .path_groups
+        .iter()
+        .map(|group| {
+            <span class="rs-kw">let</span> (status, message) = <span class="rs-kw">match</span> group.route {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Drop</span> =&gt; (
+                    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">Dropped</span>,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Reject</span> =&gt; (
+                    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">Rejected</span>,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Direct</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span> =&gt; (<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">AbortedVersion</span>, message.clone()),
+            };
+            <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> {
+                path: group.path.clone(),
+                status,
+                message,
+            }
+        })
+        .collect();
+    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+        files,
+        published_manifest_version: <span class="rs-type">None</span>,
+        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/queue.rs:420</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/commit/queue.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The single-writer publish queue — the MF-1 invariant in code.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Exactly one `occ-commit-queue` writer serializes every publish for a given</span>
+<span class="rs-comment">//! `layer_stack_root`. N disjoint file-API writes are batched into ONE manifest</span>
+<span class="rs-comment">//! CAS attempt; on a stale base the publisher returns a conflict and the writer</span>
+<span class="rs-comment">//! retries up to [`MAX_OCC_CAS_RETRIES`] times before surfacing</span>
+<span class="rs-comment">//! `CommitStatus::AbortedVersion` on every</span>
+<span class="rs-comment">//! path.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! ## MF-1: a SINGLE writer, no second instance</span>
+<span class="rs-comment">//! Any second OCC entry point (notably the PPC self-managed plugin callback)</span>
+<span class="rs-comment">//! MUST route through THIS same writer + the storage lease keyed by</span>
+<span class="rs-comment">//! `layer_stack_root`. A second [`CommitQueue`] for the same root would race the</span>
+<span class="rs-comment">//! manifest CAS and break linearizability — the per-root services singleton</span>
+<span class="rs-comment">//! (eos-daemon) is what guarantees one queue per root.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! ## Threading model (per RUST-GUIDANCE §5)</span>
+<span class="rs-comment">//! The queue is a synchronous `mpsc` work queue with one dedicated consumer</span>
+<span class="rs-comment">//! thread named `occ-commit-queue` (NOT asyncio/tokio — the commit path has</span>
+<span class="rs-comment">//! no tokio dep). Each work item carries a `std::sync::mpsc` reply sender (the std</span>
+<span class="rs-comment">//! analogue of a `oneshot`) so the async daemon can await the result without the</span>
+<span class="rs-comment">//! OCC crate ever holding a lock across `.await`.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashSet</span>;
+<span class="rs-kw">use</span> std::sync::{mpsc, <span class="rs-type">Mutex</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::outcome::{<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::usize_to_f64_saturating;
+
+<span class="rs-comment">/// Dedicated single-writer thread name (reproduce exactly).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">COMMIT_QUEUE_THREAD_NAME</span>: &amp;str = &quot;occ-commit-queue&quot;;
+
+<span class="rs-comment">/// Default upper bound on changesets coalesced into one CAS attempt.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_BATCH_SIZE</span>: usize = 64;
+
+<span class="rs-comment">/// Default batch-coalescing window in seconds (2 ms).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Only paid when a non-blocking drain emptied the queue AND batch headroom</span>
+<span class="rs-comment">/// remains; otherwise it is dead wall-clock on the single-commit hot path.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">BATCH_WINDOW_S</span>: f64 = 0.002;
+
+<span class="rs-comment">/// Bounded CAS-mismatch retry budget before `AbortedVersion`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_OCC_CAS_RETRIES</span>: u32 = 3;
+
+<span class="rs-comment">/// A routed changeset ready for the publish transaction.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// One [`PublishDecision`] per disjoint normalized path plus the typed changes</span>
+<span class="rs-comment">/// to apply; `atomic` requires every path to validate before any path lands.</span>
+<span class="rs-comment">/// The `snapshot_version` pins the base the CAS check revalidates against.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+    <span class="rs-comment">/// Base manifest version this changeset was prepared against (`None` =</span>
+    <span class="rs-comment">/// empty root).</span>
+    <span class="rs-kw">pub</span> snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-comment">/// Disjoint per-path route decisions.</span>
+    <span class="rs-kw">pub</span> path_groups: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a>&gt;,
+    <span class="rs-comment">/// Typed mutations (CAS-hashed by the layer-stack publisher).</span>
+    <span class="rs-kw">pub</span> changes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>&gt;,
+    <span class="rs-comment">/// All-or-nothing publish (Rust default `True`).</span>
+    <span class="rs-kw">pub</span> atomic: bool,
+}
+
+<span class="rs-comment">/// The publish-transaction half of the layer-stack port the queue drives.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Defined here as the queue's narrow inverted interface. The daemon injects</span>
+<span class="rs-comment">/// the layer-stack-backed implementation that revalidates the CAS base and</span>
+<span class="rs-comment">/// publishes a new manifest version, returning [`PublishConflict`] on a stale</span>
+<span class="rs-comment">/// base.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a>: <span class="rs-type">Send</span> {
+    <span class="rs-comment">/// Revalidate the base hash and atomically publish, or signal a CAS</span>
+    <span class="rs-comment">/// conflict so the queue can retry.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PublishConflict`] when the manifest CAS base is stale.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(
+        &amp;<span class="rs-self">self</span>,
+        combined: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a>&gt;;
+}
+
+<span class="rs-comment">/// Signals a manifest CAS mismatch (`ManifestConflictError`) so the writer</span>
+<span class="rs-comment">/// retries against the fresh base.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a> {
+    <span class="rs-comment">/// The base version the publisher actually observed.</span>
+    <span class="rs-kw">pub</span> observed_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+}
+
+<span class="rs-comment">/// One unit of work on the single-writer queue: a prepared changeset plus the</span>
+<span class="rs-comment">/// reply channel the submitter awaits.</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> {
+    prepared: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    reply: mpsc::<span class="rs-type">Sender</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;&gt;,
+    enqueued_at: <span class="rs-type">Instant</span>,
+}
+
+<span class="rs-comment">/// Either real work or the stop sentinel that drains and exits the worker.</span>
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a> {
+    <span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>),
+    <span class="rs-type">Stop</span>,
+}
+
+<span class="rs-comment">/// Serializes OCC publishes while batching disjoint prepared changesets.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Owns the `mpsc` producer half; the consumer half is moved into the spawned</span>
+<span class="rs-comment">/// `occ-commit-queue` thread on [`CommitQueue::start`].</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
+    sender: mpsc::<span class="rs-type">Sender</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
+    receiver: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>&gt;&gt;&gt;,
+    transaction: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;&gt;,
+    handle: <span class="rs-type">Option</span>&lt;std::thread::<span class="rs-type">JoinHandle</span>&lt;()&gt;&gt;,
+    max_batch_size: usize,
+    batch_window_s: f64,
+    max_cas_retries: u32,
+    closed: bool,
+}
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitWorker-123">CommitWorker</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
+    receiver: mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
+    transaction: <span class="rs-type">T</span>,
+    max_batch_size: usize,
+    batch_window_s: f64,
+    max_cas_retries: u32,
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-comment">/// Build a queue with default batching/retry tuning.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(transaction: <span class="rs-type">T</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-with-config-142">with_config</a>(
+            transaction,
+            <span class="rs-type">MAX_BATCH_SIZE</span>,
+            <span class="rs-type">BATCH_WINDOW_S</span>,
+            <span class="rs-type">MAX_OCC_CAS_RETRIES</span>,
+        )
+    }
+
+    <span class="rs-comment">/// Build a queue with explicit batching/retry tuning.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Clamps to match Rust: `max_batch_size &gt;= 1`, `batch_window_s &gt;= 0.0`,</span>
+    <span class="rs-comment">/// `max_cas_retries &gt;= 1`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-with-config-142">with_config</a>(
+        transaction: <span class="rs-type">T</span>,
+        max_batch_size: usize,
+        batch_window_s: f64,
+        max_cas_retries: u32,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> (sender, receiver) = mpsc::channel();
+        <span class="rs-self">Self</span> {
+            sender,
+            receiver: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(<span class="rs-type">Some</span>(receiver)),
+            transaction: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(<span class="rs-type">Some</span>(transaction)),
+            handle: <span class="rs-type">None</span>,
+            max_batch_size: max_batch_size.max(1),
+            batch_window_s: batch_window_s.max(0.0),
+            max_cas_retries: max_cas_retries.max(1),
+            closed: <span class="rs-kw">false</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Spawn the single `occ-commit-queue` consumer thread.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when the queue is closed, has already consumed its</span>
+    <span class="rs-comment">/// startup state, or the worker thread cannot be spawned.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-start-165">start</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>);
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .handle
+            .as_ref()
+            .is_some_and(|handle| !handle.is_finished())
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> receiver = <span class="rs-self">self</span>
+            .receiver
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-145">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;receiver slot&quot;))?
+            .take()
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>)?;
+        <span class="rs-kw">let</span> transaction = <span class="rs-self">self</span>
+            .transaction
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-145">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueStatePoisoned</span>(&quot;transaction slot&quot;))?
+            .take()
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>)?;
+        <span class="rs-kw">let</span> worker = <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitWorker-123">CommitWorker</a> {
+            receiver,
+            transaction,
+            max_batch_size: <span class="rs-self">self</span>.max_batch_size,
+            batch_window_s: <span class="rs-self">self</span>.batch_window_s,
+            max_cas_retries: <span class="rs-self">self</span>.max_cas_retries,
+        };
+        <span class="rs-kw">let</span> handle = std::thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>()
+            .name(<span class="rs-type">COMMIT_QUEUE_THREAD_NAME</span>.to_owned())
+            .spawn(<span class="rs-kw">move</span> || {
+                worker.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-run-309">run</a>();
+            })
+            .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">WorkerStart</span>(err.to_string()))?;
+        <span class="rs-self">self</span>.handle = <span class="rs-type">Some</span>(handle);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Stop the worker after pending queued work drains.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError::WorkerPanicked`] when the worker thread panicked.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-close-211">close</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-self">self</span>.closed = <span class="rs-kw">true</span>;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handle.is_none() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.sender.send(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>);
+        <span class="rs-self">self</span>.handle.take().map_or(<span class="rs-type">Ok</span>(()), |handle| {
+            handle.join().map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">WorkerPanicked</span>)
+        })
+    }
+
+    <span class="rs-comment">/// Enqueue a prepared changeset and return a reply receiver to await on.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The reply channel is the std analogue of a tokio `oneshot`; the async</span>
+    <span class="rs-comment">/// daemon awaits it off-thread without the queue holding any lock across</span>
+    <span class="rs-comment">/// `.await` (RUST-GUIDANCE §5).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError::QueueClosed`] if the queue is closed/disconnected and</span>
+    <span class="rs-comment">/// [`CommitError::QueueNotStarted`] if no live worker is available.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-submit-230">submit</a>(
+        &amp;<span class="rs-self">self</span>,
+        prepared: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;mpsc::<span class="rs-type">Receiver</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.closed {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>);
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>
+            .handle
+            .as_ref()
+            .is_none_or(std::thread::<span class="rs-type">JoinHandle</span>::is_finished)
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueNotStarted</span>);
+        }
+        <span class="rs-kw">let</span> (reply, receiver) = mpsc::channel();
+        <span class="rs-self">self</span>.sender
+            .send(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a> {
+                prepared,
+                reply,
+                enqueued_at: <span class="rs-type">Instant</span>::now(),
+            }))
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">QueueClosed</span>)?;
+        <span class="rs-type">Ok</span>(receiver)
+    }
+
+    <span class="rs-comment">/// Commit one disjoint batch with the bounded CAS-retry loop, fanning each</span>
+    <span class="rs-comment">/// path's `FileResult` back to its submitter.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-commit-batch-265">commit_batch</a>(transaction: &amp;<span class="rs-type">T</span>, batch: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;, max_cas_retries: u32) {
+        <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(combined) = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-combine-prepared-383">combine_prepared</a>(batch.iter().map(|item| &amp;item.prepared)) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempts = 0;
+        <span class="rs-kw">let</span> result = loop {
+            <span class="rs-kw">match</span> transaction.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-revalidate-and-publish-74">revalidate_and_publish</a>(&amp;combined) {
+                <span class="rs-type">Ok</span>(result) =&gt; <span class="rs-kw">break</span> result,
+                <span class="rs-type">Err</span>(conflict) =&gt; {
+                    attempts += 1;
+                    <span class="rs-kw">if</span> attempts &gt;= max_cas_retries {
+                        <span class="rs-kw">break</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-cas-exhaustion-result-420">cas_exhaustion_result</a>(&amp;combined, &amp;conflict, max_cas_retries);
+                    }
+                }
+            }
+        };
+        <span class="rs-kw">let</span> commit_elapsed_s = commit_start.elapsed().as_secs_f64();
+        <span class="rs-kw">let</span> batch_size = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-mod-rs.html#item-fn-usize-to-f64-saturating-94">usize_to_f64_saturating</a>(batch.len());
+        <span class="rs-kw">for</span> item <span class="rs-kw">in</span> batch {
+            <span class="rs-kw">let</span> files = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-result-files-for-item-403">result_files_for_item</a>(&amp;result, &amp;item.prepared);
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = result.timings.clone();
+            timings.insert(
+                &quot;occ.serial.queue_wait_s&quot;.to_owned(),
+                commit_start.duration_since(item.enqueued_at).as_secs_f64(),
+            );
+            timings.insert(&quot;occ.serial.batch_size&quot;.to_owned(), batch_size);
+            timings.insert(&quot;occ.serial.commit_s&quot;.to_owned(), commit_elapsed_s);
+            timings.insert(
+                &quot;occ.serial.cas_attempts&quot;.to_owned(),
+                f64::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-164">from</a>(attempts + 1),
+            );
+            <span class="rs-kw">let</span> _ = item.reply.send(<span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+                files,
+                published_manifest_version: result.published_manifest_version,
+                timings,
+            }));
+        }
+    }
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitWorker-123">CommitWorker</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-comment">/// Consumer loop: block for the first item, non-blocking-drain the rest,</span>
+    <span class="rs-comment">/// pay the batch window only with headroom, then commit disjoint batches.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-run-309">run</a>(<span class="rs-self">self</span>) {
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(first) = <span class="rs-self">self</span>.receiver.recv() {
+            <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(first) = first <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = vec![first];
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stop_seen = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            <span class="rs-kw">if</span> !stop_seen &amp;&amp; <span class="rs-self">self</span>.batch_window_s &gt; 0.0 &amp;&amp; items.len() &lt; <span class="rs-self">self</span>.max_batch_size {
+                std::thread::sleep(<span class="rs-type">Duration</span>::from_secs_f64(<span class="rs-self">self</span>.batch_window_s));
+                stop_seen = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(&amp;<span class="rs-self">self</span>.receiver, &amp;<span class="rs-kw">mut</span> items, <span class="rs-self">self</span>.max_batch_size);
+            }
+            <span class="rs-kw">for</span> batch <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-disjoint-batches-347">disjoint_batches</a>(items) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>::&lt;<span class="rs-type">T</span>&gt;::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-commit-batch-265">commit_batch</a>(&amp;<span class="rs-self">self</span>.transaction, batch, <span class="rs-self">self</span>.max_cas_retries);
+            }
+            <span class="rs-kw">if</span> stop_seen {
+                <span class="rs-kw">return</span>;
+            }
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-drain-ready-332">drain_ready</a>(
+    receiver: &amp;mpsc::<span class="rs-type">Receiver</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>&gt;,
+    items: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;,
+    max_batch_size: usize,
+) -&gt; bool {
+    <span class="rs-kw">while</span> items.len() &lt; max_batch_size {
+        <span class="rs-kw">match</span> receiver.try_recv() {
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Work</span>(item)) =&gt; items.push(item),
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-enum-QueueItem-102">QueueItem</a>::<span class="rs-type">Stop</span>) | <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">true</span>,
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">TryRecvError</span>::<span class="rs-type">Empty</span>) =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+        }
+    }
+    <span class="rs-kw">false</span>
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-disjoint-batches-347">disjoint_batches</a>(items: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>&gt;&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> pending: <span class="rs-type">Vec</span>&lt;(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-WorkItem-94">WorkItem</a>, <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;)&gt; = items
+        .into_iter()
+        .map(|item| {
+            <span class="rs-kw">let</span> paths = item
+                .prepared
+                .path_groups
+                .iter()
+                .map(|group| group.path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().to_owned())
+                .collect();
+            (item, paths)
+        })
+        .collect();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batches = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+    <span class="rs-kw">while</span> !pending.is_empty() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> used = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> batch = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>();
+        <span class="rs-kw">for</span> (item, paths) <span class="rs-kw">in</span> pending {
+            <span class="rs-kw">if</span> item.prepared.atomic || !used.is_disjoint(&amp;paths) {
+                rest.push((item, paths));
+            } <span class="rs-kw">else</span> {
+                used.extend(paths.iter().cloned());
+                batch.push(item);
+            }
+        }
+        <span class="rs-kw">if</span> batch.is_empty() {
+            <span class="rs-kw">let</span> (item, _) = rest.remove(0);
+            batch.push(item);
+        }
+        batches.push(batch);
+        pending = rest;
+    }
+    batches
+}
+
+<span class="rs-kw">fn</span> combine_prepared&lt;&#x27;a&gt;(
+    items: <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;&#x27;a <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; {
+    <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>&gt; = items.collect();
+    <span class="rs-kw">let</span> first = items.first()?;
+    debug_assert!(items.len() == 1 || !items.iter().any(|prepared| prepared.atomic));
+    <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+        snapshot_version: first.snapshot_version,
+        path_groups: items
+            .iter()
+            .flat_map(|prepared| prepared.path_groups.iter().cloned())
+            .collect(),
+        changes: items
+            .iter()
+            .flat_map(|prepared| prepared.changes.iter().cloned())
+            .collect(),
+        atomic: first.atomic,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-result-files-for-item-403">result_files_for_item</a>(
+    result: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
+    prepared
+        .path_groups
+        .iter()
+        .filter_map(|group| {
+            result
+                .files
+                .iter()
+                .find(|file| file.path == group.path)
+                .cloned()
+        })
+        .collect()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#item-fn-cas-exhaustion-result-420">cas_exhaustion_result</a>(
+    prepared: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    conflict: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PublishConflict-86">PublishConflict</a>,
+    max_cas_retries: u32,
+) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-kw">let</span> message = format!(
+        &quot;<span class="rs-type">CAS</span> mismatch retry budget exhausted after {max_cas_retries} attempts: observed version {:?}&quot;,
+        conflict.observed_version
+    );
+    <span class="rs-kw">let</span> files = prepared
+        .path_groups
+        .iter()
+        .map(|group| {
+            <span class="rs-kw">let</span> (status, message) = <span class="rs-kw">match</span> group.route {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Drop</span> =&gt; (
+                    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">Dropped</span>,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Reject</span> =&gt; (
+                    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">Rejected</span>,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Direct</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span> =&gt; (<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>::<span class="rs-type">AbortedVersion</span>, message.clone()),
+            };
+            <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> {
+                path: group.path.clone(),
+                status,
+                message,
+            }
+        })
+        .collect();
+    <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+        files,
+        published_manifest_version: <span class="rs-type">None</span>,
+        timings: std::collections::<span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-new-132">new</a>(),
+    }
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/commit/queue.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

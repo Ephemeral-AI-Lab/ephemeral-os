@@ -1,6 +1,6 @@
 //! Envelope and error-surface contract tests.
 //!
-//! Asserts the daemon's wire-error catalog directly over `eos-protocol`:
+//! Asserts the daemon's wire-error catalog directly over the checked wire contract:
 //! unknown op, malformed frame, oversized request, and TCP auth. All four are
 //! observed as structured error envelopes (`success:false` + `error.kind`).
 

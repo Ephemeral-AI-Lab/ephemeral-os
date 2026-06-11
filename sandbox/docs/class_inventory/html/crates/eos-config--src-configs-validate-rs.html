@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>12</b><span>modules</span></div>
-  <div><b>95</b><span>items</span></div>
-  <div><b>127</b><span>fields</span></div>
+  <div><b>65</b><span>items</span></div>
+  <div><b>114</b><span>fields</span></div>
   <div><b>22</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link active" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>7/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>9/9</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/0</small></a></li><li><a class="file-link active" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::validate crates/eos-config/src/configs/validate.rs ConfigFieldError impl ConfigFieldError require_absolute require_non_empty require_timestamp_timezone require_non_empty_items require_u32_at_least require_u64_at_least require_usize_at_least require_f64_gt require_f64_at_least require_ratio parse_fixed_offset">
   <div class="module-head">
     <div>
@@ -85,13 +85,13 @@
     <h3>require_absolute</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-356">require_absolute</a> (path : &amp; Path , field : &amp; &#x27;static str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-335">require_absolute</a> (path : &amp; Path , field : &amp; &#x27;static str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
   <p class="docstring">Require an absolute filesystem path.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Require an absolute filesystem path.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-356">require_absolute</a>(path: &amp;<span class="rs-type">Path</span>, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-335">require_absolute</a>(path: &amp;<span class="rs-type">Path</span>, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
     <span class="rs-kw">if</span> path.is_absolute() {
         <span class="rs-type">Ok</span>(())
     } <span class="rs-kw">else</span> {
@@ -108,13 +108,13 @@
     <h3>require_non_empty</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-342">require_non_empty</a> (value : &amp; str , field : &amp; &#x27;static str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a> (value : &amp; str , field : &amp; &#x27;static str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
   <p class="docstring">Require a non-blank string.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Require a non-blank string.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-342">require_non_empty</a>(value: &amp;str, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(value: &amp;str, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
     <span class="rs-kw">if</span> value.trim().is_empty() {
         <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(field, &quot;must be non-empty&quot;))
     } <span class="rs-kw">else</span> {
@@ -161,13 +161,13 @@
     <h3>require_non_empty_items</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-363">require_non_empty_items</a> (values : &amp; [String] , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a> (values : &amp; [String] , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
   <p class="docstring">Require that no list item is blank.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Require that no list item is blank.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-363">require_non_empty_items</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(
     values: &amp;[<span class="rs-type">String</span>],
     field: &amp;&#x27;<span class="rs-kw">static</span> str,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
@@ -220,13 +220,13 @@
     <h3>require_u64_at_least</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-398">require_u64_at_least</a> (value : u64 , minimum : u64 , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-377">require_u64_at_least</a> (value : u64 , minimum : u64 , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
   <p class="docstring">Require `value &gt;= minimum`.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Require `value &gt;= minimum`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-398">require_u64_at_least</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-377">require_u64_at_least</a>(
     value: u64,
     minimum: u64,
     field: &amp;&#x27;<span class="rs-kw">static</span> str,
@@ -250,13 +250,13 @@
     <h3>require_usize_at_least</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-405">require_usize_at_least</a> (value : usize , minimum : usize , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-384">require_usize_at_least</a> (value : usize , minimum : usize , field : &amp; &#x27;static str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a> &gt;</code>
   <p class="docstring">Require `value &gt;= minimum`.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Require `value &gt;= minimum`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-405">require_usize_at_least</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-384">require_usize_at_least</a>(
     value: usize,
     minimum: usize,
     field: &amp;&#x27;<span class="rs-kw">static</span> str,
@@ -418,7 +418,7 @@
 }
 
 <span class="rs-comment">/// Require an absolute filesystem path.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-356">require_absolute</a>(path: &amp;<span class="rs-type">Path</span>, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-absolute-335">require_absolute</a>(path: &amp;<span class="rs-type">Path</span>, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
     <span class="rs-kw">if</span> path.is_absolute() {
         <span class="rs-type">Ok</span>(())
     } <span class="rs-kw">else</span> {
@@ -427,7 +427,7 @@
 }
 
 <span class="rs-comment">/// Require a non-blank string.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-342">require_non_empty</a>(value: &amp;str, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(value: &amp;str, field: &amp;&#x27;<span class="rs-kw">static</span> str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
     <span class="rs-kw">if</span> value.trim().is_empty() {
         <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(field, &quot;must be non-empty&quot;))
     } <span class="rs-kw">else</span> {
@@ -452,7 +452,7 @@
 }
 
 <span class="rs-comment">/// Require that no list item is blank.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-363">require_non_empty_items</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-items-342">require_non_empty_items</a>(
     values: &amp;[<span class="rs-type">String</span>],
     field: &amp;&#x27;<span class="rs-kw">static</span> str,
 ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-configs-validate-rs.html#item-struct-ConfigFieldError-10">ConfigFieldError</a>&gt; {
@@ -483,7 +483,7 @@
 }
 
 <span class="rs-comment">/// Require `value &gt;= minimum`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-398">require_u64_at_least</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-u64-at-least-377">require_u64_at_least</a>(
     value: u64,
     minimum: u64,
     field: &amp;&#x27;<span class="rs-kw">static</span> str,
@@ -499,7 +499,7 @@
 }
 
 <span class="rs-comment">/// Require `value &gt;= minimum`.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-405">require_usize_at_least</a>(
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-usize-at-least-384">require_usize_at_least</a>(
     value: usize,
     minimum: usize,
     field: &amp;&#x27;<span class="rs-kw">static</span> str,

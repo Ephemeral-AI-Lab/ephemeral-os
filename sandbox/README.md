@@ -27,7 +27,7 @@ eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 | `eos-sandbox-host` | lib | container lifecycle, registry, endpoint resolution, forwarding, recovery | depend on a workspace-internal crate |
 | `eosd` / `eos-daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
 | `contract/` | data | the protocol: op catalog, fixtures, prose | contain code |
-| `eos-cas` | lib (in-box) | the two frozen content hashes + manifest/layer types | be depended on by host-side crates |
+| `eos-layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
 
 **Isolation law:** no compiled code is shared across the host/box boundary.
 The only shared artifact is `contract/` (data + prose); both sides prove
@@ -36,12 +36,14 @@ drift gate.
 
 ## The pieces
 
-- `contract/` — `ops.json` (the op catalog: canonical `sandbox.*` names +
-  legacy `api.*` aliases, visibility, routing metadata), `PROTOCOL.md`
+- `contract/` — `ops.json` (the op catalog: canonical `sandbox.*` names,
+  visibility, routing metadata), `PROTOCOL.md`
   (framing/auth/errors/canonicalization), and the immutable golden fixtures.
 - `crates/` — the workspace. Host side: `eos-api`, `eos-sandbox-host`. Box
-  side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol), `eos-cas`,
-  and the workspace/OCC/layer-stack/plugin stack underneath.
+  side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol),
+  `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command-session`,
+  `eos-command-ops`, `eos-ephemeral-workspace`, `eos-isolated-workspace`,
+  `eos-file-ops`, and `eos-plugin`.
 - `docs/API.md` — the public op reference, generated from `contract/ops.json`
   (`cargo run -p xtask -- gen-docs`).
 - `docs/contract/` — the frozen historical wire/CAS/audit contracts.

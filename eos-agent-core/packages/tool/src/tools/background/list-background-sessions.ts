@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
-import { descriptionPrompt } from "../description_prompts/index.js";
+import { DESCRIPTION } from "../description_prompts/list_background_sessions_prompt.js";
 
 /** Rows for running plus settled-but-undelivered sessions. */
 export function listBackgroundSessionsTool(
@@ -15,7 +15,7 @@ export function listBackgroundSessionsTool(
 ): ToolDefinition {
   return defineTool({
     name: "list_background_sessions",
-    description: descriptionPrompt("list_background_sessions"),
+    description: DESCRIPTION,
     input: z.object({}),
     execute: () =>
       Promise.resolve({

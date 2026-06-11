@@ -39,11 +39,12 @@ Priority order when rules conflict: **correctness (byte-identity) > the contract
 
 ---
 
-## 2. The byte-identity contract (eos-protocol) — read `docs/contract/02-cas-byte-identity.md`
+## 2. The byte-identity contract (`eos-layerstack`) — read `docs/contract/02-cas-byte-identity.md`
 
 These two hashes are **correctness-bearing** (plan AV-1c). A wrong byte ⇒ silent data divergence
-that passes every ASCII test. The golden fixtures in `crates/eos-protocol/fixtures/cas/cases.json`
-were produced by executing the real Python and MUST all pass.
+that passes every ASCII test. The golden fixtures in
+`contract/fixtures/cas/cases.json` were produced by executing the real Python
+and MUST all pass through `eos-layerstack/tests/cas_fixtures.rs`.
 
 ### 2a. `manifest_root_hash` — THE #1 TRAP: Python `ensure_ascii=True`
 `sha256( serialize({"layers":[{"layer_id":..,"path":..}, ...]}) )` where `serialize` reproduces
@@ -87,7 +88,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 
 ---
 
-## 3. Wire protocol (eos-protocol / eos-daemon) — read `docs/contract/01-wire-protocol.md`
+## 3. Wire protocol (`contract/` / `eos-daemon`) — read `docs/contract/01-wire-protocol.md`
 
 - **Framing**: one newline-delimited compact JSON object per message: `json.dumps(obj,
   separators=(",",":")) + "\n"`. For *envelopes* (not the CAS hash) `serde_json` with compact
@@ -120,31 +121,38 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   `[workspace.dependencies]`; crates use `dep.workspace = true`. Internal crates are path deps.
 - `proj-lib-main-split`: `eosd/src/main.rs` is subcommand dispatch only; all logic in libraries.
 - **The dependency edges ARE the architecture.** The single sharpest invariant —
-  *isolated keeps writes private and NEVER publishes* — is encoded by **`eos-isolated`'s
-  `Cargo.toml` not listing `eos-occ`**. `eos-plugin` is even narrower now:
+  *isolated keeps writes private and NEVER publishes* — is encoded by
+  **`eos-isolated-workspace` not depending on `eos-layerstack` and not owning
+  publish paths**. `eos-plugin` is even narrower now:
   it is a pure contract/PPC crate, while snapshot/overlay/publish/process
   behavior stays daemon-owned. Verified edges (get these EXACTLY right):
-  - `eos-protocol` → (nothing internal)
-  - `eos-layerstack` → protocol
-  - `eos-overlay` → protocol  (lowerdir inputs are concrete paths; no layerstack dep)
-  - `eos-occ` → overlay, protocol  (daemon injects layerstack transaction and route providers)
-  - `eos-isolated` → overlay  — **NOT occ**; daemon injects layer-stack ports and spawns holder/runner children
-  - `eos-plugin` → protocol  — **NOT occ/overlay/layerstack**
-  - `eos-namespace` → overlay, protocol, config  (the two single-threaded namespace children: `holder` + `runner`; the daemon↔runner wire DTOs live in protocol so the daemon never depends on this syscall crate)
-  - `eos-daemon` → protocol, layerstack, overlay, occ, isolated, plugin; implements + injects the inverted port traits; primary tokio control plane
-  - `eosd` → daemon, namespace, overlay, protocol
+  - `contract/` → data/prose only; no compiled crate.
+  - `eos-layerstack` → storage, leases, CAS hashes, route/commit policy.
+  - `eos-overlay` → overlayfs mechanics and captured path changes.
+  - `eos-namespace` → single-threaded namespace holder/runner support.
+  - `eos-ephemeral-workspace` → reusable per-operation overlay workspace helpers.
+  - `eos-isolated-workspace` → isolated session lifecycle, network setup, TTL/GC;
+    no `eos-layerstack` dependency.
+  - `eos-command-session` / `eos-command-ops` → command-session mechanics and
+    command runtime policy.
+  - `eos-file-ops` → file operation semantics over direct and isolated backends.
+  - `eos-plugin` → plugin contracts and PPC framing; **NOT overlay/layerstack
+    process ownership**.
+  - `eos-daemon` → transport, dispatch, wire, adapters, service composition,
+    daemon-owned plugin/checkpoint process glue.
+  - `eosd` → binary subcommand dispatch over daemon/namespace/overlay support.
   - `xtask` is a workspace package for packaging and is not part of the runtime architecture graph.
 - **Port traits invert the upward edges** (so the graph stays leaf→root). Lower crates define only
-  the narrow ports they actually consume (for example `OccRouteProvider` in `eos-occ` and
-  `LayerStackSnapshotPort`/`NamespaceRuntimePort` in `eos-isolated`); `eos-daemon` owns the concrete
-  caches and injections.
+  the narrow ports they actually consume (for example `RouteProvider` and
+  `CommitTransactionPort` in `eos-layerstack`); `eos-daemon` owns the concrete
+  service composition and injections.
 
 ---
 
 ## 5. Async and syscall boundaries — `async-*`
 
-- `tokio` is justified in `eos-daemon` and `eosd`; `eos-isolated` has Linux-target `tokio`
-  only for rtnetlink/netlink helpers. `eos-namespace` (both the holder and runner children)
+- `tokio` is justified in `eos-daemon` and `eosd`; `eos-isolated-workspace` has Linux-target
+  `tokio` only for rtnetlink/netlink helpers. `eos-namespace` (both the holder and runner children)
   remains **single-threaded, syscall-only, NO tokio** (kernel requires a single-threaded caller
   for `unshare(CLONE_NEWUSER)` / `setns` into a userns — this is a correctness requirement, not a
   style choice).
@@ -182,10 +190,10 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
 ## 7. Testing — `test-*`
 
 - Unit tests in-module under `#[cfg(test)] mod tests { use super::*; … }` (`test-cfg-test-module`).
-- **eos-protocol fixture tests are mandatory and gate the build**: load
-  `fixtures/cas/cases.json` and assert every `expected` hash; load `fixtures/envelopes/*.json` and
-  assert encode/decode round-trips + canonical equality. Read fixtures via
-  `concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/…")`.
+- **contract fixture tests are mandatory and gate the build**: `eos-layerstack`
+  loads `contract/fixtures/cas/cases.json` and asserts every `expected` hash;
+  `eos-daemon` loads `contract/fixtures/envelopes/*.json` and asserts
+  encode/decode round-trips + canonical equality.
 - Property tests (`test-proptest-properties`) for invariants: `decode(encode(x)) == x`;
   `aggregate` is idempotent and order-insensitive; the escaper never emits a non-ASCII byte.
 - `#[tokio::test]` for daemon async tests (`test-tokio-async`); RAII fixtures for teardown

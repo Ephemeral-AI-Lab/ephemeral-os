@@ -488,7 +488,8 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
     let lease = pool.acquire()?;
     let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
     ensure_generic_oneshot_package(&lease, &digest)?;
-    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?["manifest_version"]
+    let before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
+        ["manifest_version"]
         .as_i64()
         .context("manifest_version before plugin write")?;
 
@@ -513,7 +514,8 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
         json!({"path": "plugin/oneshot-write.txt"}),
     )?;
     assert_eq!(read["content"], "written by oneshot plugin\n", "{read}");
-    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?["manifest_version"]
+    let after = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
+        ["manifest_version"]
         .as_i64()
         .context("manifest_version after plugin write")?;
     assert!(

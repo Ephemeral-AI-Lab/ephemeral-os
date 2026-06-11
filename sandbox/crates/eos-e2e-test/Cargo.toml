@@ -45,8 +45,8 @@ name = "eos-layerstack"
 path = "tests/eos-layerstack/mod.rs"
 
 [[test]]
-name = "eos-occ"
-path = "tests/eos-occ/mod.rs"
+name = "workspace-publish-gate"
+path = "tests/workspace-publish-gate/mod.rs"
 
 [[test]]
 name = "workspace-runtime-command-session"

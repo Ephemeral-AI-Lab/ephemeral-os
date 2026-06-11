@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eos-e2e-test · src/audit.rs</title>
+  <title>eos-e2e-test · src/bin/e2e-reap.rs</title>
   <link rel="stylesheet" href="../assets/inventory.css">
 </head>
 <body>
@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>9</b><span>modules</span></div>
-  <div><b>57</b><span>items</span></div>
-  <div><b>27</b><span>fields</span></div>
-  <div><b>44</b><span>methods</span></div>
+  <div><b>5</b><span>modules</span></div>
+  <div><b>24</b><span>items</span></div>
+  <div><b>15</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,338 +41,54 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-e2e-test.html"><span>audit.rs</span><small>1/2</small></a></li><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link" href="eos-e2e-test--src-bin-e2e-reap-rs.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-client-rs.html"><span>client.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-e2e-test--src-docker-rs.html"><span>docker.rs</span><small>0/22</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li><li><a class="file-link" href="eos-e2e-test--src-tar-rs.html"><span>tar.rs</span><small>0/4</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="audit crates/eos-e2e-test/src/audit.rs AuditTap impl AuditTap type_of section">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">bin</span><ul class="file-tree"><li><a class="file-link active" href="eos-e2e-test.html"><span>e2e-reap.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link" href="eos-e2e-test--src-cas-rs.html"><span>cas.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-e2e-test--src-container-rs.html"><span>container.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-e2e-test--src-lib-rs.html"><span>lib.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-e2e-test--src-pool-rs.html"><span>pool.rs</span><small>4/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin::e2e-reap crates/eos-e2e-test/src/bin/e2e-reap.rs main">
   <div class="module-head">
     <div>
-      <h2>src/audit.rs</h2>
-      <p class="path">module <code>audit</code></p>
+      <h2>src/bin/e2e-reap.rs</h2>
+      <p class="path">module <code>bin::e2e-reap</code></p>
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>1 types</span>
-      <span>1 impls</span>
-      <span>2 fns</span>
-      <span>8 methods</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>1 fns</span>
+      <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AuditTap-15" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AuditTap pub pub struct AuditTap crates/eos-e2e-test/src/audit.rs client ProtocolClient cursor i64 limit u64 events Vec &lt; Value &gt; ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>AuditTap</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a></code>
-  <p class="docstring">Incremental audit-event reader for one daemon.</p>
-  <div class="tags"><span>derive: Debug</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>client</td><td><code><a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a></code></td></tr><tr><td>private</td><td>cursor</td><td><code>i64</code></td></tr><tr><td>private</td><td>limit</td><td><code>u64</code></td></tr><tr><td>private</td><td>events</td><td><code>Vec &lt; Value &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-pull-batch-48"><td>method</td><td>pull_batch</td><td><code>fn <a class="symbol-link" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a> (&amp; mut self) -&gt; Result &lt; Vec &lt; Value &gt; &gt;</code><p class="docstring">One `api.audit.pull` from the current cursor; advances the cursor and<br>returns the freshly pulled events (also appended to the running log).</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// One `api.audit.pull` from the current cursor; advances the cursor and</span>
-    <span class="rs-comment">/// returns the freshly pulled events (also appended to the running log).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;&gt; {
-        <span class="rs-kw">let</span> resp = <span class="rs-self">self</span>
-            .client
-            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
-                ops::<span class="rs-type">API_AUDIT_PULL</span>,
-                &quot;audit-pull&quot;,
-                &amp;json!({&quot;after_seq&quot;: <span class="rs-self">self</span>.cursor, &quot;limit&quot;: <span class="rs-self">self</span>.limit}),
-            )
-            .context(&quot;api.audit.pull&quot;)?;
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(next) = resp
-            .get(&quot;cursor&quot;)
-            .and_then(|c| c.get(&quot;after_seq&quot;))
-            .and_then(<span class="rs-type">Value</span>::as_i64)
-        {
-            <span class="rs-self">self</span>.cursor = next;
-        }
-        <span class="rs-kw">let</span> batch: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = resp
-            .get(&quot;events&quot;)
-            .and_then(<span class="rs-type">Value</span>::as_array)
-            .cloned()
-            .unwrap_or_default();
-        <span class="rs-self">self</span>.events.extend(batch.iter().cloned());
-        <span class="rs-type">Ok</span>(batch)
-    }
-</code></pre>
-</details></td></tr><tr id="method-collect-75"><td>method</td><td>collect</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-collect-75">collect</a> (&amp; mut self) -&gt; Result &lt; usize &gt;</code><p class="docstring">Drain all events available now into the running log; returns how many new.<br># Errors<br>Returns an error if a pull fails.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Drain all events available now into the running log; returns how many new.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns an error if a pull fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> total = 0;
-        loop {
-            <span class="rs-kw">let</span> batch = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>()?;
-            total += batch.len();
-            <span class="rs-kw">if</span> batch.len() &lt; usize::try_from(<span class="rs-self">self</span>.limit).unwrap_or(usize::<span class="rs-type">MAX</span>) {
-                <span class="rs-kw">break</span>;
-            }
-        }
-        <span class="rs-type">Ok</span>(total)
-    }
-</code></pre>
-</details></td></tr><tr id="method-events-91"><td>method</td><td>events</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-events-91">events</a> (&amp; self) -&gt; &amp; [Value]</code><p class="docstring">All events seen since baseline.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// All events seen since baseline.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-events-91">events</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">Value</span>] {
-        &amp;<span class="rs-self">self</span>.events
-    }
-</code></pre>
-</details></td></tr><tr id="method-any-97"><td>method</td><td>any</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-any-97">any</a> (&amp; self , event_type : &amp; str) -&gt; bool</code><p class="docstring">Whether any collected event has `type == event_type`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Whether any collected event has `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; bool {
-        <span class="rs-self">self</span>.events.iter().<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-    }
-</code></pre>
-</details></td></tr><tr id="method-count-103"><td>method</td><td>count</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-count-103">count</a> (&amp; self , event_type : &amp; str) -&gt; usize</code><p class="docstring">Count of collected events with `type == event_type`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Count of collected events with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-count-103">count</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; usize {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .filter(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-count-103">count</a>()
-    }
-</code></pre>
-</details></td></tr><tr id="method-first-112"><td>method</td><td>first</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-first-112">first</a> (&amp; self , event_type : &amp; str) -&gt; Option &lt; &amp; Value &gt;</code><p class="docstring">First collected event with `type == event_type`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// First collected event with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-first-112">first</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt; {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .find(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-    }
-</code></pre>
-</details></td></tr><tr id="method-all-120"><td>method</td><td>all</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-all-120">all</a> (&amp; self , event_type : &amp; str) -&gt; Vec &lt; &amp; Value &gt;</code><p class="docstring">All collected events with `type == event_type`.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// All collected events with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-all-120">all</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Value</span>&gt; {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .filter(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>()
-    }
-</code></pre>
-</details></td></tr><tr id="method-baseline-25"><td>associated-fn</td><td>baseline</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test.html#method-baseline-25">baseline</a> (client : <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> , limit : u64) -&gt; Result &lt; Self &gt;</code><p class="docstring">Baseline the cursor past every event currently in the ring.<br># Errors<br>Returns an error if the initial drain pull fails.</p><details class="function-source">
-  <summary>code</summary>
-  <pre><code>    <span class="rs-comment">/// Baseline the cursor past every event currently in the ring.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns an error if the initial drain pull fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>, limit: u64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tap = <span class="rs-self">Self</span> {
-            client,
-            cursor: -1,
-            limit,
-            events: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
-        };
-        <span class="rs-comment">// Advance the cursor to the end of the existing buffer without retaining.</span>
-        loop {
-            <span class="rs-kw">let</span> batch = tap.<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>()?;
-            <span class="rs-kw">let</span> drained = batch.len();
-            <span class="rs-kw">if</span> drained &lt; usize::try_from(tap.limit).unwrap_or(usize::<span class="rs-type">MAX</span>) {
-                <span class="rs-kw">break</span>;
-            }
-        }
-        tap.events.clear();
-        <span class="rs-type">Ok</span>(tap)
-    }
-</code></pre>
-</details></td></tr></tbody></table>
-
-  <p class="source">crates/eos-e2e-test/src/audit.rs:15</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-section-135" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section pub pub fn section &lt; 'a &gt; (event : &amp; 'a Value , section_key : &amp; str) -&gt; Option &lt; &amp; 'a Value &gt; crates/eos-e2e-test/src/audit.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-main-3" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn main private fn main () -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/bin/e2e-reap.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
-    <h3>section</h3>
-    <span class="visibility">pub</span>
-  </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-section-135">section</a> &lt; &#x27;a &gt; (event : &amp; &#x27;a Value , section_key : &amp; str) -&gt; Option &lt; &amp; &#x27;a Value &gt;</code>
-  <p class="docstring">The `payload.&lt;section_key&gt;` object of a pulled audit event.</p>
-  <div class="tags"><span>must_use</span></div>
-  <details class="function-source">
-  <summary>code</summary>
-  <pre><code><span class="rs-comment">/// The `payload.&lt;section_key&gt;` object of a pulled audit event.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;&#x27;a&gt;(event: &amp;&#x27;a <span class="rs-type">Value</span>, section_key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a <span class="rs-type">Value</span>&gt; {
-    event.get(&quot;payload&quot;)?.get(section_key)
-}
-</code></pre>
-</details>
-
-  <p class="source">crates/eos-e2e-test/src/audit.rs:135</p>
-</article><article id="item-fn-type-of-130" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn type_of private fn type_of (event : &amp; Value) -&gt; Option &lt; &amp; str &gt; crates/eos-e2e-test/src/audit.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>type_of</h3>
+    <h3>main</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a> (event : &amp; Value) -&gt; Option &lt; &amp; str &gt;</code>
-  <p class="docstring">The `type` of a pulled audit event.</p>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test.html#item-fn-main-3">main</a> () -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// The `type` of a pulled audit event.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-    event.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str)
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-main-3">main</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> count = eos_e2e_test::container::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-112">reap_e2e_containers</a>()?;
+    println!(&quot;removed {count} eos-e2e <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-217">container</a>(s)&quot;);
+    <span class="rs-type">Ok</span>(())
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-e2e-test/src/audit.rs:130</p>
+  <p class="source">crates/eos-e2e-test/src/bin/e2e-reap.rs:3</p>
 </article></div>
 </section></div>
 </main>
 <section class="file-source-section">
   <div class="source-head">
     <h2>Source File</h2>
-    <p class="path">crates/eos-e2e-test/src/audit.rs</p>
+    <p class="path">crates/eos-e2e-test/src/bin/e2e-reap.rs</p>
   </div>
-  <pre class="file-source"><code><span class="rs-comment">//! `AuditTap` — pull the daemon ring buffer via `api.audit.pull` using the</span>
-<span class="rs-comment">//! cursor model (`after_seq`), baselined past all pre-existing events.</span>
-<span class="rs-comment">//!</span>
-<span class="rs-comment">//! The ring is daemon-global, so a tap is only meaningful while the test holds</span>
-<span class="rs-comment">//! its node exclusively (the default pool lease). `reset_floor` is a stub, so we</span>
-<span class="rs-comment">//! never rely on it — `baseline` drains to "now" and subsequent `collect`s return</span>
-<span class="rs-comment">//! only events emitted after that point.</span>
+  <pre class="file-source"><code><span class="rs-kw">use</span> anyhow::<span class="rs-type">Result</span>;
 
-<span class="rs-kw">use</span> anyhow::{<span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
-<span class="rs-kw">use</span> eos_protocol::ops;
-<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
-
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>;
-
-<span class="rs-comment">/// Incremental audit-event reader for one daemon.</span>
-#[derive(<span class="rs-type">Debug</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a> {
-    client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>,
-    cursor: i64,
-    limit: u64,
-    events: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;,
-}
-
-<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-e2e-test.html#item-struct-AuditTap-15">AuditTap</a> {
-    <span class="rs-comment">/// Baseline the cursor past every event currently in the ring.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns an error if the initial drain pull fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-baseline-25">baseline</a>(client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>, limit: u64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tap = <span class="rs-self">Self</span> {
-            client,
-            cursor: -1,
-            limit,
-            events: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
-        };
-        <span class="rs-comment">// Advance the cursor to the end of the existing buffer without retaining.</span>
-        loop {
-            <span class="rs-kw">let</span> batch = tap.<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>()?;
-            <span class="rs-kw">let</span> drained = batch.len();
-            <span class="rs-kw">if</span> drained &lt; usize::try_from(tap.limit).unwrap_or(usize::<span class="rs-type">MAX</span>) {
-                <span class="rs-kw">break</span>;
-            }
-        }
-        tap.events.clear();
-        <span class="rs-type">Ok</span>(tap)
-    }
-
-    <span class="rs-comment">/// One `api.audit.pull` from the current cursor; advances the cursor and</span>
-    <span class="rs-comment">/// returns the freshly pulled events (also appended to the running log).</span>
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;&gt; {
-        <span class="rs-kw">let</span> resp = <span class="rs-self">self</span>
-            .client
-            .<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(
-                ops::<span class="rs-type">API_AUDIT_PULL</span>,
-                &quot;audit-pull&quot;,
-                &amp;json!({&quot;after_seq&quot;: <span class="rs-self">self</span>.cursor, &quot;limit&quot;: <span class="rs-self">self</span>.limit}),
-            )
-            .context(&quot;api.audit.pull&quot;)?;
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(next) = resp
-            .get(&quot;cursor&quot;)
-            .and_then(|c| c.get(&quot;after_seq&quot;))
-            .and_then(<span class="rs-type">Value</span>::as_i64)
-        {
-            <span class="rs-self">self</span>.cursor = next;
-        }
-        <span class="rs-kw">let</span> batch: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = resp
-            .get(&quot;events&quot;)
-            .and_then(<span class="rs-type">Value</span>::as_array)
-            .cloned()
-            .unwrap_or_default();
-        <span class="rs-self">self</span>.events.extend(batch.iter().cloned());
-        <span class="rs-type">Ok</span>(batch)
-    }
-
-    <span class="rs-comment">/// Drain all events available now into the running log; returns how many new.</span>
-    <span class="rs-comment">///</span>
-    <span class="rs-comment">/// # Errors</span>
-    <span class="rs-comment">/// Returns an error if a pull fails.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> total = 0;
-        loop {
-            <span class="rs-kw">let</span> batch = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-pull-batch-48">pull_batch</a>()?;
-            total += batch.len();
-            <span class="rs-kw">if</span> batch.len() &lt; usize::try_from(<span class="rs-self">self</span>.limit).unwrap_or(usize::<span class="rs-type">MAX</span>) {
-                <span class="rs-kw">break</span>;
-            }
-        }
-        <span class="rs-type">Ok</span>(total)
-    }
-
-    <span class="rs-comment">/// All events seen since baseline.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-events-91">events</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">Value</span>] {
-        &amp;<span class="rs-self">self</span>.events
-    }
-
-    <span class="rs-comment">/// Whether any collected event has `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; bool {
-        <span class="rs-self">self</span>.events.iter().<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-    }
-
-    <span class="rs-comment">/// Count of collected events with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-count-103">count</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; usize {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .filter(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-count-103">count</a>()
-    }
-
-    <span class="rs-comment">/// First collected event with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-first-112">first</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt; {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .find(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-    }
-
-    <span class="rs-comment">/// All collected events with `type == event_type`.</span>
-    #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#method-all-120">all</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Value</span>&gt; {
-        <span class="rs-self">self</span>.events
-            .iter()
-            .filter(|ev| <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(ev) == <span class="rs-type">Some</span>(event_type))
-            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>()
-    }
-}
-
-<span class="rs-comment">/// The `type` of a pulled audit event.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-type-of-130">type_of</a>(event: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
-    event.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str)
-}
-
-<span class="rs-comment">/// The `payload.&lt;section_key&gt;` object of a pulled audit event.</span>
-#[must_use]
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;&#x27;a&gt;(event: &amp;&#x27;a <span class="rs-type">Value</span>, section_key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a <span class="rs-type">Value</span>&gt; {
-    event.get(&quot;payload&quot;)?.get(section_key)
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test.html#item-fn-main-3">main</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> count = eos_e2e_test::container::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-112">reap_e2e_containers</a>()?;
+    println!(&quot;removed {count} eos-e2e <a class="symbol-link rs-fn" href="eos-e2e-test--src-pool-rs.html#method-container-217">container</a>(s)&quot;);
+    <span class="rs-type">Ok</span>(())
 }
 </code></pre>
 </section>

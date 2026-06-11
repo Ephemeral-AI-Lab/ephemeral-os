@@ -42,7 +42,10 @@ fn inflight_ttl_reaper_cleanup() -> Result<()> {
         0,
         "reaped invocation should be deregistered after request cleanup: {heartbeat}"
     );
-    let cancel = lease.call_ok(ops::SANDBOX_CALL_CANCEL, json!({"invocation_id": invocation_id}))?;
+    let cancel = lease.call_ok(
+        ops::SANDBOX_CALL_CANCEL,
+        json!({"invocation_id": invocation_id}),
+    )?;
     assert!(
         as_bool(&cancel, "already_done")?,
         "reaped invocation should cancel as already done: {cancel}"

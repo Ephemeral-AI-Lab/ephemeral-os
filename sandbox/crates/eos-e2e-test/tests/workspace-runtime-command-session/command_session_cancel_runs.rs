@@ -31,10 +31,7 @@ fn start_sleeping(lease: &NodeLease<'_>, caller_id: Option<&str>, marker: &str) 
 
 /// Live command-session count for one caller (empty `caller_id` counts all).
 fn count_for(lease: &NodeLease<'_>, caller_id: &str) -> Result<i64> {
-    let count = lease.call_ok(
-        ops::SANDBOX_COMMAND_COUNT,
-        json!({"caller_id": caller_id}),
-    )?;
+    let count = lease.call_ok(ops::SANDBOX_COMMAND_COUNT, json!({"caller_id": caller_id}))?;
     as_i64(&count, "count")
 }
 
@@ -77,10 +74,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     );
     assert_eq!(count_for(&lease, &sibling)?, 1, "sibling owns one run");
 
-    let cancelled = lease.call_ok(
-        ops::SANDBOX_RUN_END,
-        json!({"caller_id": owner}),
-    )?;
+    let cancelled = lease.call_ok(ops::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
     assert_eq!(
         as_i64(&cancelled, "cancelled_command_sessions")?,
         2,
@@ -111,10 +105,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     );
 
     // Tear the sibling down too and confirm every overlay lease released.
-    let _ = lease.call(
-        ops::SANDBOX_RUN_END,
-        json!({"caller_id": sibling}),
-    );
+    let _ = lease.call(ops::SANDBOX_RUN_END, json!({"caller_id": sibling}));
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -181,10 +172,7 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
     wait_for_progress(&lease, &session_id, "wrote")?;
 
     // Cancel the caller's run mid-write via the per-caller op.
-    let cancelled = lease.call_ok(
-        ops::SANDBOX_RUN_END,
-        json!({"caller_id": owner}),
-    )?;
+    let cancelled = lease.call_ok(ops::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
     assert_eq!(
         as_i64(&cancelled, "cancelled_command_sessions")?,
         1,

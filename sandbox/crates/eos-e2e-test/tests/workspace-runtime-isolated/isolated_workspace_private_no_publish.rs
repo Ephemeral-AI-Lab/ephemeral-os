@@ -93,7 +93,8 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({}))?;
-    let version_before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?["manifest_version"]
+    let version_before = lease.call_ok(ops::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?
+        ["manifest_version"]
         .as_i64()
         .context("manifest_version before isolated exec")?;
 

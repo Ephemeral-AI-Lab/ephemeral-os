@@ -22,9 +22,9 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>14</b><span>modules</span></div>
-  <div><b>141</b><span>items</span></div>
-  <div><b>122</b><span>fields</span></div>
+  <div><b>15</b><span>modules</span></div>
+  <div><b>113</b><span>items</span></div>
+  <div><b>128</b><span>fields</span></div>
   <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-plugin--src-host-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-host-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_client</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin--src-host-ppc-client-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-rs.html"><span>ppc_client.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-plugin--src-host-route-rs.html"><span>route.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/17</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/9</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-framing-rs.html"><span>framing.rs</span><small>3/2</small></a></li><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-plugin--src-host-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-host-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><span class="folder">ppc_client</span><ul class="file-tree"><li><a class="file-link active" href="eos-plugin--src-host-ppc-client-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-rs.html"><span>ppc_client.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-plugin--src-host-route-rs.html"><span>route.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/4</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="host::ppc_client::frame_io crates/eos-plugin/src/host/ppc_client/frame_io.rs FrameWriter impl FrameWriter read_envelope read_frame">
   <div class="module-head">
     <div>
@@ -98,7 +98,7 @@
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
             writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
         }
-        writer.write_all(&amp;frame.<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-54">encode</a>()?)?;
+        writer.write_all(&amp;frame.<a class="symbol-link rs-fn" href="eos-plugin--src-framing-rs.html#item-fn-encode-50">encode</a>()?)?;
         writer.flush()?;
         <span class="rs-type">Ok</span>(())
     }
@@ -157,7 +157,7 @@
   <summary>code</summary>
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream)?;
-    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
+    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-framing-rs.html#item-fn-decode-63">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
 }
 </code></pre>
 </details>
@@ -182,7 +182,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::host::<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>;
 
-<span class="rs-kw">const</span> <span class="rs-type">MAX_PPC_FRAME_BYTES</span>: usize = eos_protocol::<span class="rs-type">MAX_REQUEST_BYTES</span>;
+<span class="rs-kw">const</span> <span class="rs-type">MAX_PPC_FRAME_BYTES</span>: usize = <span class="rs-kw">crate</span>::framing::<span class="rs-type">MAX_PPC_FRAME_BYTES</span>;
 
 #[derive(<span class="rs-type">Clone</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> {
@@ -216,7 +216,7 @@
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
             writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
         }
-        writer.write_all(&amp;frame.<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-encode-54">encode</a>()?)?;
+        writer.write_all(&amp;frame.<a class="symbol-link rs-fn" href="eos-plugin--src-framing-rs.html#item-fn-encode-50">encode</a>()?)?;
         writer.flush()?;
         <span class="rs-type">Ok</span>(())
     }
@@ -224,7 +224,7 @@
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-envelope-52">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>&gt; {
     <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-plugin--src-host-ppc-client-frame-io-rs.html#item-fn-read-frame-57">read_frame</a>(stream)?;
-    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-ppc-rs.html#method-decode-67">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
+    <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-framing-rs.html#item-fn-decode-63">decode</a>(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-plugin--src-host-mod-rs.html#item-enum-PpcError-26">PpcError</a>::from)
 }
 
 <span class="rs-comment">/// Read one newline-terminated PPC frame from `stream`, capped at the protocol</span>

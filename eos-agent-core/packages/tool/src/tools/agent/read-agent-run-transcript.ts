@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
-import { descriptionPrompt } from "../description_prompts/index.js";
+import { DESCRIPTION } from "../description_prompts/read_agent_run_transcript_prompt.js";
 import type { AgentRunCalls } from "./index.js";
 
 const DEFAULT_READ_BYTES = 65_536;
@@ -19,7 +19,7 @@ const ReadTranscriptInputSchema = z.object({
 export function readAgentRunTranscriptTool(calls: AgentRunCalls): ToolDefinition {
   return defineTool({
     name: "read_agent_run_transcript",
-    description: descriptionPrompt("read_agent_run_transcript"),
+    description: DESCRIPTION,
     input: ReadTranscriptInputSchema,
     execute: async (input) => {
       const path = calls.transcriptPathOf(agentRunIdFrom(input.run_id));

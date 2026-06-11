@@ -23,10 +23,7 @@ fn daemon_restart_reaps_orphaned_isolated_handle() -> Result<()> {
     reset_isolated_workspaces(&lease);
 
     let caller = format!("restart-iws-{}", eos_e2e_test::unique_suffix());
-    let enter = lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
-        json!({"caller_id": caller}),
-    )?;
+    let enter = lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller}))?;
     assert!(
         as_bool(&enter, "success")?,
         "isolated enter should open: {enter}"

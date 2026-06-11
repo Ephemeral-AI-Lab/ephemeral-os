@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import type { ToolDefinition } from "../../contract.js";
 import { defineTool } from "../../define.js";
-import { descriptionPrompt } from "../description_prompts/index.js";
+import { DESCRIPTION } from "../description_prompts/run_subagent_prompt.js";
 import type { AgentRunCalls, AgentToolUserMessage } from "./index.js";
 
 function userText(text: string): AgentToolUserMessage {
@@ -29,7 +29,7 @@ export function runSubagentTool(
 ): ToolDefinition {
   return defineTool({
     name: "run_subagent",
-    description: descriptionPrompt("run_subagent"),
+    description: DESCRIPTION,
     input: RunSubagentInputSchema,
     execute: (input) => {
       // Deliberately NO signal: a detached run gets a fresh abort root and

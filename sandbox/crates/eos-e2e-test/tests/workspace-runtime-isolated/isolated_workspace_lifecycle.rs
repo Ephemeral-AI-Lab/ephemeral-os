@@ -192,10 +192,7 @@ fn isolated_write_is_private_and_discarded_on_exit() -> Result<()> {
         json!({"caller_id": caller_id, "path": path, "content": "isolated private\n", "overwrite": true}),
     )?;
     assert_eq!(as_str(&write, "workspace")?, "isolated", "{write}");
-    let exit = lease.call_ok(
-        ops::SANDBOX_ISOLATION_EXIT,
-        json!({"caller_id": caller_id}),
-    )?;
+    let exit = lease.call_ok(ops::SANDBOX_ISOLATION_EXIT, json!({"caller_id": caller_id}))?;
     assert!(
         as_i64(&exit, "evicted_upperdir_bytes")? > 0,
         "exit should report discarded private bytes: {exit}"

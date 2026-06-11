@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/commit/outcome.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>211</b><span>items</span></div>
+  <div><b>152</b><span>fields</span></div>
+  <div><b>98</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-mod-rs.html"><span>mod.rs</span><small>0/6</small></a></li><li><a class="file-link active" href="eos-layerstack--src-commit-outcome-rs.html"><span>outcome.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-prepare-rs.html"><span>prepare.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-queue-rs.html"><span>queue.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-transaction-rs.html"><span>transaction.rs</span><small>2/17</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-metrics-rs.html"><span>metrics.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="eos-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-service-rs.html"><span>service.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="commit::outcome crates/eos-layerstack/src/commit/outcome.rs Route CommitStatus impl CommitStatus PublishDecision FileResult impl FileResult ChangesetResult impl ChangesetResult">
+  <div class="module-head">
+    <div>
+      <h2>src/commit/outcome.rs</h2>
+      <p class="path">module <code>commit::outcome</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>3 impls</span>
+      <span>0 fns</span>
+      <span>8 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PublishDecision-92" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PublishDecision pub pub struct PublishDecision crates/eos-layerstack/src/commit/outcome.rs path LayerPath route Route base_hash Option &lt; String &gt; message Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>PublishDecision</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a></code>
+  <p class="docstring">The route + reason a preparer assigned to one normalized path.<br>This is the per-path half of a `PublishDecision`: the input contract the<br>commit queue consumes (one entry per disjoint path).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code><a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a></code></td></tr><tr><td>pub</td><td>route</td><td><code><a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a></code></td></tr><tr><td>pub</td><td>base_hash</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>message</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/outcome.rs:92</p>
+</article><article id="item-struct-FileResult-111" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FileResult pub pub struct FileResult crates/eos-layerstack/src/commit/outcome.rs path LayerPath status CommitStatus message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>FileResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a></code>
+  <p class="docstring">Terminal outcome for one path after the publish transaction.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code><a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a></code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a></code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-conflict-message-123"><td>method</td><td>conflict_message</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-conflict-message-123">conflict_message</a> &lt; &#x27;a &gt; (&amp; &#x27;a self , fallback : &amp; &#x27;a str) -&gt; &amp; &#x27;a str</code><p class="docstring">Return the diagnostic message, falling back when the result has none.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return the diagnostic message, falling back when the result has none.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> conflict_message&lt;&#x27;a&gt;(&amp;&#x27;a <span class="rs-self">self</span>, fallback: &amp;&#x27;a str) -&gt; &amp;&#x27;a str {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.message.is_empty() {
+            fallback
+        } <span class="rs-kw">else</span> {
+            <span class="rs-self">self</span>.message.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>()
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/outcome.rs:111</p>
+</article><article id="item-struct-ChangesetResult-134" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ChangesetResult pub pub struct ChangesetResult crates/eos-layerstack/src/commit/outcome.rs files Vec &lt; FileResult &gt; published_manifest_version Option &lt; u64 &gt; timings BTreeMap &lt; String , f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ChangesetResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a></code>
+  <p class="docstring">Aggregate result of a published (or aborted) changeset.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>files</td><td><code>Vec &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> &gt;</code></td></tr><tr><td>pub</td><td>published_manifest_version</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>BTreeMap &lt; String , f64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-success-147"><td>method</td><td>success</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-success-147">success</a> (&amp; self) -&gt; bool</code><p class="docstring">True iff every path reached a success status.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// True iff every path reached a success status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-success-147">success</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.files.iter().all(|f| f.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>())
+    }
+</code></pre>
+</details></td></tr><tr id="method-first-conflict-153"><td>method</td><td>first_conflict</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-first-conflict-153">first_conflict</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> &gt;</code><p class="docstring">First path that failed to reach a success status.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// First path that failed to reach a success status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-first-conflict-153">first_conflict</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
+        <span class="rs-self">self</span>.files.iter().find(|file| !file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>())
+    }
+</code></pre>
+</details></td></tr><tr id="method-published-paths-159"><td>method</td><td>published_paths</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-published-paths-159">published_paths</a> (&amp; self) -&gt; Vec &lt; String &gt;</code><p class="docstring">Paths that landed in the published manifest.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Paths that landed in the published manifest.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-published-paths-159">published_paths</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-self">self</span>.files
+            .iter()
+            .filter(|file| file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>())
+            .map(|file| file.path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().to_owned())
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-published-file-count-169"><td>method</td><td>published_file_count</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-published-file-count-169">published_file_count</a> (&amp; self) -&gt; usize</code><p class="docstring">Count paths that landed in the published manifest.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Count paths that landed in the published manifest.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-published-file-count-169">published_file_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.files
+            .iter()
+            .filter(|file| file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>())
+            .count()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/outcome.rs:134</p>
+</article><article id="item-enum-Route-14" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Route pub pub enum Route crates/eos-layerstack/src/commit/outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Route</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a></code>
+  <p class="docstring">Where a single normalized path is routed during preparation.<br>The wire strings are exact: `gated`/`direct`/`drop`/`reject`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Gated</td><td><code></code></td></tr><tr><td>Direct</td><td><code></code></td></tr><tr><td>Drop</td><td><code></code></td></tr><tr><td>Reject</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/outcome.rs:14</p>
+</article><article id="item-enum-CommitStatus-34" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CommitStatus pub pub enum CommitStatus crates/eos-layerstack/src/commit/outcome.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>CommitStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a></code>
+  <p class="docstring">Terminal per-path status after the publish transaction resolves.<br>Wire strings are exact and include `aborted_version` — the stale-base<br>outcome surfaced when the CAS retry budget is exhausted.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Accepted</td><td><code></code></td></tr><tr><td>Committed</td><td><code></code></td></tr><tr><td>AbortedVersion</td><td><code></code></td></tr><tr><td>AbortedOverlap</td><td><code></code></td></tr><tr><td>Dropped</td><td><code></code></td></tr><tr><td>Rejected</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-wire-str-65"><td>method</td><td>wire_str</td><td><code>pub const fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-wire-str-65">wire_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable wire string for this path status.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stable wire string for this path status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-wire-str-65">wire_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> =&gt; &quot;accepted&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Committed</span> =&gt; &quot;committed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span> =&gt; &quot;aborted_version&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedOverlap</span> =&gt; &quot;aborted_overlap&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span> =&gt; &quot;dropped&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Rejected</span> =&gt; &quot;rejected&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-is-published-79"><td>method</td><td>is_published</td><td><code>pub const fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a> (self) -&gt; bool</code><p class="docstring">Did this path actually land in a published manifest?</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Did this path actually land in a published manifest?</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> | <span class="rs-self">Self</span>::<span class="rs-type">Committed</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-is-success-85"><td>method</td><td>is_success</td><td><code>pub const fn <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a> (self) -&gt; bool</code><p class="docstring">Is this a success outcome (published, or a deliberate drop)?</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Is this a success outcome (published, or a deliberate drop)?</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> | <span class="rs-self">Self</span>::<span class="rs-type">Committed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span>)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/outcome.rs:34</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/commit/outcome.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Route classification and per-path publish outcomes.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! A changeset is split into disjoint normalized paths; each path is routed by</span>
+<span class="rs-comment">//! [`Route`] to exactly one of four destinations and, after the publish</span>
+<span class="rs-comment">//! transaction, lands a per-path [`CommitStatus`]. The `str` values of both enums</span>
+<span class="rs-comment">//! are part of the wire contract, so the `serde` rename strings below are</span>
+<span class="rs-comment">//! load-bearing.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-comment">/// Where a single normalized path is routed during preparation.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The wire strings are exact: `gated`/`direct`/`drop`/`reject`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a> {
+    <span class="rs-comment">/// Tracked-by-git path: publish through CAS with a base-hash check.</span>
+    #[serde(rename = &quot;gated&quot;)]
+    <span class="rs-type">Gated</span>,
+    <span class="rs-comment">/// Gitignored path: publish directly without a base-hash gate.</span>
+    #[serde(rename = &quot;direct&quot;)]
+    <span class="rs-type">Direct</span>,
+    <span class="rs-comment">/// `.git` internal path: dropped (never published).</span>
+    #[serde(rename = &quot;drop&quot;)]
+    <span class="rs-type">Drop</span>,
+    <span class="rs-comment">/// Disallowed path (absolute / escaping): rejected.</span>
+    #[serde(rename = &quot;reject&quot;)]
+    <span class="rs-type">Reject</span>,
+}
+
+<span class="rs-comment">/// Terminal per-path status after the publish transaction resolves.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Wire strings are exact and include `aborted_version` — the stale-base</span>
+<span class="rs-comment">/// outcome surfaced when the CAS retry budget is exhausted.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a> {
+    <span class="rs-comment">/// Validated and staged (atomic batch not yet finalized).</span>
+    #[serde(rename = &quot;accepted&quot;)]
+    <span class="rs-type">Accepted</span>,
+    <span class="rs-comment">/// Published into a new manifest version.</span>
+    #[serde(rename = &quot;committed&quot;)]
+    <span class="rs-type">Committed</span>,
+    <span class="rs-comment">/// Stale base hash; CAS retry budget exhausted.</span>
+    #[serde(rename = &quot;aborted_version&quot;)]
+    <span class="rs-type">AbortedVersion</span>,
+    <span class="rs-comment">/// Overlapping in-flight publish to the same path aborted this one.</span>
+    #[serde(rename = &quot;aborted_overlap&quot;)]
+    <span class="rs-type">AbortedOverlap</span>,
+    <span class="rs-comment">/// Routed [`Route::Drop`]: intentionally not published.</span>
+    #[serde(rename = &quot;dropped&quot;)]
+    <span class="rs-type">Dropped</span>,
+    <span class="rs-comment">/// Routed [`Route::Reject`]: disallowed path.</span>
+    #[serde(rename = &quot;rejected&quot;)]
+    <span class="rs-type">Rejected</span>,
+    <span class="rs-comment">/// Publish failed for a non-version reason.</span>
+    #[serde(rename = &quot;failed&quot;)]
+    <span class="rs-type">Failed</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a> {
+    <span class="rs-comment">/// Stable wire string for this path status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-wire-str-65">wire_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> =&gt; &quot;accepted&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Committed</span> =&gt; &quot;committed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedVersion</span> =&gt; &quot;aborted_version&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AbortedOverlap</span> =&gt; &quot;aborted_overlap&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span> =&gt; &quot;dropped&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Rejected</span> =&gt; &quot;rejected&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// Did this path actually land in a published manifest?</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> | <span class="rs-self">Self</span>::<span class="rs-type">Committed</span>)
+    }
+
+    <span class="rs-comment">/// Is this a success outcome (published, or a deliberate drop)?</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Accepted</span> | <span class="rs-self">Self</span>::<span class="rs-type">Committed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Dropped</span>)
+    }
+}
+
+<span class="rs-comment">/// The route + reason a preparer assigned to one normalized path.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// This is the per-path half of a `PublishDecision`: the input contract the</span>
+<span class="rs-comment">/// commit queue consumes (one entry per disjoint path).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
+    <span class="rs-comment">/// Normalized, validated path (unrepresentable when invalid).</span>
+    <span class="rs-kw">pub</span> path: <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>,
+    <span class="rs-comment">/// Destination this path was routed to.</span>
+    <span class="rs-kw">pub</span> route: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>,
+    <span class="rs-comment">/// Expected content hash for gated writes/deletes.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// `None` means the path did not exist at the operation snapshot. Direct,</span>
+    <span class="rs-comment">/// dropped, and rejected routes do not use this field.</span>
+    <span class="rs-kw">pub</span> base_hash: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Optional human-readable reason (e.g. why dropped/rejected).</span>
+    <span class="rs-kw">pub</span> message: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// Terminal outcome for one path after the publish transaction.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> {
+    <span class="rs-comment">/// The normalized path this result describes.</span>
+    <span class="rs-kw">pub</span> path: <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>,
+    <span class="rs-comment">/// Terminal status.</span>
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-CommitStatus-34">CommitStatus</a>,
+    <span class="rs-comment">/// Diagnostic message (empty by default).</span>
+    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a> {
+    <span class="rs-comment">/// Return the diagnostic message, falling back when the result has none.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> conflict_message&lt;&#x27;a&gt;(&amp;&#x27;a <span class="rs-self">self</span>, fallback: &amp;&#x27;a str) -&gt; &amp;&#x27;a str {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.message.is_empty() {
+            fallback
+        } <span class="rs-kw">else</span> {
+            <span class="rs-self">self</span>.message.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>()
+        }
+    }
+}
+
+<span class="rs-comment">/// Aggregate result of a published (or aborted) changeset.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-comment">/// Per-path outcomes, one entry per input path.</span>
+    <span class="rs-kw">pub</span> files: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>&gt;,
+    <span class="rs-comment">/// Manifest version produced, or `None` if nothing landed.</span>
+    <span class="rs-kw">pub</span> published_manifest_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-comment">/// Per-commit phase timings keyed with the Rust-compatible `occ.commit.*`</span>
+    <span class="rs-comment">/// names.</span>
+    <span class="rs-kw">pub</span> timings: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-comment">/// True iff every path reached a success status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-success-147">success</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.files.iter().all(|f| f.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>())
+    }
+
+    <span class="rs-comment">/// First path that failed to reach a success status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-first-conflict-153">first_conflict</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-FileResult-111">FileResult</a>&gt; {
+        <span class="rs-self">self</span>.files.iter().find(|file| !file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-success-85">is_success</a>())
+    }
+
+    <span class="rs-comment">/// Paths that landed in the published manifest.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-published-paths-159">published_paths</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-self">self</span>.files
+            .iter()
+            .filter(|file| file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>())
+            .map(|file| file.path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().to_owned())
+            .collect()
+    }
+
+    <span class="rs-comment">/// Count paths that landed in the published manifest.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-published-file-count-169">published_file_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.files
+            .iter()
+            .filter(|file| file.status.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-outcome-rs.html#method-is-published-79">is_published</a>())
+            .count()
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

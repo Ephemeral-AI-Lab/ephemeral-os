@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-api · src/public.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>40</b><span>items</span></div>
+  <div><b>18</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-api.html"><span>admin.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-api--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-api--src-main-rs.html"><span>main.rs</span><small>1/2</small></a></li><li><a class="file-link active" href="eos-api--src-public-rs.html"><span>public.rs</span><small>5/2</small></a></li><li><a class="file-link" href="eos-api--src-router-rs.html"><span>router.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-api--src-server-rs.html"><span>server.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-api--src-wire-rs.html"><span>wire.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="public crates/eos-api/src/public.rs Visibility HostVerb Route OpEntry Catalog impl Catalog host_verb str_field">
+  <div class="module-head">
+    <div>
+      <h2>src/public.rs</h2>
+      <p class="path">module <code>public</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>1 impls</span>
+      <span>2 fns</span>
+      <span>4 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OpEntry-50" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OpEntry pub pub struct OpEntry crates/eos-api/src/public.rs name String route Route visibility Visibility mutates_state bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OpEntry</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a></code>
+  <p class="docstring">One catalog entry's routing metadata (the ONLY per-op data the router reads).</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>route</td><td><code><a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a></code></td></tr><tr><td>pub</td><td>visibility</td><td><code><a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a></code></td></tr><tr><td>pub</td><td>mutates_state</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/public.rs:50</p>
+</article><article id="item-struct-Catalog-63" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Catalog pub pub struct Catalog crates/eos-api/src/public.rs by_name HashMap &lt; String , Arc &lt; OpEntry &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Catalog</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-api--src-public-rs.html#item-struct-Catalog-63">Catalog</a></code>
+  <p class="docstring">The catalog indexed by canonical name.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_name</td><td><code>HashMap &lt; String , Arc &lt; <a class="symbol-link" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-lookup-118"><td>method</td><td>lookup</td><td><code>pub fn <a class="symbol-link" href="eos-api--src-public-rs.html#method-lookup-118">lookup</a> (&amp; self , op : &amp; str) -&gt; Option &lt; &amp; Arc &lt; <a class="symbol-link" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> &gt; &gt;</code><p class="docstring">Resolve a request spelling to its catalog entry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Resolve a request spelling to its catalog entry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-lookup-118">lookup</a>(&amp;<span class="rs-self">self</span>, op: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.get(op)
+    }
+</code></pre>
+</details></td></tr><tr id="method-entries-124"><td>method</td><td>entries</td><td><code>pub fn <a class="symbol-link" href="eos-api--src-public-rs.html#method-entries-124">entries</a> (&amp; self) -&gt; Vec &lt; &amp; Arc &lt; <a class="symbol-link" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> &gt; &gt;</code><p class="docstring">Every entry, for coverage tests.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Every entry, for coverage tests.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-entries-124">entries</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.values().collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-load-builtin-69"><td>associated-fn</td><td>load_builtin</td><td><code>pub fn <a class="symbol-link" href="eos-api--src-public-rs.html#method-load-builtin-69">load_builtin</a> () -&gt; Result &lt; Self &gt;</code><p class="docstring">Parse the embedded `contract/ops.json`.<br># Errors<br>Returns an error when the committed catalog is malformed — every entry<br>must resolve to a route (the SPEC §9.3 "router covers every catalog<br>entry" bar).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse the embedded `contract/ops.json`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error when the committed catalog is malformed — every entry</span>
+    <span class="rs-comment">/// must resolve to a route (the SPEC §9.3 "router covers every catalog</span>
+    <span class="rs-comment">/// entry" bar).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-load-builtin-69">load_builtin</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-type">OPS_JSON</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-parse-79"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eos-api.html#method-parse-26">parse</a> (ops_json : &amp; str) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(ops_json: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> document: <span class="rs-type">Value</span> = serde_json::from_str(ops_json).context(&quot;parse ops.json&quot;)?;
+        <span class="rs-kw">let</span> ops = document
+            .get(&quot;ops&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .context(&quot;ops.json must carry an `ops` array&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_name = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> ops {
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;name&quot;)?.to_owned();
+            <span class="rs-kw">let</span> served_by = <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;served_by&quot;)?;
+            <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> served_by {
+                &quot;daemon&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a>::<span class="rs-type">Daemon</span>,
+                &quot;host&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a>::<span class="rs-type">Host</span>(<a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-host-verb-131">host_verb</a>(&amp;name)?),
+                other =&gt; bail!(&quot;op {name}: unknown served_by {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> visibility = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;visibility&quot;)? {
+                &quot;public&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Public</span>,
+                &quot;operator&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Operator</span>,
+                &quot;internal&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Internal</span>,
+                &quot;test&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Test</span>,
+                other =&gt; bail!(&quot;op {name}: unknown visibility {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> mutates_state = op
+                .get(&quot;mutates_state&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_bool)
+                .with_context(|| format!(&quot;op {name}: missing mutates_state&quot;))?;
+            <span class="rs-kw">let</span> entry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> {
+                name: name.clone(),
+                route,
+                visibility,
+                mutates_state,
+            });
+            <span class="rs-kw">if</span> by_name.insert(name.clone(), entry).is_some() {
+                bail!(&quot;catalog name claimed twice: {name}&quot;);
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { by_name })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/public.rs:63</p>
+</article><article id="item-enum-Visibility-14" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Visibility pub pub enum Visibility crates/eos-api/src/public.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Visibility</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a></code>
+  <p class="docstring">Who may invoke an op, and from which socket.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Public</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr><tr><td>Internal</td><td><code></code></td></tr><tr><td>Test</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/public.rs:14</p>
+</article><article id="item-enum-HostVerb-27" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum HostVerb pub pub enum HostVerb crates/eos-api/src/public.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>HostVerb</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a></code>
+  <p class="docstring">Host lifecycle verbs (`served_by: host`), parsed once at catalog load so<br>the request path never branches on op names.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Acquire</td><td><code></code></td></tr><tr><td>Release</td><td><code></code></td></tr><tr><td>Status</td><td><code></code></td></tr><tr><td>List</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/public.rs:27</p>
+</article><article id="item-enum-Route-41" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Route pub pub enum Route crates/eos-api/src/public.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>Route</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a></code>
+  <p class="docstring">Where an op is served.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Host</td><td><code>0: <a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a></code></td></tr><tr><td>Daemon</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/public.rs:41</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-host-verb-131" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn host_verb private fn host_verb (name : &amp; str) -&gt; Result &lt; HostVerb &gt; crates/eos-api/src/public.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>host_verb</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api--src-public-rs.html#item-fn-host-verb-131">host_verb</a> (name : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-host-verb-131">host_verb</a>(name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>&gt; {
+    <span class="rs-comment">// The four host verbs are the entire host surface; an unrecognized</span>
+    <span class="rs-comment">// host-served name is a catalog/router drift and must fail at startup.</span>
+    <span class="rs-kw">match</span> name {
+        &quot;sandbox.acquire&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Acquire</span>),
+        &quot;sandbox.release&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Release</span>),
+        &quot;sandbox.status&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Status</span>),
+        &quot;sandbox.list&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">List</span>),
+        other =&gt; bail!(&quot;host-served op {other} has no router implementation&quot;),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/public.rs:131</p>
+</article><article id="item-fn-str-field-143" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn str_field private fn str_field &lt; 'a &gt; (op : &amp; 'a Value , field : &amp; str) -&gt; Result &lt; &amp; 'a str &gt; crates/eos-api/src/public.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>str_field</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a> &lt; &#x27;a &gt; (op : &amp; &#x27;a Value , field : &amp; str) -&gt; Result &lt; &amp; &#x27;a str &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> str_field&lt;&#x27;a&gt;(op: &amp;&#x27;a <span class="rs-type">Value</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a str&gt; {
+    op.get(field)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .with_context(|| format!(&quot;catalog op missing string field {field}&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/public.rs:143</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-api/src/public.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The op catalog as `eos-api` sees it: parsed from the committed</span>
+<span class="rs-comment">//! `contract/ops.json` (embedded at compile time — the shared artifact is</span>
+<span class="rs-comment">//! data, never code) and indexed by canonical name.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-comment">/// The committed catalog document this binary serves.</span>
+<span class="rs-kw">const</span> <span class="rs-type">OPS_JSON</span>: &amp;str = include_str!(&quot;../../../contract/ops.json&quot;);
+
+<span class="rs-comment">/// Who may invoke an op, and from which socket.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a> {
+    <span class="rs-comment">/// Client socket.</span>
+    <span class="rs-type">Public</span>,
+    <span class="rs-comment">/// `eos-api admin` socket only.</span>
+    <span class="rs-type">Operator</span>,
+    <span class="rs-comment">/// Host machinery only; never served from a socket.</span>
+    <span class="rs-type">Internal</span>,
+    <span class="rs-comment">/// Daemon-side test hook; never served from a socket.</span>
+    <span class="rs-type">Test</span>,
+}
+
+<span class="rs-comment">/// Host lifecycle verbs (`served_by: host`), parsed once at catalog load so</span>
+<span class="rs-comment">/// the request path never branches on op names.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a> {
+    <span class="rs-comment">/// `sandbox.acquire`</span>
+    <span class="rs-type">Acquire</span>,
+    <span class="rs-comment">/// `sandbox.release`</span>
+    <span class="rs-type">Release</span>,
+    <span class="rs-comment">/// `sandbox.status`</span>
+    <span class="rs-type">Status</span>,
+    <span class="rs-comment">/// `sandbox.list`</span>
+    <span class="rs-type">List</span>,
+}
+
+<span class="rs-comment">/// Where an op is served.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a> {
+    <span class="rs-comment">/// Engine call in `eos-sandbox-host`.</span>
+    <span class="rs-type">Host</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>),
+    <span class="rs-comment">/// Forwarded to the sandbox daemon.</span>
+    <span class="rs-type">Daemon</span>,
+}
+
+<span class="rs-comment">/// One catalog entry's routing metadata (the ONLY per-op data the router reads).</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> {
+    <span class="rs-comment">/// Canonical name (for error messages and logs).</span>
+    <span class="rs-kw">pub</span> name: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Routing target.</span>
+    <span class="rs-kw">pub</span> route: <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a>,
+    <span class="rs-comment">/// Caller surface.</span>
+    <span class="rs-kw">pub</span> visibility: <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>,
+    <span class="rs-comment">/// Drives the recovery ladder's fail-closed branch.</span>
+    <span class="rs-kw">pub</span> mutates_state: bool,
+}
+
+<span class="rs-comment">/// The catalog indexed by canonical name.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-Catalog-63">Catalog</a> {
+    by_name: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a>&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-Catalog-63">Catalog</a> {
+    <span class="rs-comment">/// Parse the embedded `contract/ops.json`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error when the committed catalog is malformed — every entry</span>
+    <span class="rs-comment">/// must resolve to a route (the SPEC §9.3 "router covers every catalog</span>
+    <span class="rs-comment">/// entry" bar).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-load-builtin-69">load_builtin</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-type">OPS_JSON</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(ops_json: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> document: <span class="rs-type">Value</span> = serde_json::from_str(ops_json).context(&quot;parse ops.json&quot;)?;
+        <span class="rs-kw">let</span> ops = document
+            .get(&quot;ops&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .context(&quot;ops.json must carry an `ops` array&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> by_name = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> ops {
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;name&quot;)?.to_owned();
+            <span class="rs-kw">let</span> served_by = <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;served_by&quot;)?;
+            <span class="rs-kw">let</span> route = <span class="rs-kw">match</span> served_by {
+                &quot;daemon&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a>::<span class="rs-type">Daemon</span>,
+                &quot;host&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Route-41">Route</a>::<span class="rs-type">Host</span>(<a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-host-verb-131">host_verb</a>(&amp;name)?),
+                other =&gt; bail!(&quot;op {name}: unknown served_by {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> visibility = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-str-field-143">str_field</a>(op, &quot;visibility&quot;)? {
+                &quot;public&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Public</span>,
+                &quot;operator&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Operator</span>,
+                &quot;internal&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Internal</span>,
+                &quot;test&quot; =&gt; <a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-Visibility-14">Visibility</a>::<span class="rs-type">Test</span>,
+                other =&gt; bail!(&quot;op {name}: unknown visibility {other:?}&quot;),
+            };
+            <span class="rs-kw">let</span> mutates_state = op
+                .get(&quot;mutates_state&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_bool)
+                .with_context(|| format!(&quot;op {name}: missing mutates_state&quot;))?;
+            <span class="rs-kw">let</span> entry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a> {
+                name: name.clone(),
+                route,
+                visibility,
+                mutates_state,
+            });
+            <span class="rs-kw">if</span> by_name.insert(name.clone(), entry).is_some() {
+                bail!(&quot;catalog name claimed twice: {name}&quot;);
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { by_name })
+    }
+
+    <span class="rs-comment">/// Resolve a request spelling to its catalog entry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-lookup-118">lookup</a>(&amp;<span class="rs-self">self</span>, op: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.get(op)
+    }
+
+    <span class="rs-comment">/// Every entry, for coverage tests.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-entries-124">entries</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;&amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-OpEntry-50">OpEntry</a>&gt;&gt; {
+        <span class="rs-self">self</span>.by_name.values().collect()
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#item-fn-host-verb-131">host_verb</a>(name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>&gt; {
+    <span class="rs-comment">// The four host verbs are the entire host surface; an unrecognized</span>
+    <span class="rs-comment">// host-served name is a catalog/router drift and must fail at startup.</span>
+    <span class="rs-kw">match</span> name {
+        &quot;sandbox.acquire&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Acquire</span>),
+        &quot;sandbox.release&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Release</span>),
+        &quot;sandbox.status&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">Status</span>),
+        &quot;sandbox.list&quot; =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-enum-HostVerb-27">HostVerb</a>::<span class="rs-type">List</span>),
+        other =&gt; bail!(&quot;host-served op {other} has no router implementation&quot;),
+    }
+}
+
+<span class="rs-kw">fn</span> str_field&lt;&#x27;a&gt;(op: &amp;&#x27;a <span class="rs-type">Value</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;a str&gt; {
+    op.get(field)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .with_context(|| format!(&quot;catalog op missing string field {field}&quot;))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

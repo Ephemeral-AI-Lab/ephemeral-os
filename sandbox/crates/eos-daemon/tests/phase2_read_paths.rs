@@ -625,12 +625,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
     assert_eq!(duplicate["success"], Value::Bool(false));
     assert_eq!(duplicate["error"]["kind"], "already_open");
 
-    let open = dispatch_request(
-        table,
-        "sandbox.isolation.list_open",
-        "iws-list",
-        json!({}),
-    );
+    let open = dispatch_request(table, "sandbox.isolation.list_open", "iws-list", json!({}));
     assert_eq!(open["success"], Value::Bool(true));
     assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }

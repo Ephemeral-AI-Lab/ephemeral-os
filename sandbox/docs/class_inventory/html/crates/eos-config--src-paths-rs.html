@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>12</b><span>modules</span></div>
-  <div><b>95</b><span>items</span></div>
-  <div><b>127</b><span>fields</span></div>
+  <div><b>65</b><span>items</span></div>
+  <div><b>114</b><span>fields</span></div>
   <div><b>22</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>8/5</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>10/13</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/13</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link active" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>7/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>9/9</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link active" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="paths crates/eos-config/src/paths.rs ConfigPath impl ConfigPath workspace_root is_test_yml canonicalize_for_policy invalid_override">
   <div class="module-head">
     <div>
@@ -82,7 +82,7 @@
     <span class="rs-comment">/// crate layout.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            path: <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()?.join(&quot;config&quot;).join(&quot;prd.yml&quot;),
+            path: <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>()?.join(&quot;config&quot;).join(&quot;prd.yml&quot;),
         })
     }
 </code></pre>
@@ -100,7 +100,7 @@
             ));
         }
 
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()?;
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>()?;
         <span class="rs-kw">let</span> candidate = <span class="rs-kw">if</span> path.is_absolute() {
             path.to_path_buf()
         } <span class="rs-kw">else</span> {
@@ -143,11 +143,11 @@
     <h3>workspace_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a> () -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a> () -&gt; Result &lt; PathBuf , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
     <span class="rs-kw">let</span> manifest_dir = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;));
     manifest_dir
         .ancestors()
@@ -245,7 +245,7 @@
     <span class="rs-comment">/// crate layout.</span>
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
         <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
-            path: <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()?.join(&quot;config&quot;).join(&quot;prd.yml&quot;),
+            path: <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>()?.join(&quot;config&quot;).join(&quot;prd.yml&quot;),
         })
     }
 
@@ -261,7 +261,7 @@
             ));
         }
 
-        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()?;
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>()?;
         <span class="rs-kw">let</span> candidate = <span class="rs-kw">if</span> path.is_absolute() {
             path.to_path_buf()
         } <span class="rs-kw">else</span> {
@@ -302,7 +302,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#item-fn-workspace-root-76">workspace_root</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
     <span class="rs-kw">let</span> manifest_dir = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;));
     manifest_dir
         .ancestors()

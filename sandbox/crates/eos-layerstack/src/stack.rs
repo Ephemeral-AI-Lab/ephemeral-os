@@ -510,7 +510,8 @@ impl LayerStack {
     ///
     /// This is the policy-blind `LayerStack` half of Phase 3: callers are
     /// responsible for OCC route/conflict decisions before they hand changes
-    /// here. The CAS byte-identity pieces come from `eos-protocol`.
+    /// here. The CAS byte-identity pieces are implemented in this crate and
+    /// checked against `contract/fixtures/cas/cases.json`.
     ///
     /// # Errors
     ///

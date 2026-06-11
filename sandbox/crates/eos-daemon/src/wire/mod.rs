@@ -1,6 +1,5 @@
-//! The daemon wire protocol, absorbed from the old `eos-protocol` crate:
-//! envelope framing, the op catalog (canonical names), frozen
-//! protocol constants, and response canonicalization.
+//! The daemon wire protocol: envelope framing, the op catalog (canonical
+//! names), frozen protocol constants, and response canonicalization.
 //!
 //! This is in-box code. The host side carries its own copy of the vocabulary
 //! (`eos-sandbox-host::wire`); the shared artifact between them is

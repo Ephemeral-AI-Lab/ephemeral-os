@@ -6191,6 +6191,156 @@
       ]
     },
     {
+      "id": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/run_subagent_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/run_subagent_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt",
+      "kind": "module",
+      "tags": [
+        "source"
+      ]
+    },
+    {
+      "id": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt#DESCRIPTION",
+      "kind": "symbol",
+      "tags": [
+        "exported",
+        "public-api"
+      ]
+    },
+    {
       "id": "@eos/tool/src/tools/submission/index",
       "kind": "module",
       "tags": [
@@ -10684,6 +10834,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/ask-advisor.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/ask-advisor",
+      "to": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/ask-advisor.ts",
       "line": 11
     },
     {
@@ -10780,6 +10938,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/read-agent-run-transcript",
+      "to": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
       "line": 6
     },
     {
@@ -10836,6 +11002,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/run-subagent.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/run-subagent",
+      "to": "@eos/tool/src/tools/description_prompts/run_subagent_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/run-subagent.ts",
       "line": 14
     },
     {
@@ -10869,6 +11043,14 @@
       "typeOnly": false,
       "file": "packages/tool/src/tools/background/cancel-background-session.ts",
       "line": 5
+    },
+    {
+      "from": "@eos/tool/src/tools/background/cancel-background-session",
+      "to": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/background/cancel-background-session.ts",
+      "line": 6
     },
     {
       "from": "@eos/tool/src/tools/background/cancel-background-session",
@@ -10941,6 +11123,14 @@
       "typeOnly": false,
       "file": "packages/tool/src/tools/background/list-background-sessions.ts",
       "line": 9
+    },
+    {
+      "from": "@eos/tool/src/tools/background/list-background-sessions",
+      "to": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/background/list-background-sessions.ts",
+      "line": 10
     },
     {
       "from": "@eos/tool/src/tools/background/list-background-sessions",
@@ -11048,13 +11238,21 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_advisor_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_advisor_outcome.ts",
       "line": 2
     },
     {
+      "from": "@eos/tool/src/tools/submission/submit_advisor_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_advisor_outcome.ts",
+      "line": 3
+    },
+    {
       "from": "@eos/tool/src/tools/submission/submit_main_outcome",
       "to": "@eos/tool/src/contract",
       "kind": "imports",
@@ -11064,11 +11262,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_main_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_main_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_main_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_main_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
@@ -11080,13 +11286,21 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_planner_outcome.ts",
       "line": 2
     },
     {
+      "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_planner_outcome.ts",
+      "line": 3
+    },
+    {
       "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
       "to": "@eos/tool/src/contract",
       "kind": "imports",
@@ -11096,11 +11310,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_subagent_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_subagent_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
@@ -11112,11 +11334,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_worker_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_worker_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/toolset",
@@ -14346,7 +14576,7 @@
       "to": "@eos/tool/src/tools/agent/ask-advisor#JsonObjectSchema",
       "kind": "uses-schema",
       "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-      "line": 22
+      "line": 23
     },
     {
       "from": "@eos/tool/src/tools/submission/shared#SubmissionInput",

@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import type { ToolDefinition, ToolOutcome } from "../../contract.js";
 import { defineTool } from "../../define.js";
-import { descriptionPrompt } from "../description_prompts/index.js";
+import { DESCRIPTION } from "../description_prompts/ask_advisor_prompt.js";
 import type { AgentRunCalls, AgentToolUserMessage } from "./index.js";
 
 /** The single site that owns the advisor profile's magic name (§2.6). */
@@ -30,7 +30,7 @@ const AskAdvisorInputSchema = z.object({
 export function askAdvisorTool(calls: AgentRunCalls): ToolDefinition {
   return defineTool({
     name: "ask_advisor",
-    description: descriptionPrompt("ask_advisor"),
+    description: DESCRIPTION,
     input: AskAdvisorInputSchema,
     execute: async (input, ctx) => {
       const advisorPrompt = calls.advisorPromptFor(input.tool_name);

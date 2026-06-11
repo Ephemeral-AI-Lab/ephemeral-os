@@ -23,9 +23,9 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>5</b><span>modules</span></div>
-  <div><b>55</b><span>items</span></div>
-  <div><b>24</b><span>fields</span></div>
-  <div><b>8</b><span>methods</span></div>
+  <div><b>42</b><span>items</span></div>
+  <div><b>23</b><span>fields</span></div>
+  <div><b>6</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/16</small></a></li><li><a class="file-link active" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>3/17</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-overlay.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-overlay--src-kernel-mount-rs.html"><span>kernel_mount.rs</span><small>4/12</small></a></li><li><a class="file-link active" href="eos-overlay--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-overlay--src-path-change-rs.html"><span>path_change.rs</span><small>2/15</small></a></li><li><a class="file-link" href="eos-overlay--src-writable-dirs-rs.html"><span>writable_dirs.rs</span><small>1/2</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-overlay/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -74,10 +74,11 @@
 <span class="rs-comment">//! mount itself is built with the RAW new-mount API</span>
 <span class="rs-comment">//! (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) — NOT the `mount(8)` binary.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! This is a one-way leaf below occ: overlay has NO `eos-occ` dependency, so the</span>
-<span class="rs-comment">//! `occ → overlay` edge is acyclic. The `OverlayPathChange -&gt;</span>
-<span class="rs-comment">//! eos_protocol::LayerChange` conversion lives here precisely because occ</span>
-<span class="rs-comment">//! consumes it one-way.</span>
+<span class="rs-comment">//! Overlay produces the layer stack's change vocabulary one-way: the</span>
+<span class="rs-comment">//! `OverlayPathChange -&gt; LayerChange` conversion lives here, and the only</span>
+<span class="rs-comment">//! `eos-layerstack` edge is those model types — overlay never reads or writes</span>
+<span class="rs-comment">//! the stack itself. Workspace crates consume the re-exported vocabulary from</span>
+<span class="rs-comment">//! here without linking the storage engine's write surface directly.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! # Build-time guarantee / platform</span>
 <span class="rs-comment">//!</span>
@@ -95,12 +96,15 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> path_change;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> writable_dirs;
 
+<span class="rs-comment">// The capture vocabulary, re-exported so overlay consumers (the workspace</span>
+<span class="rs-comment">// crates) never import the storage engine directly.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_layerstack::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
+
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>, <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> kernel_mount::{mount_overlay, unmount_overlay, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a>, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayMount-51">OverlayMount</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> path_change::capture_upperdir;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> writable_dirs::{
     allocate_overlay_writable_dirs, overlay_writable_root, <a class="symbol-link rs-type" href="eos-overlay--src-writable-dirs-rs.html#item-struct-OverlayWritableDirs-16">OverlayWritableDirs</a>,
-    <span class="rs-type">OVERLAY_WRITABLE_ROOT</span>,
 };
 </code></pre>
 </section>

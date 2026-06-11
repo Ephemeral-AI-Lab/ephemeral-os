@@ -30,7 +30,7 @@ replaces that model with a planner-declared **iteration focus**:
 - declarations are append-only rows on plans; the current focus, the current
   goal, and every archived predecessor are all derived views over them,
 - the closure outcome of an iteration comes from its last attempt, and only
-  attempts consistent with the final focus count as the iteration's
+  attempts with `consistent_to_iteration_focus` count as the iteration's
   achievement.
 
 The projection layer is rebuilt to match: composed `spec.md`/`brief.md`
@@ -75,10 +75,10 @@ DB-derived render.
    planner that re-declares focus supersedes the prior declaration inside
    the same iteration - it does not open a new one (a new iteration would
    refresh the attempt budget after a failure, letting a pivoting planner
-   loop forever). An attempt is **consistent** iff no later plan in its
-   iteration declared a focus. `max_attempts` counts every attempt in the
-   iteration, refocused or not; a planner that wants a fresh budget has the
-   honest path of declaring the work in `deferred_goal`.
+   loop forever). An attempt has `consistent_to_iteration_focus = true` iff
+   no later plan in its iteration declared a focus. `max_attempts` counts
+   every attempt in the iteration, refocused or not; a planner that wants a
+   fresh budget has the honest path of declaring the work in `deferred_goal`.
 5. **`deferred_goal` is a handoff declaration, not load-bearing state.**
    `current_goal` advances only at successful iteration close, so a refocus
    that drops the previous deferral loses nothing: the next planner re-peels
@@ -114,9 +114,10 @@ DB-derived render.
    Nothing archives at mutation time: "archived" is purely derived (a
    later declaration exists), so archives stay automatically correct under
    idempotent transitions and cancel races, and the live attempt set under
-   `iteration_<id>/` is exactly the consistent set - an iteration's folder
-   always reads as the current focus's story. A refocus is the one event
-   that changes an entity's path; §9 names the recovery rules.
+   `iteration_<id>/` is exactly the set with `consistent_to_iteration_focus`
+   true - an iteration's folder always reads as the current focus's story. A
+   refocus is the one event that changes an entity's path; §9 names the
+   recovery rules.
 9. **The tree listing is the overview projection.** A read path (the
    `read_workflow_context` surface - tool exposure deferred, §2.18; the
    resolver and listing ship package-side and these semantics bind when
@@ -142,13 +143,15 @@ DB-derived render.
     Hiding is policy; the composer decides. The workflow launcher takes one
     injected `composeLaunchContext(agentName, input)` function and calls it
     after commit, before `port.launch`.
-12. **Context scripts are hook-parity subprocesses bound by agent kind.**
-    Scripts live in `.eos-agents/workflow/scripts/` and bind by filename:
-    `planner.(cjs|mjs)` / `worker.(cjs|mjs)`, falling back to the built-in
-    default policy. Kind is also the input shape (§7), so one script
-    serves every profile of its kind; per-profile (agent-name) overrides
-    stay a deferred seam (§5). The runtime spawns the bound script
-    per launch with the JSON snapshot on stdin and parses
+12. **Context scripts are hook-parity subprocesses selected by profile.**
+    Planner and worker agent profiles carry `workflow_context_script`, a
+    repo-root-relative path under `.eos-agents/workflow/scripts/`. Each
+    workflow agent gets its own script (`planner.cjs`, `worker.cjs`, or a
+    profile-specific file) instead of a shared script branching on `kind`.
+    Shared code lives in helper files in the same directory, for example
+    `variable_reference_map.cjs`; helpers are loaded by scripts and are never
+    spawned directly. The runtime spawns the profile-selected script per
+    launch with the JSON snapshot on stdin and parses
     `{ initial_messages: UserMessage[] }` from stdout, where each message uses
     the real `@eos/contracts` `Message` content-block shape - the same
     mental model, trust level, and execution discipline as the
@@ -156,20 +159,22 @@ DB-derived render.
     script's `initial_messages` output IS the launch's complete ordered
     `initialMessages` - replace, never merge: the runtime appends no preamble or directive,
     and the only other model-visible context is the profile's system
-    prompt and tool exposure. Without a matching script, the built-in
-    default policy (an in-package pure function) composes - so the
-    workflow suite spawns no processes.
+    prompt and tool exposure. The built-in default policy remains an
+    in-package fallback for engine-free `@eos/workflow` tests that bypass
+    runtime profiles; profile-based planner/worker runtime launches must name
+    a script.
 13. **Default composition policy.** Initial planner: `current_goal`, then a
     directive to declare focus (and optionally `deferred_goal`) and plan
     work items. Retry planner: `current_goal`, the standing focus, the
-    *consistent* failed attempts (work items with summaries/outcomes and
-    `fail_reason`), then a directive to re-plan within the focus or refocus
-    (naming that refocus resets both fields) - the consistent failed
-    attempts arrive fully expanded in the variables, so no read escalation
-    exists or is needed this round (§2.18); the standing `deferred_goal`
-    and superseded attempts are deliberately omitted (§2.5). Worker: the
-    iteration focus, dependency outcomes, own `work_item_spec`, submit
-    directive.
+    failed attempts with `consistent_to_iteration_focus` true (work items
+    with summaries/outcomes and `fail_reason`), then a directive to re-plan
+    within the focus or refocus (naming that refocus resets both fields) -
+    those failed attempts arrive fully expanded in the variables, so no read
+    escalation exists or is needed this round (§2.18); the standing
+    `deferred_goal` and superseded attempts are deliberately omitted (§2.5).
+    Worker: the
+    iteration focus, dependency outcomes, own `work_item_description` and
+    `work_item_spec`, submit directive.
 14. **Compose failures ride the §2.7 uniform rule.** A script that exits
     non-zero, times out, or emits output failing the Zod parse means the
     launch never happens: the workflow service synthesizes a failed settlement for
@@ -190,8 +195,8 @@ DB-derived render.
     a status row in listings (the Phase 05 §2.20 rule), and rows under
     `archived/` subtrees render as status rows only; with drifted attempts
     relocated (§2.8) the live iteration subtree needs no further collapse -
-    it contains only consistent attempts. The workflow terminal summary
-    mechanism is unchanged.
+    it contains only attempts with `consistent_to_iteration_focus` true. The
+    workflow terminal summary mechanism is unchanged.
 17. **The context tree persists to disk as a post-commit mirror.** Each
     mutation, after commit and before guarded launches, re-renders the §9
     universe from the fresh `WorkflowTree` and mirrors it under
@@ -261,7 +266,7 @@ everything not listed is implemented as written there.
 | §6 `PlannerOutcomePayloadSchema` (`plan_spec`, top-level `deferred_goal_for_next_iteration`) | flattened optional `iteration_focus` plus sibling `deferred_goal` replace both; `plan_spec` deleted | §7 |
 | §6 schema: `workflows.goal`, `iterations.goal`, `plans.plan_spec`/`deferred_goal` | `workflows.original_goal`; iterations carry no goal/focus columns; plans gain `declared_focus`/`declared_deferred_goal` | §8 |
 | §6/§8 workflow read model | named `loadWorkflowTree` for the complete UI/render graph and `loadWorkflowContext` for the context path universe | §8 |
-| §7 `context.ts` fixed launch policy | launch-context builders + injected composer + default policy + kind-bound `.eos-agents/workflow/scripts/` scripts | §2.12, §10 |
+| §7 `context.ts` fixed launch policy | launch-context builders + injected composer + default policy + profile-selected `workflow_context_script` files under `.eos-agents/workflow/scripts/` | §2.12, §10 |
 | §7 default read at workflow root = `brief.md` | directory paths (root included) return subtree listings | §2.9 |
 | §2.19 every rendered projection opens with a metadata stamp line | dropped: content is verbatim field text; status is DTO/listing metadata, and context reads use latest-render overwrite semantics | §2.7 |
 | §13 step 3 renderer tests bind the companion §12 criteria | replaced by the §15 projection/derivation tables | §15 |
@@ -307,18 +312,16 @@ Phase 05):
   tool, §2.18) with supervisor registration and the one-open guard, the
   per-kind submission schemas with bound-mutation execute (§2.19),
   `cancel_background_session` type union gaining `"workflow"`,
-- `@eos/agent-runtime`: the `.eos-agents/workflow/scripts/` registry
-  (loaded and validated at startup), `workflowScriptsDir?`, the
-  script-runner composer adapter, the `workflowContextRoot` mirror
-  dependency.
+- `@eos/agent-runtime`: `workflow_context_script` frontmatter on
+  planner/worker agent profiles, `.eos-agents/workflow/scripts/` script-root
+  validation, `workflowScriptsDir?`, the script-runner composer adapter, and
+  the `workflowContextRoot` mirror dependency.
 
 Out of scope: everything Phase 05 §11 defers except the physical projector
 (now in scope, §2.17), plus the context read/query tools
 (`read_workflow_context` / `query_workflow_context` - deferred to a later
 discussion; their resolver and listing layers ship package-side),
-context-script sandboxing beyond the hook trust model, per-profile
-(agent-name) context-script overrides (one extra registry lookup when
-wanted), non-workflow uses of the composer,
+context-script sandboxing beyond the hook trust model, non-workflow uses of the composer,
 dirty-subtree mirror optimization (the mirror re-projects the workflow per
 mutation), an on-disk per-workflow index file for human status visibility
 (the mirror carries no metadata), and any stored focus history beyond the
@@ -338,7 +341,8 @@ delegate_workflow(goal)
     │              submits (focus, deferred_goal?, work_items)   focus REQUIRED
     │
     ├─ Attempt n (retry) → planner sees (current_goal, focus,
-    │              consistent prior attempts + fail_reasons)
+    │              prior attempts with consistent_to_iteration_focus=true
+    │              + fail_reasons)
     │              submits (work_items)                          keep focus
     │              or (focus, deferred_goal?, work_items)        refocus: resets
     │                                                            BOTH, supersedes
@@ -360,9 +364,9 @@ Invariants:
    exists without the focus that produced it.
 4. Declarations are append-only; the current focus/deferred pair is the
    latest declaration among the iteration's plans.
-5. An attempt is consistent iff no later plan in its iteration declared;
-   closure outcomes and retry context consider only consistent attempts,
-   and the live attempt paths are exactly the consistent attempts -
+5. An attempt has `consistent_to_iteration_focus = true` iff no later plan in
+   its iteration declared; closure outcomes and retry context consider only
+   those attempts, and the live attempt paths are exactly those attempts -
    drifted attempts resolve under `archived/` (§2.8).
 6. `max_attempts` bounds the iteration's total attempts across refocuses.
 7. The iteration's first materialized plan must carry a declaration
@@ -381,6 +385,7 @@ const PlannerOutcomePayloadSchema = z.object({
   work_items: z.array(z.object({
     id: z.string().min(1),
     agent_name: z.string().min(1),
+    description: z.string().min(1),
     work_item_spec: z.string().min(1),
     needs: z.array(z.string()).default([]),
   })).min(1),
@@ -407,7 +412,7 @@ interface WorkflowContextSnapshot {
     original_goal: string;
     current_goal: string;
     status: string;
-    paths: { root: string; archived: string };
+    context_path: string;                      // entity context folder path
     iterations: WorkflowContextIteration[];
   };
 }
@@ -420,7 +425,7 @@ interface WorkflowContextIteration {
   focus: string | null;                         // null means no declaration yet
   deferred_goal: string | null;
   max_attempts: number;
-  paths: { live: string; archived: string };
+  context_path: string;                         // entity context folder path
   attempts: WorkflowContextAttempt[];
 }
 
@@ -429,8 +434,8 @@ interface WorkflowContextAttempt {
   sequence: number;
   status: string;
   fail_reason: string | null;
-  consistent: boolean;                          // §6 invariant 5
-  paths: { live: string | null; archived: string | null };
+  consistent_to_iteration_focus: boolean;       // §6 invariant 5
+  context_path: string;                         // live or archived folder path
   plan: {
     id: string;
     status: string;
@@ -438,17 +443,19 @@ interface WorkflowContextAttempt {
     declared_deferred_goal: string | null;
     summary: string | null;
     agent_run_id: string | null;
+    context_path: string;                       // entity context folder path
   };
   work_items: Array<{
     id: string;
     agent_name: string;
+    description: string;
     spec: string;
     needs: string[];
     status: string;
     summary: string | null;
     outcome: string | null;
     agent_run_id: string | null;
-    paths: { live: string | null; archived: string | null };
+    context_path: string;                       // entity context folder path
   }>;
 }
 
@@ -483,6 +490,32 @@ const ContextScriptOutputSchema = z.object({
 });
 ```
 
+Agent-profile frontmatter delta (`@eos/agent-runtime`):
+
+```ts
+interface AgentProfile {
+  // Existing Phase 04.5 fields...
+  workflow_context_script?: string; // required for agent_kind planner | worker
+}
+```
+
+For `agent_kind: "planner" | "worker"`, `workflow_context_script` is required
+and must name a `.cjs` or `.mjs` file under `workflowScriptsDir` (default
+`.eos-agents/workflow/scripts/`). The field is a repo-root-relative path in
+profile frontmatter, for example:
+
+```yaml
+workflow_context_script: .eos-agents/workflow/scripts/planner.cjs
+```
+
+Non-workflow agent kinds omit it. The runtime rejects a planner/worker profile
+with a missing, unreadable, outside-root, or non-script path before any run
+starts.
+
+Every `context_path` field is the folder path for that entity's context inside
+the §9 tree. Field files are addressed by appending the field filename to that
+folder; scripts do not receive separate live/archived path objects.
+
 `ContextSearch` keeps its Phase 05 shape; `ContextPage` gains `status`
 (the owning entity's), replacing the dropped in-content status line (§2.7);
 a search hit's `field` is the filename of the matched file.
@@ -499,7 +532,7 @@ attempts     id PK, workflow_id, iteration_id, sequence, status, fail_reason,
 plans        id PK, workflow_id, iteration_id, attempt_id, agent_run_id,
              status, declared_focus, declared_deferred_goal,   -- null = kept
              planner_summary, timestamps                -- plan_spec deleted
-work_items   unchanged from Phase 05 §6
+work_items   gain description; otherwise unchanged from Phase 05 §6
 launch_queue gains `launch_token`; otherwise unchanged from Phase 05 §6
 ```
 
@@ -529,7 +562,7 @@ The derived views are computed once inside `loadWorkflowTree`:
 | goal in effect for iteration `k` | `original_goal` for the first iteration; otherwise iteration `k-1`'s effective `deferred_goal` (§6 invariant 2) |
 | `current_goal` | goal in effect for the latest iteration |
 | iteration focus / deferred goal | latest plan in the iteration with non-null `declared_focus` |
-| attempt consistency | no later plan in the iteration declared |
+| `consistent_to_iteration_focus` | no later plan in the iteration declared |
 | workflow archive set | every iteration with a successor (it advanced the goal) |
 | iteration archive set | every non-latest declaration, keyed by its declaring attempt |
 | iteration outcome | closing attempt's plan summary + work-item summaries/outcomes |
@@ -560,14 +593,17 @@ workflow_<id>/
         plan_<id>/                         identical shapes to a live attempt
           summary.md
         work_item_<id>/
+          description.md
           spec.md
           summary.md
           outcome.md
-    attempt_<id>/                          consistent attempts only (§2.8)
+    attempt_<id>/                          consistent_to_iteration_focus only
+                                           (§2.8)
       fail_reason.md                       failed attempts only
       plan_<id>/
         summary.md
       work_item_<id>/
+        description.md
         spec.md
         summary.md
         outcome.md
@@ -634,30 +670,32 @@ spawn-free).
 
 The runtime's composer adapter owns script resolution. `AgentRuntimeDependencies`
 gains `workflowScriptsDir?` (default `.eos-agents/workflow/scripts/`). At startup
-the runtime loads that directory as the context-script registry:
+the runtime validates that directory as the context-script root:
 
 ```text
 .eos-agents/workflow/
   scripts/                       user-authored composers
-    planner.cjs                  binds every agent_kind: planner profile
-    worker.cjs                   binds every agent_kind: worker profile
+    variable_reference_map.cjs   shared helper, loaded by scripts
+    planner.cjs                  named by planner profile
+    worker.cjs                   named by worker profile
   context/                       machine-written §2.17 mirror
     workflow_<id>/…              the §9 path universe on disk
 ```
 
-Resolution per launch: `<agent_kind>` match, else the package default
-policy. Missing directory means no scripts and therefore the package default.
-Any other unreadable directory is a startup error. `.cjs` and `.mjs` both load
-- scripts are spawned, never imported, so module flavor is the script's own
-business. The registry is validated at `createAgentRuntime`: every filename
-must be exactly `planner.cjs`, `planner.mjs`, `worker.cjs`, or `worker.mjs`, so
-a typo (`planer.cjs`) fails at startup, never mid-run; both `planner.cjs` and
-`planner.mjs` in the same directory is also a startup error. Scripts run with
-the repo root as `cwd` when the default `.eos-agents/...` path is used, or with
+Resolution per launch: the launcher already knows `agentName`, so it loads that
+agent profile and reads `profile.workflow_context_script`. Missing
+`workflowScriptsDir` is a startup error when a loaded planner/worker profile
+references a file under it. Engine-free workflow package tests may inject the
+package default composer without loading runtime profiles. Any unreadable
+script root, missing referenced script,
+directory path, non-`.cjs`/`.mjs` extension, or path escaping the script root is
+a startup error. Helper files are allowed and are not registered as launchable
+scripts; only profile-referenced files are spawned. Scripts run with the repo
+root as `cwd` when the default `.eos-agents/...` path is used, or with
 `workflowScriptsDir` itself as `cwd` when that dependency is explicitly
 overridden. They inherit the launch signal and use the same default timeout as
 command hooks (`60_000ms`) unless a later config file deliberately adds
-per-kind overrides.
+per-profile overrides.
 
 Per launch the adapter spawns the resolved script with the JSON-serialized
 snapshot on stdin and parses stdout against `ContextScriptOutputSchema`,
@@ -667,16 +705,11 @@ handled by §2.14. The parsed `initial_messages` are the launch's complete
 `initialMessages` - replace, never merge (§2.12): a script that drops the
 submit directive has removed it; the default policy always carries it.
 
-Reference script shape (the user-side contract, mirroring the existing hook
-scripts). `planner.cjs` and `worker.cjs` can use the same body; the registry
-selects which one runs by filename, and `ctx.kind` selects the message path.
-The script first builds a variable reference map, then
-`get_initial_messages` reads only that map:
+Reference script layout (the user-side contract, mirroring the existing hook
+scripts):
 
 ```js
-// .eos-agents/workflow/scripts/planner.cjs or worker.cjs
-// stdin: PlannerContextInput JSON or WorkerContextInput JSON
-// stdout: { initial_messages: UserMessage[] }
+// .eos-agents/workflow/scripts/variable_reference_map.cjs
 function create_variable_reference_map(ctx) {
   const workflow = ctx.workflow_context.workflow;
   const current_iteration = workflow.iterations.find(
@@ -718,12 +751,16 @@ function create_variable_reference_map(ctx) {
           status: attempt.status,
           fail_reason: attempt.fail_reason,
           plan_summary: attempt.plan.summary,
+          consistent_to_iteration_focus: attempt.consistent_to_iteration_focus,
+          plan_context_path: attempt.plan.context_path,
           work_items: attempt.work_items.map((item) => ({
             id: item.id,
             agent_name: item.agent_name,
+            description: item.description,
             status: item.status,
             summary: item.summary,
             outcome: item.outcome,
+            context_path: item.context_path,
           })),
         };
   const iteration_outcome = (iteration) =>
@@ -737,7 +774,7 @@ function create_variable_reference_map(ctx) {
     workflow_goal: workflow.current_goal,
     original_workflow_goal: workflow.original_goal,
     current_workflow_goal: workflow.current_goal,
-    workflow_paths: workflow.paths,
+    workflow_context_path: workflow.context_path,
 
     current_iteration_id: current_iteration?.id ?? null,
     current_iteration_sequence: current_iteration?.sequence ?? null,
@@ -746,7 +783,7 @@ function create_variable_reference_map(ctx) {
     current_iteration_focus: current_iteration?.focus ?? null,
     current_iteration_deferred_goal: current_iteration?.deferred_goal ?? null,
     current_iteration_max_attempts: current_iteration?.max_attempts ?? null,
-    current_iteration_paths: current_iteration?.paths ?? null,
+    current_iteration_context_path: current_iteration?.context_path ?? null,
     current_iteration_outcome: iteration_outcome(current_iteration),
 
     previous_iteration_id: previous_iteration?.id ?? null,
@@ -754,13 +791,16 @@ function create_variable_reference_map(ctx) {
     previous_iteration_status: previous_iteration?.status ?? null,
     previous_iteration_focus: previous_iteration?.focus ?? null,
     previous_iteration_deferred_goal: previous_iteration?.deferred_goal ?? null,
+    previous_iteration_context_path: previous_iteration?.context_path ?? null,
     previous_iteration_outcome: iteration_outcome(previous_iteration),
 
     current_attempt_id: current_attempt?.id ?? null,
     current_attempt_sequence: current_attempt?.sequence ?? null,
     current_attempt_status: current_attempt?.status ?? null,
     current_attempt_fail_reason: current_attempt?.fail_reason ?? null,
-    current_attempt_consistent: current_attempt?.consistent ?? null,
+    current_attempt_consistent_to_iteration_focus:
+      current_attempt?.consistent_to_iteration_focus ?? null,
+    current_attempt_context_path: current_attempt?.context_path ?? null,
     current_attempt_outcome: attempt_outcome(current_attempt),
     current_attempt_work_items: current_attempt?.work_items ?? [],
 
@@ -768,16 +808,23 @@ function create_variable_reference_map(ctx) {
     previous_attempt_sequence: previous_attempt?.sequence ?? null,
     previous_attempt_status: previous_attempt?.status ?? null,
     previous_attempt_fail_reason: previous_attempt?.fail_reason ?? null,
-    previous_attempt_consistent: previous_attempt?.consistent ?? null,
+    previous_attempt_consistent_to_iteration_focus:
+      previous_attempt?.consistent_to_iteration_focus ?? null,
+    previous_attempt_context_path: previous_attempt?.context_path ?? null,
     previous_attempt_outcome: attempt_outcome(previous_attempt),
 
     last_attempt_id: last_attempt?.id ?? null,
     last_attempt_status: last_attempt?.status ?? null,
     last_attempt_fail_reason: last_attempt?.fail_reason ?? null,
+    last_attempt_context_path: last_attempt?.context_path ?? null,
     last_attempt_outcome: attempt_outcome(last_attempt),
 
-    consistent_attempts: all_attempts.filter((attempt) => attempt.consistent),
-    inconsistent_attempts: all_attempts.filter((attempt) => !attempt.consistent),
+    attempts_consistent_to_iteration_focus: all_attempts.filter(
+      (attempt) => attempt.consistent_to_iteration_focus,
+    ),
+    attempts_not_consistent_to_iteration_focus: all_attempts.filter(
+      (attempt) => !attempt.consistent_to_iteration_focus,
+    ),
     failed_attempts: all_attempts.filter((attempt) => attempt.status === "Failed"),
     cancelled_attempts: all_attempts.filter((attempt) => attempt.status === "Cancelled"),
 
@@ -787,18 +834,21 @@ function create_variable_reference_map(ctx) {
     current_plan_declared_focus: current_attempt?.plan.declared_focus ?? null,
     current_plan_declared_deferred_goal:
       current_attempt?.plan.declared_deferred_goal ?? null,
+    current_plan_context_path: current_attempt?.plan.context_path ?? null,
 
     work_item_id: current_work_item?.id ?? null,
     work_item_agent_name: current_work_item?.agent_name ?? null,
+    work_item_description: current_work_item?.description ?? null,
     work_item_spec: current_work_item?.spec ?? null,
     work_item_status: current_work_item?.status ?? null,
     work_item_summary: current_work_item?.summary ?? null,
     work_item_outcome: current_work_item?.outcome ?? null,
     work_item_needs: current_work_item?.needs ?? [],
-    work_item_paths: current_work_item?.paths ?? null,
+    work_item_context_path: current_work_item?.context_path ?? null,
     dependency_work_items: dependencies,
     dependency_outcomes: dependencies.map((item) => ({
       id: item.id,
+      description: item.description ?? null,
       status: item.status ?? "Unknown",
       summary: item.summary ?? null,
       outcome: item.outcome ?? null,
@@ -806,26 +856,56 @@ function create_variable_reference_map(ctx) {
   };
 }
 
+module.exports = { create_variable_reference_map };
+```
+
+```js
+// .eos-agents/workflow/scripts/planner.cjs
+// stdin: PlannerContextInput JSON
+// stdout: { initial_messages: UserMessage[] }
+const { create_variable_reference_map } = require("./variable_reference_map.cjs");
+
 function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
   const messages = [user(`# Workflow goal\n${vars.workflow_goal}`)];
 
-  if (vars.kind === "planner") {
-    if (vars.current_iteration_focus === null) {
-      messages.push(user("Declare this iteration's focus and work items."));
-    } else {
-      messages.push(user(`# Iteration focus\n${vars.current_iteration_focus}`));
-      if (vars.previous_attempt_outcome !== null) {
-        messages.push(
-          user(`# Previous attempt\n${JSON.stringify(vars.previous_attempt_outcome)}`),
-        );
-      }
-      messages.push(user("Submit planner outcome with work items for this focus."));
+  if (vars.current_iteration_focus === null) {
+    messages.push(user("Declare this iteration's focus and work items."));
+  } else {
+    messages.push(user(`# Iteration focus\n${vars.current_iteration_focus}`));
+    if (vars.previous_attempt_outcome !== null) {
+      messages.push(
+        user(`# Previous attempt\n${JSON.stringify(vars.previous_attempt_outcome)}`),
+      );
     }
-    return messages;
+    messages.push(user("Submit planner outcome with work items for this focus."));
   }
 
+  return messages;
+}
+
+let input = "";
+process.stdin.on("data", (c) => (input += c));
+process.stdin.on("end", () => {
+  const ctx = JSON.parse(input);
+  const vars = create_variable_reference_map(ctx);
+  const initial_messages = get_initial_messages(vars);
+  process.stdout.write(JSON.stringify({ initial_messages }));
+});
+```
+
+```js
+// .eos-agents/workflow/scripts/worker.cjs
+// stdin: WorkerContextInput JSON
+// stdout: { initial_messages: UserMessage[] }
+const { create_variable_reference_map } = require("./variable_reference_map.cjs");
+
+function get_initial_messages(vars) {
+  const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
+  const messages = [user(`# Workflow goal\n${vars.workflow_goal}`)];
+
   messages.push(user(`# Iteration focus\n${vars.current_iteration_focus ?? ""}`));
+  messages.push(user(`# Work item description\n${vars.work_item_description ?? ""}`));
   messages.push(user(`# Work item\n${vars.work_item_spec ?? ""}`));
   if (vars.dependency_outcomes.length > 0) {
     messages.push(
@@ -921,8 +1001,8 @@ Deltas retained from the focus model:
   derivation, and the closing iteration's goal becomes archived by
   construction; otherwise close the workflow `Success`.
 - Failure/retry: unchanged, except the retry planner's variables carry only
-  consistent prior attempts in expanded form and the budget counts all
-  attempts (§2.4).
+  prior attempts with `consistent_to_iteration_focus` true in expanded form
+  and the budget counts all attempts (§2.4).
 - Every mutating transition re-projects the disk mirror after commit and
   before guarded launches (§2.17), so a launched agent's filesystem view -
   once the sandboxed-worker seam is consumed - is never older than its own
@@ -1027,18 +1107,18 @@ ride `outcome.submission`.
 
 ## 13. Runtime Wiring Deltas (`@eos/agent-runtime`)
 
-- `createAgentRuntime` loads and validates the `workflow/scripts/`
-  registry (§10) beside the existing hook config loading; profiles are
-  untouched.
+- `createAgentRuntime` loads agent profiles with the new
+  `workflow_context_script` frontmatter field (§7). Planner/worker profiles
+  must name a script under `workflowScriptsDir`; other agent kinds omit it.
 - `AgentRuntimeDependencies` gains `workflowContextRoot?` (default
   `.eos-agents/workflow/context/`), passed to the `WorkflowService` for
   the §2.17 mirror.
 - `AgentRuntimeDependencies` gains `workflowScriptsDir?` (default
-  `.eos-agents/workflow/scripts/`), loaded with the §10 missing-directory,
-  duplicate-extension, cwd, and timeout rules.
-- The composer adapter (kind → default resolution; script subprocess when
-  bound, package default otherwise) is injected into `WorkflowService` beside
-  the launch-port adapter.
+  `.eos-agents/workflow/scripts/`), used as the root for validating
+  profile-named scripts and their helper imports.
+- The composer adapter (profile script path → subprocess, package default
+  otherwise) is injected into `WorkflowService` beside the launch-port
+  adapter.
 - The launch-port adapter threads each launch's `SubmissionBinding` into
   per-run tool assembly: a workflow-launched child's terminal submission
   tool executes against `binding.submit` (§2.19); runs without a binding
@@ -1066,7 +1146,7 @@ packages/workflow/src/
 │  ├─ context.ts       focus.md / deferred_goal.md / outcome.md
 │  └─ transitions.ts   close; deferred-goal promotion (next iteration)
 ├─ attempt/
-│  ├─ state.ts         consistency predicate (§6 invariant 5)
+│  ├─ state.ts         consistent_to_iteration_focus predicate (§6 invariant 5)
 │  ├─ context.ts       fail_reason.md
 │  └─ transitions.ts   creation; fail/close; retry within max_attempts
 ├─ plan/
@@ -1076,7 +1156,7 @@ packages/workflow/src/
 │                      creation
 ├─ work-item/
 │  ├─ state.ts         readiness (`needs` all Success)
-│  ├─ context.ts       spec.md / summary.md / outcome.md
+│  ├─ context.ts       description.md / spec.md / summary.md / outcome.md
 │  └─ transitions.ts   worker-outcome recording (is_pass → status)
 ├─ archive/            pure addressing only - membership facts (attempt
 │                      consistency, goal chain) live on the entity state
@@ -1122,14 +1202,15 @@ for sibling workflow modules through relative imports, but `index.ts` must
 not re-export them, and `packages/workflow/package.json` must expose only
 `.` like the adjacent packages. Outside packages can construct workflows
 only through `WorkflowService` and the exported port/DTO types; they cannot
-call `createIteration`, `createAttempt`, consistency predicates, or derived
-state helpers directly.
+call `createIteration`, `createAttempt`, `consistent_to_iteration_focus`
+predicates, or derived state helpers directly.
 
 `@eos/contracts` adds the §7 DTOs; `@eos/db` reshapes the migration and
-row queries consumed by `loadWorkflowTree`; `@eos/agent-runtime` adds the `workflow/scripts/` registry
-loader, the script-runner composer adapter, `workflowScriptsDir?`, and
-`workflowContextRoot`. No new third-party dependencies. The dependency graph is
-unchanged.
+row queries consumed by `loadWorkflowTree`; `@eos/agent-runtime` adds
+`workflow_context_script` profile frontmatter, profile-script validation under
+`workflow/scripts/`, the script-runner composer adapter,
+`workflowScriptsDir?`, and `workflowContextRoot`. No new third-party
+dependencies. The dependency graph is unchanged.
 
 ## 15. Migration Steps and Progress
 
@@ -1144,7 +1225,7 @@ under the Phase 05 step list with these substitutions.
 | 4 | Lifecycle + launcher: declaration rules, composer seam, compose-failure synthesis | §16 cases 4-9, engine-free | Planned |
 | 5 | Service delegate/cancel + the `DelegatedWorkflow` handle | §16 cases 10-11 | Planned |
 | 6 | `@eos/tool`: `delegate_workflow` family + bound submissions | §16 case 11 | Planned |
-| 7 | Runtime: `workflow/scripts/` registry + composer adapter, end-to-end | §16 case 12 | Planned |
+| 7 | Runtime: profile `workflow_context_script` loading + composer adapter, end-to-end | §16 case 12 | Planned |
 | 8 | Workspace wiring + index row | `pnpm run check`; `git diff --stat -- agent-core` empty | Planned |
 
 ## 16. Verification
@@ -1155,18 +1236,18 @@ context script fixture.
 
 | # | Case | Asserts |
 | --- | --- | --- |
-| 1 | Contracts | flattened planner payload accepts/rejects documented shapes; `deferred_goal` never validates without `iteration_focus`; script inputs carry only `workflow_context` plus `current`; `ContextScriptOutputSchema` rejects empty `initial_messages`, non-user messages, and string-content shortcuts that are not real `Message` content blocks |
-| 2 | Store + `loadWorkflowTree` | row load returns the full workflow / iteration / attempt / plan / work-item tree; goal chain across iterations (first = original, then each deferral); focus/deferred views track the latest declaration; consistency flags flip on a later declaration; archive sets per §8 table; budget counts attempts across refocuses; UI graph DTO builders can render the whole workflow from this one tree |
-| 3 | `loadWorkflowContext` + projection | `loadWorkflowContext` builds the §9 path universe from `loadWorkflowTree` and never reads the disk mirror; field render = verbatim field text with no embedded metadata (`ContextPage` returns `status`); absent field = absent path; directory paths render listings with status and summary first lines; offset paging reads the latest bytes for still-valid paths; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; live `current_goal.md` is never simultaneously archived |
+| 1 | Contracts | flattened planner payload accepts/rejects documented shapes, including required work-item `description`; `deferred_goal` never validates without `iteration_focus`; script inputs carry only `workflow_context` plus `current`; planner/worker agent profiles require `workflow_context_script`; `ContextScriptOutputSchema` rejects empty `initial_messages`, non-user messages, and string-content shortcuts that are not real `Message` content blocks |
+| 2 | Store + `loadWorkflowTree` | row load returns the full workflow / iteration / attempt / plan / work-item tree; goal chain across iterations (first = original, then each deferral); focus/deferred views track the latest declaration; `consistent_to_iteration_focus` flips on a later declaration; archive sets per §8 table; budget counts attempts across refocuses; UI graph DTO builders can render the whole workflow from this one tree |
+| 3 | `loadWorkflowContext` + projection | `loadWorkflowContext` builds the §9 path universe from `loadWorkflowTree` and never reads the disk mirror; field render = verbatim field text with no embedded metadata (`ContextPage` returns `status`); work-item `description.md` and `spec.md` render as distinct fields; absent field = absent path; directory paths render listings with status and summary first lines; offset paging reads the latest bytes for still-valid paths; prior iterations and `archived/` rows collapse to status rows; drifted attempts render whole under `archived/` with declaration files only on the declarer; an iteration's `outcome.md` derives from the closing attempt; live `current_goal.md` is never simultaneously archived |
 | 4 | Delegation | unchanged Phase 05 case 4, plus: the supervisor session registers before the tool result returns, a second `delegate_workflow` is rejected by the one-open guard, and the launched planner's `initialMessages` come from the default initial policy (goal present, focus-declaration directive present) |
-| 5 | Submission validation | a valid first payload records the pair and materializes items in-run before the planner terminates; a first payload without `iteration_focus`, with an unknown `agent_name`, or with dangling/cyclic `needs` returns an in-run error result and the same run corrects and resubmits successfully - no attempt burns for a correctable payload, and the accepted resubmission mutates exactly once |
-| 6 | Keep vs refocus | keep: focus view unchanged, attempt consistent, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, the resolver errors on the old live path naming `archived/` among valid children, the retry directive carries only consistent attempts and omits the standing `deferred_goal` |
+| 5 | Submission validation | a valid first payload records the pair and materializes described work items in-run before the planner terminates; a first payload without `iteration_focus`, with missing work-item `description`, with an unknown `agent_name`, or with dangling/cyclic `needs` returns an in-run error result and the same run corrects and resubmits successfully - no attempt burns for a correctable payload, and the accepted resubmission mutates exactly once |
+| 6 | Keep vs refocus | keep: focus view unchanged, prior attempts keep `consistent_to_iteration_focus = true`, paths stable; refocus: both fields reset, prior attempts relocate whole under `archived/` at the next render, the resolver errors on the old live path naming `archived/` among valid children, the retry directive carries only attempts with `consistent_to_iteration_focus` true and omits the standing `deferred_goal` |
 | 7 | Success cascade | unchanged Phase 05 case 6, plus: the next planner's `current_goal` is the promoted deferral; the closing iteration's goal appears under `archived/iteration_<id>/`; no deferral → workflow `Success` with `current_goal.md` still live |
 | 8 | Failure and retry | unchanged Phase 05 case 7, with the budget spanning refocuses; exhaustion mid-refocus closes iteration and workflow `Failed`; a failing work item cancels its non-terminal siblings in the same transaction, advances the workflow abort generation (`attempt_failed`, §2.20), and their late settlements no-op with no `Running` rows left |
 | 9 | Death + compose synthesis | unchanged Phase 05 case 8, plus: a composer that throws/times out/returns garbage synthesizes a failed settlement with `context_script_error` recorded; synthesis keys off the entity still being `Running` - a run whose in-run submission already landed settles as a no-op; no entity stays `Running` |
 | 10 | DB guards + cancel | Phase 05 cases 9-10 re-run against the new model; competing tool submissions, settlements, guarded launch stamps, and cancel requests reload fresh state and use terminal/launch-token guards so the instrumented store sees at most one accepted mutation per entity transition and stale launches are skipped |
 | 11 | Tools | `delegate_workflow` registers the session before returning, rejects a second open delegation, and returns the workflow id; submission tools: shape, structure, and materialization error tables each correctable in-run; unbound planner/worker runs keep service-free submissions; `cancel_background_session` accepts `type: "workflow"` and its tool call awaits the workflow handle cascade, while the existing supervisor may publish the `cancelled` notification at the cancel transition |
-| 12 | Runtime end-to-end | Phase 05 case 12 amended: the caller delegates, auto-waits, drains `session_settled`, and submits; fixture `workflow/scripts/planner.cjs` and `worker.cjs` compose complete initial messages from `create_variable_reference_map(ctx)` → `get_initial_messages(vars)` only (proven by transcript inspection - nothing merged around them, worker includes `work_item_spec` and dependency outcomes); missing `workflowScriptsDir` uses the default policy; duplicate `planner.cjs`/`planner.mjs` and unknown filenames fail startup; a broken or timed-out fixture script drives the case-9 synthesis path live; `cancel_background_session` mid-workflow cascades `workflow_cancelled` into child transcripts and settles the session `cancelled` |
+| 12 | Runtime end-to-end | Phase 05 case 12 amended: the caller delegates, auto-waits, drains `session_settled`, and submits; planner and worker profiles name separate `workflow_context_script` files; fixture `workflow/scripts/planner.cjs` and `worker.cjs` each load `variable_reference_map.cjs`, then compose complete initial messages from `create_variable_reference_map(ctx)` → their own `get_initial_messages(vars)` only (proven by transcript inspection - nothing merged around them, worker includes `work_item_description`, `work_item_spec`, and dependency outcomes); missing/escaping/unreadable profile script paths fail startup; a broken or timed-out fixture script drives the case-9 synthesis path live; `cancel_background_session` mid-workflow cascades `workflow_cancelled` into child transcripts and settles the session `cancelled` |
 | 13 | Disk mirror | after each scripted lifecycle step the on-disk tree under the context root equals the rendered universe byte-for-byte; a refocus prunes the old live attempt folder and writes the archived one; a write failure (read-only root) leaves DB state and the run unaffected and the next mutation heals the mirror; package-side resolver/listing output is identical with the mirror deleted |
 | 14 | Package boundary | `@eos/workflow` exports only `WorkflowService` and port/DTO types from `index.ts`; no `state.ts`, `transitions.ts`, or `creation.ts` helper is re-exported; a repo scan finds no outside-package import of `@eos/workflow/*/state`, `@eos/workflow/creation`, or `packages/workflow/src/**` internals |
 
@@ -1195,8 +1276,8 @@ Phase 05.1 is accepted when, in the combined Phase 05 + 05.1 implementation:
 
 - iterations are governed by planner-declared focus end to end: required
   first declaration (materialization-enforced), keep vs refocus with atomic
-  resets, in-place supersession with consistency flags, and a budget that
-  spans refocuses,
+  resets, in-place supersession with `consistent_to_iteration_focus` flags,
+  and a budget that spans refocuses,
 - `current_goal`, iteration focus/deferred views, and both archive sections
   are derived views over append-only declarations - no mutable goal/focus
   columns and no archive state exist anywhere in the schema,
@@ -1210,10 +1291,11 @@ Phase 05.1 is accepted when, in the combined Phase 05 + 05.1 implementation:
   virtual renders, pruned on relocation, with non-fatal write failures and
   the DB remaining the only source of truth,
 - launch context flows through `workflow_context` snapshots and one composer
-  seam: the default policy implements §2.13, `.eos-agents/workflow/scripts/`
-  scripts override it by agent kind with hook-parity subprocess semantics
-  owning the complete initial messages, and every compose failure
-  synthesizes a failed settlement through the Phase 05 §2.7 path,
+  seam: the default policy implements §2.13, planner/worker profiles name
+  `workflow_context_script` files under `.eos-agents/workflow/scripts/`, each
+  script owns the complete initial messages with hook-parity subprocess
+  semantics, helper files are loaded by those scripts, and every compose
+  failure synthesizes a failed settlement through the Phase 05 §2.7 path,
 - a delegated workflow is exactly one supervisor session of the caller:
   `delegate_workflow` (the family's only tool) registers before returning,
   the one-open guard holds, the terminal maps onto the session outcome,

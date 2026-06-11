@@ -23,7 +23,8 @@
     ],
     "tags": [
       "workspace-runtime-command-session",
-      "eos",
+      "workspace",
+      "runtime",
       "command",
       "session"
     ]

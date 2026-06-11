@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/services/plugin/setup.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>41</b><span>modules</span></div>
+  <div><b>312</b><span>items</span></div>
+  <div><b>172</b><span>fields</span></div>
+  <div><b>52</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>dispatcher.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-registry-rs.html"><span>registry.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-cancel-rs.html"><span>cancel.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/14</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-rs.html"><span>command.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolation-rs.html"><span>isolation.rs</span><small>0/16</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugin-rs.html"><span>plugin.rs</span><small>0/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-rs.html"><span>response.rs</span><small>1/10</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>2/19</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-rs.html"><span>checkpoint.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-mod-rs.html"><span>mod.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-process-rs.html"><span>process.rs</span><small>2/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link active" href="eos-daemon--src-services-plugin-setup-rs.html"><span>setup.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-state-rs.html"><span>state.rs</span><small>2/13</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-rs.html"><span>workspace.rs</span><small>1/12</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-wire-canonical-rs.html"><span>canonical.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-envelope-rs.html"><span>envelope.rs</span><small>6/3</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-ops-rs.html"><span>ops.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-version-rs.html"><span>version.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="services::plugin::setup crates/eos-daemon/src/services/plugin/setup.rs configure_plugin_runtime plugin_runtime_config plugin_runtime_config_cell ppc_socket_root default_plugin_runtime_config ensure_plugin_family_allowed package_report_value record_setup_failure stop_services_for_layer_stack_root">
+  <div class="module-head">
+    <div>
+      <h2>src/services/plugin/setup.rs</h2>
+      <p class="path">module <code>services::plugin::setup</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>9 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-configure-plugin-runtime-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_plugin_runtime pub(crate) pub(crate) fn configure_plugin_runtime (config : &amp; PluginRuntimeConfig) crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>configure_plugin_runtime</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-configure-plugin-runtime-17">configure_plugin_runtime</a> (config : &amp; PluginRuntimeConfig)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-configure-plugin-runtime-17">configure_plugin_runtime</a>(config: &amp;<span class="rs-type">PluginRuntimeConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>()
+        .write()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:17</p>
+</article><article id="item-fn-plugin-runtime-config-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_runtime_config pub(super) pub(super) fn plugin_runtime_config () -&gt; PluginRuntimeConfig crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_runtime_config</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-24">plugin_runtime_config</a> () -&gt; PluginRuntimeConfig</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-24">plugin_runtime_config</a>() -&gt; <span class="rs-type">PluginRuntimeConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>()
+        .read()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:24</p>
+</article><article id="item-fn-ppc-socket-root-36" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ppc_socket_root pub(super) pub(super) fn ppc_socket_root (args : &amp; Value) -&gt; String crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ppc_socket_root</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ppc-socket-root-36">ppc_socket_root</a> (args : &amp; Value) -&gt; String</code>
+  <p class="docstring">PPC socket root for `ParsedEnsure` spec construction. Reads the daemon<br>runtime config global, so it stays daemon-side and is threaded into the<br>host-neutral parser.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// PPC socket root for `ParsedEnsure` spec construction. Reads the daemon</span>
+<span class="rs-comment">/// runtime config global, so it stays daemon-side and is threaded into the</span>
+<span class="rs-comment">/// host-neutral parser.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ppc-socket-root-36">ppc_socket_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
+    #[cfg(test)]
+    {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = args.get(&quot;ppc_socket_root&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+            <span class="rs-kw">return</span> root.to_owned();
+        }
+    }
+    <span class="rs-kw">let</span> _ = args;
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-24">plugin_runtime_config</a>()
+        .ppc_root
+        .to_string_lossy()
+        .into_owned()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:36</p>
+</article><article id="item-fn-ensure-plugin-family-allowed-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_plugin_family_allowed pub(super) pub(super) fn ensure_plugin_family_allowed (args : &amp; Value) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_plugin_family_allowed</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ensure-plugin-family-allowed-62">ensure_plugin_family_allowed</a> (args : &amp; Value) -&gt; Result &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ensure-plugin-family-allowed-62">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    validate_plugin_caller_fields(args)?;
+    <span class="rs-kw">let</span> caller_id = args
+        .get(&quot;caller_id&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim();
+    <span class="rs-kw">if</span> !caller_id.is_empty() &amp;&amp; <span class="rs-kw">crate</span>::ops::isolation::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolation-rs.html#item-fn-caller-has-active-handle-214">caller_has_active_handle</a>(caller_id) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(
+            <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+        ));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:62</p>
+</article><article id="item-fn-package-report-value-77" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn package_report_value pub(super) pub(super) fn package_report_value (report : &amp; PackageEnsureReport) -&gt; Value crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>package_report_value</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-package-report-value-77">package_report_value</a> (report : &amp; PackageEnsureReport) -&gt; Value</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-package-report-value-77">package_report_value</a>(report: &amp;<span class="rs-type">PackageEnsureReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !report.active {
+        <span class="rs-kw">return</span> <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+    }
+    json!({
+        &quot;needs_upload&quot;: report.needs_upload,
+        &quot;package_root&quot;: report.package_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;dependency_root&quot;: report.dependency_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;package_published&quot;: report.package_published,
+        &quot;setup_ran&quot;: report.setup_ran,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:77</p>
+</article><article id="item-fn-record-setup-failure-90" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_setup_failure pub(super) pub(super) fn record_setup_failure (manifest : Option &lt; &amp; PluginManifest &gt; , err : &amp; DaemonError) crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>record_setup_failure</h3>
+    <span class="visibility">pub(super)</span>
+  </div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-record-setup-failure-90">record_setup_failure</a> (manifest : Option &lt; &amp; PluginManifest &gt; , err : &amp; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-record-setup-failure-90">record_setup_failure</a>(manifest: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">PluginManifest</span>&gt;, err: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(manifest) = manifest <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(<span class="rs-kw">mut</span> state) = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-76">lock_state</a>() {
+        state.setup_failures.insert(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-state-rs.html#item-fn-setup-failure-key-125">setup_failure_key</a>(&amp;manifest.plugin_id, &amp;manifest.plugin_digest),
+            json!({
+                &quot;plugin&quot;: manifest.plugin_id,
+                &quot;digest&quot;: manifest.plugin_digest,
+                &quot;error&quot;: err.to_string(),
+            }),
+        );
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:90</p>
+</article><article id="item-fn-stop-services-for-layer-stack-root-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stop_services_for_layer_stack_root pub(crate) pub(crate) fn stop_services_for_layer_stack_root (layer_stack_root : &amp; str ,) -&gt; Result &lt; usize , DaemonError &gt; crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>stop_services_for_layer_stack_root</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugin-service-rs.html#item-fn-stop-services-for-layer-stack-root-217">stop_services_for_layer_stack_root</a> (layer_stack_root : &amp; str ,) -&gt; Result &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-service-rs.html#item-fn-stop-services-for-layer-stack-root-217">stop_services_for_layer_stack_root</a>(
+    layer_stack_root: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-76">lock_state</a>()?;
+    <span class="rs-type">Ok</span>(stop_services_for_layer_stack_root_in_state(
+        &amp;<span class="rs-kw">mut</span> state,
+        layer_stack_root,
+    ))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:106</p>
+</article><article id="item-fn-plugin-runtime-config-cell-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_runtime_config_cell private fn plugin_runtime_config_cell () -&gt; &amp; 'static RwLock &lt; PluginRuntimeConfig &gt; crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>plugin_runtime_config_cell</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a> () -&gt; &amp; &#x27;static RwLock &lt; PluginRuntimeConfig &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">RwLock</span>&lt;<span class="rs-type">PluginRuntimeConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">RwLock</span>&lt;<span class="rs-type">PluginRuntimeConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-58">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-58">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-default-plugin-runtime-config-53">default_plugin_runtime_config</a>()))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:31</p>
+</article><article id="item-fn-default-plugin-runtime-config-53" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_plugin_runtime_config private fn default_plugin_runtime_config () -&gt; PluginRuntimeConfig crates/eos-daemon/src/services/plugin/setup.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_plugin_runtime_config</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-default-plugin-runtime-config-53">default_plugin_runtime_config</a> () -&gt; PluginRuntimeConfig</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-default-plugin-runtime-config-53">default_plugin_runtime_config</a>() -&gt; <span class="rs-type">PluginRuntimeConfig</span> {
+    <span class="rs-type">PluginRuntimeConfig</span> {
+        ppc_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/plugin/ppc&quot;),
+        ppc_timeout_ms: 5_000,
+        service_probe_timeout_ms: 5_000,
+        max_response_bytes: 8 * 1024 * 1024,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/services/plugin/setup.rs:53</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/plugin/setup.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin setup/config helpers for the daemon facade.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">OnceLock</span>, <span class="rs-type">RwLock</span>};
+
+<span class="rs-kw">use</span> eos_plugin::host::ensure_args::validate_plugin_caller_fields;
+<span class="rs-kw">use</span> eos_plugin::host::<span class="rs-type">PackageEnsureReport</span>;
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PluginManifest</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::<span class="rs-type">PluginRuntimeConfig</span>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::service::stop_services_for_layer_stack_root <span class="rs-kw">as</span> stop_services_for_layer_stack_root_in_state;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::state::{lock_state, setup_failure_key};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-configure-plugin-runtime-17">configure_plugin_runtime</a>(config: &amp;<span class="rs-type">PluginRuntimeConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>()
+        .write()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-24">plugin_runtime_config</a>() -&gt; <span class="rs-type">PluginRuntimeConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>()
+        .read()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-cell-31">plugin_runtime_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">RwLock</span>&lt;<span class="rs-type">PluginRuntimeConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">RwLock</span>&lt;<span class="rs-type">PluginRuntimeConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-58">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-new-58">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-default-plugin-runtime-config-53">default_plugin_runtime_config</a>()))
+}
+
+<span class="rs-comment">/// PPC socket root for `ParsedEnsure` spec construction. Reads the daemon</span>
+<span class="rs-comment">/// runtime config global, so it stays daemon-side and is threaded into the</span>
+<span class="rs-comment">/// host-neutral parser.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ppc-socket-root-36">ppc_socket_root</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">String</span> {
+    #[cfg(test)]
+    {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(root) = args.get(&quot;ppc_socket_root&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+            <span class="rs-kw">return</span> root.to_owned();
+        }
+    }
+    <span class="rs-kw">let</span> _ = args;
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-plugin-runtime-config-24">plugin_runtime_config</a>()
+        .ppc_root
+        .to_string_lossy()
+        .into_owned()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-default-plugin-runtime-config-53">default_plugin_runtime_config</a>() -&gt; <span class="rs-type">PluginRuntimeConfig</span> {
+    <span class="rs-type">PluginRuntimeConfig</span> {
+        ppc_root: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-from-92">from</a>(&quot;/eos/plugin/ppc&quot;),
+        ppc_timeout_ms: 5_000,
+        service_probe_timeout_ms: 5_000,
+        max_response_bytes: 8 * 1024 * 1024,
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-ensure-plugin-family-allowed-62">ensure_plugin_family_allowed</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    validate_plugin_caller_fields(args)?;
+    <span class="rs-kw">let</span> caller_id = args
+        .get(&quot;caller_id&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim();
+    <span class="rs-kw">if</span> !caller_id.is_empty() &amp;&amp; <span class="rs-kw">crate</span>::ops::isolation::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolation-rs.html#item-fn-caller-has-active-handle-214">caller_has_active_handle</a>(caller_id) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(
+            <span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+        ));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-package-report-value-77">package_report_value</a>(report: &amp;<span class="rs-type">PackageEnsureReport</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !report.active {
+        <span class="rs-kw">return</span> <span class="rs-type">Value</span>::<span class="rs-type">Null</span>;
+    }
+    json!({
+        &quot;needs_upload&quot;: report.needs_upload,
+        &quot;package_root&quot;: report.package_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;dependency_root&quot;: report.dependency_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        &quot;package_published&quot;: report.package_published,
+        &quot;setup_ran&quot;: report.setup_ran,
+    })
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-setup-rs.html#item-fn-record-setup-failure-90">record_setup_failure</a>(manifest: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">PluginManifest</span>&gt;, err: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(manifest) = manifest <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(<span class="rs-kw">mut</span> state) = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-76">lock_state</a>() {
+        state.setup_failures.insert(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-state-rs.html#item-fn-setup-failure-key-125">setup_failure_key</a>(&amp;manifest.plugin_id, &amp;manifest.plugin_digest),
+            json!({
+                &quot;plugin&quot;: manifest.plugin_id,
+                &quot;digest&quot;: manifest.plugin_digest,
+                &quot;error&quot;: err.to_string(),
+            }),
+        );
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugin-service-rs.html#item-fn-stop-services-for-layer-stack-root-217">stop_services_for_layer_stack_root</a>(
+    layer_stack_root: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-lock-state-76">lock_state</a>()?;
+    <span class="rs-type">Ok</span>(stop_services_for_layer_stack_root_in_state(
+        &amp;<span class="rs-kw">mut</span> state,
+        layer_stack_root,
+    ))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

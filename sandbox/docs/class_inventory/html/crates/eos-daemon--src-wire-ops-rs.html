@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-daemon · src/wire/ops.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>41</b><span>modules</span></div>
+  <div><b>312</b><span>items</span></div>
+  <div><b>172</b><span>fields</span></div>
+  <div><b>52</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">dispatch</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon.html"><span>dispatcher.rs</span><small>1/6</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-dispatch-registry-rs.html"><span>registry.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">ops</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-ops-cancel-rs.html"><span>cancel.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-checkpoint-rs.html"><span>checkpoint.rs</span><small>0/14</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-command-rs.html"><span>command.rs</span><small>0/23</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-control-rs.html"><span>control.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-files-rs.html"><span>files.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-isolation-rs.html"><span>isolation.rs</span><small>0/16</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-mod-rs.html"><span>mod.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-ops-plugin-rs.html"><span>plugin.rs</span><small>0/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-runtime-context-rs.html"><span>context.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-invocation-registry-rs.html"><span>invocation_registry.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-ns-runner-rs.html"><span>ns_runner.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-request-args-rs.html"><span>request_args.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-runtime-response-rs.html"><span>response.rs</span><small>1/10</small></a></li></ul></li><li><span class="folder">services</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-checkpoint-commit-rs.html"><span>commit.rs</span><small>2/19</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-checkpoint-rs.html"><span>checkpoint.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-daemon--src-services-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-services-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-connected-rs.html"><span>connected.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-mod-rs.html"><span>mod.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-process-rs.html"><span>process.rs</span><small>2/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-refresh-rs.html"><span>refresh.rs</span><small>1/16</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-service-rs.html"><span>service.rs</span><small>2/21</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-setup-rs.html"><span>setup.rs</span><small>0/9</small></a></li><li><a class="file-link" href="eos-daemon--src-services-plugin-state-rs.html"><span>state.rs</span><small>2/13</small></a></li></ul></li><li><a class="file-link" href="eos-daemon--src-services-workspace-rs.html"><span>workspace.rs</span><small>1/12</small></a></li></ul></li><li><span class="folder">transport</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-transport-framing-rs.html"><span>framing.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-daemon--src-transport-server-rs.html"><span>server.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">wire</span><ul class="file-tree"><li><a class="file-link" href="eos-daemon--src-wire-canonical-rs.html"><span>canonical.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-envelope-rs.html"><span>envelope.rs</span><small>6/3</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-daemon--src-wire-ops-rs.html"><span>ops.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-daemon--src-wire-version-rs.html"><span>version.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="wire::ops crates/eos-daemon/src/wire/ops.rs OpFamily impl OpFamily OpVisibility impl OpVisibility HostOpSpec CatalogOp CatalogDocument ops_json_document">
+  <div class="module-head">
+    <div>
+      <h2>src/wire/ops.rs</h2>
+      <p class="path">module <code>wire::ops</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>2 impls</span>
+      <span>1 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-OpFamily-17" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpFamily pub pub enum OpFamily crates/eos-daemon/src/wire/ops.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OpFamily</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a></code>
+  <p class="docstring">Functional owner for a catalog op.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Sandbox</td><td><code></code></td></tr><tr><td>Control</td><td><code></code></td></tr><tr><td>Checkpoint</td><td><code></code></td></tr><tr><td>Files</td><td><code></code></td></tr><tr><td>Plugins</td><td><code></code></td></tr><tr><td>IsolatedWorkspace</td><td><code></code></td></tr><tr><td>CommandSession</td><td><code></code></td></tr><tr><td>WorkspaceRun</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-39"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `contract/ops.json`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stable spelling used in `contract/ops.json`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Sandbox</span> =&gt; &quot;<span class="rs-type">Sandbox</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Control</span> =&gt; &quot;<span class="rs-type">Control</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Checkpoint</span> =&gt; &quot;<span class="rs-type">Checkpoint</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Files</span> =&gt; &quot;<span class="rs-type">Files</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Plugins</span> =&gt; &quot;<span class="rs-type">Plugins</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspace</span> =&gt; &quot;<span class="rs-type">IsolatedWorkspace</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">CommandSession</span> =&gt; &quot;<span class="rs-type">CommandSession</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">WorkspaceRun</span> =&gt; &quot;<span class="rs-type">WorkspaceRun</span>&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:17</p>
+</article><article id="item-enum-OpVisibility-55" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum OpVisibility pub pub enum OpVisibility crates/eos-daemon/src/wire/ops.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OpVisibility</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a></code>
+  <p class="docstring">Caller surface allowed to invoke an op; `eos-api` enforces it at the<br>client socket (`visibility != public` → `forbidden`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Public</td><td><code></code></td></tr><tr><td>Operator</td><td><code></code></td></tr><tr><td>Internal</td><td><code></code></td></tr><tr><td>Test</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-70"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">Stable spelling used in `contract/ops.json`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stable spelling used in `contract/ops.json`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Public</span> =&gt; &quot;public&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Internal</span> =&gt; &quot;internal&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Test</span> =&gt; &quot;test&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:55</p>
+</article><article id="item-struct-HostOpSpec-208" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct HostOpSpec private struct HostOpSpec crates/eos-daemon/src/wire/ops.rs name &amp; 'static str mutates_state bool summary &amp; 'static str ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>HostOpSpec</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a></code>
+  <p class="docstring">One host-served sandbox lifecycle op (`served_by: host`).<br>The daemon never serves these; the entries are review-owned by `eos-api`<br>and live here only so `eosd dump-ops` can render the complete catalog.<br>All host ops are `visibility: public` and family `Sandbox`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>name</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>mutates_state</td><td><code>bool</code></td></tr><tr><td>private</td><td>summary</td><td><code>&amp; &#x27;static str</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:208</p>
+</article><article id="item-struct-CatalogOp-247" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogOp private struct CatalogOp crates/eos-daemon/src/wire/ops.rs name &amp; 'static str served_by &amp; 'static str visibility &amp; 'static str family &amp; 'static str mutates_state bool summary &amp; 'static str ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CatalogOp</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a></code>
+  <div class="tags"><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>name</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>served_by</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>visibility</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>family</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>private</td><td>mutates_state</td><td><code>bool</code></td></tr><tr><td>private</td><td>summary</td><td><code>&amp; &#x27;static str</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:247</p>
+</article><article id="item-struct-CatalogDocument-257" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CatalogDocument private struct CatalogDocument crates/eos-daemon/src/wire/ops.rs protocol_version i64 ops Vec &lt; CatalogOp &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CatalogDocument</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogDocument-257">CatalogDocument</a></code>
+  <div class="tags"><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>protocol_version</td><td><code>i64</code></td></tr><tr><td>private</td><td>ops</td><td><code>Vec &lt; <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:257</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-ops-json-document-263" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ops_json_document pub pub fn ops_json_document () -&gt; String crates/eos-daemon/src/wire/ops.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ops_json_document</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-wire-ops-rs.html#item-fn-ops-json-document-263">ops_json_document</a> () -&gt; String</code>
+  <p class="docstring">Render the catalog as the `contract/ops.json` document: host ops first,<br>then daemon ops in catalog order. Pretty-printed with a trailing newline so<br>`eosd dump-ops` output can be committed and diffed byte-for-byte.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Render the catalog as the `contract/ops.json` document: host ops first,</span>
+<span class="rs-comment">/// then daemon ops in catalog order. Pretty-printed with a trailing newline so</span>
+<span class="rs-comment">/// `eosd dump-ops` output can be committed and diffed byte-for-byte.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#item-fn-ops-json-document-263">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> host = <span class="rs-type">HOST_OP_SPECS</span>.iter().map(|spec| <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> {
+        name: spec.name,
+        served_by: &quot;host&quot;,
+        visibility: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a>::<span class="rs-type">Public</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        family: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a>::<span class="rs-type">Sandbox</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        mutates_state: spec.mutates_state,
+        summary: spec.summary,
+    });
+    <span class="rs-kw">let</span> daemon = <span class="rs-type">BUILTIN_DAEMON_OP_SPECS</span>.iter().map(|spec| <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> {
+        name: spec.name,
+        served_by: &quot;daemon&quot;,
+        visibility: spec.visibility.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        family: spec.family.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        mutates_state: spec.mutates_state,
+        summary: spec.summary,
+    });
+    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogDocument-257">CatalogDocument</a> {
+        protocol_version: <span class="rs-type">DAEMON_PROTOCOL_VERSION</span>,
+        ops: host.chain(daemon).collect(),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body =
+        serde_json::to_string_pretty(&amp;document).expect(&quot;<span class="rs-kw">static</span> catalog always serializes&quot;);
+    body.push(&#x27;\n&#x27;);
+    body
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-daemon/src/wire/ops.rs:263</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/wire/ops.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The sandbox op catalog: canonical names and routing metadata.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Canonical grammar: `sandbox.&lt;verb&gt;` for host ops, `sandbox.&lt;service&gt;.&lt;verb&gt;`</span>
+<span class="rs-comment">//! for daemon ops, `plugin.&lt;id&gt;.&lt;op&gt;` for dynamic plugin ops. Each op has</span>
+<span class="rs-comment">//! exactly one wire spelling — its canonical name. The token `v1` is dead:</span>
+<span class="rs-comment">//! protocol versioning lives in `args`/`ops.json`, never in names.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The live `eosd` dispatcher registers these exact strings, and protocol</span>
+<span class="rs-comment">//! clients should import them from here instead of duplicating string literals.</span>
+<span class="rs-comment">//! `eosd dump-ops` renders this catalog as `contract/ops.json`; the</span>
+<span class="rs-comment">//! `cargo xtask check-contract` gate keeps the committed artifact in sync.</span>
+
+<span class="rs-kw">use</span> serde::<span class="rs-type">Serialize</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::version::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>;
+
+<span class="rs-comment">/// Functional owner for a catalog op.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a> {
+    <span class="rs-comment">/// Host-side sandbox lifecycle (acquire/release/status/list).</span>
+    <span class="rs-type">Sandbox</span>,
+    <span class="rs-comment">/// Runtime readiness, heartbeat, cancellation, and in-flight accounting.</span>
+    <span class="rs-type">Control</span>,
+    <span class="rs-comment">/// LayerStack base, metrics, and checkpoint materialization.</span>
+    <span class="rs-type">Checkpoint</span>,
+    <span class="rs-comment">/// Shared workspace file read/write/edit operations.</span>
+    <span class="rs-type">Files</span>,
+    <span class="rs-comment">/// Plugin package, service, and dynamic dispatch operations.</span>
+    <span class="rs-type">Plugins</span>,
+    <span class="rs-comment">/// Isolated workspace lifecycle and status operations.</span>
+    <span class="rs-type">IsolatedWorkspace</span>,
+    <span class="rs-comment">/// Command-session lifecycle, IO, and completion operations.</span>
+    <span class="rs-type">CommandSession</span>,
+    <span class="rs-comment">/// Caller-keyed or whole-sandbox workspace-run cleanup operations.</span>
+    <span class="rs-type">WorkspaceRun</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a> {
+    <span class="rs-comment">/// Stable spelling used in `contract/ops.json`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Sandbox</span> =&gt; &quot;<span class="rs-type">Sandbox</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Control</span> =&gt; &quot;<span class="rs-type">Control</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Checkpoint</span> =&gt; &quot;<span class="rs-type">Checkpoint</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Files</span> =&gt; &quot;<span class="rs-type">Files</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Plugins</span> =&gt; &quot;<span class="rs-type">Plugins</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">IsolatedWorkspace</span> =&gt; &quot;<span class="rs-type">IsolatedWorkspace</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">CommandSession</span> =&gt; &quot;<span class="rs-type">CommandSession</span>&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">WorkspaceRun</span> =&gt; &quot;<span class="rs-type">WorkspaceRun</span>&quot;,
+        }
+    }
+}
+
+<span class="rs-comment">/// Caller surface allowed to invoke an op; `eos-api` enforces it at the</span>
+<span class="rs-comment">/// client socket (`visibility != public` → `forbidden`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a> {
+    <span class="rs-comment">/// Part of the public client vocabulary.</span>
+    <span class="rs-type">Public</span>,
+    <span class="rs-comment">/// `eos-api admin &lt;op&gt;` CLI only; never the client socket.</span>
+    <span class="rs-type">Operator</span>,
+    <span class="rs-comment">/// Host machinery only (recovery ready-gate).</span>
+    <span class="rs-type">Internal</span>,
+    <span class="rs-comment">/// Daemon-side test hook; test builds only.</span>
+    <span class="rs-type">Test</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a> {
+    <span class="rs-comment">/// Stable spelling used in `contract/ops.json`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Public</span> =&gt; &quot;public&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Operator</span> =&gt; &quot;operator&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Internal</span> =&gt; &quot;internal&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Test</span> =&gt; &quot;test&quot;,
+        }
+    }
+}
+
+macro_rules! declare_builtin_daemon_ops {
+    (
+        $(
+            $variant:ident, $const_name:ident, $name:literal,
+            $family:ident, $visibility:ident, $mutates_state:literal, $summary:literal;
+        )+
+    ) =&gt; {
+        <span class="rs-comment">/// One built-in daemon operation in the wire protocol catalog.</span>
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
+        #[non_exhaustive]
+        <span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <span class="rs-type">BuiltinDaemonOp</span> {
+            $(
+                #[doc = concat!(&quot;`&quot;, $name, &quot;`: &quot;, $summary)]
+                $variant,
+            )+
+        }
+
+        <span class="rs-comment">/// Catalog metadata for one built-in daemon op.</span>
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>)]
+        <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <span class="rs-type">BuiltinOpSpec</span> {
+            <span class="rs-comment">/// Typed op identity.</span>
+            <span class="rs-kw">pub</span> op: <span class="rs-type">BuiltinDaemonOp</span>,
+            <span class="rs-comment">/// Canonical `sandbox.*` wire spelling.</span>
+            <span class="rs-kw">pub</span> name: &amp;&#x27;<span class="rs-kw">static</span> str,
+            <span class="rs-comment">/// Functional owner.</span>
+            <span class="rs-kw">pub</span> family: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a>,
+            <span class="rs-comment">/// Caller surface that may invoke the op.</span>
+            <span class="rs-kw">pub</span> visibility: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a>,
+            <span class="rs-comment">/// Whether the op may change daemon, workspace, or process state.</span>
+            <span class="rs-kw">pub</span> mutates_state: bool,
+            <span class="rs-comment">/// One-line summary rendered into `contract/ops.json`.</span>
+            <span class="rs-kw">pub</span> summary: &amp;&#x27;<span class="rs-kw">static</span> str,
+        }
+
+        <span class="rs-kw">impl</span> <span class="rs-type">BuiltinDaemonOp</span> {
+            <span class="rs-comment">/// Protocol catalog entry for this op.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> spec(<span class="rs-self">self</span>) -&gt; <span class="rs-type">BuiltinOpSpec</span> {
+                <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+                    $(
+                        <span class="rs-self">Self</span>::$variant =&gt; <span class="rs-type">BuiltinOpSpec</span> {
+                            op: <span class="rs-self">Self</span>::$variant,
+                            name: $name,
+                            family: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a>::$family,
+                            visibility: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a>::$visibility,
+                            mutates_state: $mutates_state,
+                            summary: $summary,
+                        },
+                    )+
+                }
+            }
+        }
+
+        $(
+            #[doc = concat!(&quot;<span class="rs-type">Canonical</span> wire spelling `&quot;, $name, &quot;`: &quot;, $summary)]
+            <span class="rs-kw">pub</span> <span class="rs-kw">const</span> $const_name: &amp;str = $name;
+        )+
+
+        <span class="rs-comment">/// Built-in daemon op metadata expected to be available over the wire.</span>
+        <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">BUILTIN_DAEMON_OP_SPECS</span>: &amp;[<span class="rs-type">BuiltinOpSpec</span>] = &amp;[
+            $(
+                <span class="rs-type">BuiltinDaemonOp</span>::$variant.spec(),
+            )+
+        ];
+    };
+}
+
+declare_builtin_daemon_ops! {
+    <span class="rs-type">RuntimeReady</span>, <span class="rs-type">SANDBOX_RUNTIME_READY</span>, &quot;sandbox.runtime.ready&quot;,
+        <span class="rs-type">Control</span>, <span class="rs-type">Internal</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Daemon</span> readiness probe used by the host recovery machine.&quot;;
+    <span class="rs-type">InvocationHeartbeat</span>, <span class="rs-type">SANDBOX_CALL_HEARTBEAT</span>, &quot;sandbox.call.heartbeat&quot;,
+        <span class="rs-type">Control</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Extend</span> the lease on an <span class="rs-kw">in</span>-flight invocation.&quot;;
+    <span class="rs-type">InvocationCancel</span>, <span class="rs-type">SANDBOX_CALL_CANCEL</span>, &quot;sandbox.call.cancel&quot;,
+        <span class="rs-type">Control</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<a class="symbol-link rs-type" href="eos-daemon--src-wire-envelope-rs.html#item-struct-Request-29">Request</a> cooperative cancellation of an <span class="rs-kw">in</span>-flight invocation.&quot;;
+    <span class="rs-type">InflightCount</span>, <span class="rs-type">SANDBOX_CALL_COUNT</span>, &quot;sandbox.call.count&quot;,
+        <span class="rs-type">Control</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Count</span> <span class="rs-kw">in</span>-flight invocations.&quot;;
+    <span class="rs-type">LayerMetrics</span>, <span class="rs-type">SANDBOX_CHECKPOINT_LAYER_METRICS</span>, &quot;sandbox.checkpoint.layer_metrics&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Report</span> <span class="rs-type">LayerStack</span> and storage metrics <span class="rs-kw">for</span> the sandbox.&quot;;
+    <span class="rs-type">EnsureWorkspaceBase</span>, <span class="rs-type">SANDBOX_CHECKPOINT_ENSURE_BASE</span>, &quot;sandbox.checkpoint.ensure_base&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Ensure</span> a workspace base binding exists.&quot;;
+    <span class="rs-type">BuildWorkspaceBase</span>, <span class="rs-type">SANDBOX_CHECKPOINT_BUILD_BASE</span>, &quot;sandbox.checkpoint.build_base&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Build</span> or rebuild a workspace base binding.&quot;;
+    <span class="rs-type">CommitToWorkspace</span>, <span class="rs-type">SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE</span>, &quot;sandbox.checkpoint.commit_to_workspace&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Materialize</span> <span class="rs-type">LayerStack</span> state into the bound workspace.&quot;;
+    <span class="rs-type">CommitToGit</span>, <span class="rs-type">SANDBOX_CHECKPOINT_COMMIT_TO_GIT</span>, &quot;sandbox.checkpoint.commit_to_git&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Commit</span> a <span class="rs-type">LayerStack</span> snapshot into the bound workspace&#x27;s durable <span class="rs-type">Git</span> repo.&quot;;
+    <span class="rs-type">WorkspaceBinding</span>, <span class="rs-type">SANDBOX_CHECKPOINT_BINDING</span>, &quot;sandbox.checkpoint.binding&quot;,
+        <span class="rs-type">Checkpoint</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Inspect</span> the workspace binding <span class="rs-kw">for</span> a layer stack root.&quot;;
+    <span class="rs-type">ReadFile</span>, <span class="rs-type">SANDBOX_FILE_READ</span>, &quot;sandbox.file.read&quot;,
+        <span class="rs-type">Files</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Read</span> one file from the layer stack or isolated workspace.&quot;;
+    <span class="rs-type">WriteFile</span>, <span class="rs-type">SANDBOX_FILE_WRITE</span>, &quot;sandbox.file.write&quot;,
+        <span class="rs-type">Files</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Write</span> one file through the <span class="rs-type">OCC</span> gate.&quot;;
+    <span class="rs-type">EditFile</span>, <span class="rs-type">SANDBOX_FILE_EDIT</span>, &quot;sandbox.file.edit&quot;,
+        <span class="rs-type">Files</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Edit</span> one file through the <span class="rs-type">OCC</span> gate.&quot;;
+    <span class="rs-type">PluginEnsure</span>, <span class="rs-type">SANDBOX_PLUGIN_ENSURE</span>, &quot;sandbox.plugin.ensure&quot;,
+        <span class="rs-type">Plugins</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Ensure</span> a plugin service is installed and running.&quot;;
+    <span class="rs-type">PluginStatus</span>, <span class="rs-type">SANDBOX_PLUGIN_STATUS</span>, &quot;sandbox.plugin.status&quot;,
+        <span class="rs-type">Plugins</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Inspect</span> plugin service status.&quot;;
+    <span class="rs-type">IsolatedWorkspaceEnter</span>, <span class="rs-type">SANDBOX_ISOLATION_ENTER</span>, &quot;sandbox.isolation.enter&quot;,
+        <span class="rs-type">IsolatedWorkspace</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Enter</span> isolated workspace mode <span class="rs-kw">for</span> a caller.&quot;;
+    <span class="rs-type">IsolatedWorkspaceExit</span>, <span class="rs-type">SANDBOX_ISOLATION_EXIT</span>, &quot;sandbox.isolation.exit&quot;,
+        <span class="rs-type">IsolatedWorkspace</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Exit</span> isolated workspace mode <span class="rs-kw">for</span> a caller.&quot;;
+    <span class="rs-type">IsolatedWorkspaceStatus</span>, <span class="rs-type">SANDBOX_ISOLATION_STATUS</span>, &quot;sandbox.isolation.status&quot;,
+        <span class="rs-type">IsolatedWorkspace</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Inspect</span> isolated workspace status.&quot;;
+    <span class="rs-type">IsolatedWorkspaceListOpen</span>, <span class="rs-type">SANDBOX_ISOLATION_LIST_OPEN</span>, &quot;sandbox.isolation.list_open&quot;,
+        <span class="rs-type">IsolatedWorkspace</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">List</span> open isolated workspaces.&quot;;
+    <span class="rs-type">IsolatedWorkspaceTestReset</span>, <span class="rs-type">SANDBOX_ISOLATION_TEST_RESET</span>, &quot;sandbox.isolation.test_reset&quot;,
+        <span class="rs-type">IsolatedWorkspace</span>, <span class="rs-type">Test</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Test</span>-only isolated workspace reset hook.&quot;;
+    <span class="rs-type">ExecCommand</span>, <span class="rs-type">SANDBOX_COMMAND_EXEC</span>, &quot;sandbox.command.exec&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Run</span> a foreground command or start a command session.&quot;;
+    <span class="rs-type">WriteStdin</span>, <span class="rs-type">SANDBOX_COMMAND_WRITE_STDIN</span>, &quot;sandbox.command.write_stdin&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Write</span> stdin to a command session.&quot;;
+    <span class="rs-type">CommandReadProgress</span>, <span class="rs-type">SANDBOX_COMMAND_POLL</span>, &quot;sandbox.command.poll&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Poll</span> command-session progress without writing stdin.&quot;;
+    <span class="rs-type">CommandCancel</span>, <span class="rs-type">SANDBOX_COMMAND_CANCEL</span>, &quot;sandbox.command.cancel&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Cancel</span> a command session.&quot;;
+    <span class="rs-type">CommandCollectCompleted</span>, <span class="rs-type">SANDBOX_COMMAND_COLLECT_COMPLETED</span>, &quot;sandbox.command.collect_completed&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Collect</span> completed command-session notifications.&quot;;
+    <span class="rs-type">CommandSessionCount</span>, <span class="rs-type">SANDBOX_COMMAND_COUNT</span>, &quot;sandbox.command.count&quot;,
+        <span class="rs-type">CommandSession</span>, <span class="rs-type">Public</span>, <span class="rs-kw">false</span>, &quot;<span class="rs-type">Count</span> live command sessions.&quot;;
+    <span class="rs-type">CancelWorkspaceRunsByCaller</span>, <span class="rs-type">SANDBOX_RUN_END</span>, &quot;sandbox.run.end&quot;,
+        <span class="rs-type">WorkspaceRun</span>, <span class="rs-type">Public</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">End</span> a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace.&quot;;
+    <span class="rs-type">CancelWorkspaceRuns</span>, <span class="rs-type">SANDBOX_RUN_CANCEL_ALL</span>, &quot;sandbox.run.cancel_all&quot;,
+        <span class="rs-type">WorkspaceRun</span>, <span class="rs-type">Operator</span>, <span class="rs-kw">true</span>, &quot;<span class="rs-type">Cancel</span> every workspace run <span class="rs-kw">in</span> the sandbox: the whole-sandbox sweep backstop.&quot;;
+}
+
+<span class="rs-comment">/// One host-served sandbox lifecycle op (`served_by: host`).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The daemon never serves these; the entries are review-owned by `eos-api`</span>
+<span class="rs-comment">/// and live here only so `eosd dump-ops` can render the complete catalog.</span>
+<span class="rs-comment">/// All host ops are `visibility: public` and family `Sandbox`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a> {
+    <span class="rs-comment">/// Canonical `sandbox.&lt;verb&gt;` wire spelling.</span>
+    name: &amp;&#x27;<span class="rs-kw">static</span> str,
+    <span class="rs-comment">/// Whether the op changes fleet state.</span>
+    mutates_state: bool,
+    <span class="rs-comment">/// One-line summary rendered into `contract/ops.json`.</span>
+    summary: &amp;&#x27;<span class="rs-kw">static</span> str,
+}
+
+<span class="rs-comment">/// Host-served sandbox lifecycle ops.</span>
+<span class="rs-kw">const</span> <span class="rs-type">HOST_OP_SPECS</span>: &amp;[<a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a>] = &amp;[
+    <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a> {
+        name: &quot;sandbox.acquire&quot;,
+        mutates_state: <span class="rs-kw">true</span>,
+        summary: &quot;<span class="rs-type">Provision</span> a sandbox container plus daemon and <span class="rs-kw">return</span> its sandbox_id.&quot;,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a> {
+        name: &quot;sandbox.release&quot;,
+        mutates_state: <span class="rs-kw">true</span>,
+        summary: &quot;<span class="rs-type">Destroy</span> the sandbox container and drop its registry entry.&quot;,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a> {
+        name: &quot;sandbox.status&quot;,
+        mutates_state: <span class="rs-kw">false</span>,
+        summary: &quot;<span class="rs-type">Host</span> view of one sandbox (container/endpoint/recovery state) plus embedded daemon readiness.&quot;,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-HostOpSpec-208">HostOpSpec</a> {
+        name: &quot;sandbox.list&quot;,
+        mutates_state: <span class="rs-kw">false</span>,
+        summary: &quot;<span class="rs-type">Enumerate</span> the sandbox registry.&quot;,
+    },
+];
+
+#[derive(<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> {
+    name: &amp;&#x27;<span class="rs-kw">static</span> str,
+    served_by: &amp;&#x27;<span class="rs-kw">static</span> str,
+    visibility: &amp;&#x27;<span class="rs-kw">static</span> str,
+    family: &amp;&#x27;<span class="rs-kw">static</span> str,
+    mutates_state: bool,
+    summary: &amp;&#x27;<span class="rs-kw">static</span> str,
+}
+
+#[derive(<span class="rs-type">Serialize</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogDocument-257">CatalogDocument</a> {
+    protocol_version: i64,
+    ops: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a>&gt;,
+}
+
+<span class="rs-comment">/// Render the catalog as the `contract/ops.json` document: host ops first,</span>
+<span class="rs-comment">/// then daemon ops in catalog order. Pretty-printed with a trailing newline so</span>
+<span class="rs-comment">/// `eosd dump-ops` output can be committed and diffed byte-for-byte.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#item-fn-ops-json-document-263">ops_json_document</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> host = <span class="rs-type">HOST_OP_SPECS</span>.iter().map(|spec| <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> {
+        name: spec.name,
+        served_by: &quot;host&quot;,
+        visibility: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpVisibility-55">OpVisibility</a>::<span class="rs-type">Public</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        family: <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-enum-OpFamily-17">OpFamily</a>::<span class="rs-type">Sandbox</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        mutates_state: spec.mutates_state,
+        summary: spec.summary,
+    });
+    <span class="rs-kw">let</span> daemon = <span class="rs-type">BUILTIN_DAEMON_OP_SPECS</span>.iter().map(|spec| <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogOp-247">CatalogOp</a> {
+        name: spec.name,
+        served_by: &quot;daemon&quot;,
+        visibility: spec.visibility.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        family: spec.family.<a class="symbol-link rs-fn" href="eos-daemon--src-wire-ops-rs.html#method-as-str-39">as_str</a>(),
+        mutates_state: spec.mutates_state,
+        summary: spec.summary,
+    });
+    <span class="rs-kw">let</span> document = <a class="symbol-link rs-type" href="eos-daemon--src-wire-ops-rs.html#item-struct-CatalogDocument-257">CatalogDocument</a> {
+        protocol_version: <span class="rs-type">DAEMON_PROTOCOL_VERSION</span>,
+        ops: host.chain(daemon).collect(),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body =
+        serde_json::to_string_pretty(&amp;document).expect(&quot;<span class="rs-kw">static</span> catalog always serializes&quot;);
+    body.push(&#x27;\n&#x27;);
+    body
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/wire/ops.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

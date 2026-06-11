@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>10</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>54</b><span>fields</span></div>
-  <div><b>16</b><span>methods</span></div>
+  <div><b>6</b><span>modules</span></div>
+  <div><b>23</b><span>items</span></div>
+  <div><b>25</b><span>fields</span></div>
+  <div><b>10</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,8 +41,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-ephemeral-workspace.html"><span>capture.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-command-rs.html"><span>command.rs</span><small>4/20</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-dirs-rs.html"><span>dirs.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-finalize-rs.html"><span>finalize.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ops-rs.html"><span>ops.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-ports-rs.html"><span>ports.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-timings-rs.html"><span>timings.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-types-rs.html"><span>types.rs</span><small>7/0</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="capture crates/eos-ephemeral-workspace/src/capture.rs CapturedUpperdir capture_for_publish path_change_from_layer_change">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-ephemeral-workspace.html"><span>capture.rs</span><small>3/4</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-dirs-rs.html"><span>dirs.rs</span><small>3/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-lib-rs.html"><span>lib.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-runtime-dirs-rs.html"><span>runtime_dirs.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-stats-rs.html"><span>stats.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-ephemeral-workspace--src-workspace-rs.html"><span>workspace.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="capture crates/eos-ephemeral-workspace/src/capture.rs CapturedChanges PathChange PathChangeKind path_changes_to_wire path_change_kind_wire capture_upperdir path_change_from_layer_change">
   <div class="module-head">
     <div>
       <h2>src/capture.rs</h2>
@@ -50,77 +50,154 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>1 types</span>
+      <span>3 types</span>
       <span>0 impls</span>
-      <span>2 fns</span>
+      <span>4 fns</span>
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CapturedUpperdir-9" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CapturedUpperdir pub pub struct CapturedUpperdir crates/eos-ephemeral-workspace/src/capture.rs changes Vec &lt; LayerChange &gt; path_kinds Vec &lt; PathChange &gt; stats TreeResourceStats capture_s f64 ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CapturedChanges-9" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CapturedChanges pub pub struct CapturedChanges crates/eos-ephemeral-workspace/src/capture.rs changes Vec &lt; LayerChange &gt; path_kinds Vec &lt; PathChange &gt; stats TreeResourceStats capture_s f64 ">
   <div class="item-head">
     <span class="kind">struct</span>
-    <h3>CapturedUpperdir</h3>
+    <h3>CapturedChanges</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a></code>
-  <p class="docstring">Captured publishable upperdir changes and local path classifications.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a></code>
+  <p class="docstring">Captured upperdir changes and local path classifications.</p>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>changes</td><td><code>Vec &lt; LayerChange &gt;</code></td></tr><tr><td>pub</td><td>path_kinds</td><td><code>Vec &lt; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a> &gt;</code></td></tr><tr><td>pub</td><td>stats</td><td><code><a class="symbol-link" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a></code></td></tr><tr><td>pub</td><td>capture_s</td><td><code>f64</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>changes</td><td><code>Vec &lt; LayerChange &gt;</code></td></tr><tr><td>pub</td><td>path_kinds</td><td><code>Vec &lt; <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> &gt;</code></td></tr><tr><td>pub</td><td>stats</td><td><code><a class="symbol-link" href="eos-ephemeral-workspace--src-stats-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a></code></td></tr><tr><td>pub</td><td>capture_s</td><td><code>f64</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:9</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-capture-for-publish-18" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_for_publish pub pub fn capture_for_publish (upperdir : &amp; Path) -&gt; Result &lt; CapturedUpperdir , EphemeralWorkspaceError &gt; crates/eos-ephemeral-workspace/src/capture.rs  ">
+</article><article id="item-struct-PathChange-18" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PathChange pub pub struct PathChange crates/eos-ephemeral-workspace/src/capture.rs path String kind PathChangeKind ">
   <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>capture_for_publish</h3>
+    <span class="kind">struct</span>
+    <h3>PathChange</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-capture-for-publish-18">capture_for_publish</a> (upperdir : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> , <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code>
-  <p class="docstring">Capture an ephemeral upperdir and classify path change kinds.<br># Errors<br>Returns [`EphemeralWorkspaceError`] when overlay capture fails.</p>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a></code>
+  <p class="docstring">Local path-kind classification for captured upperdir changes.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:18</p>
+</article><article id="item-enum-PathChangeKind-25" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PathChangeKind pub pub enum PathChangeKind crates/eos-ephemeral-workspace/src/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>PathChangeKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a></code>
+  <p class="docstring">The path operation kind observed in the upperdir.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Delete</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr><tr><td>OpaqueDir</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:25</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-path-changes-to-wire-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_changes_to_wire pub pub fn path_changes_to_wire (path_changes : &amp; [PathChange]) -&gt; Vec &lt; (String , String) &gt; crates/eos-ephemeral-workspace/src/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_changes_to_wire</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-path-changes-to-wire-35">path_changes_to_wire</a> (path_changes : &amp; [<a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a>]) -&gt; Vec &lt; (String , String) &gt;</code>
+  <p class="docstring">Map captured path changes to their wire `(path, kind)` string pairs.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Map captured path changes to their wire `(path, kind)` string pairs.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-changes-to-wire-35">path_changes_to_wire</a>(path_changes: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+    path_changes
+        .iter()
+        .map(|change| {
+            (
+                change.path.clone(),
+                <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-kind-wire-49">path_change_kind_wire</a>(change.kind).to_owned(),
+            )
+        })
+        .<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:35</p>
+</article><article id="item-fn-capture-upperdir-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_upperdir pub pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; CapturedChanges , EphemeralWorkspaceError &gt; crates/eos-ephemeral-workspace/src/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>capture_upperdir</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-capture-upperdir-58">capture_upperdir</a> (upperdir : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a> , <a class="symbol-link" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a> &gt;</code>
+  <p class="docstring">Capture an upperdir delta and classify path change kinds.<br>Standalone entry for callers that hold raw overlay dirs (the plugin<br>overlay path); [`crate::EphemeralWorkspace::capture`] wraps it.<br># Errors<br>Returns [`EphemeralWorkspaceError::CaptureFailed`] when the walk fails.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Capture an ephemeral upperdir and classify path change kinds.</span>
+  <pre><code><span class="rs-comment">/// Capture an upperdir delta and classify path change kinds.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Standalone entry for callers that hold raw overlay dirs (the plugin</span>
+<span class="rs-comment">/// overlay path); [`crate::EphemeralWorkspace::capture`] wraps it.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`EphemeralWorkspaceError`] when overlay capture fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-for-publish-18">capture_for_publish</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt; {
+<span class="rs-comment">/// Returns [`EphemeralWorkspaceError::CaptureFailed`] when the walk fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-upperdir-58">capture_upperdir</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a>&gt; {
     <span class="rs-kw">let</span> start = std::time::<span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
-        <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
+    <span class="rs-kw">let</span> changes = eos_overlay::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-upperdir-58">capture_upperdir</a>(upperdir).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
             reason: error.to_string(),
         }
     })?;
-    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-timings-rs.html#method-collect-23">collect</a>();
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>();
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a> {
         changes,
         path_kinds,
-        stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-timings-rs.html#method-collect-23">collect</a>(upperdir),
+        stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-stats-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>(upperdir),
         capture_s: start.elapsed().as_secs_f64(),
     })
 }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:18</p>
-</article><article id="item-fn-path-change-from-layer-change-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_from_layer_change private fn path_change_from_layer_change (change : &amp; LayerChange) -&gt; PathChange crates/eos-ephemeral-workspace/src/capture.rs  ">
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:58</p>
+</article><article id="item-fn-path-change-kind-wire-49" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_kind_wire private const fn path_change_kind_wire (kind : PathChangeKind) -&gt; &amp; 'static str crates/eos-ephemeral-workspace/src/capture.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>path_change_kind_wire</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">const fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-path-change-kind-wire-49">path_change_kind_wire</a> (kind : <a class="symbol-link" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>) -&gt; &amp; &#x27;static str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-kind-wire-49">path_change_kind_wire</a>(kind: <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> kind {
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:49</p>
+</article><article id="item-fn-path-change-from-layer-change-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_change_from_layer_change private fn path_change_from_layer_change (change : &amp; LayerChange) -&gt; PathChange crates/eos-ephemeral-workspace/src/capture.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>path_change_from_layer_change</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a> (change : &amp; LayerChange) -&gt; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a></code>
+  <code class="signature">fn <a class="symbol-link" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-82">path_change_from_layer_change</a> (change : &amp; LayerChange) -&gt; <a class="symbol-link" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a></code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-82">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> {
     <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Write</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Delete</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Write</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Delete</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
     };
-    <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+    <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> {
         path: change.path().as_str().to_owned(),
         kind,
     }
@@ -128,7 +205,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:39</p>
+  <p class="source">crates/eos-ephemeral-workspace/src/capture.rs:82</p>
 </article></div>
 </section></div>
 </main>
@@ -139,50 +216,93 @@
   </div>
   <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
 
-<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
+<span class="rs-kw">use</span> eos_overlay::<span class="rs-type">LayerChange</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
 
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::timings::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::{<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::stats::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-stats-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a>;
 
-<span class="rs-comment">/// Captured publishable upperdir changes and local path classifications.</span>
+<span class="rs-comment">/// Captured upperdir changes and local path classifications.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
-<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a> {
     <span class="rs-kw">pub</span> changes: <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerChange</span>&gt;,
-    <span class="rs-kw">pub</span> path_kinds: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>&gt;,
-    <span class="rs-kw">pub</span> stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>,
+    <span class="rs-kw">pub</span> path_kinds: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a>&gt;,
+    <span class="rs-kw">pub</span> stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-stats-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>,
     <span class="rs-kw">pub</span> capture_s: f64,
 }
 
-<span class="rs-comment">/// Capture an ephemeral upperdir and classify path change kinds.</span>
+<span class="rs-comment">/// Local path-kind classification for captured upperdir changes.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> {
+    <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>,
+}
+
+<span class="rs-comment">/// The path operation kind observed in the upperdir.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a> {
+    <span class="rs-type">Write</span>,
+    <span class="rs-type">Delete</span>,
+    <span class="rs-type">Symlink</span>,
+    <span class="rs-type">OpaqueDir</span>,
+}
+
+<span class="rs-comment">/// Map captured path changes to their wire `(path, kind)` string pairs.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-changes-to-wire-35">path_changes_to_wire</a>(path_changes: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a>]) -&gt; <span class="rs-type">Vec</span>&lt;(<span class="rs-type">String</span>, <span class="rs-type">String</span>)&gt; {
+    path_changes
+        .iter()
+        .map(|change| {
+            (
+                change.path.clone(),
+                <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-kind-wire-49">path_change_kind_wire</a>(change.kind).to_owned(),
+            )
+        })
+        .<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>()
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-kind-wire-49">path_change_kind_wire</a>(kind: <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> kind {
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Write</span> =&gt; &quot;write&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Delete</span> =&gt; &quot;delete&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; &quot;symlink&quot;,
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; &quot;opaque_dir&quot;,
+    }
+}
+
+<span class="rs-comment">/// Capture an upperdir delta and classify path change kinds.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Standalone entry for callers that hold raw overlay dirs (the plugin</span>
+<span class="rs-comment">/// overlay path); [`crate::EphemeralWorkspace::capture`] wraps it.</span>
 <span class="rs-comment">///</span>
 <span class="rs-comment">/// # Errors</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// Returns [`EphemeralWorkspaceError`] when overlay capture fails.</span>
-<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-for-publish-18">capture_for_publish</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt; {
+<span class="rs-comment">/// Returns [`EphemeralWorkspaceError::CaptureFailed`] when the walk fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-upperdir-58">capture_upperdir</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a>&gt; {
     <span class="rs-kw">let</span> start = std::time::<span class="rs-type">Instant</span>::now();
-    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(upperdir).map_err(|error| {
-        <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
+    <span class="rs-kw">let</span> changes = eos_overlay::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-capture-upperdir-58">capture_upperdir</a>(upperdir).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-lib-rs.html#item-enum-EphemeralWorkspaceError-35">EphemeralWorkspaceError</a>::<span class="rs-type">CaptureFailed</span> {
             reason: error.to_string(),
         }
     })?;
-    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-timings-rs.html#method-collect-23">collect</a>();
-    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a> {
+    <span class="rs-kw">let</span> path_kinds = changes.iter().map(path_change_from_layer_change).<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>();
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedChanges-9">CapturedChanges</a> {
         changes,
         path_kinds,
-        stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-timings-rs.html#method-collect-23">collect</a>(upperdir),
+        stats: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-stats-rs.html#item-struct-TreeResourceStats-5">TreeResourceStats</a>::<a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-stats-rs.html#method-collect-15">collect</a>(upperdir),
         capture_s: start.elapsed().as_secs_f64(),
     })
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-39">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace.html#item-fn-path-change-from-layer-change-82">path_change_from_layer_change</a>(change: &amp;<span class="rs-type">LayerChange</span>) -&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> {
     <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Write</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Delete</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
-        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Write</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Delete</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">Symlink</span>,
+        <span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-enum-PathChangeKind-25">PathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
     };
-    <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a> {
+    <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-PathChange-18">PathChange</a> {
         path: change.path().as_str().to_owned(),
         kind,
     }

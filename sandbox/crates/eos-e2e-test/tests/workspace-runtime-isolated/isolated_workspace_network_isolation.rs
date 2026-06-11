@@ -196,10 +196,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
             "ephemeral server must start: {server_a}"
         );
         // Caller B enters isolated mode (its own netns), then binds the SAME port.
-        lease.call_ok(
-            ops::SANDBOX_ISOLATION_ENTER,
-            json!({"caller_id": caller_b}),
-        )?;
+        lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
         let bind_b = lease.call_ok(
             ops::SANDBOX_COMMAND_EXEC,
             json!({
@@ -284,14 +281,8 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
     let caller_b = format!("iws-loopback-b-{}", eos_e2e_test::unique_suffix());
     let marker = format!("A_ONLY_{}", eos_e2e_test::unique_suffix().replace('-', "_"));
 
-    lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
-        json!({"caller_id": caller_a}),
-    )?;
-    lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
-        json!({"caller_id": caller_b}),
-    )?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_a}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
 
     let mut sessions: Vec<(String, String)> = Vec::new();
     let body = (|| -> Result<()> {
@@ -403,14 +394,8 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
     let caller_a = format!("iws-net-a-{}", eos_e2e_test::unique_suffix());
     let caller_b = format!("iws-net-b-{}", eos_e2e_test::unique_suffix());
 
-    lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
-        json!({"caller_id": caller_a}),
-    )?;
-    lease.call_ok(
-        ops::SANDBOX_ISOLATION_ENTER,
-        json!({"caller_id": caller_b}),
-    )?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_a}))?;
+    lease.call_ok(ops::SANDBOX_ISOLATION_ENTER, json!({"caller_id": caller_b}))?;
 
     let mut sessions: Vec<(String, String)> = Vec::new();
     let body = (|| -> Result<()> {

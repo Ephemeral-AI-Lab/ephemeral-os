@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>24</b><span>items</span></div>
-  <div><b>16</b><span>fields</span></div>
+  <div><b>26</b><span>items</span></div>
+  <div><b>14</b><span>fields</span></div>
   <div><b>4</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="daemon crates/eosd/src/daemon.rs run DaemonRuntimeConfig load_runtime_config daemon_worker_threads DaemonCliConfig impl DaemonCliConfig required_arg run_daemon_client run_daemon_client spawn_daemon daemon_already_running io_error_name">
   <div class="module-head">
     <div>
@@ -301,7 +301,7 @@
         <span class="rs-type">Ok</span>(stream) =&gt; stream,
         <span class="rs-type">Err</span>(err) =&gt; {
             eprintln!(&quot;<span class="rs-type">EOS_DAEMON_CONNECT_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-            std::process::exit(eos_protocol::<span class="rs-type">CONNECT_FAILED</span>);
+            std::process::exit(eos_daemon::wire::<span class="rs-type">CONNECT_FAILED</span>);
         }
     };
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream
@@ -309,16 +309,16 @@
         .and_then(|()| stream.write_all(b&quot;\n&quot;))
     {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream.shutdown(std::net::<span class="rs-type">Shutdown</span>::<span class="rs-type">Write</span>) {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">Vec</span>::new();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream.read_to_end(&amp;<span class="rs-kw">mut</span> response) {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     std::io::stdout()
         .lock()
@@ -343,7 +343,7 @@
   <pre><code>#[cfg(not(unix))]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-daemon-client-183">run_daemon_client</a>(_socket_path: &amp;<span class="rs-type">PathBuf</span>, _payload: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     eprintln!(&quot;<span class="rs-type">EOS_DAEMON_CONNECT_FAILED</span>:<span class="rs-type">UnsupportedPlatform</span>&quot;);
-    std::process::exit(eos_protocol::<span class="rs-type">CONNECT_FAILED</span>);
+    std::process::exit(eos_daemon::wire::<span class="rs-type">CONNECT_FAILED</span>);
 }
 </code></pre>
 </details>
@@ -386,7 +386,7 @@
         <span class="rs-kw">let</span> log = std::fs::<span class="rs-type">OpenOptions</span>::new()
             .create(<span class="rs-kw">true</span>)
             .append(<span class="rs-kw">true</span>)
-            .<a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#method-open-188">open</a>(path)
+            .<a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#method-open-182">open</a>(path)
             .with_context(|| format!(&quot;failed to open daemon log {}&quot;, path.display()))?;
         command.stdout(<span class="rs-type">Stdio</span>::from(log.try_clone()?));
         command.stderr(<span class="rs-type">Stdio</span>::from(log));
@@ -653,7 +653,7 @@
         <span class="rs-type">Ok</span>(stream) =&gt; stream,
         <span class="rs-type">Err</span>(err) =&gt; {
             eprintln!(&quot;<span class="rs-type">EOS_DAEMON_CONNECT_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-            std::process::exit(eos_protocol::<span class="rs-type">CONNECT_FAILED</span>);
+            std::process::exit(eos_daemon::wire::<span class="rs-type">CONNECT_FAILED</span>);
         }
     };
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream
@@ -661,16 +661,16 @@
         .and_then(|()| stream.write_all(b&quot;\n&quot;))
     {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream.shutdown(std::net::<span class="rs-type">Shutdown</span>::<span class="rs-type">Write</span>) {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">Vec</span>::new();
     <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = stream.read_to_end(&amp;<span class="rs-kw">mut</span> response) {
         eprintln!(&quot;<span class="rs-type">EOS_DAEMON_IO_FAILED</span>:{}&quot;, <a class="symbol-link rs-fn" href="eosd.html#item-fn-io-error-name-280">io_error_name</a>(&amp;err));
-        std::process::exit(eos_protocol::<span class="rs-type">IO_FAILED</span>);
+        std::process::exit(eos_daemon::wire::<span class="rs-type">IO_FAILED</span>);
     }
     std::io::stdout()
         .lock()
@@ -682,7 +682,7 @@
 #[cfg(not(unix))]
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-run-daemon-client-183">run_daemon_client</a>(_socket_path: &amp;<span class="rs-type">PathBuf</span>, _payload: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
     eprintln!(&quot;<span class="rs-type">EOS_DAEMON_CONNECT_FAILED</span>:<span class="rs-type">UnsupportedPlatform</span>&quot;);
-    std::process::exit(eos_protocol::<span class="rs-type">CONNECT_FAILED</span>);
+    std::process::exit(eos_daemon::wire::<span class="rs-type">CONNECT_FAILED</span>);
 }
 
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd.html#item-fn-spawn-daemon-221">spawn_daemon</a>(config: &amp;<a class="symbol-link rs-type" href="eosd.html#item-struct-DaemonCliConfig-89">DaemonCliConfig</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
@@ -712,7 +712,7 @@
         <span class="rs-kw">let</span> log = std::fs::<span class="rs-type">OpenOptions</span>::new()
             .create(<span class="rs-kw">true</span>)
             .append(<span class="rs-kw">true</span>)
-            .<a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#method-open-188">open</a>(path)
+            .<a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#method-open-182">open</a>(path)
             .with_context(|| format!(&quot;failed to open daemon log {}&quot;, path.display()))?;
         command.stdout(<span class="rs-type">Stdio</span>::from(log.try_clone()?));
         command.stderr(<span class="rs-type">Stdio</span>::from(log));

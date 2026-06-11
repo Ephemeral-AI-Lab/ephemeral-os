@@ -17,7 +17,10 @@ fn read_nonexistent_reports_absent() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let read = lease.call_ok(ops::SANDBOX_FILE_READ, json!({"path": "does/not/exist.txt"}))?;
+    let read = lease.call_ok(
+        ops::SANDBOX_FILE_READ,
+        json!({"path": "does/not/exist.txt"}),
+    )?;
     assert!(
         !as_bool(&read, "exists")?,
         "missing file must report exists=false: {read}"

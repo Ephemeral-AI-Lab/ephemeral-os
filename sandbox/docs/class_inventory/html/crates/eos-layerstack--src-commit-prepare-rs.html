@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-layerstack · src/commit/prepare.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>23</b><span>modules</span></div>
+  <div><b>211</b><span>items</span></div>
+  <div><b>152</b><span>fields</span></div>
+  <div><b>98</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">commit</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-mod-rs.html"><span>mod.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-outcome-rs.html"><span>outcome.rs</span><small>5/0</small></a></li><li><a class="file-link active" href="eos-layerstack--src-commit-prepare-rs.html"><span>prepare.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-queue-rs.html"><span>queue.rs</span><small>7/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-commit-transaction-rs.html"><span>transaction.rs</span><small>2/17</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-fsutil-rs.html"><span>fsutil.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lease-rs.html"><span>lease.rs</span><small>3/5</small></a></li><li><a class="file-link" href="eos-layerstack--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-layerstack--src-metrics-rs.html"><span>metrics.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-model-rs.html"><span>model.rs</span><small>5/9</small></a></li><li><a class="file-link" href="eos-layerstack--src-route-rs.html"><span>route.rs</span><small>2/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-service-rs.html"><span>service.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-layerstack--src-squash-rs.html"><span>squash.rs</span><small>4/3</small></a></li><li><span class="folder">stack</span><ul class="file-tree"><li><a class="file-link" href="eos-layerstack--src-stack-fs-rs.html"><span>fs.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-manifest-io-rs.html"><span>manifest_io.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-projection-rs.html"><span>projection.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-layerstack--src-stack-whiteout-rs.html"><span>whiteout.rs</span><small>0/7</small></a></li></ul></li><li><a class="file-link" href="eos-layerstack--src-stack-rs.html"><span>stack.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-layerstack--src-storage-lock-rs.html"><span>storage_lock.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-base-rs.html"><span>workspace_base.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-layerstack--src-workspace-binding-rs.html"><span>workspace_binding.rs</span><small>1/3</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="commit::prepare crates/eos-layerstack/src/commit/prepare.rs RouteProvider CommitService impl CommitService &lt; T &gt; finalize_apply_result timing_or_default impl Drop for CommitService &lt; T &gt;">
+  <div class="module-head">
+    <div>
+      <h2>src/commit/prepare.rs</h2>
+      <p class="path">module <code>commit::prepare</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>2 types</span>
+      <span>2 impls</span>
+      <span>2 fns</span>
+      <span>7 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommitService-37" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommitService pub pub struct CommitService&lt; T : CommitTransactionPort + 'static &gt; crates/eos-layerstack/src/commit/prepare.rs commit_queue CommitQueue &lt; T &gt; route_provider Arc &lt; dyn RouteProvider &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommitService</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-struct-CommitService-37">CommitService</a>&lt; T : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;static &gt;</code>
+  <p class="docstring">Prepare typed OCC changesets and commit them through the single writer.<br>Holds the per-root [`CommitQueue`]. There is exactly one `CommitService` per<br>`layer_stack_root` (the MF-1 owner).</p>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>commit_queue</td><td><code><a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a> &lt; T &gt;</code></td></tr><tr><td>private</td><td>route_provider</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-with-route-provider-47"><td>constructor</td><td>with_route_provider</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-with-route-provider-47">with_route_provider</a> (mut commit_queue : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a> &lt; T &gt; , route_provider : Arc &lt; dyn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a> &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Build a service with a daemon-provided route/base-hash provider.<br># Errors<br>Returns [`CommitError`] when the owned commit queue cannot be started.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a service with a daemon-provided route/base-hash provider.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when the owned commit queue cannot be started.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-with-route-provider-47">with_route_provider</a>(
+        <span class="rs-kw">mut</span> commit_queue: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt;,
+        route_provider: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-start-165">start</a>()?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            commit_queue,
+            route_provider,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-apply-changeset-with-base-hashes-63"><td>method</td><td>apply_changeset_with_base_hashes</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-changeset-with-base-hashes-63">apply_changeset_with_base_hashes</a> (&amp; self , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>] , snapshot_version : Option &lt; u64 &gt; , atomic : bool , base_hashes : &amp; [(<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a> , Option &lt; String &gt;)] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Prepare and commit with caller-supplied base hashes.<br>Direct file APIs use this to pin the hash observed before applying edit<br>anchors. Overlay callers can pass hashes from their leased snapshot once<br>the shell/search pipeline is wired.<br># Errors<br>Returns [`CommitError`] when preparation, queue submission, or the commit<br>worker reply fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Prepare and commit with caller-supplied base hashes.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Direct file APIs use this to pin the hash observed before applying edit</span>
+    <span class="rs-comment">/// anchors. Overlay callers can pass hashes from their leased snapshot once</span>
+    <span class="rs-comment">/// the shell/search pipeline is wired.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when preparation, queue submission, or the commit</span>
+    <span class="rs-comment">/// worker reply fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-changeset-with-base-hashes-63">apply_changeset_with_base_hashes</a>(
+        &amp;<span class="rs-self">self</span>,
+        changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>],
+        snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+        atomic: bool,
+        base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> prepared = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-prepare-changeset-with-base-hashes-89">prepare_changeset_with_base_hashes</a>(
+            changes,
+            snapshot_version,
+            atomic,
+            base_hashes,
+        )?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-prepared-changeset-144">apply_prepared_changeset</a>(prepared)
+    }
+</code></pre>
+</details></td></tr><tr id="method-prepare-changeset-with-base-hashes-89"><td>method</td><td>prepare_changeset_with_base_hashes</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-prepare-changeset-with-base-hashes-89">prepare_changeset_with_base_hashes</a> (&amp; self , changes : &amp; [<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>] , snapshot_version : Option &lt; u64 &gt; , atomic : bool , base_hashes : &amp; [(<a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a> , Option &lt; String &gt;)] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Route raw changes into a [`PreparedChangeset`] with optional base-hash<br>overrides supplied by the caller.<br># Errors<br>Returns [`CommitError`] when route or base-hash lookup fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Route raw changes into a [`PreparedChangeset`] with optional base-hash</span>
+    <span class="rs-comment">/// overrides supplied by the caller.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when route or base-hash lookup fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-prepare-changeset-with-base-hashes-89">prepare_changeset_with_base_hashes</a>(
+        &amp;<span class="rs-self">self</span>,
+        changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>],
+        snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+        atomic: bool,
+        base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> path_groups = <span class="rs-type">Vec</span>::with_capacity(changes.len());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> publishable = <span class="rs-type">Vec</span>::with_capacity(changes.len());
+        <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes {
+            <span class="rs-kw">let</span> path = change.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-244">path</a>().clone();
+            <span class="rs-kw">if</span> path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>() == &quot;.git&quot; || path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().starts_with(&quot;.git/&quot;) {
+                path_groups.push(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
+                    path,
+                    route: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Drop</span>,
+                    base_hash: <span class="rs-type">None</span>,
+                    message: <span class="rs-type">Some</span>(&quot;.git paths are not mutable through <span class="rs-type">OCC</span>&quot;.to_owned()),
+                });
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> route = <span class="rs-kw">if</span> <span class="rs-self">self</span>.route_provider.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-is-ignored-22">is_ignored</a>(&amp;path)? {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Direct</span>
+            } <span class="rs-kw">else</span> {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span>
+            };
+            <span class="rs-kw">let</span> base_hash = <span class="rs-kw">if</span> route == <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span> {
+                <span class="rs-kw">match</span> base_hashes.iter().find(|(candidate, _)| candidate == &amp;path) {
+                    <span class="rs-type">Some</span>((_, hash)) =&gt; hash.clone(),
+                    <span class="rs-type">None</span> =&gt; <span class="rs-self">self</span>.route_provider.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-base-hash-29">base_hash</a>(&amp;path)?,
+                }
+            } <span class="rs-kw">else</span> {
+                <span class="rs-type">None</span>
+            };
+            path_groups.push(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
+                path,
+                route,
+                base_hash,
+                message: <span class="rs-type">None</span>,
+            });
+            publishable.push(change.clone());
+        }
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+            snapshot_version,
+            path_groups,
+            changes: publishable,
+            atomic,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-apply-prepared-changeset-144"><td>method</td><td>apply_prepared_changeset</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-prepared-changeset-144">apply_prepared_changeset</a> (&amp; self , prepared : <a class="symbol-link" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-prepared-changeset-144">apply_prepared_changeset</a>(
+        &amp;<span class="rs-self">self</span>,
+        prepared: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> snapshot_version = prepared.snapshot_version;
+        <span class="rs-kw">let</span> receiver = <span class="rs-self">self</span>.commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-submit-230">submit</a>(prepared)?;
+        <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = receiver
+            .recv()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">ReplyDisconnected</span>)??;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-finalize-apply-result-164">finalize_apply_result</a>(
+            result,
+            snapshot_version,
+            commit_start.elapsed().as_secs_f64(),
+            total_start.elapsed().as_secs_f64(),
+        ))
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-struct-CommitService-37">CommitService</a> &lt; T &gt;</code></summary><table><tbody><tr id="method-drop-204"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-drop-204">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-drop-204">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-close-211">close</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-layerstack/src/commit/prepare.rs:37</p>
+</article><article id="item-trait-RouteProvider-15" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait RouteProvider pub pub trait RouteProvider crates/eos-layerstack/src/commit/prepare.rs  is_ignored fn is_ignored (&amp; self , path : &amp; LayerPath) -&gt; Result &lt; bool , CommitError &gt; base_hash fn base_hash (&amp; self , path : &amp; LayerPath) -&gt; Result &lt; Option &lt; String &gt; , CommitError &gt;">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>RouteProvider</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a></code>
+  <p class="docstring">Route/base-hash provider used while preparing OCC changesets.<br>The daemon owns the concrete layer-stack/gitignore implementation because<br>this crate must not know daemon workspace bindings. The default provider<br>routes every non-`.git` path as gated with an unknown base hash, giving unit<br>tests and custom queues a conservative default.</p>
+  <div class="tags"></div>
+  <h4>Methods</h4><table><tbody><tr id="method-is-ignored-22"><td>required</td><td>is_ignored</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-is-ignored-22">is_ignored</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; Result &lt; bool , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Is this normalized path gitignored in the operation snapshot?<br># Errors<br>Returns [`CommitError`] when ignore-state lookup fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Is this normalized path gitignored in the operation snapshot?</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when ignore-state lookup fails.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-is-ignored-22">is_ignored</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-base-hash-29"><td>required</td><td>base_hash</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#method-base-hash-29">base_hash</a> (&amp; self , path : &amp; <a class="symbol-link" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; Result &lt; Option &lt; String &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a> &gt;</code><p class="docstring">Content hash of `path` in the operation snapshot, or `None` if absent.<br># Errors<br>Returns [`CommitError`] when snapshot content lookup fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Content hash of `path` in the operation snapshot, or `None` if absent.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when snapshot content lookup fails.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-base-hash-29">base_hash</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-layerstack/src/commit/prepare.rs:15</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-finalize-apply-result-164" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_apply_result private fn finalize_apply_result (mut result : ChangesetResult , snapshot_version : Option &lt; u64 &gt; , commit_elapsed_s : f64 , total_s : f64 ,) -&gt; ChangesetResult crates/eos-layerstack/src/commit/prepare.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_apply_result</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-finalize-apply-result-164">finalize_apply_result</a> (mut result : <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> , snapshot_version : Option &lt; u64 &gt; , commit_elapsed_s : f64 , total_s : f64 ,) -&gt; <a class="symbol-link" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-finalize-apply-result-164">finalize_apply_result</a>(
+    <span class="rs-kw">mut</span> result: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
+    snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+    commit_elapsed_s: f64,
+    total_s: f64,
+) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-kw">let</span> commit_queue_wait_s = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.serial.queue_wait_s&quot;);
+    <span class="rs-kw">let</span> commit_worker_s = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.commit.total_s&quot;)
+        .max(<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.serial.commit_s&quot;));
+    result.timings.insert(
+        &quot;occ.apply.commit_queue_wait_s&quot;.to_owned(),
+        commit_queue_wait_s,
+    );
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_resume_wait_s&quot;.to_owned(), 0.0);
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_worker_s&quot;.to_owned(), commit_worker_s);
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_s&quot;.to_owned(), commit_elapsed_s);
+    result
+        .timings
+        .insert(&quot;occ.apply.total_s&quot;.to_owned(), total_s);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(published), <span class="rs-type">Some</span>(snapshot)) = (result.published_manifest_version, snapshot_version)
+    {
+        result.timings.insert(
+            &quot;occ.apply.manifest_lag&quot;.to_owned(),
+            published.saturating_sub(snapshot + 1) <span class="rs-kw">as</span> f64,
+        );
+    }
+    result
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/prepare.rs:164</p>
+</article><article id="item-fn-timing-or-default-199" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timing_or_default private fn timing_or_default (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; , key : &amp; str) -&gt; f64 crates/eos-layerstack/src/commit/prepare.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>timing_or_default</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a> (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; , key : &amp; str) -&gt; f64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(timings: &amp;std::collections::<span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, key: &amp;str) -&gt; f64 {
+    timings.<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#method-get-101">get</a>(key).copied().unwrap_or(0.0)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-layerstack/src/commit/prepare.rs:199</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/commit/prepare.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! OCC service: prepare typed changesets and commit through the single writer.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The service routes changes into [`PublishDecision`]s, submits the prepared</span>
+<span class="rs-comment">//! changeset to the per-root [`CommitQueue`].</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::outcome::{<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::queue::{<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>};
+
+<span class="rs-comment">/// Route/base-hash provider used while preparing OCC changesets.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The daemon owns the concrete layer-stack/gitignore implementation because</span>
+<span class="rs-comment">/// this crate must not know daemon workspace bindings. The default provider</span>
+<span class="rs-comment">/// routes every non-`.git` path as gated with an unknown base hash, giving unit</span>
+<span class="rs-comment">/// tests and custom queues a conservative default.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Is this normalized path gitignored in the operation snapshot?</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when ignore-state lookup fails.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-is-ignored-22">is_ignored</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; <span class="rs-type">Result</span>&lt;bool, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;;
+
+    <span class="rs-comment">/// Content hash of `path` in the operation snapshot, or `None` if absent.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when snapshot content lookup fails.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-base-hash-29">base_hash</a>(&amp;<span class="rs-self">self</span>, path: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt;;
+}
+
+<span class="rs-comment">/// Prepare typed OCC changesets and commit them through the single writer.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Holds the per-root [`CommitQueue`]. There is exactly one `CommitService` per</span>
+<span class="rs-comment">/// `layer_stack_root` (the MF-1 owner).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-struct-CommitService-37">CommitService</a>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; {
+    commit_queue: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt;,
+    route_provider: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a>&gt;,
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-struct-CommitService-37">CommitService</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-comment">/// Build a service with a daemon-provided route/base-hash provider.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when the owned commit queue cannot be started.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-with-route-provider-47">with_route_provider</a>(
+        <span class="rs-kw">mut</span> commit_queue: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-CommitQueue-108">CommitQueue</a>&lt;<span class="rs-type">T</span>&gt;,
+        route_provider: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-trait-RouteProvider-15">RouteProvider</a>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-start-165">start</a>()?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            commit_queue,
+            route_provider,
+        })
+    }
+
+    <span class="rs-comment">/// Prepare and commit with caller-supplied base hashes.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Direct file APIs use this to pin the hash observed before applying edit</span>
+    <span class="rs-comment">/// anchors. Overlay callers can pass hashes from their leased snapshot once</span>
+    <span class="rs-comment">/// the shell/search pipeline is wired.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when preparation, queue submission, or the commit</span>
+    <span class="rs-comment">/// worker reply fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-changeset-with-base-hashes-63">apply_changeset_with_base_hashes</a>(
+        &amp;<span class="rs-self">self</span>,
+        changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>],
+        snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+        atomic: bool,
+        base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> prepared = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-prepare-changeset-with-base-hashes-89">prepare_changeset_with_base_hashes</a>(
+            changes,
+            snapshot_version,
+            atomic,
+            base_hashes,
+        )?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-prepared-changeset-144">apply_prepared_changeset</a>(prepared)
+    }
+
+    <span class="rs-comment">/// Route raw changes into a [`PreparedChangeset`] with optional base-hash</span>
+    <span class="rs-comment">/// overrides supplied by the caller.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`CommitError`] when route or base-hash lookup fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-prepare-changeset-with-base-hashes-89">prepare_changeset_with_base_hashes</a>(
+        &amp;<span class="rs-self">self</span>,
+        changes: &amp;[<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-enum-LayerChange-213">LayerChange</a>],
+        snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+        atomic: bool,
+        base_hashes: &amp;[(<a class="symbol-link rs-type" href="eos-layerstack--src-model-rs.html#item-struct-LayerPath-42">LayerPath</a>, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;)],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> path_groups = <span class="rs-type">Vec</span>::with_capacity(changes.len());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> publishable = <span class="rs-type">Vec</span>::with_capacity(changes.len());
+        <span class="rs-kw">for</span> change <span class="rs-kw">in</span> changes {
+            <span class="rs-kw">let</span> path = change.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-path-244">path</a>().clone();
+            <span class="rs-kw">if</span> path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>() == &quot;.git&quot; || path.<a class="symbol-link rs-fn" href="eos-layerstack--src-model-rs.html#method-as-str-83">as_str</a>().starts_with(&quot;.git/&quot;) {
+                path_groups.push(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
+                    path,
+                    route: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Drop</span>,
+                    base_hash: <span class="rs-type">None</span>,
+                    message: <span class="rs-type">Some</span>(&quot;.git paths are not mutable through <span class="rs-type">OCC</span>&quot;.to_owned()),
+                });
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> route = <span class="rs-kw">if</span> <span class="rs-self">self</span>.route_provider.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-is-ignored-22">is_ignored</a>(&amp;path)? {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Direct</span>
+            } <span class="rs-kw">else</span> {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span>
+            };
+            <span class="rs-kw">let</span> base_hash = <span class="rs-kw">if</span> route == <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-enum-Route-14">Route</a>::<span class="rs-type">Gated</span> {
+                <span class="rs-kw">match</span> base_hashes.iter().find(|(candidate, _)| candidate == &amp;path) {
+                    <span class="rs-type">Some</span>((_, hash)) =&gt; hash.clone(),
+                    <span class="rs-type">None</span> =&gt; <span class="rs-self">self</span>.route_provider.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-base-hash-29">base_hash</a>(&amp;path)?,
+                }
+            } <span class="rs-kw">else</span> {
+                <span class="rs-type">None</span>
+            };
+            path_groups.push(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-PublishDecision-92">PublishDecision</a> {
+                path,
+                route,
+                base_hash,
+                message: <span class="rs-type">None</span>,
+            });
+            publishable.push(change.clone());
+        }
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a> {
+            snapshot_version,
+            path_groups,
+            changes: publishable,
+            atomic,
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-apply-prepared-changeset-144">apply_prepared_changeset</a>(
+        &amp;<span class="rs-self">self</span>,
+        prepared: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>&gt; {
+        <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> snapshot_version = prepared.snapshot_version;
+        <span class="rs-kw">let</span> receiver = <span class="rs-self">self</span>.commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-submit-230">submit</a>(prepared)?;
+        <span class="rs-kw">let</span> commit_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> result = receiver
+            .recv()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-CommitError-9">CommitError</a>::<span class="rs-type">ReplyDisconnected</span>)??;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-finalize-apply-result-164">finalize_apply_result</a>(
+            result,
+            snapshot_version,
+            commit_start.elapsed().as_secs_f64(),
+            total_start.elapsed().as_secs_f64(),
+        ))
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-finalize-apply-result-164">finalize_apply_result</a>(
+    <span class="rs-kw">mut</span> result: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>,
+    snapshot_version: <span class="rs-type">Option</span>&lt;u64&gt;,
+    commit_elapsed_s: f64,
+    total_s: f64,
+) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-commit-outcome-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a> {
+    <span class="rs-kw">let</span> commit_queue_wait_s = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.serial.queue_wait_s&quot;);
+    <span class="rs-kw">let</span> commit_worker_s = <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.commit.total_s&quot;)
+        .max(<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(&amp;result.timings, &quot;occ.serial.commit_s&quot;));
+    result.timings.insert(
+        &quot;occ.apply.commit_queue_wait_s&quot;.to_owned(),
+        commit_queue_wait_s,
+    );
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_resume_wait_s&quot;.to_owned(), 0.0);
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_worker_s&quot;.to_owned(), commit_worker_s);
+    result
+        .timings
+        .insert(&quot;occ.apply.commit_s&quot;.to_owned(), commit_elapsed_s);
+    result
+        .timings
+        .insert(&quot;occ.apply.total_s&quot;.to_owned(), total_s);
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(published), <span class="rs-type">Some</span>(snapshot)) = (result.published_manifest_version, snapshot_version)
+    {
+        result.timings.insert(
+            &quot;occ.apply.manifest_lag&quot;.to_owned(),
+            published.saturating_sub(snapshot + 1) <span class="rs-kw">as</span> f64,
+        );
+    }
+    result
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#item-fn-timing-or-default-199">timing_or_default</a>(timings: &amp;std::collections::<span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, key: &amp;str) -&gt; f64 {
+    timings.<a class="symbol-link rs-fn" href="eos-layerstack--src-service-rs.html#method-get-101">get</a>(key).copied().unwrap_or(0.0)
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>: <a class="symbol-link rs-type" href="eos-layerstack--src-commit-queue-rs.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a> + &#x27;<span class="rs-kw">static</span>&gt; <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-commit-prepare-rs.html#item-struct-CommitService-37">CommitService</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-commit-prepare-rs.html#method-drop-204">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.commit_queue.<a class="symbol-link rs-fn" href="eos-layerstack--src-commit-queue-rs.html#method-close-211">close</a>();
+    }
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/commit/prepare.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

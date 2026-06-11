@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-api · src/admin.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>40</b><span>items</span></div>
+  <div><b>18</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-api.html"><span>admin.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-api--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-api--src-main-rs.html"><span>main.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-api--src-public-rs.html"><span>public.rs</span><small>5/2</small></a></li><li><a class="file-link" href="eos-api--src-router-rs.html"><span>router.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-api--src-server-rs.html"><span>server.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-api--src-wire-rs.html"><span>wire.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="admin crates/eos-api/src/admin.rs AdminArgs impl AdminArgs default_listen run round_trip admin_invocation_id">
+  <div class="module-head">
+    <div>
+      <h2>src/admin.rs</h2>
+      <p class="path">module <code>admin</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>4 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AdminArgs-13" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AdminArgs pub pub struct AdminArgs crates/eos-api/src/admin.rs op String listen std :: path :: PathBuf sandbox_id Option &lt; String &gt; args Value ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AdminArgs</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a></code>
+  <p class="docstring">Parsed `admin` subcommand arguments.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>op</td><td><code>String</code></td></tr><tr><td>pub</td><td>listen</td><td><code>std :: path :: PathBuf</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-26"><td>associated-fn</td><td>parse</td><td><code>pub fn <a class="symbol-link" href="eos-api.html#method-parse-26">parse</a> (mut argv : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><p class="docstring">Parse `admin &lt;op&gt; [--listen &lt;socket&gt;] [--sandbox &lt;id&gt;] [--args &lt;json&gt;]`.<br># Errors<br>Returns an error on unknown flags or malformed `--args` JSON.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse `admin &lt;op&gt; [--listen &lt;socket&gt;] [--sandbox &lt;id&gt;] [--args &lt;json&gt;]`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error on unknown flags or malformed `--args` JSON.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(op) = argv.next() <span class="rs-kw">else</span> {
+            bail!(&quot;usage: eos-api admin &lt;op&gt; [--listen &lt;socket&gt;] [--sandbox &lt;id&gt;] [--args &lt;json&gt;]&quot;);
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> listen = <a class="symbol-link rs-fn" href="eos-api.html#item-fn-default-listen-64">default_listen</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sandbox_id = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = json!({});
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(flag) = argv.next() {
+            <span class="rs-kw">match</span> flag.as_str() {
+                &quot;--listen&quot; =&gt; {
+                    listen = argv.next().context(&quot;--listen requires a value&quot;)?.into();
+                }
+                &quot;--sandbox&quot; =&gt; {
+                    sandbox_id = <span class="rs-type">Some</span>(argv.next().context(&quot;--sandbox requires a value&quot;)?);
+                }
+                &quot;--args&quot; =&gt; {
+                    <span class="rs-kw">let</span> raw = argv.next().context(&quot;--args requires a value&quot;)?;
+                    args = serde_json::from_str(&amp;raw).context(&quot;--args must be <span class="rs-type">JSON</span>&quot;)?;
+                    <span class="rs-kw">if</span> !args.is_object() {
+                        bail!(&quot;--args must be a <span class="rs-type">JSON</span> object&quot;);
+                    }
+                }
+                other =&gt; bail!(&quot;unknown admin flag {other:?}&quot;),
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            op,
+            listen,
+            sandbox_id,
+            args,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/admin.rs:13</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-run-68" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run pub pub fn run (args : &amp; AdminArgs) -&gt; Result &lt; () &gt; crates/eos-api/src/admin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-api.html#item-fn-run-68">run</a> (args : &amp; <a class="symbol-link" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a>) -&gt; Result &lt; () &gt;</code>
+  <p class="docstring">Run one admin op and print the response line to stdout.<br># Errors<br>Returns an error on socket/transport failure (an error ENVELOPE is still<br>a successful round trip and is printed).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Run one admin op and print the response line to stdout.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error on socket/transport failure (an error ENVELOPE is still</span>
+<span class="rs-comment">/// a successful round trip and is printed).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-run-68">run</a>(args: &amp;<a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> envelope = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+    envelope.insert(&quot;op&quot;.to_owned(), json!(args.op));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = &amp;args.sandbox_id {
+        envelope.insert(&quot;sandbox_id&quot;.to_owned(), json!(sandbox_id));
+    }
+    envelope.insert(&quot;invocation_id&quot;.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-api.html#item-fn-admin-invocation-id-100">admin_invocation_id</a>()));
+    envelope.insert(&quot;args&quot;.to_owned(), args.args.clone());
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="eos-api.html#item-fn-round-trip-86">round_trip</a>(&amp;<a class="symbol-link rs-fn" href="eos-api--src-server-rs.html#item-fn-admin-socket-path-17">admin_socket_path</a>(&amp;args.listen), &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(envelope))?;
+    println!(&quot;{response}&quot;);
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/admin.rs:68</p>
+</article><article id="item-fn-default-listen-64" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_listen private fn default_listen () -&gt; std :: path :: PathBuf crates/eos-api/src/admin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_listen</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api.html#item-fn-default-listen-64">default_listen</a> () -&gt; std :: path :: PathBuf</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-default-listen-64">default_listen</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+    std::path::<span class="rs-type">PathBuf</span>::from(&quot;/tmp/eos-api.sock&quot;)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/admin.rs:64</p>
+</article><article id="item-fn-round-trip-86" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn round_trip private fn round_trip (socket : &amp; Path , envelope : &amp; Value) -&gt; Result &lt; Value &gt; crates/eos-api/src/admin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>round_trip</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api.html#item-fn-round-trip-86">round_trip</a> (socket : &amp; Path , envelope : &amp; Value) -&gt; Result &lt; Value &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-round-trip-86">round_trip</a>(socket: &amp;<span class="rs-type">Path</span>, envelope: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = <span class="rs-type">UnixStream</span>::connect(socket)
+        .with_context(|| format!(&quot;connect operator socket {}&quot;, socket.display()))?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = serde_json::to_vec(envelope)?;
+    line.push(b&#x27;\n&#x27;);
+    stream.write_all(&amp;line)?;
+    stream.flush()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(stream);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+    reader.read_line(&amp;<span class="rs-kw">mut</span> response)?;
+    serde_json::from_str(response.trim_end())
+        .with_context(|| format!(&quot;decode response {response:?}&quot;))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/admin.rs:86</p>
+</article><article id="item-fn-admin-invocation-id-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn admin_invocation_id private fn admin_invocation_id () -&gt; String crates/eos-api/src/admin.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>admin_invocation_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api.html#item-fn-admin-invocation-id-100">admin_invocation_id</a> () -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-admin-invocation-id-100">admin_invocation_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> nanos = std::time::<span class="rs-type">SystemTime</span>::now()
+        .duration_since(std::time::<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    format!(&quot;admin-{}-{nanos:x}&quot;, std::process::id())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/admin.rs:100</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-api/src/admin.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-api admin &lt;op&gt;` — the operator CLI. Connects to the operator socket</span>
+<span class="rs-comment">//! beside the client socket (never the client socket) and performs one op.</span>
+
+<span class="rs-kw">use</span> std::io::{<span class="rs-type">BufRead</span>, <span class="rs-type">BufReader</span>, <span class="rs-type">Write</span>};
+<span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixStream</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::server::admin_socket_path;
+
+<span class="rs-comment">/// Parsed `admin` subcommand arguments.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a> {
+    <span class="rs-comment">/// The op to invoke (canonical name or alias).</span>
+    <span class="rs-kw">pub</span> op: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Client socket path (the operator socket is derived from it).</span>
+    <span class="rs-kw">pub</span> listen: std::path::<span class="rs-type">PathBuf</span>,
+    <span class="rs-comment">/// Optional sandbox id for daemon-bound/host per-sandbox ops.</span>
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Op args as a JSON object.</span>
+    <span class="rs-kw">pub</span> args: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a> {
+    <span class="rs-comment">/// Parse `admin &lt;op&gt; [--listen &lt;socket&gt;] [--sandbox &lt;id&gt;] [--args &lt;json&gt;]`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error on unknown flags or malformed `--args` JSON.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(op) = argv.next() <span class="rs-kw">else</span> {
+            bail!(&quot;usage: eos-api admin &lt;op&gt; [--listen &lt;socket&gt;] [--sandbox &lt;id&gt;] [--args &lt;json&gt;]&quot;);
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> listen = <a class="symbol-link rs-fn" href="eos-api.html#item-fn-default-listen-64">default_listen</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> sandbox_id = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = json!({});
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(flag) = argv.next() {
+            <span class="rs-kw">match</span> flag.as_str() {
+                &quot;--listen&quot; =&gt; {
+                    listen = argv.next().context(&quot;--listen requires a value&quot;)?.into();
+                }
+                &quot;--sandbox&quot; =&gt; {
+                    sandbox_id = <span class="rs-type">Some</span>(argv.next().context(&quot;--sandbox requires a value&quot;)?);
+                }
+                &quot;--args&quot; =&gt; {
+                    <span class="rs-kw">let</span> raw = argv.next().context(&quot;--args requires a value&quot;)?;
+                    args = serde_json::from_str(&amp;raw).context(&quot;--args must be <span class="rs-type">JSON</span>&quot;)?;
+                    <span class="rs-kw">if</span> !args.is_object() {
+                        bail!(&quot;--args must be a <span class="rs-type">JSON</span> object&quot;);
+                    }
+                }
+                other =&gt; bail!(&quot;unknown admin flag {other:?}&quot;),
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            op,
+            listen,
+            sandbox_id,
+            args,
+        })
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-default-listen-64">default_listen</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+    std::path::<span class="rs-type">PathBuf</span>::from(&quot;/tmp/eos-api.sock&quot;)
+}
+
+<span class="rs-comment">/// Run one admin op and print the response line to stdout.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error on socket/transport failure (an error ENVELOPE is still</span>
+<span class="rs-comment">/// a successful round trip and is printed).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-run-68">run</a>(args: &amp;<a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> envelope = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+    envelope.insert(&quot;op&quot;.to_owned(), json!(args.op));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(sandbox_id) = &amp;args.sandbox_id {
+        envelope.insert(&quot;sandbox_id&quot;.to_owned(), json!(sandbox_id));
+    }
+    envelope.insert(&quot;invocation_id&quot;.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-api.html#item-fn-admin-invocation-id-100">admin_invocation_id</a>()));
+    envelope.insert(&quot;args&quot;.to_owned(), args.args.clone());
+    <span class="rs-kw">let</span> response = <a class="symbol-link rs-fn" href="eos-api.html#item-fn-round-trip-86">round_trip</a>(&amp;<a class="symbol-link rs-fn" href="eos-api--src-server-rs.html#item-fn-admin-socket-path-17">admin_socket_path</a>(&amp;args.listen), &amp;<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(envelope))?;
+    println!(&quot;{response}&quot;);
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-round-trip-86">round_trip</a>(socket: &amp;<span class="rs-type">Path</span>, envelope: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = <span class="rs-type">UnixStream</span>::connect(socket)
+        .with_context(|| format!(&quot;connect operator socket {}&quot;, socket.display()))?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> line = serde_json::to_vec(envelope)?;
+    line.push(b&#x27;\n&#x27;);
+    stream.write_all(&amp;line)?;
+    stream.flush()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reader = <span class="rs-type">BufReader</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(stream);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>();
+    reader.read_line(&amp;<span class="rs-kw">mut</span> response)?;
+    serde_json::from_str(response.trim_end())
+        .with_context(|| format!(&quot;decode response {response:?}&quot;))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#item-fn-admin-invocation-id-100">admin_invocation_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> nanos = std::time::<span class="rs-type">SystemTime</span>::now()
+        .duration_since(std::time::<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    format!(&quot;admin-{}-{nanos:x}&quot;, std::process::id())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

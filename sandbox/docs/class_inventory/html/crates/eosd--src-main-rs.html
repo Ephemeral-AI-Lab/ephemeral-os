@@ -23,8 +23,8 @@
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>3</b><span>modules</span></div>
-  <div><b>24</b><span>items</span></div>
-  <div><b>16</b><span>fields</span></div>
+  <div><b>26</b><span>items</span></div>
+  <div><b>14</b><span>fields</span></div>
   <div><b>4</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link active" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eosd.html"><span>daemon.rs</span><small>2/9</small></a></li><li><a class="file-link active" href="eosd--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eosd--src-runner-rs.html"><span>runner.rs</span><small>3/6</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin crates/eosd/src/main.rs main run_ns_holder parse_fd">
   <div class="module-head">
     <div>
@@ -77,12 +77,18 @@
         }
         <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
-        <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-61">run_ns_holder</a>(args),
+        <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
+        <span class="rs-comment">// The committed `contract/ops.json`; `cargo xtask check-contract`</span>
+        <span class="rs-comment">// fails when this output drifts from the checked-in artifact.</span>
+        <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
+            print!(&quot;{}&quot;, eos_daemon::wire::ops::ops_json_document());
+            <span class="rs-type">Ok</span>(())
+        }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(
-            &quot;unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | --version&quot;
+            &quot;unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | dump-ops | --version&quot;
         )),
         <span class="rs-type">None</span> =&gt; <span class="rs-type">Err</span>(anyhow!(
-            &quot;missing subcommand; expected daemon | ns-runner | ns-holder | --version&quot;
+            &quot;missing subcommand; expected daemon | ns-runner | ns-holder | dump-ops | --version&quot;
         )),
     }
 }
@@ -90,14 +96,14 @@
 </details>
 
   <p class="source">crates/eosd/src/main.rs:40</p>
-</article><article id="item-fn-run-ns-holder-61" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_ns_holder private fn run_ns_holder (mut args : std :: env :: Args) -&gt; Result &lt; () &gt; crates/eosd/src/main.rs  ">
+</article><article id="item-fn-run-ns-holder-67" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_ns_holder private fn run_ns_holder (mut args : std :: env :: Args) -&gt; Result &lt; () &gt; crates/eosd/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_ns_holder</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eosd--src-main-rs.html#item-fn-run-ns-holder-61">run_ns_holder</a> (mut args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
-  <p class="docstring">`eosd ns-holder &lt;readiness_fd&gt; &lt;control_fd&gt;` — become the single-threaded<br>child that creates and pins the isolated workspace's namespace stack and<br>runs the readiness handshake, then `pause()`s until `SIGTERM`.<br>Real thin call: `eos-ns-holder` already exposes `run(readiness_fd,<br>control_fd)`, and its lib doc sanctions keeping the argv -&gt; FD parsing here.<br>We parse the two positional FD ints and dispatch; the holder's typed errors<br>carry exit codes (`1` / `2` / `7`) that we map onto the process status so the<br>daemon-side crash-recovery sees the same codes as the Rust holder.</p>
+  <code class="signature">fn <a class="symbol-link" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a> (mut args : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
+  <p class="docstring">`eosd ns-holder &lt;readiness_fd&gt; &lt;control_fd&gt;` — become the single-threaded<br>child that creates and pins the isolated workspace's namespace stack and<br>runs the readiness handshake, then `pause()`s until `SIGTERM`.<br>Real thin call: `eos-namespace::holder` already exposes `run(readiness_fd,<br>control_fd)`, and its lib doc sanctions keeping the argv -&gt; FD parsing here.<br>We parse the two positional FD ints and dispatch; the holder's typed errors<br>carry exit codes (`1` / `2` / `7`) that we map onto the process status so the<br>daemon-side crash-recovery sees the same codes as the Rust holder.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
@@ -105,27 +111,27 @@
 <span class="rs-comment">/// child that creates and pins the isolated workspace's namespace stack and</span>
 <span class="rs-comment">/// runs the readiness handshake, then `pause()`s until `SIGTERM`.</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// Real thin call: `eos-ns-holder` already exposes `run(readiness_fd,</span>
+<span class="rs-comment">/// Real thin call: `eos-namespace::holder` already exposes `run(readiness_fd,</span>
 <span class="rs-comment">/// control_fd)`, and its lib doc sanctions keeping the argv -&gt; FD parsing here.</span>
 <span class="rs-comment">/// We parse the two positional FD ints and dispatch; the holder's typed errors</span>
 <span class="rs-comment">/// carry exit codes (`1` / `2` / `7`) that we map onto the process status so the</span>
 <span class="rs-comment">/// daemon-side crash-recovery sees the same codes as the Rust holder.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-61">run_ns_holder</a>(<span class="rs-kw">mut</span> args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
-    <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(<span class="rs-kw">mut</span> args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
+    <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
 
-    <span class="rs-kw">match</span> eos_ns_holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
+    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
         <span class="rs-type">Err</span>(err) =&gt; {
             <span class="rs-kw">let</span> code = <span class="rs-kw">match</span> &amp;err {
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">ControlPipeClosed</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">CONTROL_CLOSED_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">ControlPipeClosed</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">CONTROL_CLOSED_EXIT</span>
                 }
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UnexpectedToken</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UNEXPECTED_TOKEN_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UnexpectedToken</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UNEXPECTED_TOKEN_EXIT</span>
                 }
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TestCrash</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TEST_CRASH_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TestCrash</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TEST_CRASH_EXIT</span>
                 }
                 <span class="rs-comment">// Unshare / pipe-i/o failures have no dedicated Rust exit code;</span>
                 <span class="rs-comment">// surface the message and fall through to the generic status.</span>
@@ -140,20 +146,20 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eosd/src/main.rs:61</p>
-</article><article id="item-fn-parse-fd-98" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_fd private fn parse_fd (value : Option &lt; String &gt; , name : &amp; str) -&gt; Result &lt; RawFd &gt; crates/eosd/src/main.rs  ">
+  <p class="source">crates/eosd/src/main.rs:67</p>
+</article><article id="item-fn-parse-fd-104" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_fd private fn parse_fd (value : Option &lt; String &gt; , name : &amp; str) -&gt; Result &lt; RawFd &gt; crates/eosd/src/main.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_fd</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a> (value : Option &lt; String &gt; , name : &amp; str) -&gt; Result &lt; RawFd &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a> (value : Option &lt; String &gt; , name : &amp; str) -&gt; Result &lt; RawFd &gt;</code>
   <p class="docstring">Parse a positional file-descriptor argument shared by the ns-holder arm.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code><span class="rs-comment">/// Parse a positional file-descriptor argument shared by the ns-holder arm.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(value: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(value: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>&gt; {
     value
         .ok_or_else(|| anyhow!(&quot;missing {name} argument <span class="rs-kw">for</span> ns-holder&quot;))?
         .parse::&lt;<span class="rs-type">RawFd</span>&gt;()
@@ -162,7 +168,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eosd/src/main.rs:98</p>
+  <p class="source">crates/eosd/src/main.rs:104</p>
 </article></div>
 </section></div>
 </main>
@@ -179,8 +185,8 @@
 <span class="rs-comment">//! subcommand adapters, and maps their typed errors to process exit codes:</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! - `eosd daemon`     -&gt; the async RPC server in `eos-daemon`.</span>
-<span class="rs-comment">//! - `eosd ns-runner`  -&gt; the single-threaded namespace runner in `eos-runner`.</span>
-<span class="rs-comment">//! - `eosd ns-holder`  -&gt; the single-threaded namespace holder in `eos-ns-holder`.</span>
+<span class="rs-comment">//! - `eosd ns-runner`  -&gt; the single-threaded namespace runner in `eos-namespace::runner`.</span>
+<span class="rs-comment">//! - `eosd ns-holder`  -&gt; the single-threaded namespace holder in `eos-namespace::holder`.</span>
 <span class="rs-comment">//!</span>
 <span class="rs-comment">//! Three real processes, one static binary. This is the launcher chain:</span>
 <span class="rs-comment">//! `daemon` owns the RPC server, `ns-runner` owns fresh/setns tool execution,</span>
@@ -197,10 +203,10 @@
 <span class="rs-comment">//! silently drop the contract. The dispatcher therefore maps known codes via</span>
 <span class="rs-comment">//! [`std::process::exit`]:</span>
 <span class="rs-comment">//! - ns-holder: `1` (control pipe closed), `2` (unexpected token), `7` (test</span>
-<span class="rs-comment">//!   crash knob) — `eos_ns_holder::NsHolderError::{CONTROL_CLOSED_EXIT,</span>
+<span class="rs-comment">//!   crash knob) — `eos_namespace::holder::NsHolderError::{CONTROL_CLOSED_EXIT,</span>
 <span class="rs-comment">//!   UNEXPECTED_TOKEN_EXIT, TEST_CRASH_EXIT}`.</span>
 <span class="rs-comment">//! - thin-client / daemon connect path: `97` (`CONNECT_FAILED`), `98`</span>
-<span class="rs-comment">//!   (`IO_FAILED`) — `eos_protocol::{CONNECT_FAILED, IO_FAILED}`.</span>
+<span class="rs-comment">//!   (`IO_FAILED`) — `eos_daemon::wire::{CONNECT_FAILED, IO_FAILED}`.</span>
 #![forbid(unsafe_code)]
 
 <span class="rs-kw">mod</span> daemon;
@@ -221,12 +227,18 @@
         }
         <span class="rs-type">Some</span>(&quot;daemon&quot;) =&gt; daemon::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
         <span class="rs-type">Some</span>(&quot;ns-runner&quot;) =&gt; runner::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(args),
-        <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-61">run_ns_holder</a>(args),
+        <span class="rs-type">Some</span>(&quot;ns-holder&quot;) =&gt; <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(args),
+        <span class="rs-comment">// The committed `contract/ops.json`; `cargo xtask check-contract`</span>
+        <span class="rs-comment">// fails when this output drifts from the checked-in artifact.</span>
+        <span class="rs-type">Some</span>(&quot;dump-ops&quot;) =&gt; {
+            print!(&quot;{}&quot;, eos_daemon::wire::ops::ops_json_document());
+            <span class="rs-type">Ok</span>(())
+        }
         <span class="rs-type">Some</span>(other) =&gt; <span class="rs-type">Err</span>(anyhow!(
-            &quot;unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | --version&quot;
+            &quot;unknown subcommand {other:?}; expected daemon | ns-runner | ns-holder | dump-ops | --version&quot;
         )),
         <span class="rs-type">None</span> =&gt; <span class="rs-type">Err</span>(anyhow!(
-            &quot;missing subcommand; expected daemon | ns-runner | ns-holder | --version&quot;
+            &quot;missing subcommand; expected daemon | ns-runner | ns-holder | dump-ops | --version&quot;
         )),
     }
 }
@@ -235,27 +247,27 @@
 <span class="rs-comment">/// child that creates and pins the isolated workspace's namespace stack and</span>
 <span class="rs-comment">/// runs the readiness handshake, then `pause()`s until `SIGTERM`.</span>
 <span class="rs-comment">///</span>
-<span class="rs-comment">/// Real thin call: `eos-ns-holder` already exposes `run(readiness_fd,</span>
+<span class="rs-comment">/// Real thin call: `eos-namespace::holder` already exposes `run(readiness_fd,</span>
 <span class="rs-comment">/// control_fd)`, and its lib doc sanctions keeping the argv -&gt; FD parsing here.</span>
 <span class="rs-comment">/// We parse the two positional FD ints and dispatch; the holder's typed errors</span>
 <span class="rs-comment">/// carry exit codes (`1` / `2` / `7`) that we map onto the process status so the</span>
 <span class="rs-comment">/// daemon-side crash-recovery sees the same codes as the Rust holder.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-61">run_ns_holder</a>(<span class="rs-kw">mut</span> args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
-    <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
-    <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-run-ns-holder-67">run_ns_holder</a>(<span class="rs-kw">mut</span> args: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> readiness_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;readiness_fd&quot;)?;
+    <span class="rs-kw">let</span> control_fd = <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(args.next(), &quot;control_fd&quot;)?;
 
-    <span class="rs-kw">match</span> eos_ns_holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
+    <span class="rs-kw">match</span> eos_namespace::holder::<a class="symbol-link rs-fn" href="eosd.html#item-fn-run-15">run</a>(readiness_fd, control_fd) {
         <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
         <span class="rs-type">Err</span>(err) =&gt; {
             <span class="rs-kw">let</span> code = <span class="rs-kw">match</span> &amp;err {
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">ControlPipeClosed</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">CONTROL_CLOSED_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">ControlPipeClosed</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">CONTROL_CLOSED_EXIT</span>
                 }
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UnexpectedToken</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UNEXPECTED_TOKEN_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UnexpectedToken</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">UNEXPECTED_TOKEN_EXIT</span>
                 }
-                eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TestCrash</span> =&gt; {
-                    eos_ns_holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TEST_CRASH_EXIT</span>
+                eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TestCrash</span> =&gt; {
+                    eos_namespace::holder::<span class="rs-type">NsHolderError</span>::<span class="rs-type">TEST_CRASH_EXIT</span>
                 }
                 <span class="rs-comment">// Unshare / pipe-i/o failures have no dedicated Rust exit code;</span>
                 <span class="rs-comment">// surface the message and fall through to the generic status.</span>
@@ -269,7 +281,7 @@
 }
 
 <span class="rs-comment">/// Parse a positional file-descriptor argument shared by the ns-holder arm.</span>
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-98">parse_fd</a>(value: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>&gt; {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-main-rs.html#item-fn-parse-fd-104">parse_fd</a>(value: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RawFd</span>&gt; {
     value
         .ok_or_else(|| anyhow!(&quot;missing {name} argument <span class="rs-kw">for</span> ns-holder&quot;))?
         .parse::&lt;<span class="rs-type">RawFd</span>&gt;()

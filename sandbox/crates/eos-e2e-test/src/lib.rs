@@ -2,7 +2,7 @@
 //!
 //! This crate owns test infrastructure only. Docker lifecycle is allowed for
 //! container bring-up; every sandbox operation under test must go through
-//! `eos-protocol` over the live daemon wire.
+//! `eos-sandbox-host` over the live daemon wire.
 
 use std::path::Path;
 #[cfg(feature = "e2e")]

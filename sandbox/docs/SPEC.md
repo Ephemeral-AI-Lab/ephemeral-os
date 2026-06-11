@@ -1,6 +1,6 @@
 # EphemeralOS Sandbox — Target Architecture Spec
 
-Status: **proposed** (target state; supersedes the `eos-protocol`-centric layout).
+Status: **implemented** (live crate map; supersedes the old shared-protocol-crate layout).
 Scope: the sandbox system only — the host-side API service, the host engine, the
 in-container daemon, and the contract artifact that binds them. Client
 implementations (agent-core or otherwise) are out of scope; they are defined
@@ -44,7 +44,7 @@ eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
 | `eos-sandbox-host` | lib | container lifecycle, registry, endpoint resolution, forwarding, recovery | parse op semantics beyond catalog metadata |
 | `eosd` / `eos-daemon` | bin+lib | dispatch and execute the in-box op catalog | know about Docker, sandbox_ids, or the fleet |
 | `contract/` | data | the protocol: op catalog, fixtures, prose | contain code |
-| `eos-cas` | lib (in-box) | the two frozen content hashes + manifest/layer types | be depended on by host-side crates |
+| `eos-layerstack` | lib (in-box) | the two frozen content hashes + manifest/layer types, storage, leases, checkpoint squashing | be depended on by host-side crates |
 
 Dependency law: `eos-api → eos-sandbox-host → (std/tokio/serde only)`.
 Host crates never depend on in-box crates; in-box crates never depend on host
@@ -238,33 +238,34 @@ is `served_by`, `visibility`, and `mutates_state`.
 
 ```
 sandbox/
-├── README.md                       entry point (NEW)
-├── CONTRACT.md                     version-pin pointers (amended)
-├── contract/                       shared artifact — data only (NEW)
+├── README.md                       entry point
+├── CONTRACT.md                     version-pin pointers
+├── contract/                       shared artifact — data only
 │   ├── ops.json
-│   ├── fixtures/*.json             moved from eos-protocol/fixtures/
+│   ├── fixtures/
 │   └── PROTOCOL.md                 framing/envelope/auth/errors/canonicalization
 ├── crates/
-│   ├── eos-api/                    NEW bin: main, server, wire, public, router, admin
+│   ├── eos-api/                    bin: main, server, wire, public, router, admin
 │   │   └── tests/contract.rs
-│   ├── eos-sandbox-host/           NEW lib: registry, lifecycle, docker, endpoint,
-│   │   │                           forward, recovery   (promoted from eos-e2e-test)
+│   ├── eos-sandbox-host/           lib: registry, lifecycle, docker, endpoint,
+│   │   │                           forward, recovery
 │   │   └── tests/
 │   ├── eosd/                       + dump-ops subcommand
 │   ├── eos-daemon/
 │   │   ├── src/wire/               absorbed: envelope, ops catalog, errors, version
 │   │   └── tests/contract.rs
-│   ├── eos-cas/                    renamed rump of eos-protocol: cas.rs, models.rs,
-│   │                               runner.rs (daemon↔ns-runner wire DTOs)
-│   ├── eos-plugin/                 + framing.rs (own PPC framing)
-│   ├── eos-workspace-runtime/      src/contract/ + ids.rs (absorbed typed IDs)
-│   ├── eos-layerstack/ eos-occ/ eos-overlay/
-│   │   eos-namespace/              absorbed eos-runner + eos-ns-holder
-│   │                               (holder + runner modules; DTOs → eos-cas)
-│   ├── eos-e2e-test/               shrinks; imports eos-sandbox-host
-│   └── eos-protocol/               DELETED (final step)
+│   ├── eos-layerstack/             CAS hashes, storage, leases, commit queue
+│   ├── eos-overlay/                overlayfs mount/capture leaf
+│   ├── eos-namespace/              holder + runner namespace child support
+│   ├── eos-command-session/        PTY-backed command sessions
+│   ├── eos-command-ops/            command lifecycle/runtime policy
+│   ├── eos-ephemeral-workspace/    per-operation overlay workspace helpers
+│   ├── eos-isolated-workspace/     isolated session lifecycle + network setup
+│   ├── eos-file-ops/               file operation semantics
+│   ├── eos-plugin/                 plugin contracts and PPC protocol
+│   └── eos-e2e-test/               live protocol tests
 ├── docs/
-│   ├── README.md                   index (NEW)
+│   ├── README.md                   index
 │   ├── API.md                      GENERATED from ops.json
 │   └── contract/ …                 frozen historical contracts (unchanged)
 └── xtask/                          + check-contract, + gen-docs
@@ -272,7 +273,7 @@ sandbox/
 
 ## 9. Conformance (the drift defense)
 
-`cargo xtask check-contract` is a REQUIRED CI gate:
+`cargo run -p xtask -- check-contract` is a REQUIRED CI gate:
 
 1. `eosd dump-ops` output must equal the committed `contract/ops.json`.
 2. Daemon conformance: decodes request fixtures byte-exactly; error envelopes
@@ -284,18 +285,17 @@ sandbox/
 4. Name integrity: canonical names are unique across the catalog.
 
 CAS byte-identity remains governed by `docs/contract/02-cas-byte-identity.md`
-and the 18 golden cases — `eos-cas` carries them; host-side crates never
-depend on it.
+and the 18 golden cases — `eos-layerstack` carries the implementation and
+fixture tests; host-side crates never depend on it.
 
-## 10. Migration plan (each phase ships green)
+## 10. Drift cleanup
 
-| Phase | Work | Verify |
-|---|---|---|
-| 1 | `contract/` (fixtures moved, PROTOCOL.md), `eosd dump-ops`, `ops.json`, `check-contract` gate — `eos-protocol` still present | gate passes; fixture tests repointed |
-| 2 | `eos-sandbox-host` (promote e2e docker/container/client); repoint `eos-e2e-test` | e2e suite green against live daemon |
-| 3 | fix `audit/events.rs` op-name literals → catalog consts; dispatcher alias table (canonical + legacy); `eos-api` + contract tests | e2e invokes ops under both spellings |
-| 4 | absorb wire into `eos-daemon/src/wire/`; `eos-cas` rename; `eos-plugin` framing; ids → `eos-workspace-runtime::contract`; delete `eos-protocol` | workspace builds; `check-contract` green |
-| 5 | READMEs, `docs/API.md` generation, gitignore hygiene | docs regenerate-and-diff clean |
+When crate boundaries move, clean these surfaces in the same change:
+
+- `contract/ops.json` and `docs/API.md` via `cargo run -p xtask -- gen-docs`.
+- `docs/class_inventory/html/` via `cargo run --manifest-path scripts/class-inventory/Cargo.toml`.
+- Stale prose in `README.md`, `docs/SPEC.md`, and `docs/RUST-GUIDANCE.md`.
+- Ignored local junk such as `.DS_Store`, `.omc/`, and `target/` leftovers.
 
 ## 11. Out of scope
 

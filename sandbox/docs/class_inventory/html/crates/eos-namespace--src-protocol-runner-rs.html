@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-namespace · src/protocol/runner.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-namespace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>16</b><span>modules</span></div>
+  <div><b>116</b><span>items</span></div>
+  <div><b>72</b><span>fields</span></div>
+  <div><b>17</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">holder</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace.html"><span>handshake.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-namespace-rs.html"><span>namespace.rs</span><small>2/14</small></a></li><li><a class="file-link" href="eos-namespace--src-holder-network-rs.html"><span>network.rs</span><small>6/25</small></a></li></ul></li><li><a class="file-link" href="eos-namespace--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">protocol</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-protocol-intent-rs.html"><span>intent.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-namespace--src-protocol-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-namespace--src-protocol-runner-rs.html"><span>runner.rs</span><small>8/0</small></a></li></ul></li><li><span class="folder">runner</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-runner-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">fresh_ns</span><ul class="file-tree"><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-child-rs.html"><span>child.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-command-rs.html"><span>command.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-namespace--src-runner-fresh-ns-rs.html"><span>fresh_ns.rs</span><small>1/8</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-mod-rs.html"><span>mod.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-mount-mask-rs.html"><span>mount_mask.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-path-rs.html"><span>path.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-namespace--src-runner-setns-rs.html"><span>setns.rs</span><small>0/17</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="protocol::runner crates/eos-namespace/src/protocol/runner.rs RunMode Fd WorkspaceRoot NsFds RunnerVerb impl RunnerVerb impl From &lt; &amp; str &gt; for RunnerVerb impl From &lt; String &gt; for RunnerVerb impl Serialize for RunnerVerb impl Deserialize &lt; 'de &gt; for RunnerVerb ToolCall RunRequest RunResult">
+  <div class="module-head">
+    <div>
+      <h2>src/protocol/runner.rs</h2>
+      <p class="path">module <code>protocol::runner</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>5 impls</span>
+      <span>0 fns</span>
+      <span>5 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Fd-34" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Fd pub pub struct Fd crates/eos-namespace/src/protocol/runner.rs 0 RawFd ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>Fd</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a></code>
+  <p class="docstring">A raw file descriptor handle.<br>`#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`<br>syscall unchanged.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>repr: transparent</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>RawFd</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:34</p>
+</article><article id="item-struct-WorkspaceRoot-42" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceRoot pub pub struct WorkspaceRoot crates/eos-namespace/src/protocol/runner.rs 0 PathBuf ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>WorkspaceRoot</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-WorkspaceRoot-42">WorkspaceRoot</a></code>
+  <p class="docstring">The validated workspace root the overlay is mounted at.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:42</p>
+</article><article id="item-struct-NsFds-46" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NsFds pub pub struct NsFds crates/eos-namespace/src/protocol/runner.rs user Option &lt; Fd &gt; mnt Option &lt; Fd &gt; pid Option &lt; Fd &gt; net Option &lt; Fd &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>NsFds</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-NsFds-46">NsFds</a></code>
+  <p class="docstring">The ns-holder's pre-opened namespace FDs.<br>Applied in this exact order:<br>`user` (privilege change), `mnt` (mount table), `pid` (descendants only,<br>before `fork`), `net`. A wrong order breaks the setns sequence.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>user</td><td><code>Option &lt; <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>mnt</td><td><code>Option &lt; <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>pid</td><td><code>Option &lt; <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>net</td><td><code>Option &lt; <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:46</p>
+</article><article id="item-struct-ToolCall-124" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolCall pub pub struct ToolCall crates/eos-namespace/src/protocol/runner.rs invocation_id String caller_id String verb RunnerVerb intent Intent args Value background bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ToolCall</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-ToolCall-124">ToolCall</a></code>
+  <p class="docstring">One tool invocation, the runner's view of `ToolCallRequest`.<br>`args` is the opaque verb payload forwarded to the in-namespace primitive;<br>`intent` reuses the protocol enum so the runner does not redefine the verb<br>taxonomy.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>verb</td><td><code><a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code></td></tr><tr><td>pub</td><td>intent</td><td><code><a class="symbol-link" href="eos-namespace--src-protocol-intent-rs.html#item-enum-Intent-8">Intent</a></code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr><tr><td>pub</td><td>background</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:124</p>
+</article><article id="item-struct-RunRequest-140" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunRequest pub pub struct RunRequest crates/eos-namespace/src/protocol/runner.rs mode RunMode tool_call ToolCall workspace_root WorkspaceRoot layer_paths Vec &lt; PathBuf &gt; upperdir Option &lt; PathBuf &gt; workdir Option &lt; PathBuf &gt; ns_fds Option &lt; NsFds &gt; cgroup_path Option &lt; PathBuf &gt; timeout_seconds Option &lt; f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunRequest</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-RunRequest-140">RunRequest</a></code>
+  <p class="docstring">A fully-resolved request to the runner: which mode, the tool call, the<br>overlay layout (fresh-ns), and the held namespace FDs (setns).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code><a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunMode-22">RunMode</a></code></td></tr><tr><td>pub</td><td>tool_call</td><td><code><a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-ToolCall-124">ToolCall</a></code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code><a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-WorkspaceRoot-42">WorkspaceRoot</a></code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>ns_fds</td><td><code>Option &lt; <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-NsFds-46">NsFds</a> &gt;</code></td></tr><tr><td>pub</td><td>cgroup_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:140</p>
+</article><article id="item-struct-RunResult-172" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunResult pub pub struct RunResult crates/eos-namespace/src/protocol/runner.rs tool_result Value exit_code i32 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-struct-RunResult-172">RunResult</a></code>
+  <p class="docstring">The runner's result.<br>Contains the in-namespace tool result JSON plus the child's exit code. The<br>runner constructs the tool result object in-namespace and carries it<br>opaquely as [`Value`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>tool_result</td><td><code>Value</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i32</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:172</p>
+</article><article id="item-enum-RunMode-22" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RunMode pub pub enum RunMode crates/eos-namespace/src/protocol/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>RunMode</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunMode-22">RunMode</a></code>
+  <p class="docstring">Which namespace strategy the runner uses for this call.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>FreshNs</td><td><code></code></td></tr><tr><td>SetNs</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:22</p>
+</article><article id="item-enum-RunnerVerb-63" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerVerb pub pub enum RunnerVerb crates/eos-namespace/src/protocol/runner.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>RunnerVerb</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code>
+  <p class="docstring">Runner-supported tool verbs.<br>Unknown verbs stay representable so the runner can preserve the current<br>`unsupported_runner_verb` result instead of failing JSON decoding before<br>dispatch.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>PluginService</td><td><code></code></td></tr><tr><td>Unknown</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-76"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &quot;exec_command&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span> =&gt; &quot;plugin_service&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(verb) =&gt; verb,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; str &gt; for <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code></summary><table><tbody><tr id="method-from-87"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a> (value : &amp; str) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a>(value: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(other.to_owned()),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; String &gt; for <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code></summary><table><tbody><tr id="method-from-97"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a> (value : String) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value.<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>() {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            _ =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(value),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl Serialize for <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code></summary><table><tbody><tr id="method-serialize-107"><td>method</td><td>serialize</td><td><code>fn <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#method-serialize-107">serialize</a> &lt; S &gt; (&amp; self , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : Serializer ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> serialize&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">Serializer</span>,
+    {
+        serializer.serialize_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl Deserialize &lt; &#x27;de &gt; for <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a></code></summary><table><tbody><tr id="method-deserialize-116"><td>associated-fn</td><td>deserialize</td><td><code>fn <a class="symbol-link" href="eos-namespace--src-protocol-runner-rs.html#method-deserialize-116">deserialize</a> &lt; D &gt; (deserializer : D) -&gt; Result &lt; Self , D :: Error &gt; where D : Deserializer &lt; &#x27;de &gt; ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> deserialize&lt;<span class="rs-type">D</span>&gt;(deserializer: <span class="rs-type">D</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">D</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">D</span>: <span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
+    {
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-deserialize-116">deserialize</a>(deserializer).map(<span class="rs-self">Self</span>::from)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-namespace/src/protocol/runner.rs:63</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-namespace/src/protocol/runner.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Owned request/result types for the namespace runner.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These model the JSON payloads the daemon and the ns-runner child exchange</span>
+<span class="rs-comment">//! over stdin/stdout and the namespace request/result files — the tool-call</span>
+<span class="rs-comment">//! payload, the fresh-ns request file, and the setns stdin payload. The verb-specific `args`</span>
+<span class="rs-comment">//! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim</span>
+<span class="rs-comment">//! to the in-namespace tool primitive); the typed per-verb args/results are the</span>
+<span class="rs-comment">//! daemon's concern (decoded into the command/file tool-crate types), not</span>
+<span class="rs-comment">//! modeled here.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The crate that executes the protocol owns it: the tokio daemon (and the</span>
+<span class="rs-comment">//! command-ops tier) build requests and parse results by depending on this</span>
+<span class="rs-comment">//! module.</span>
+
+<span class="rs-kw">use</span> std::os::unix::io::<span class="rs-type">RawFd</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::intent::<a class="symbol-link rs-type" href="eos-namespace--src-protocol-intent-rs.html#item-enum-Intent-8">Intent</a>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Deserializer</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Serializer</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-comment">/// Which namespace strategy the runner uses for this call.</span>
+<span class="rs-comment">///</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunMode-22">RunMode</a> {
+    <span class="rs-comment">/// Create a brand-new private namespace stack via `unshare`, mount the</span>
+    <span class="rs-comment">/// overlay, then exec — one tool call per namespace.</span>
+    <span class="rs-type">FreshNs</span>,
+    <span class="rs-comment">/// `setns` into the ns-holder's already-open namespace FDs, then exec.</span>
+    <span class="rs-type">SetNs</span>,
+}
+
+<span class="rs-comment">/// A raw file descriptor handle.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`</span>
+<span class="rs-comment">/// syscall unchanged.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[repr(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a>(<span class="rs-kw">pub</span> <span class="rs-type">RawFd</span>);
+
+<span class="rs-comment">/// The validated workspace root the overlay is mounted at.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-WorkspaceRoot-42">WorkspaceRoot</a>(<span class="rs-kw">pub</span> <span class="rs-type">PathBuf</span>);
+
+<span class="rs-comment">/// The ns-holder's pre-opened namespace FDs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Applied in this exact order:</span>
+<span class="rs-comment">/// `user` (privilege change), `mnt` (mount table), `pid` (descendants only,</span>
+<span class="rs-comment">/// before `fork`), `net`. A wrong order breaks the setns sequence.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-NsFds-46">NsFds</a> {
+    <span class="rs-comment">/// User namespace FD (`CLONE_NEWUSER`) — applied first.</span>
+    <span class="rs-kw">pub</span> user: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a>&gt;,
+    <span class="rs-comment">/// Mount namespace FD (`CLONE_NEWNS`).</span>
+    <span class="rs-kw">pub</span> mnt: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a>&gt;,
+    <span class="rs-comment">/// PID namespace FD (`CLONE_NEWPID`) — affects descendants only; set before `fork`.</span>
+    <span class="rs-kw">pub</span> pid: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a>&gt;,
+    <span class="rs-comment">/// Network namespace FD (`CLONE_NEWNET`).</span>
+    <span class="rs-kw">pub</span> net: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-Fd-34">Fd</a>&gt;,
+}
+
+<span class="rs-comment">/// Runner-supported tool verbs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Unknown verbs stay representable so the runner can preserve the current</span>
+<span class="rs-comment">/// `unsupported_runner_verb` result instead of failing JSON decoding before</span>
+<span class="rs-comment">/// dispatch.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    <span class="rs-type">ExecCommand</span>,
+    <span class="rs-type">PluginService</span>,
+    <span class="rs-type">Unknown</span>(<span class="rs-type">String</span>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &quot;exec_command&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span> =&gt; &quot;plugin_service&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(verb) =&gt; verb,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;&amp;str&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a>(value: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(other.to_owned()),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<span class="rs-type">String</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-from-87">from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value.<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>() {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            _ =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(value),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Serialize</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> serialize&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">Serializer</span>,
+    {
+        serializer.serialize_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-as-str-76">as_str</a>())
+    }
+}
+
+<span class="rs-kw">impl</span>&lt;&#x27;de&gt; <span class="rs-type">Deserialize</span>&lt;&#x27;de&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> deserialize&lt;<span class="rs-type">D</span>&gt;(deserializer: <span class="rs-type">D</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">D</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">D</span>: <span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
+    {
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-namespace--src-protocol-runner-rs.html#method-deserialize-116">deserialize</a>(deserializer).map(<span class="rs-self">Self</span>::from)
+    }
+}
+
+<span class="rs-comment">/// One tool invocation, the runner's view of `ToolCallRequest`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `args` is the opaque verb payload forwarded to the in-namespace primitive;</span>
+<span class="rs-comment">/// `intent` reuses the protocol enum so the runner does not redefine the verb</span>
+<span class="rs-comment">/// taxonomy.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-ToolCall-124">ToolCall</a> {
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> verb: <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunnerVerb-63">RunnerVerb</a>,
+    <span class="rs-kw">pub</span> intent: <a class="symbol-link rs-type" href="eos-namespace--src-protocol-intent-rs.html#item-enum-Intent-8">Intent</a>,
+    <span class="rs-kw">pub</span> args: <span class="rs-type">Value</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> background: bool,
+}
+
+<span class="rs-comment">/// A fully-resolved request to the runner: which mode, the tool call, the</span>
+<span class="rs-comment">/// overlay layout (fresh-ns), and the held namespace FDs (setns).</span>
+<span class="rs-comment">///</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-RunRequest-140">RunRequest</a> {
+    <span class="rs-comment">/// Fresh-ns vs setns.</span>
+    <span class="rs-kw">pub</span> mode: <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-enum-RunMode-22">RunMode</a>,
+    <span class="rs-comment">/// The tool invocation to execute inside the namespace.</span>
+    <span class="rs-kw">pub</span> tool_call: <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-ToolCall-124">ToolCall</a>,
+    <span class="rs-comment">/// Where the overlay is (or will be) mounted; the exec cwd.</span>
+    <span class="rs-kw">pub</span> workspace_root: <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-WorkspaceRoot-42">WorkspaceRoot</a>,
+    <span class="rs-comment">/// Overlay lower layers (newest-first), present for [`RunMode::FreshNs`].</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Overlay upperdir (fresh-ns).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> upperdir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Overlay workdir (fresh-ns).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> workdir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Held namespace FDs to `setns` into, present for [`RunMode::SetNs`].</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-NsFds-46">NsFds</a>&gt;,
+    <span class="rs-comment">/// Absolute iws cgroup path; the setns child joins it before `fork` so the</span>
+    <span class="rs-comment">/// child inherits cgroup membership.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> cgroup_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Hard timeout for the tool call (tool's own timeout + a fixed margin).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+}
+
+<span class="rs-comment">/// The runner's result.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Contains the in-namespace tool result JSON plus the child's exit code. The</span>
+<span class="rs-comment">/// runner constructs the tool result object in-namespace and carries it</span>
+<span class="rs-comment">/// opaquely as [`Value`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-namespace--src-protocol-runner-rs.html#item-struct-RunResult-172">RunResult</a> {
+    <span class="rs-comment">/// The in-namespace tool result object, forwarded unchanged.</span>
+    <span class="rs-kw">pub</span> tool_result: <span class="rs-type">Value</span>,
+    <span class="rs-comment">/// The child process exit code.</span>
+    <span class="rs-kw">pub</span> exit_code: i32,
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/unit/protocol/runner.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

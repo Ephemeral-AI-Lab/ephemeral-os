@@ -41,11 +41,11 @@
       "page": "eos-layerstack/index.html"
     },
     {
-      "name": "eos-occ",
-      "displayName": "eos-occ",
-      "cargoTestName": "eos-occ",
-      "path": "eos-occ/readme.json",
-      "page": "eos-occ/index.html"
+      "name": "workspace-publish-gate",
+      "displayName": "workspace-publish-gate",
+      "cargoTestName": "workspace-publish-gate",
+      "path": "workspace-publish-gate/readme.json",
+      "page": "workspace-publish-gate/index.html"
     },
     {
       "name": "workspace-runtime-command-session",

@@ -22,9 +22,9 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>14</b><span>modules</span></div>
-  <div><b>141</b><span>items</span></div>
-  <div><b>122</b><span>fields</span></div>
+  <div><b>15</b><span>modules</span></div>
+  <div><b>113</b><span>items</span></div>
+  <div><b>128</b><span>fields</span></div>
   <div><b>43</b><span>methods</span></div>
 </section>
 <section class="toolbar">
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/14</small></a></li><li><a class="file-link" href="eos-plugin--src-host-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-host-package-rs.html"><span>package.rs</span><small>3/27</small></a></li><li><span class="folder">ppc_client</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-rs.html"><span>ppc_client.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-plugin--src-host-route-rs.html"><span>route.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link active" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/17</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/9</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/2</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-framing-rs.html"><span>framing.rs</span><small>3/2</small></a></li><li><span class="folder">host</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ensure-args-rs.html"><span>ensure_args.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-plugin--src-host-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-plugin--src-host-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><span class="folder">ppc_client</span><ul class="file-tree"><li><a class="file-link" href="eos-plugin--src-host-ppc-client-frame-io-rs.html"><span>frame_io.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-pending-rs.html"><span>pending.rs</span><small>2/1</small></a></li></ul></li><li><a class="file-link" href="eos-plugin--src-host-ppc-client-rs.html"><span>ppc_client.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-plugin--src-host-route-rs.html"><span>route.rs</span><small>2/2</small></a></li></ul></li><li><a class="file-link active" href="eos-plugin--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-plugin--src-manifest-rs.html"><span>manifest.rs</span><small>6/4</small></a></li><li><a class="file-link" href="eos-plugin--src-ppc-rs.html"><span>ppc.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-plugin--src-refresh-rs.html"><span>refresh.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-plugin--src-service-rs.html"><span>service.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-plugin--src-service-registry-rs.html"><span>service_registry.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-plugin/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -87,9 +87,9 @@
 <span class="rs-comment">//! cannot publish and does not define a publish port; `eos-daemon` owns the</span>
 <span class="rs-comment">//! callback handler and routes it through its existing per-root OCC writer.</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! # Build-time guarantee — NOT `eos-occ`</span>
+<span class="rs-comment">//! # Build-time guarantee — no storage edge</span>
 <span class="rs-comment">//!</span>
-<span class="rs-comment">//! This crate does NOT depend on `eos-occ`, `eos-overlay`, `eos-layerstack`,</span>
+<span class="rs-comment">//! This crate does NOT depend on `eos-overlay`, `eos-layerstack`,</span>
 <span class="rs-comment">//! `nix`, or `tokio`. Snapshot, overlay, publish, process, and</span>
 <span class="rs-comment">//! namespace behavior are daemon-side responsibilities.</span>
 <span class="rs-comment">//!</span>
@@ -101,6 +101,7 @@
 #![forbid(unsafe_code)]
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> framing;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> host;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> manifest;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ppc;

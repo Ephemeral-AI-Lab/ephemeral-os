@@ -1,6 +1,6 @@
 # Sandbox Daemon Core Service Refactor SPEC
 
-Status: Implemented locally; contract gate needs Linux-capable runner
+Status: Implemented and verified
 Date: 2026-06-11
 Owner: sandbox/crates
 Scope: `sandbox/crates/eos-daemon` and existing sandbox crates it already
@@ -536,7 +536,7 @@ The refactor is complete when:
 
 ## 10. Implementation Verification
 
-Local checks completed on 2026-06-11:
+Local macOS checks completed on 2026-06-11:
 
 ```bash
 cargo metadata --manifest-path sandbox/Cargo.toml --format-version=1 --no-deps
@@ -548,7 +548,26 @@ rustfmt --edition 2021 --check <touched Rust files>
 git diff --check
 ```
 
-Local checks blocked by host/toolchain constraints:
+Linux Docker checks completed on 2026-06-11:
+
+```bash
+docker run --rm --mount type=bind,source=/Users/yifanxu/machine_learning/LoVC/EphemeralOS,target=/work,readonly -w /work/sandbox -e CARGO_TARGET_DIR=/tmp/eos-target rust:1 sh -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -p xtask -- check-contract'
+docker run --rm --privileged --mount type=bind,source=/Users/yifanxu/machine_learning/LoVC/EphemeralOS,target=/work,readonly -w /work/sandbox -e CARGO_TARGET_DIR=/tmp/eos-target rust:1 sh -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo test -p eos-command-ops --all-targets && cargo test -p eos-ephemeral-workspace --all-targets'
+docker run --rm --privileged --mount type=bind,source=/Users/yifanxu/machine_learning/LoVC/EphemeralOS,target=/work,readonly -w /work/sandbox -e CARGO_TARGET_DIR=/tmp/eos-target rust:1 sh -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo test -p eos-isolated-workspace --all-targets'
+docker run --rm --privileged --user "$(id -u):$(id -g)" --mount type=bind,source=/Users/yifanxu/machine_learning/LoVC/EphemeralOS,target=/work -w /work/sandbox -e CARGO_TARGET_DIR=/tmp/eos-target rust:1 sh -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo test -p eos-daemon --all-targets'
+```
+
+Results:
+
+- `cargo run -p xtask -- check-contract`: ops catalog in sync, names sound,
+  conformance suites green.
+- `cargo test -p eos-command-ops --all-targets`: 1 test passed.
+- `cargo test -p eos-ephemeral-workspace --all-targets`: 2 tests passed.
+- `cargo test -p eos-isolated-workspace --all-targets`: 8 tests passed.
+- `cargo test -p eos-daemon --all-targets`: 83 lib tests, 3 contract tests,
+  10 phase-2 read-path tests, and 6 phase-3 write-path tests passed.
+
+Host-only checks still require care:
 
 - `cargo run -p xtask -- check-contract` compiles host-target
   `eos-command-session` and fails on macOS because `rustix::pty::ioctl_tiocgptpeer`

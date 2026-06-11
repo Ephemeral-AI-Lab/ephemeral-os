@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-command-ops · src/settle.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-command-ops File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>8</b><span>modules</span></div>
+  <div><b>61</b><span>items</span></div>
+  <div><b>71</b><span>fields</span></div>
+  <div><b>42</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-ops.html"><span>binding.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-ops-rs.html"><span>ops.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-command-ops--src-outcome-rs.html"><span>outcome.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-command-ops--src-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command-ops--src-registry-rs.html"><span>registry.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-command-ops--src-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link active" href="eos-command-ops--src-settle-rs.html"><span>settle.rs</span><small>0/13</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="settle crates/eos-command-ops/src/settle.rs settle_ephemeral settle_isolated base_timings insert_cgroup_resource_timings insert_process_resource_timings merge_runner_timings conflict_from_file conflict_message insert_tree_resource_timings insert_resource_timing u64_to_f64_saturating usize_to_f64_saturating finalize_error">
+  <div class="module-head">
+    <div>
+      <h2>src/settle.rs</h2>
+      <p class="path">module <code>settle</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>13 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-settle-ephemeral-22" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_ephemeral pub(crate) pub(crate) fn settle_ephemeral (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>settle_ephemeral</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-22">settle_ephemeral</a> (root : &amp; Path , snapshot : &amp; Snapshot , workspace : &amp; EphemeralWorkspace , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a> &gt;</code>
+  <p class="docstring">Capture the run's upperdir, publish it against its snapshot, and shape the<br>command outcome. COMPLETE branch only.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Capture the run's upperdir, publish it against its snapshot, and shape the</span>
+<span class="rs-comment">/// command outcome. COMPLETE branch only.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-22">settle_ephemeral</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    snapshot: &amp;<span class="rs-type">Snapshot</span>,
+    workspace: &amp;<span class="rs-type">EphemeralWorkspace</span>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(root)?;
+    <span class="rs-kw">let</span> captured = workspace.capture().map_err(finalize_error)?;
+    <span class="rs-kw">let</span> publish_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changeset = service::publish_capture(
+        root,
+        snapshot.manifest_version,
+        &amp;snapshot.layer_paths,
+        &amp;captured.changes,
+    )
+    .map_err(finalize_error)?;
+    <span class="rs-kw">let</span> publish_s = publish_start.elapsed().as_secs_f64();
+
+    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.path_kinds);
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-12">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> first_conflict = changeset.first_conflict();
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-92">command_succeeded</a>();
+    <span class="rs-kw">let</span> publish_success = changeset.success();
+
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(changed_path_kinds.len())),
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.upperdir&quot;,
+        &amp;captured.stats,
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.run_dir&quot;,
+        &amp;<span class="rs-type">TreeResourceStats</span>::collect(&amp;workspace.dirs().run_dir),
+    );
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;changeset.timings {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.clone(), json!(value));
+    }
+    <span class="rs-kw">let</span> occ_s = changeset
+        .timings
+        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-76">get</a>(&quot;occ.commit.total_s&quot;)
+        .copied()
+        .unwrap_or(publish_s);
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(captured.capture_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(occ_s));
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> {
+        workspace_kind: &quot;ephemeral&quot;.to_owned(),
+        success: command_success &amp;&amp; publish_success,
+        status: request.status,
+        exit_code: request.exit_code,
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths: changeset.published_paths(),
+        changed_path_kinds,
+        mutation_source: &quot;overlay_capture&quot;.to_owned(),
+        conflict: first_conflict.map(conflict_from_file),
+        conflict_reason: first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file).to_owned()),
+        timings,
+        metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:22</p>
+</article><article id="item-fn-settle-isolated-102" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn settle_isolated pub(crate) pub(crate) fn settle_isolated (binding : &amp; CommandBinding , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>settle_isolated</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-102">settle_isolated</a> (binding : &amp; <a class="symbol-link" href="eos-command-ops.html#item-struct-CommandBinding-4">CommandBinding</a> , request : <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a> &gt;</code>
+  <p class="docstring">Capture the isolated command's upperdir (response metadata only — never<br>published) and shape the command outcome.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Capture the isolated command's upperdir (response metadata only — never</span>
+<span class="rs-comment">/// published) and shape the command outcome.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-102">settle_isolated</a>(
+    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-4">CommandBinding</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(&amp;binding.layer_stack_root)?;
+    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;binding.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-362">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
+    <span class="rs-kw">let</span> changed_path_kinds = changes
+        .iter()
+        .map(|change| {
+            <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
+            };
+            (change.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-25">path</a>().as_str().to_owned(), kind.to_owned())
+        })
+        .collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-12">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = changed_path_kinds.keys().cloned().collect();
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-306">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(changed_paths.len())),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(capture_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(0.0));
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> {
+        workspace_kind: &quot;isolated&quot;.to_owned(),
+        success: request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-92">command_succeeded</a>(),
+        status: request.status.clone(),
+        exit_code: <span class="rs-type">Some</span>(request.exit_code.unwrap_or(1)),
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths,
+        changed_path_kinds,
+        mutation_source: &quot;isolated_workspace&quot;.to_owned(),
+        conflict: <span class="rs-type">None</span>,
+        conflict_reason: <span class="rs-type">None</span>,
+        timings,
+        metadata: json!({
+            &quot;isolated_workspace&quot;: {
+                &quot;caller_id&quot;: binding.caller_id,
+                &quot;workspace_handle_id&quot;: binding.workspace_handle_id,
+                &quot;manifest_version&quot;: binding.manifest_version,
+                &quot;manifest_root_hash&quot;: binding.manifest_root_hash,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+            },
+            &quot;warnings&quot;: [],
+        }),
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:102</p>
+</article><article id="item-fn-base-timings-175" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_timings private fn base_timings (root : &amp; Path) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>base_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a> (root : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> , <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a> &gt;</code>
+  <p class="docstring">Latest-state resource telemetry sampled at settle: manifest depth plus the<br>zero-seeded tree counters the wire contract always carries (the per-run<br>upperdir/run-dir counters overwrite their seeds on the ephemeral path).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Latest-state resource telemetry sampled at settle: manifest depth plus the</span>
+<span class="rs-comment">/// zero-seeded tree counters the wire contract always carries (the per-run</span>
+<span class="rs-comment">/// upperdir/run-dir counters overwrite their seeds on the ephemeral path).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> manifest = service::active_manifest(root).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>();
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(0.0),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> [
+        &quot;resource.command_exec.run_dir_tree_exists&quot;,
+        &quot;resource.command_exec.run_dir_tree_bytes&quot;,
+        &quot;resource.command_exec.run_dir_tree_file_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_dir_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_entry_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_truncated&quot;,
+        &quot;resource.command_exec.workspace_tree_exists&quot;,
+        &quot;resource.command_exec.workspace_tree_bytes&quot;,
+        &quot;resource.command_exec.workspace_tree_file_count&quot;,
+        &quot;resource.command_exec.workspace_tree_dir_count&quot;,
+        &quot;resource.command_exec.workspace_tree_entry_count&quot;,
+        &quot;resource.command_exec.workspace_tree_truncated&quot;,
+        &quot;resource.command_exec.upperdir_tree_exists&quot;,
+        &quot;resource.command_exec.upperdir_tree_bytes&quot;,
+        &quot;resource.command_exec.upperdir_tree_file_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_dir_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_entry_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_truncated&quot;,
+    ] {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(0.0));
+    }
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-222">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-284">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <span class="rs-type">Ok</span>(timings)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:175</p>
+</article><article id="item-fn-insert-cgroup-resource-timings-222" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_cgroup_resource_timings private fn insert_cgroup_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_cgroup_resource_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-222">insert_cgroup_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>)</code>
+  <p class="docstring">Daemon-process cgroup gauges (cpu/memory/io). Absent on hosts without<br>cgroup v2 files.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Daemon-process cgroup gauges (cpu/memory/io). Absent on hosts without</span>
+<span class="rs-comment">/// cgroup v2 files.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-222">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = parts.next() <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+        }
+    }
+
+    <span class="rs-kw">for</span> (path, key) <span class="rs-kw">in</span> [
+        (
+            &quot;/sys/fs/cgroup/memory.current&quot;,
+            &quot;resource.cgroup.memory_current_bytes&quot;,
+        ),
+        (
+            &quot;/sys/fs/cgroup/memory.peak&quot;,
+            &quot;resource.cgroup.memory_peak_bytes&quot;,
+        ),
+    ] {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
+                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(value));
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>([
+        (&quot;rbytes&quot;, 0.0),
+        (&quot;wbytes&quot;, 0.0),
+        (&quot;rios&quot;, 0.0),
+        (&quot;wios&quot;, 0.0),
+        (&quot;dbytes&quot;, 0.0),
+        (&quot;dios&quot;, 0.0),
+    ]);
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+        <span class="rs-kw">for</span> token <span class="rs-kw">in</span> line.split_whitespace().skip(1) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>((name, raw_value)) = token.split_once(&#x27;=&#x27;) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(total) = totals.get_mut(name) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw_value.parse::&lt;f64&gt;() {
+                *total += value;
+            }
+        }
+    }
+    <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:222</p>
+</article><article id="item-fn-insert-process-resource-timings-284" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_process_resource_timings private fn insert_process_resource_timings (timings : &amp; mut WorkspaceTimings) crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_process_resource_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-284">insert_process_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>)</code>
+  <p class="docstring">Daemon process memory gauges from `/proc/self/status` (bytes); absent on<br>non-Linux dev hosts.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Daemon process memory gauges from `/proc/self/status` (bytes); absent on</span>
+<span class="rs-comment">/// non-Linux dev hosts.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-284">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>) {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> status.lines() {
+        <span class="rs-kw">let</span> key = <span class="rs-kw">match</span> line.split(&#x27;:&#x27;).next() {
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmRSS</span>&quot;) =&gt; &quot;resource.process.rss_bytes&quot;,
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmHWM</span>&quot;) =&gt; &quot;resource.process.max_rss_bytes&quot;,
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::&lt;f64&gt;().ok())
+        {
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(kib * 1024.0));
+        }
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:284</p>
+</article><article id="item-fn-merge-runner-timings-306" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings private fn merge_runner_timings (timings : &amp; mut WorkspaceTimings , runner_result : Option &lt; &amp; Value &gt;) crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>merge_runner_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-306">merge_runner_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> , runner_result : Option &lt; &amp; Value &gt;)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-306">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
+        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-76">get</a>(&quot;timings&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_object)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+        timings.entry(key.clone()).or_insert_with(|| value.clone());
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:306</p>
+</article><article id="item-fn-conflict-from-file-318" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_from_file private fn conflict_from_file (file : &amp; FileResult) -&gt; WorkspaceConflict crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>conflict_from_file</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-318">conflict_from_file</a> (file : &amp; FileResult) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-318">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a> {
+    <span class="rs-kw">let</span> reason = file.status.wire_str();
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-25">path</a>(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(reason))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:318</p>
+</article><article id="item-fn-conflict-message-323" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn conflict_message private fn conflict_message (file : &amp; FileResult) -&gt; &amp; str crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>conflict_message</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a> (file : &amp; FileResult) -&gt; &amp; str</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
+    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file.status.wire_str())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:323</p>
+</article><article id="item-fn-insert-tree-resource-timings-327" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings private fn insert_tree_resource_timings (timings : &amp; mut WorkspaceTimings , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_tree_resource_timings</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> , prefix : &amp; str , stats : &amp; TreeResourceStats ,)</code>
+  <p class="docstring">Emit `&lt;prefix&gt;_tree_*` resource counters for a captured scratch tree.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Emit `&lt;prefix&gt;_tree_*` resource counters for a captured scratch tree.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>,
+    prefix: &amp;str,
+    stats: &amp;<span class="rs-type">TreeResourceStats</span>,
+) {
+    <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
+    <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(
+        timings,
+        &amp;format!(&quot;{prefix}_tree_exists&quot;),
+        entry_count.min(1),
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:327</p>
+</article><article id="item-fn-insert-resource-timing-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_resource_timing private fn insert_resource_timing (timings : &amp; mut WorkspaceTimings , key : &amp; str , value : u64) crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>insert_resource_timing</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a> (timings : &amp; mut <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a> , key : &amp; str , value : u64)</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, key: &amp;str, value: u64) {
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-351">u64_to_f64_saturating</a>(value)));
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:347</p>
+</article><article id="item-fn-u64-to-f64-saturating-351" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_saturating private fn u64_to_f64_saturating (value : u64) -&gt; f64 crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>u64_to_f64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-351">u64_to_f64_saturating</a> (value : u64) -&gt; f64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-351">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
+    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(low))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:351</p>
+</article><article id="item-fn-usize-to-f64-saturating-358" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating private fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>usize_to_f64_saturating</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:358</p>
+</article><article id="item-fn-finalize-error-362" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn finalize_error private fn finalize_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-command-ops/src/settle.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>finalize_error</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-362">finalize_error</a> (error : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-362">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command-ops/src/settle.rs:362</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-command-ops/src/settle.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Settle: turn a reaped command + its bound workspace into the typed outcome.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Ephemeral completion captures the overlay delta and publishes it through</span>
+<span class="rs-comment">//! the per-root single writer; the publish result is the typed</span>
+<span class="rs-comment">//! [`ChangesetResult`] — no JSON round-trips. Isolated completion shapes</span>
+<span class="rs-comment">//! response metadata only (the workspace is retained untouched). Cancel never</span>
+<span class="rs-comment">//! reaches either: the caller routes it to the discard branch.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> eos_ephemeral_workspace::{path_changes_to_wire, <span class="rs-type">EphemeralWorkspace</span>, <span class="rs-type">TreeResourceStats</span>};
+<span class="rs-kw">use</span> eos_layerstack::service::<span class="rs-type">Snapshot</span>;
+<span class="rs-kw">use</span> eos_layerstack::{service, <span class="rs-type">FileResult</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::binding::<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-4">CommandBinding</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcome::{
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-12">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a>,
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>,
+};
+
+<span class="rs-comment">/// Capture the run's upperdir, publish it against its snapshot, and shape the</span>
+<span class="rs-comment">/// command outcome. COMPLETE branch only.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-ephemeral-22">settle_ephemeral</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    snapshot: &amp;<span class="rs-type">Snapshot</span>,
+    workspace: &amp;<span class="rs-type">EphemeralWorkspace</span>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(root)?;
+    <span class="rs-kw">let</span> captured = workspace.capture().map_err(finalize_error)?;
+    <span class="rs-kw">let</span> publish_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changeset = service::publish_capture(
+        root,
+        snapshot.manifest_version,
+        &amp;snapshot.layer_paths,
+        &amp;captured.changes,
+    )
+    .map_err(finalize_error)?;
+    <span class="rs-kw">let</span> publish_s = publish_start.elapsed().as_secs_f64();
+
+    <span class="rs-kw">let</span> path_kinds = path_changes_to_wire(&amp;captured.path_kinds);
+    <span class="rs-kw">let</span> changed_path_kinds = path_kinds.into_iter().collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-12">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> first_conflict = changeset.first_conflict();
+    <span class="rs-kw">let</span> command_success = request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-92">command_succeeded</a>();
+    <span class="rs-kw">let</span> publish_success = changeset.success();
+
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(changed_path_kinds.len())),
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.upperdir&quot;,
+        &amp;captured.stats,
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+        &amp;<span class="rs-kw">mut</span> timings,
+        &quot;resource.command_exec.run_dir&quot;,
+        &amp;<span class="rs-type">TreeResourceStats</span>::collect(&amp;workspace.dirs().run_dir),
+    );
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;changeset.timings {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.clone(), json!(value));
+    }
+    <span class="rs-kw">let</span> occ_s = changeset
+        .timings
+        .<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-76">get</a>(&quot;occ.commit.total_s&quot;)
+        .copied()
+        .unwrap_or(publish_s);
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(captured.capture_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(occ_s));
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> {
+        workspace_kind: &quot;ephemeral&quot;.to_owned(),
+        success: command_success &amp;&amp; publish_success,
+        status: request.status,
+        exit_code: request.exit_code,
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths: changeset.published_paths(),
+        changed_path_kinds,
+        mutation_source: &quot;overlay_capture&quot;.to_owned(),
+        conflict: first_conflict.map(conflict_from_file),
+        conflict_reason: first_conflict.map(|file| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file).to_owned()),
+        timings,
+        metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+    })
+}
+
+<span class="rs-comment">/// Capture the isolated command's upperdir (response metadata only — never</span>
+<span class="rs-comment">/// published) and shape the command outcome.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-settle-isolated-102">settle_isolated</a>(
+    binding: &amp;<a class="symbol-link rs-type" href="eos-command-ops.html#item-struct-CommandBinding-4">CommandBinding</a>,
+    request: <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-FinalizeCommandRequest-71">FinalizeCommandRequest</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(&amp;binding.layer_stack_root)?;
+    <span class="rs-kw">let</span> capture_start = std::time::<span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> changes = eos_overlay::capture_upperdir(&amp;binding.upperdir)
+        .map_err(|err| <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-362">finalize_error</a>(format!(&quot;capture isolated upperdir: {err}&quot;)))?;
+    <span class="rs-kw">let</span> capture_s = capture_start.elapsed().as_secs_f64();
+    <span class="rs-kw">let</span> changed_path_kinds = changes
+        .iter()
+        .map(|change| {
+            <span class="rs-kw">let</span> kind = <span class="rs-kw">match</span> change {
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { .. } =&gt; &quot;write&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { .. } =&gt; &quot;delete&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { .. } =&gt; &quot;symlink&quot;,
+                eos_overlay::<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { .. } =&gt; &quot;opaque_dir&quot;,
+            };
+            (change.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-25">path</a>().as_str().to_owned(), kind.to_owned())
+        })
+        .collect::&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-ChangedPathKinds-12">ChangedPathKinds</a>&gt;();
+    <span class="rs-kw">let</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = changed_path_kinds.keys().cloned().collect();
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-306">merge_runner_timings</a>(&amp;<span class="rs-kw">mut</span> timings, request.runner_result.as_ref());
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(changed_paths.len())),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.capture_upperdir_s&quot;.to_owned(),
+        json!(capture_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(&quot;command_exec.occ_apply_s&quot;.to_owned(), json!(0.0));
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;command_exec.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;api.exec_command.dispatch_total_s&quot;.to_owned(),
+        json!(request.command_elapsed_s),
+    );
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceCommandOutcome-99">WorkspaceCommandOutcome</a> {
+        workspace_kind: &quot;isolated&quot;.to_owned(),
+        success: request.<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-command-succeeded-92">command_succeeded</a>(),
+        status: request.status.clone(),
+        exit_code: <span class="rs-type">Some</span>(request.exit_code.unwrap_or(1)),
+        stdout: request.stdout,
+        stderr: request.stderr,
+        command_session_id: request.command_session_id,
+        changed_paths,
+        changed_path_kinds,
+        mutation_source: &quot;isolated_workspace&quot;.to_owned(),
+        conflict: <span class="rs-type">None</span>,
+        conflict_reason: <span class="rs-type">None</span>,
+        timings,
+        metadata: json!({
+            &quot;isolated_workspace&quot;: {
+                &quot;caller_id&quot;: binding.caller_id,
+                &quot;workspace_handle_id&quot;: binding.workspace_handle_id,
+                &quot;manifest_version&quot;: binding.manifest_version,
+                &quot;manifest_root_hash&quot;: binding.manifest_root_hash,
+                &quot;published&quot;: <span class="rs-kw">false</span>,
+            },
+            &quot;warnings&quot;: [],
+        }),
+    })
+}
+
+<span class="rs-comment">/// Latest-state resource telemetry sampled at settle: manifest depth plus the</span>
+<span class="rs-comment">/// zero-seeded tree counters the wire contract always carries (the per-run</span>
+<span class="rs-comment">/// upperdir/run-dir counters overwrite their seeds on the ephemeral path).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-base-timings-175">base_timings</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>&gt; {
+    <span class="rs-kw">let</span> manifest = service::active_manifest(root).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>();
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(0.0),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(
+        &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> [
+        &quot;resource.command_exec.run_dir_tree_exists&quot;,
+        &quot;resource.command_exec.run_dir_tree_bytes&quot;,
+        &quot;resource.command_exec.run_dir_tree_file_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_dir_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_entry_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_truncated&quot;,
+        &quot;resource.command_exec.workspace_tree_exists&quot;,
+        &quot;resource.command_exec.workspace_tree_bytes&quot;,
+        &quot;resource.command_exec.workspace_tree_file_count&quot;,
+        &quot;resource.command_exec.workspace_tree_dir_count&quot;,
+        &quot;resource.command_exec.workspace_tree_entry_count&quot;,
+        &quot;resource.command_exec.workspace_tree_truncated&quot;,
+        &quot;resource.command_exec.upperdir_tree_exists&quot;,
+        &quot;resource.command_exec.upperdir_tree_bytes&quot;,
+        &quot;resource.command_exec.upperdir_tree_file_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_dir_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_entry_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_truncated&quot;,
+    ] {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(0.0));
+    }
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-222">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-284">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <span class="rs-type">Ok</span>(timings)
+}
+
+<span class="rs-comment">/// Daemon-process cgroup gauges (cpu/memory/io). Absent on hosts without</span>
+<span class="rs-comment">/// cgroup v2 files.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-cgroup-resource-timings-222">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = parts.next() <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+        }
+    }
+
+    <span class="rs-kw">for</span> (path, key) <span class="rs-kw">in</span> [
+        (
+            &quot;/sys/fs/cgroup/memory.current&quot;,
+            &quot;resource.cgroup.memory_current_bytes&quot;,
+        ),
+        (
+            &quot;/sys/fs/cgroup/memory.peak&quot;,
+            &quot;resource.cgroup.memory_peak_bytes&quot;,
+        ),
+    ] {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
+                timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(value));
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = std::collections::<span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>([
+        (&quot;rbytes&quot;, 0.0),
+        (&quot;wbytes&quot;, 0.0),
+        (&quot;rios&quot;, 0.0),
+        (&quot;wios&quot;, 0.0),
+        (&quot;dbytes&quot;, 0.0),
+        (&quot;dios&quot;, 0.0),
+    ]);
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+        <span class="rs-kw">for</span> token <span class="rs-kw">in</span> line.split_whitespace().skip(1) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>((name, raw_value)) = token.split_once(&#x27;=&#x27;) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(total) = totals.get_mut(name) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw_value.parse::&lt;f64&gt;() {
+                *total += value;
+            }
+        }
+    }
+    <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
+        timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+    }
+}
+
+<span class="rs-comment">/// Daemon process memory gauges from `/proc/self/status` (bytes); absent on</span>
+<span class="rs-comment">/// non-Linux dev hosts.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-process-resource-timings-284">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>) {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> status.lines() {
+        <span class="rs-kw">let</span> key = <span class="rs-kw">match</span> line.split(&#x27;:&#x27;).next() {
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmRSS</span>&quot;) =&gt; &quot;resource.process.rss_bytes&quot;,
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmHWM</span>&quot;) =&gt; &quot;resource.process.max_rss_bytes&quot;,
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::&lt;f64&gt;().ok())
+        {
+            timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(kib * 1024.0));
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-merge-runner-timings-306">merge_runner_timings</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, runner_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner_result
+        .and_then(|result| result.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-get-76">get</a>(&quot;timings&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_object)
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+        timings.entry(key.clone()).or_insert_with(|| value.clone());
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-from-file-318">conflict_from_file</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a> {
+    <span class="rs-kw">let</span> reason = file.status.wire_str();
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceConflict-15">WorkspaceConflict</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-path-25">path</a>(reason, file.path.as_str(), file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(reason))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file: &amp;<span class="rs-type">FileResult</span>) -&gt; &amp;str {
+    file.<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-conflict-message-323">conflict_message</a>(file.status.wire_str())
+}
+
+<span class="rs-comment">/// Emit `&lt;prefix&gt;_tree_*` resource counters for a captured scratch tree.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-tree-resource-timings-327">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>,
+    prefix: &amp;str,
+    stats: &amp;<span class="rs-type">TreeResourceStats</span>,
+) {
+    <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
+    <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(
+        timings,
+        &amp;format!(&quot;{prefix}_tree_exists&quot;),
+        entry_count.min(1),
+    );
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_bytes&quot;), stats.bytes);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_file_count&quot;), file_entries);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_dir_count&quot;), stats.dirs);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_entry_count&quot;), entry_count);
+    <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings, &amp;format!(&quot;{prefix}_tree_truncated&quot;), 0);
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-insert-resource-timing-347">insert_resource_timing</a>(timings: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-type-WorkspaceTimings-9">WorkspaceTimings</a>, key: &amp;str, value: u64) {
+    timings.<a class="symbol-link rs-fn" href="eos-command-ops--src-registry-rs.html#method-insert-84">insert</a>(key.to_owned(), json!(<a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-351">u64_to_f64_saturating</a>(value)));
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-u64-to-f64-saturating-351">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+    <span class="rs-kw">const</span> <span class="rs-type">U32_FACTOR</span>: f64 = 4_294_967_296.0;
+    <span class="rs-kw">let</span> high = u32::try_from(value &gt;&gt; 32).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    <span class="rs-kw">let</span> low = u32::try_from(value &amp; u64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(u32::<span class="rs-type">MAX</span>)).unwrap_or(u32::<span class="rs-type">MAX</span>);
+    f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(high).mul_add(<span class="rs-type">U32_FACTOR</span>, f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(low))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-usize-to-f64-saturating-358">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::<a class="symbol-link rs-fn" href="eos-command-ops--src-outcome-rs.html#method-from-66">from</a>(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-ops--src-settle-rs.html#item-fn-finalize-error-362">finalize_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a> {
+    <a class="symbol-link rs-type" href="eos-command-ops--src-outcome-rs.html#item-struct-WorkspaceApiError-35">WorkspaceApiError</a>::<a class="symbol-link rs-fn" href="eos-command-ops--src-ops-rs.html#method-new-55">new</a>(&quot;command_finalize_failed&quot;, error.to_string())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

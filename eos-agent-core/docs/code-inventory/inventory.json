@@ -1,7 +1,7 @@
 {
   "workspace": "eos-agent-core",
   "schemaVersion": 1,
-  "generatedAt": "2026-06-11T10:49:39.395Z",
+  "generatedAt": "2026-06-11T11:21:19.164Z",
   "packageManager": "pnpm@10.23.0",
   "tsconfig": {
     "module": "NodeNext",
@@ -23909,13 +23909,21 @@
               "line": 10
             },
             {
+              "source": "../description_prompts/ask_advisor_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 11
+            },
+            {
               "source": "./index.js",
               "imported": [
                 "AgentRunCalls",
                 "AgentToolUserMessage"
               ],
               "typeOnly": true,
-              "line": 11
+              "line": 12
             }
           ],
           "exports": [],
@@ -23928,7 +23936,7 @@
               "visibility": "public",
               "signature": "export const ADVISOR_AGENT_NAME = \"advisor\"",
               "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-              "line": 14,
+              "line": 15,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -23947,7 +23955,7 @@
               "visibility": "internal",
               "signature": "const MAX_READ_BYTES = 262_144",
               "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-              "line": 16,
+              "line": 17,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -23965,7 +23973,7 @@
               "visibility": "internal",
               "signature": "function userText(text: string): AgentToolUserMessage",
               "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-              "line": 18,
+              "line": 19,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -23983,7 +23991,7 @@
               "visibility": "internal",
               "signature": "const AskAdvisorInputSchema = z.object({ /** The terminal tool the caller intends to call next. */ tool_name: z.string().min(1), /** The exact payload the caller intends to submit. */ payload: JsonObjectSchema.optiona...",
               "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-              "line": 22,
+              "line": 23,
               "fields": [
                 {
                   "name": "tool_name",
@@ -24017,7 +24025,7 @@
               "visibility": "public",
               "signature": "export function askAdvisorTool(calls: AgentRunCalls): ToolDefinition",
               "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-              "line": 29,
+              "line": 30,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24440,12 +24448,20 @@
               "line": 5
             },
             {
+              "source": "../description_prompts/read_agent_run_transcript_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 6
+            },
+            {
               "source": "./index.js",
               "imported": [
                 "AgentRunCalls"
               ],
               "typeOnly": true,
-              "line": 6
+              "line": 7
             }
           ],
           "exports": [],
@@ -24458,7 +24474,7 @@
               "visibility": "internal",
               "signature": "const DEFAULT_READ_BYTES = 65_536",
               "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
-              "line": 8,
+              "line": 9,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24476,7 +24492,7 @@
               "visibility": "internal",
               "signature": "const MAX_READ_BYTES = 262_144",
               "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
-              "line": 9,
+              "line": 10,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24494,7 +24510,7 @@
               "visibility": "internal",
               "signature": "const ReadTranscriptInputSchema = z.object({ run_id: z.string().min(1), /** Byte offset to resume from; 0 reads from the start. */ offset: z.number().int().min(0).default(0), max_bytes: z.number().int().positive().max...",
               "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
-              "line": 11,
+              "line": 12,
               "fields": [
                 {
                   "name": "run_id",
@@ -24533,7 +24549,7 @@
               "visibility": "public",
               "signature": "export function readAgentRunTranscriptTool(calls: AgentRunCalls): ToolDefinition",
               "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
-              "line": 18,
+              "line": 19,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24614,13 +24630,21 @@
               "line": 13
             },
             {
+              "source": "../description_prompts/run_subagent_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 14
+            },
+            {
               "source": "./index.js",
               "imported": [
                 "AgentRunCalls",
                 "AgentToolUserMessage"
               ],
               "typeOnly": true,
-              "line": 14
+              "line": 15
             }
           ],
           "exports": [],
@@ -24633,7 +24657,7 @@
               "visibility": "internal",
               "signature": "function userText(text: string): AgentToolUserMessage",
               "file": "packages/tool/src/tools/agent/run-subagent.ts",
-              "line": 16,
+              "line": 17,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24651,7 +24675,7 @@
               "visibility": "internal",
               "signature": "const RunSubagentInputSchema = z.object({ agent_name: z.string().min(1), prompt: z.string().min(1), })",
               "file": "packages/tool/src/tools/agent/run-subagent.ts",
-              "line": 20,
+              "line": 21,
               "fields": [
                 {
                   "name": "agent_name",
@@ -24684,7 +24708,7 @@
               "visibility": "public",
               "signature": "export function runSubagentTool( calls: AgentRunCalls, supervisor: BackgroundSessionSupervisor, ): ToolDefinition",
               "file": "packages/tool/src/tools/agent/run-subagent.ts",
-              "line": 25,
+              "line": 26,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24782,6 +24806,14 @@
               ],
               "typeOnly": false,
               "line": 5
+            },
+            {
+              "source": "../description_prompts/cancel_background_session_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 6
             }
           ],
           "exports": [],
@@ -24794,7 +24826,7 @@
               "visibility": "internal",
               "signature": "const CancelInputSchema = z.object({ type: z.string().min(1), id: z.string().min(1), reason: z.string().optional(), })",
               "file": "packages/tool/src/tools/background/cancel-background-session.ts",
-              "line": 9,
+              "line": 10,
               "fields": [
                 {
                   "name": "type",
@@ -24834,7 +24866,7 @@
               "signature": "export function cancelBackgroundSessionTool( supervisor: BackgroundSessionSupervisor, ): ToolDefinition",
               "docs": "Cancel by native `(type, id)` ref - no minted session-id namespace.",
               "file": "packages/tool/src/tools/background/cancel-background-session.ts",
-              "line": 16,
+              "line": 17,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -24997,6 +25029,14 @@
               ],
               "typeOnly": false,
               "line": 9
+            },
+            {
+              "source": "../description_prompts/list_background_sessions_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 10
             }
           ],
           "exports": [],
@@ -25010,7 +25050,7 @@
               "signature": "export function listBackgroundSessionsTool( supervisor: BackgroundSessionSupervisor, ): ToolDefinition",
               "docs": "Rows for running plus settled-but-undelivered sessions.",
               "file": "packages/tool/src/tools/background/list-background-sessions.ts",
-              "line": 12,
+              "line": 13,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -25047,6 +25087,406 @@
             "interfaces": 0,
             "types": 0,
             "functions": 2,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/ask_advisor_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Ask the advisor to review this run's transcript and the terminal payload you intend to submit (pass tool_name and the exact payload). Blocks until the advisor answers; the result is the adv...",
+              "file": "packages/tool/src/tools/description_prompts/ask_advisor_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/cancel_background_session_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Cancel a running background session by its type and id, as listed by list_background_sessions.\"",
+              "file": "packages/tool/src/tools/description_prompts/cancel_background_session_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/list_background_sessions_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"List background sessions: running ones plus settled ones whose completion notice has not been delivered yet.\"",
+              "file": "packages/tool/src/tools/description_prompts/list_background_sessions_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/read_agent_run_transcript_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Read a started agent run's JSONL transcript by byte offset. Returns the chunk, the offset to resume from, and whether the end was reached.\"",
+              "file": "packages/tool/src/tools/description_prompts/read_agent_run_transcript_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/run_subagent_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/run_subagent_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/run_subagent_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Start the named agent as a detached background run on the given prompt. Returns its run_id immediately; the outcome arrives later as a session_settled notification.\"",
+              "file": "packages/tool/src/tools/description_prompts/run_subagent_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/submit_advisor_outcome_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Submit the final outcome of this advisor run. Terminal: a successful call ends the run.\"",
+              "file": "packages/tool/src/tools/description_prompts/submit_advisor_outcome_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/submit_main_outcome_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Submit the final outcome of this main run. Terminal: a successful call ends the run.\"",
+              "file": "packages/tool/src/tools/description_prompts/submit_main_outcome_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/submit_planner_outcome_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Submit the final outcome of this planner run. Terminal: a successful call ends the run.\"",
+              "file": "packages/tool/src/tools/description_prompts/submit_planner_outcome_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/submit_subagent_outcome_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Submit the final outcome of this subagent run. Terminal: a successful call ends the run.\"",
+              "file": "packages/tool/src/tools/description_prompts/submit_subagent_outcome_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
+            "schemas": 0
+          }
+        },
+        {
+          "id": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt",
+          "packageName": "@eos/tool",
+          "path": "packages/tool/src/tools/description_prompts/submit_worker_outcome_prompt.ts",
+          "kind": "source",
+          "tags": [
+            "source"
+          ],
+          "imports": [],
+          "exports": [],
+          "symbols": [
+            {
+              "id": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt#DESCRIPTION",
+              "name": "DESCRIPTION",
+              "kind": "const",
+              "exported": true,
+              "visibility": "public",
+              "signature": "export const DESCRIPTION = \"Submit the final outcome of this worker run. Terminal: a successful call ends the run.\"",
+              "file": "packages/tool/src/tools/description_prompts/submit_worker_outcome_prompt.ts",
+              "line": 1,
+              "fields": [],
+              "methods": [],
+              "variants": [],
+              "extends": [],
+              "implements": [],
+              "tags": [
+                "exported",
+                "public-api"
+              ]
+            }
+          ],
+          "stats": {
+            "symbols": 1,
+            "classes": 0,
+            "interfaces": 0,
+            "types": 0,
+            "functions": 0,
             "schemas": 0
           }
         },
@@ -25417,12 +25857,20 @@
               "line": 1
             },
             {
+              "source": "../description_prompts/submit_advisor_outcome_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 2
+            },
+            {
               "source": "./shared.js",
               "imported": [
                 "defineSubmissionTool"
               ],
               "typeOnly": false,
-              "line": 2
+              "line": 3
             }
           ],
           "exports": [],
@@ -25435,7 +25883,7 @@
               "visibility": "public",
               "signature": "export function submitAdvisorOutcomeTool(): ToolDefinition",
               "file": "packages/tool/src/tools/submission/submit_advisor_outcome.ts",
-              "line": 4,
+              "line": 5,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -25474,12 +25922,20 @@
               "line": 1
             },
             {
+              "source": "../description_prompts/submit_main_outcome_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 2
+            },
+            {
               "source": "./shared.js",
               "imported": [
                 "defineSubmissionTool"
               ],
               "typeOnly": false,
-              "line": 2
+              "line": 3
             }
           ],
           "exports": [],
@@ -25492,7 +25948,7 @@
               "visibility": "public",
               "signature": "export function submitMainOutcomeTool(): ToolDefinition",
               "file": "packages/tool/src/tools/submission/submit_main_outcome.ts",
-              "line": 4,
+              "line": 5,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -25531,12 +25987,20 @@
               "line": 1
             },
             {
+              "source": "../description_prompts/submit_planner_outcome_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 2
+            },
+            {
               "source": "./shared.js",
               "imported": [
                 "defineSubmissionTool"
               ],
               "typeOnly": false,
-              "line": 2
+              "line": 3
             }
           ],
           "exports": [],
@@ -25549,7 +26013,7 @@
               "visibility": "public",
               "signature": "export function submitPlannerOutcomeTool(): ToolDefinition",
               "file": "packages/tool/src/tools/submission/submit_planner_outcome.ts",
-              "line": 4,
+              "line": 5,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -25588,12 +26052,20 @@
               "line": 1
             },
             {
+              "source": "../description_prompts/submit_subagent_outcome_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 2
+            },
+            {
               "source": "./shared.js",
               "imported": [
                 "defineSubmissionTool"
               ],
               "typeOnly": false,
-              "line": 2
+              "line": 3
             }
           ],
           "exports": [],
@@ -25606,7 +26078,7 @@
               "visibility": "public",
               "signature": "export function submitSubagentOutcomeTool(): ToolDefinition",
               "file": "packages/tool/src/tools/submission/submit_subagent_outcome.ts",
-              "line": 4,
+              "line": 5,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -25645,12 +26117,20 @@
               "line": 1
             },
             {
+              "source": "../description_prompts/submit_worker_outcome_prompt.js",
+              "imported": [
+                "DESCRIPTION"
+              ],
+              "typeOnly": false,
+              "line": 2
+            },
+            {
               "source": "./shared.js",
               "imported": [
                 "defineSubmissionTool"
               ],
               "typeOnly": false,
-              "line": 2
+              "line": 3
             }
           ],
           "exports": [],
@@ -25663,7 +26143,7 @@
               "visibility": "public",
               "signature": "export function submitWorkerOutcomeTool(): ToolDefinition",
               "file": "packages/tool/src/tools/submission/submit_worker_outcome.ts",
-              "line": 4,
+              "line": 5,
               "fields": [],
               "methods": [],
               "variants": [],
@@ -27048,15 +27528,15 @@
       ],
       "stats": {
         "packages": 1,
-        "modules": 33,
-        "symbols": 118,
+        "modules": 43,
+        "symbols": 128,
         "classes": 1,
         "interfaces": 23,
         "types": 8,
         "functions": 61,
         "schemas": 10,
-        "relations": 234,
-        "sourceModules": 25,
+        "relations": 244,
+        "sourceModules": 35,
         "testModules": 8,
         "empty": false
       }
@@ -31106,6 +31586,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/ask-advisor.ts",
+      "line": 12
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/ask-advisor",
+      "to": "@eos/tool/src/tools/description_prompts/ask_advisor_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/ask-advisor.ts",
       "line": 11
     },
     {
@@ -31202,6 +31690,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
+      "line": 7
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/read-agent-run-transcript",
+      "to": "@eos/tool/src/tools/description_prompts/read_agent_run_transcript_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/read-agent-run-transcript.ts",
       "line": 6
     },
     {
@@ -31258,6 +31754,14 @@
       "kind": "imports",
       "typeOnly": true,
       "file": "packages/tool/src/tools/agent/run-subagent.ts",
+      "line": 15
+    },
+    {
+      "from": "@eos/tool/src/tools/agent/run-subagent",
+      "to": "@eos/tool/src/tools/description_prompts/run_subagent_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/agent/run-subagent.ts",
       "line": 14
     },
     {
@@ -31291,6 +31795,14 @@
       "typeOnly": false,
       "file": "packages/tool/src/tools/background/cancel-background-session.ts",
       "line": 5
+    },
+    {
+      "from": "@eos/tool/src/tools/background/cancel-background-session",
+      "to": "@eos/tool/src/tools/description_prompts/cancel_background_session_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/background/cancel-background-session.ts",
+      "line": 6
     },
     {
       "from": "@eos/tool/src/tools/background/cancel-background-session",
@@ -31363,6 +31875,14 @@
       "typeOnly": false,
       "file": "packages/tool/src/tools/background/list-background-sessions.ts",
       "line": 9
+    },
+    {
+      "from": "@eos/tool/src/tools/background/list-background-sessions",
+      "to": "@eos/tool/src/tools/description_prompts/list_background_sessions_prompt",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/background/list-background-sessions.ts",
+      "line": 10
     },
     {
       "from": "@eos/tool/src/tools/background/list-background-sessions",
@@ -31470,13 +31990,21 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_advisor_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_advisor_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_advisor_outcome.ts",
       "line": 2
     },
     {
+      "from": "@eos/tool/src/tools/submission/submit_advisor_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_advisor_outcome.ts",
+      "line": 3
+    },
+    {
       "from": "@eos/tool/src/tools/submission/submit_main_outcome",
       "to": "@eos/tool/src/contract",
       "kind": "imports",
@@ -31486,11 +32014,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_main_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_main_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_main_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_main_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_main_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
@@ -31502,13 +32038,21 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_planner_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_planner_outcome.ts",
       "line": 2
     },
     {
+      "from": "@eos/tool/src/tools/submission/submit_planner_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_planner_outcome.ts",
+      "line": 3
+    },
+    {
       "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
       "to": "@eos/tool/src/contract",
       "kind": "imports",
@@ -31518,11 +32062,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_subagent_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_subagent_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_subagent_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_subagent_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
@@ -31534,11 +32086,19 @@
     },
     {
       "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
-      "to": "@eos/tool/src/tools/submission/shared",
+      "to": "@eos/tool/src/tools/description_prompts/submit_worker_outcome_prompt",
       "kind": "imports",
       "typeOnly": false,
       "file": "packages/tool/src/tools/submission/submit_worker_outcome.ts",
       "line": 2
+    },
+    {
+      "from": "@eos/tool/src/tools/submission/submit_worker_outcome",
+      "to": "@eos/tool/src/tools/submission/shared",
+      "kind": "imports",
+      "typeOnly": false,
+      "file": "packages/tool/src/tools/submission/submit_worker_outcome.ts",
+      "line": 3
     },
     {
       "from": "@eos/tool/src/toolset",
@@ -34768,7 +35328,7 @@
       "to": "@eos/tool/src/tools/agent/ask-advisor#JsonObjectSchema",
       "kind": "uses-schema",
       "file": "packages/tool/src/tools/agent/ask-advisor.ts",
-      "line": 22
+      "line": 23
     },
     {
       "from": "@eos/tool/src/tools/submission/shared#SubmissionInput",
@@ -34787,13 +35347,13 @@
   ],
   "stats": {
     "packages": 10,
-    "modules": 136,
-    "symbols": 656,
+    "modules": 146,
+    "symbols": 666,
     "classes": 17,
     "interfaces": 109,
     "types": 60,
     "functions": 324,
     "schemas": 42,
-    "relations": 985
+    "relations": 995
   }
 }

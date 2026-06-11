@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-api · src/main.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>40</b><span>items</span></div>
+  <div><b>18</b><span>fields</span></div>
+  <div><b>18</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-api.html"><span>admin.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-api--src-lib-rs.html"><span>lib.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-api--src-main-rs.html"><span>main.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-api--src-public-rs.html"><span>public.rs</span><small>5/2</small></a></li><li><a class="file-link" href="eos-api--src-router-rs.html"><span>router.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-api--src-server-rs.html"><span>server.rs</span><small>0/5</small></a></li><li><a class="file-link" href="eos-api--src-wire-rs.html"><span>wire.rs</span><small>2/5</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bin crates/eos-api/src/main.rs main serve ServeArgs impl ServeArgs">
+  <div class="module-head">
+    <div>
+      <h2>src/main.rs</h2>
+      <p class="path">module <code>bin</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>2 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ServeArgs-39" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ServeArgs private struct ServeArgs crates/eos-api/src/main.rs listen PathBuf host HostConfig ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ServeArgs</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-api--src-main-rs.html#item-struct-ServeArgs-39">ServeArgs</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>listen</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>host</td><td><code>HostConfig</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-45"><td>associated-fn</td><td>parse</td><td><code>fn <a class="symbol-link" href="eos-api.html#method-parse-26">parse</a> (mut argv : std :: env :: Args) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-comment">// Compile-time workspace root: eos-api and eosd are built from the</span>
+        <span class="rs-comment">// same workspace, so the daemon's compiled-in config path and the</span>
+        <span class="rs-comment">// packaged binary location are derivable defaults.</span>
+        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+            .ancestors()
+            .nth(2)
+            .map(std::path::<span class="rs-type">Path</span>::to_path_buf)
+            .context(&quot;derive workspace root&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> listen = <span class="rs-type">PathBuf</span>::from(&quot;/tmp/eos-api.sock&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> image = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> platform = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> eosd_path = workspace.join(&quot;dist&quot;).join(&quot;eosd-linux-amd64&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> config_yaml_path = workspace.join(&quot;config&quot;).join(&quot;prd.yml&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> remote_config_path = workspace.join(&quot;config&quot;).join(&quot;prd.yml&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> remote_daemon_dir = <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_port = 37_657_u16;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ready_timeout_s = 60_u64;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request_timeout_s = 30_u64;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> created_by = &quot;eos-api&quot;.to_owned();
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(flag) = argv.next() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = |flag: &amp;str| -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+                argv.next()
+                    .with_context(|| format!(&quot;{flag} requires a value&quot;))
+            };
+            <span class="rs-kw">match</span> flag.as_str() {
+                &quot;--listen&quot; =&gt; listen = value(&quot;--listen&quot;)?.into(),
+                &quot;--image&quot; =&gt; image = <span class="rs-type">Some</span>(value(&quot;--image&quot;)?),
+                &quot;--platform&quot; =&gt; platform = <span class="rs-type">Some</span>(value(&quot;--platform&quot;)?),
+                &quot;--eosd&quot; =&gt; eosd_path = value(&quot;--eosd&quot;)?.into(),
+                &quot;--config-yaml&quot; =&gt; config_yaml_path = value(&quot;--config-yaml&quot;)?.into(),
+                &quot;--remote-config&quot; =&gt; remote_config_path = value(&quot;--remote-config&quot;)?.into(),
+                &quot;--remote-daemon-dir&quot; =&gt; remote_daemon_dir = value(&quot;--remote-daemon-dir&quot;)?.into(),
+                &quot;--state-dir&quot; =&gt; state_dir = <span class="rs-type">Some</span>(value(&quot;--state-dir&quot;)?.into()),
+                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>().context(&quot;--tcp-port&quot;)?,
+                &quot;--ready-timeout-s&quot; =&gt; {
+                    ready_timeout_s = value(&quot;--ready-timeout-s&quot;)?
+                        .<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>()
+                        .context(&quot;--ready-timeout-s&quot;)?;
+                }
+                &quot;--request-timeout-s&quot; =&gt; {
+                    request_timeout_s = value(&quot;--request-timeout-s&quot;)?
+                        .<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>()
+                        .context(&quot;--request-timeout-s&quot;)?;
+                }
+                &quot;--created-by&quot; =&gt; created_by = value(&quot;--created-by&quot;)?,
+                other =&gt; bail!(&quot;unknown serve flag {other:?}&quot;),
+            }
+        }
+        <span class="rs-kw">let</span> image = image.context(&quot;serve requires --image &lt;docker image&gt;&quot;)?;
+        <span class="rs-kw">let</span> state_dir = state_dir.unwrap_or_else(|| {
+            listen
+                .parent()
+                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(&quot;/tmp&quot;))
+                .join(&quot;eos-api-state&quot;)
+        });
+        <span class="rs-kw">let</span> remote_eosd_path = remote_daemon_dir.join(&quot;eosd&quot;);
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            listen,
+            host: <span class="rs-type">HostConfig</span> {
+                image,
+                platform,
+                eosd_path,
+                config_yaml_path,
+                remote_daemon_dir,
+                remote_eosd_path,
+                remote_config_path,
+                tcp_port,
+                ready_timeout: <span class="rs-type">Duration</span>::from_secs(ready_timeout_s),
+                request_timeout: <span class="rs-type">Duration</span>::from_secs(request_timeout_s),
+                created_by,
+                state_dir,
+            },
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-api/src/main.rs:39</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-main-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn main private fn main () -&gt; Result &lt; () &gt; crates/eos-api/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>main</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api--src-main-rs.html#item-fn-main-17">main</a> () -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-main-17">main</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = std::env::args();
+    <span class="rs-kw">let</span> _argv0 = args.next();
+    <span class="rs-kw">match</span> args.next().as_deref() {
+        <span class="rs-type">Some</span>(&quot;--version&quot; | &quot;-<span class="rs-type">V</span>&quot;) =&gt; {
+            println!(&quot;eos-api {}&quot;, env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;));
+            <span class="rs-type">Ok</span>(())
+        }
+        <span class="rs-type">Some</span>(&quot;serve&quot;) =&gt; <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(args),
+        <span class="rs-type">Some</span>(&quot;admin&quot;) =&gt; admin::<a class="symbol-link rs-fn" href="eos-api.html#item-fn-run-68">run</a>(&amp;admin::<a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(args)?),
+        <span class="rs-type">Some</span>(other) =&gt; bail!(&quot;unknown subcommand {other:?}; expected serve | admin | --version&quot;),
+        <span class="rs-type">None</span> =&gt; bail!(&quot;missing subcommand; expected serve | admin | --version&quot;),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/main.rs:17</p>
+</article><article id="item-fn-serve-32" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serve private fn serve (argv : std :: env :: Args) -&gt; Result &lt; () &gt; crates/eos-api/src/main.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serve</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a> (argv : std :: env :: Args) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-api--src-main-rs.html#item-struct-ServeArgs-39">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(argv)?;
+    <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(public::<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-Catalog-63">Catalog</a>::<a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-load-builtin-69">load_builtin</a>()?);
+    <span class="rs-kw">let</span> host = <span class="rs-type">SandboxHost</span>::open(config.host)?;
+    server::<a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(&amp;config.listen, catalog, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(host))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-api/src/main.rs:32</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-api/src/main.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-api` binary entry: argv parsing and subcommand dispatch ONLY.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - `eos-api serve --listen &lt;socket&gt; --image &lt;img&gt; [engine flags]` — serve</span>
+<span class="rs-comment">//!   the client socket plus the operator socket beside it (`&lt;socket&gt;.admin`).</span>
+<span class="rs-comment">//! - `eos-api admin &lt;op&gt; …` — operator CLI against the operator socket.</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+
+<span class="rs-kw">use</span> eos_api::{admin, public, server};
+<span class="rs-kw">use</span> eos_sandbox_host::{<span class="rs-type">HostConfig</span>, <span class="rs-type">SandboxHost</span>};
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-main-17">main</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = std::env::args();
+    <span class="rs-kw">let</span> _argv0 = args.next();
+    <span class="rs-kw">match</span> args.next().as_deref() {
+        <span class="rs-type">Some</span>(&quot;--version&quot; | &quot;-<span class="rs-type">V</span>&quot;) =&gt; {
+            println!(&quot;eos-api {}&quot;, env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;));
+            <span class="rs-type">Ok</span>(())
+        }
+        <span class="rs-type">Some</span>(&quot;serve&quot;) =&gt; <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(args),
+        <span class="rs-type">Some</span>(&quot;admin&quot;) =&gt; admin::<a class="symbol-link rs-fn" href="eos-api.html#item-fn-run-68">run</a>(&amp;admin::<a class="symbol-link rs-type" href="eos-api.html#item-struct-AdminArgs-13">AdminArgs</a>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(args)?),
+        <span class="rs-type">Some</span>(other) =&gt; bail!(&quot;unknown subcommand {other:?}; expected serve | admin | --version&quot;),
+        <span class="rs-type">None</span> =&gt; bail!(&quot;missing subcommand; expected serve | admin | --version&quot;),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> config = <a class="symbol-link rs-type" href="eos-api--src-main-rs.html#item-struct-ServeArgs-39">ServeArgs</a>::<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(argv)?;
+    <span class="rs-kw">let</span> catalog = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(public::<a class="symbol-link rs-type" href="eos-api--src-public-rs.html#item-struct-Catalog-63">Catalog</a>::<a class="symbol-link rs-fn" href="eos-api--src-public-rs.html#method-load-builtin-69">load_builtin</a>()?);
+    <span class="rs-kw">let</span> host = <span class="rs-type">SandboxHost</span>::open(config.host)?;
+    server::<a class="symbol-link rs-fn" href="eos-api--src-main-rs.html#item-fn-serve-32">serve</a>(&amp;config.listen, catalog, <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(host))
+}
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-api--src-main-rs.html#item-struct-ServeArgs-39">ServeArgs</a> {
+    listen: <span class="rs-type">PathBuf</span>,
+    host: <span class="rs-type">HostConfig</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-api--src-main-rs.html#item-struct-ServeArgs-39">ServeArgs</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>(<span class="rs-kw">mut</span> argv: std::env::<span class="rs-type">Args</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-comment">// Compile-time workspace root: eos-api and eosd are built from the</span>
+        <span class="rs-comment">// same workspace, so the daemon's compiled-in config path and the</span>
+        <span class="rs-comment">// packaged binary location are derivable defaults.</span>
+        <span class="rs-kw">let</span> workspace = <span class="rs-type">PathBuf</span>::from(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+            .ancestors()
+            .nth(2)
+            .map(std::path::<span class="rs-type">Path</span>::to_path_buf)
+            .context(&quot;derive workspace root&quot;)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> listen = <span class="rs-type">PathBuf</span>::from(&quot;/tmp/eos-api.sock&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> image = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> platform = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> eosd_path = workspace.join(&quot;dist&quot;).join(&quot;eosd-linux-amd64&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> config_yaml_path = workspace.join(&quot;config&quot;).join(&quot;prd.yml&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> remote_config_path = workspace.join(&quot;config&quot;).join(&quot;prd.yml&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> remote_daemon_dir = <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon&quot;);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; = <span class="rs-type">None</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tcp_port = 37_657_u16;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ready_timeout_s = 60_u64;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> request_timeout_s = 30_u64;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> created_by = &quot;eos-api&quot;.to_owned();
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(flag) = argv.next() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = |flag: &amp;str| -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+                argv.next()
+                    .with_context(|| format!(&quot;{flag} requires a value&quot;))
+            };
+            <span class="rs-kw">match</span> flag.as_str() {
+                &quot;--listen&quot; =&gt; listen = value(&quot;--listen&quot;)?.into(),
+                &quot;--image&quot; =&gt; image = <span class="rs-type">Some</span>(value(&quot;--image&quot;)?),
+                &quot;--platform&quot; =&gt; platform = <span class="rs-type">Some</span>(value(&quot;--platform&quot;)?),
+                &quot;--eosd&quot; =&gt; eosd_path = value(&quot;--eosd&quot;)?.into(),
+                &quot;--config-yaml&quot; =&gt; config_yaml_path = value(&quot;--config-yaml&quot;)?.into(),
+                &quot;--remote-config&quot; =&gt; remote_config_path = value(&quot;--remote-config&quot;)?.into(),
+                &quot;--remote-daemon-dir&quot; =&gt; remote_daemon_dir = value(&quot;--remote-daemon-dir&quot;)?.into(),
+                &quot;--state-dir&quot; =&gt; state_dir = <span class="rs-type">Some</span>(value(&quot;--state-dir&quot;)?.into()),
+                &quot;--tcp-port&quot; =&gt; tcp_port = value(&quot;--tcp-port&quot;)?.<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>().context(&quot;--tcp-port&quot;)?,
+                &quot;--ready-timeout-s&quot; =&gt; {
+                    ready_timeout_s = value(&quot;--ready-timeout-s&quot;)?
+                        .<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>()
+                        .context(&quot;--ready-timeout-s&quot;)?;
+                }
+                &quot;--request-timeout-s&quot; =&gt; {
+                    request_timeout_s = value(&quot;--request-timeout-s&quot;)?
+                        .<a class="symbol-link rs-fn" href="eos-api.html#method-parse-26">parse</a>()
+                        .context(&quot;--request-timeout-s&quot;)?;
+                }
+                &quot;--created-by&quot; =&gt; created_by = value(&quot;--created-by&quot;)?,
+                other =&gt; bail!(&quot;unknown serve flag {other:?}&quot;),
+            }
+        }
+        <span class="rs-kw">let</span> image = image.context(&quot;serve requires --image &lt;docker image&gt;&quot;)?;
+        <span class="rs-kw">let</span> state_dir = state_dir.unwrap_or_else(|| {
+            listen
+                .parent()
+                .unwrap_or_else(|| std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-api--src-wire-rs.html#method-new-38">new</a>(&quot;/tmp&quot;))
+                .join(&quot;eos-api-state&quot;)
+        });
+        <span class="rs-kw">let</span> remote_eosd_path = remote_daemon_dir.join(&quot;eosd&quot;);
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            listen,
+            host: <span class="rs-type">HostConfig</span> {
+                image,
+                platform,
+                eosd_path,
+                config_yaml_path,
+                remote_daemon_dir,
+                remote_eosd_path,
+                remote_config_path,
+                tcp_port,
+                ready_timeout: <span class="rs-type">Duration</span>::from_secs(ready_timeout_s),
+                request_timeout: <span class="rs-type">Duration</span>::from_secs(request_timeout_s),
+                created_by,
+                state_dir,
+            },
+        })
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

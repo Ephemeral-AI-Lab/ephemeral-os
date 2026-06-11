@@ -179,7 +179,8 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
     )?;
     // Under x86-on-arm64 emulation a quick command can outlast its yield window
     // and return `running`; settle it before asserting the terminal outcome.
-    let overlay = settle_foreground_command(&lease, overlay, Instant::now() + Duration::from_secs(30))?;
+    let overlay =
+        settle_foreground_command(&lease, overlay, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
 
     let commit = lease.call_ok(
