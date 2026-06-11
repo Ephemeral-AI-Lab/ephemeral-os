@@ -8,12 +8,16 @@
 
 pub mod envelope;
 pub mod ops;
-pub mod version;
 
 pub use envelope::{
     decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
 };
-pub use version::{
-    CONNECT_FAILED, CONNECT_RETRY_DELAYS_S, DAEMON_AUTH_FIELD, DAEMON_PROTOCOL_FIELD,
-    DAEMON_PROTOCOL_VERSION, IO_FAILED, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S,
-};
+
+pub const DAEMON_PROTOCOL_VERSION: i64 = 1;
+pub const DAEMON_PROTOCOL_FIELD: &str = "_eos_daemon_protocol_version";
+pub const DAEMON_AUTH_FIELD: &str = "_eos_daemon_auth_token";
+pub const CONNECT_FAILED: i32 = 97;
+pub const IO_FAILED: i32 = 98;
+pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
+pub const REQUEST_READ_TIMEOUT_S: f64 = 30.0;
+pub const CONNECT_RETRY_DELAYS_S: [f64; 4] = [0.25, 0.5, 1.0, 2.0];

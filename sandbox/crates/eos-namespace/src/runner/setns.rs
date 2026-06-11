@@ -1,16 +1,4 @@
-//! Setns mode: join the ns-holder's pre-opened namespaces, then spawn the tool.
-//!
-//! For each isolated-workspace call the runner `setns`es this single-threaded
-//! caller into the holder's FDs in the order `user → mnt → pid → net`
-//! (PID setns affects descendants only, so it precedes `fork`), optionally joins
-//! the iws cgroup before spawning, then the child execs the command through the
-//! same shell/tool primitive used by fresh-namespace mode. A
-//! separate helper does the in-namespace overlay mount (`setns` into `user`+`mnt`,
-//! then call [`eos_overlay::mount_overlay`]).
-//!
-//! `setns(2)` is the only raw syscall here; child creation stays behind
-//! [`std::process::Command`] in `fresh_ns::execute_tool`. `#![deny(unsafe_op_in_unsafe_fn)]`
-//! still forces a `// SAFETY:` note on every FFI block.
+//! Setns mode: join holder namespaces, optionally mount overlay/DNS, run tool.
 
 #[cfg(target_os = "linux")]
 use std::ffi::CString;
@@ -36,23 +24,8 @@ use crate::protocol::{RunRequest, RunResult};
 #[cfg(target_os = "linux")]
 const RESOLV_CONF: &str = "/etc/resolv.conf";
 
-/// `setns` into the held namespaces, then run the tool command.
-///
-/// # Safety
-///
-/// Calls `setns(2)` (which requires this to be the only thread in the process),
-/// then delegates child spawning to the shared shell/tool primitive. The setns
-/// FD order (`user`, `mnt`, `pid`, `net`) is load-bearing.
-///
-/// # Errors
-///
-/// Returns [`RunnerError`] when namespace FDs are missing, `setns`/cgroup join
-/// fails, request validation fails, or child execution fails.
 #[cfg(target_os = "linux")]
 pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> {
-    //   setns(user), setns(mnt), setns(pid), setns(net) in order; join cgroup.procs
-    //   before fork; pipe stdin_b64 to the child; fork → execvp(argv); waitpid and
-    //   map waitstatus → exit code. The group is its own session so cancel killpgs it.
     let ns_fds = require_ns_fds(request)?;
     join_cgroup(request)?;
     join_namespaces(&ns_fds)?;
@@ -60,46 +33,17 @@ pub(crate) fn run_setns(request: &RunRequest) -> Result<RunResult, RunnerError> 
 }
 
 #[cfg(not(target_os = "linux"))]
-/// Return the non-Linux unsupported error for setns execution.
-///
-/// # Errors
-///
-/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
-/// is unavailable.
 pub(crate) fn run_setns(_request: &RunRequest) -> Result<RunResult, RunnerError> {
     Err(RunnerError::Unsupported)
 }
 
 /// Mount the overlay inside an existing workspace mount namespace.
-///
-/// The runner `setns`es into the holder's `user` then `mnt` FDs, gaining
-/// `CAP_SYS_ADMIN` in that namespace before calling [`eos_overlay::mount_overlay`].
-///
-/// # Invariant
-///
-/// Calls `setns(2)` twice (`user`, then `mnt`) before the mount; must run on a
-/// single-threaded caller until both setns calls complete.
-///
-/// # Errors
-///
-/// Returns [`RunnerError`] when required namespace/overlay paths are missing,
-/// `setns` fails, or the overlay mount fails.
 #[cfg(target_os = "linux")]
 pub fn setns_overlay_mount(
     request: &RunRequest,
     config: &super::config::RunnerConfig,
 ) -> Result<(), RunnerError> {
-    //   setns(ns_fds.user, CLONE_NEWUSER); setns(ns_fds.mnt, CLONE_NEWNS); then build
-    //   OverlayHandle (newest-first lowerdirs + upper/work) and mount the overlay.
-    let ns_fds = require_ns_fds(request)?;
-    let user = ns_fds.user.ok_or_else(|| {
-        RunnerError::InvalidRequest("setns overlay mount requires user ns fd".to_owned())
-    })?;
-    let mnt = ns_fds.mnt.ok_or_else(|| {
-        RunnerError::InvalidRequest("setns overlay mount requires mnt ns fd".to_owned())
-    })?;
-    setns_fd("user", user.0, libc::CLONE_NEWUSER)?;
-    setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)?;
+    setns_user_mnt(request, "setns overlay mount")?;
     let upperdir = request.upperdir.as_ref().ok_or_else(|| {
         RunnerError::InvalidRequest("setns overlay mount requires upperdir".to_owned())
     })?;
@@ -121,12 +65,6 @@ pub fn setns_overlay_mount(
 }
 
 #[cfg(not(target_os = "linux"))]
-/// Return the non-Linux unsupported error for setns overlay mounting.
-///
-/// # Errors
-///
-/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
-/// is unavailable.
 pub fn setns_overlay_mount(
     _request: &RunRequest,
     _config: &super::config::RunnerConfig,
@@ -135,23 +73,8 @@ pub fn setns_overlay_mount(
 }
 
 /// Configure `/etc/resolv.conf` inside an existing workspace mount namespace.
-///
-/// The helper only applies the fallback when the current first nameserver is a
-/// loopback resolver such as systemd-resolved's `127.0.0.53` stub.
-///
-/// # Errors
-///
-/// Returns [`RunnerError`] when namespace FDs are missing, `setns` fails, the
-/// request lacks `fallback_dns`, or the private bind mount cannot be applied.
 #[cfg(target_os = "linux")]
 pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
-    let ns_fds = require_ns_fds(request)?;
-    let user = ns_fds.user.ok_or_else(|| {
-        RunnerError::InvalidRequest("configure_dns requires user ns fd".to_owned())
-    })?;
-    let mnt = ns_fds.mnt.ok_or_else(|| {
-        RunnerError::InvalidRequest("configure_dns requires mnt ns fd".to_owned())
-    })?;
     let fallback_dns = request
         .tool_call
         .args
@@ -162,8 +85,7 @@ pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerEr
             RunnerError::InvalidRequest("configure_dns requires fallback_dns".to_owned())
         })?;
 
-    setns_fd("user", user.0, libc::CLONE_NEWUSER)?;
-    setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)?;
+    setns_user_mnt(request, "configure_dns")?;
 
     let content = match fs::read_to_string(RESOLV_CONF) {
         Ok(content) => content,
@@ -187,12 +109,6 @@ pub fn configure_dns(request: &RunRequest) -> Result<serde_json::Value, RunnerEr
 }
 
 #[cfg(not(target_os = "linux"))]
-/// Return the non-Linux unsupported error for DNS configuration.
-///
-/// # Errors
-///
-/// Always returns [`RunnerError::Unsupported`] outside Linux because `setns(2)`
-/// and bind mounts are unavailable.
 pub const fn configure_dns(_request: &RunRequest) -> Result<serde_json::Value, RunnerError> {
     Err(RunnerError::Unsupported)
 }
@@ -215,6 +131,19 @@ fn namespace_fd_order_with_types(ns_fds: &NsFds) -> Vec<(&'static str, RawFd, li
     .into_iter()
     .filter_map(|(name, fd, nstype)| fd.map(|fd| (name, fd.0, nstype)))
     .collect()
+}
+
+#[cfg(target_os = "linux")]
+fn setns_user_mnt(request: &RunRequest, operation: &str) -> Result<(), RunnerError> {
+    let ns_fds = require_ns_fds(request)?;
+    let user = ns_fds
+        .user
+        .ok_or_else(|| RunnerError::InvalidRequest(format!("{operation} requires user ns fd")))?;
+    let mnt = ns_fds
+        .mnt
+        .ok_or_else(|| RunnerError::InvalidRequest(format!("{operation} requires mnt ns fd")))?;
+    setns_fd("user", user.0, libc::CLONE_NEWUSER)?;
+    setns_fd("mnt", mnt.0, libc::CLONE_NEWNS)
 }
 
 #[cfg(any(test, target_os = "linux"))]
@@ -254,10 +183,8 @@ fn bind_mount_resolv_conf(fallback_dns: &str) -> Result<(), RunnerError> {
         .map_err(|err| RunnerError::InvalidRequest(format!("invalid resolv.conf path: {err}")))?;
     let fstype = CString::new("none")
         .map_err(|err| RunnerError::InvalidRequest(format!("invalid mount fstype: {err}")))?;
-    // SAFETY: after `setns(user,mnt)` this dedicated single-threaded helper has
-    // CAP_SYS_ADMIN in the target namespace. `source`, `target`, and `fstype`
-    // are NUL-terminated C strings that live for the call, and the data pointer
-    // is null because MS_BIND ignores filesystem-specific data.
+    // SAFETY: after `setns(user,mnt)` this helper has CAP_SYS_ADMIN in the
+    // target namespace. The C strings live for the call; MS_BIND ignores data.
     let rc = unsafe {
         libc::mount(
             source.as_ptr(),

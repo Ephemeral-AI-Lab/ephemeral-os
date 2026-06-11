@@ -64,7 +64,7 @@ fn await_net_ready_rejects_wrong_token() -> TestResult {
 fn finish_ready_writes_ready_token() -> TestResult {
     let (readiness_read, readiness_write) = nix::unistd::pipe()?;
     let (_control_read, control_write) = nix::unistd::pipe()?;
-    let mut handshake = Handshake::new(
+    let handshake = Handshake::new(
         readiness_write.as_raw_fd(),
         control_write.as_raw_fd(),
         HeldNamespaces::for_test()?,

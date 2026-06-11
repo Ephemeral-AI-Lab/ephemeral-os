@@ -17,26 +17,13 @@ use rustix::thread::{set_thread_gid, set_thread_uid, unshare, UnshareFlags};
 
 use super::NsHolderError;
 
-/// The namespace FDs the holder pins open for its whole lifetime.
-///
-/// Wrapping [`OwnedFd`] gives RAII close-on-drop for free with zero `unsafe`:
-/// when the holder process exits the kernel tears the namespaces down once the
-/// last referencing FD (and the holder task) is gone. The daemon reads the
-/// matching `/proc/{holder_pid}/ns/*` symlinks while this struct keeps the
-/// holder alive; the daemon side opens these symlinks against the live holder.
-// The four namespace FDs are pinned solely for close-on-drop RAII (see the
-// doc above): they are never read in-process — the daemon reads the matching
-// `/proc/{holder_pid}/ns/*` symlinks instead — so `dead_code` is expected.
+// FDs are pinned for RAII only; the daemon reads `/proc/{holder_pid}/ns/*`.
 #[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct HeldNamespaces {
-    /// User namespace FD (`/proc/self/ns/user`).
     pub user: OwnedFd,
-    /// Mount namespace FD (`/proc/self/ns/mnt`).
     pub mnt: OwnedFd,
-    /// PID namespace-for-children FD (`/proc/self/ns/pid_for_children`).
     pub pid: OwnedFd,
-    /// Network namespace FD (`/proc/self/ns/net`).
     pub net: OwnedFd,
     #[cfg(target_os = "linux")]
     _pid_init: Option<PidNamespaceInit>,
@@ -62,12 +49,6 @@ impl Drop for PidNamespaceInit {
     }
 }
 
-/// Recursively bind the parent's `/proc` over the inherited `/proc` so setns'd
-/// shells inside the new mount namespace see a usable `/proc/self`.
-///
-/// Best-effort, shell-free: replaces the Rust `subprocess.run(["mount",
-/// "--rbind", "/proc", "/proc"], check=False)` with a raw `mount(MS_BIND |
-/// MS_REC)` syscall. Failure must NOT abort the holder.
 #[cfg(target_os = "linux")]
 pub(crate) fn rbind_proc() {
     let proc = b"/proc\0";
@@ -89,29 +70,13 @@ pub(crate) fn rbind_proc() {
 #[cfg(not(target_os = "linux"))]
 pub(crate) const fn rbind_proc() {}
 
-/// `unshare` the full namespace stack on the single-threaded holder and pin the
-/// resulting `/proc/self/ns/*` FDs.
-///
-/// # Safety
-///
-/// This function MUST run on a single-threaded process; the kernel rejects
-/// `CLONE_NEWUSER` in a multithreaded process. The crate deliberately has no
-/// tokio dependency and is invoked through the dedicated `eosd ns-holder`
-/// subprocess.
 #[cfg(target_os = "linux")]
 pub(crate) fn unshare_namespace_stack(
     readiness_fd: RawFd,
     control_fd: RawFd,
 ) -> Result<HeldNamespaces, NsHolderError> {
-    struct ParentIds {
-        user: u32,
-        group: u32,
-    }
-
-    let parent_ids = ParentIds {
-        user: rustix::process::getuid().as_raw(),
-        group: rustix::process::getgid().as_raw(),
-    };
+    let parent_uid = rustix::process::getuid().as_raw();
+    let parent_gid = rustix::process::getgid().as_raw();
     unshare(
         UnshareFlags::NEWUSER | UnshareFlags::NEWNS | UnshareFlags::NEWPID | UnshareFlags::NEWNET,
     )
@@ -119,11 +84,11 @@ pub(crate) fn unshare_namespace_stack(
     write_if_exists("/proc/self/setgroups", b"deny\n")?;
     write_setup_file(
         "/proc/self/uid_map",
-        format!("0 {} 1\n", parent_ids.user).as_bytes(),
+        format!("0 {parent_uid} 1\n").as_bytes(),
     )?;
     write_setup_file(
         "/proc/self/gid_map",
-        format!("0 {} 1\n", parent_ids.group).as_bytes(),
+        format!("0 {parent_gid} 1\n").as_bytes(),
     )?;
     set_thread_gid(rustix::process::Gid::ROOT).map_err(|_| NsHolderError::Unshare)?;
     set_thread_uid(rustix::process::Uid::ROOT).map_err(|_| NsHolderError::Unshare)?;

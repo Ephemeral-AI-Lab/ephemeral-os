@@ -1,13 +1,4 @@
-//! Fresh-namespace mode: `unshare` → `uid_map` → mount overlay → spawn tool.
-//!
-//! This is the daemon's standard per-tool-call path. This single-threaded child
-//! does the `unshare(CLONE_NEWUSER|CLONE_NEWNS)` itself, writes the uid/gid
-//! maps, mounts the overlay, then spawns the tool in its own process group so
-//! timeout cleanup can kill the whole tree.
-//!
-//! The syscall boundary is kept behind safe `rustix` wrappers here. If this
-//! later needs a raw libc gap, the block must carry a focused `// SAFETY:` note
-//! and the crate's `#![deny(unsafe_op_in_unsafe_fn)]` forces that discipline.
+//! Fresh-namespace mode: unshare, mount overlay, spawn the tool.
 
 #[cfg(target_os = "linux")]
 use std::ffi::OsStr;
@@ -49,27 +40,11 @@ use child::*;
 #[cfg(target_os = "linux")]
 use command::*;
 
-/// Run one tool call in a freshly-unshared namespace.
-///
-/// # Invariant
-///
-/// Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new
-/// namespace. The namespace syscalls require the process to be single-threaded
-/// (the crate-level invariant) and the caller to own the namespace it creates.
-///
-/// # Errors
-///
-/// Returns [`RunnerError`] when namespace setup, overlay mounting, request
-/// validation, or child execution fails.
 #[cfg(target_os = "linux")]
 pub(crate) fn run_fresh_ns(
     request: &RunRequest,
     config: &super::config::RunnerConfig,
 ) -> Result<RunResult, RunnerError> {
-    //   sequence: unshare(CLONE_NEWUSER|CLONE_NEWNS) on this single-threaded child,
-    //   write /proc/self/{uid_map,setgroups,gid_map}, mount overlay at
-    //   workspace_root, setsid + spawn the tool, then build the result JSON and
-    //   reap the process group on timeout.
     enter_fresh_namespace()?;
     let upperdir = request
         .upperdir
@@ -97,12 +72,6 @@ pub(crate) fn run_fresh_ns(
 }
 
 #[cfg(not(target_os = "linux"))]
-/// Return the non-Linux unsupported error for fresh-namespace execution.
-///
-/// # Errors
-///
-/// Always returns [`RunnerError::Unsupported`] outside Linux because the
-/// namespace syscalls do not exist.
 pub(crate) fn run_fresh_ns(
     _request: &RunRequest,
     _config: &super::config::RunnerConfig,
@@ -112,15 +81,8 @@ pub(crate) fn run_fresh_ns(
 
 #[cfg(target_os = "linux")]
 fn enter_fresh_namespace() -> Result<(), RunnerError> {
-    struct ParentIds {
-        user: u32,
-        group: u32,
-    }
-
-    let parent_ids = ParentIds {
-        user: rustix::process::getuid().as_raw(),
-        group: rustix::process::getgid().as_raw(),
-    };
+    let parent_uid = rustix::process::getuid().as_raw();
+    let parent_gid = rustix::process::getgid().as_raw();
 
     if let Err(err) = setsid() {
         // Docker exec may launch the runner as a process-group leader. In that
@@ -132,10 +94,8 @@ fn enter_fresh_namespace() -> Result<(), RunnerError> {
     }
     unshare(UnshareFlags::NEWUSER | UnshareFlags::NEWNS).map_syscall()?;
     write_if_exists("/proc/self/setgroups", "deny\n")?;
-    fs::write("/proc/self/uid_map", format!("0 {} 1\n", parent_ids.user))
-        .map_err(RunnerError::Syscall)?;
-    fs::write("/proc/self/gid_map", format!("0 {} 1\n", parent_ids.group))
-        .map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/uid_map", format!("0 {parent_uid} 1\n")).map_err(RunnerError::Syscall)?;
+    fs::write("/proc/self/gid_map", format!("0 {parent_gid} 1\n")).map_err(RunnerError::Syscall)?;
     set_thread_gid(rustix::process::Gid::ROOT).map_syscall()?;
     set_thread_uid(rustix::process::Uid::ROOT).map_syscall()?;
     mount_change(

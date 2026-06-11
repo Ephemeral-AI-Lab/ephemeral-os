@@ -4,10 +4,7 @@ use std::fs;
 use std::net::Ipv4Addr;
 use std::path::Path;
 
-/// `/proc` subtree the holder enumerates to find per-interface IPv6 config dirs.
 const IPV6_CONF_ROOT: &str = "/proc/sys/net/ipv6/conf";
-
-/// Interface names tried when `/proc/sys/net/ipv6/conf` cannot be listed.
 const FALLBACK_IPV6_CONF_INTERFACES: [&str; 4] = ["all", "default", "lo", "eth0"];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,23 +33,17 @@ pub(crate) fn parse_network_config(buf: &[u8]) -> Option<NetworkConfig> {
     })
 }
 
-/// Disable IPv6 router-advertisement acceptance on every interface.
 pub(crate) fn disable_ipv6_ra() {
-    let mut interfaces = Vec::new();
-    if let Ok(entries) = fs::read_dir(IPV6_CONF_ROOT) {
-        interfaces.extend(
+    let mut interfaces: Vec<String> = fs::read_dir(IPV6_CONF_ROOT)
+        .map(|entries| {
             entries
                 .flatten()
-                .filter_map(|entry| entry.file_name().into_string().ok()),
-        );
-    }
+                .filter_map(|entry| entry.file_name().into_string().ok())
+                .collect()
+        })
+        .unwrap_or_default();
     if interfaces.is_empty() {
-        interfaces.extend(
-            FALLBACK_IPV6_CONF_INTERFACES
-                .iter()
-                .copied()
-                .map(str::to_owned),
-        );
+        interfaces = FALLBACK_IPV6_CONF_INTERFACES.map(str::to_owned).to_vec();
     }
     for iface in interfaces {
         let _ = fs::write(
@@ -62,7 +53,6 @@ pub(crate) fn disable_ipv6_ra() {
     }
 }
 
-/// Bring loopback up through rtnetlink.
 #[cfg(target_os = "linux")]
 pub(crate) fn bring_loopback_up() {
     let index = link_index("lo");
@@ -74,7 +64,6 @@ pub(crate) fn bring_loopback_up() {
 #[cfg(not(target_os = "linux"))]
 pub(crate) const fn bring_loopback_up() {}
 
-/// Configure the namespace-side veth after the daemon moved it into this netns.
 #[cfg(target_os = "linux")]
 pub(crate) fn configure_namespace_veth(config: &NetworkConfig) {
     let index = link_index(&config.iface);
@@ -118,7 +107,7 @@ fn set_link_up(index: libc::c_uint) {
         ifi_flags: iff_up,
         ifi_change: iff_up,
     };
-    let Some(flags) = netlink_request_flags() else {
+    let Some(flags) = libc_c_int_to_u16(libc::NLM_F_REQUEST) else {
         return;
     };
     let _ = send_netlink_message(libc::RTM_NEWLINK, flags, &msg);
@@ -140,7 +129,9 @@ fn add_ipv4_address(index: libc::c_uint, ip: Ipv4Addr, prefix_len: u8) {
         NetlinkAttr::new(IFA_ADDRESS, ip.octets().to_vec()),
         NetlinkAttr::new(IFA_LOCAL, ip.octets().to_vec()),
     ];
-    let Some(flags) = netlink_create_flags() else {
+    let Some(flags) =
+        libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
+    else {
         return;
     };
     let _ = send_netlink_message_with_attrs(libc::RTM_NEWADDR, flags, &msg, &attrs);
@@ -166,13 +157,14 @@ fn add_ipv4_default_route(index: libc::c_uint, gateway: Ipv4Addr) {
         NetlinkAttr::new(RTA_GATEWAY, gateway.octets().to_vec()),
         NetlinkAttr::new(RTA_OIF, index.to_ne_bytes().to_vec()),
     ];
-    let Some(flags) = netlink_create_flags() else {
+    let Some(flags) =
+        libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
+    else {
         return;
     };
     let _ = send_netlink_message_with_attrs(libc::RTM_NEWROUTE, flags, &route, &attrs);
 }
 
-/// Flush the IPv6 default route via rtnetlink.
 #[cfg(target_os = "linux")]
 pub(crate) fn flush_ipv6_default_route() {
     let Some(rtm_family) = libc_c_int_to_u8(libc::AF_INET6) else {
@@ -189,7 +181,7 @@ pub(crate) fn flush_ipv6_default_route() {
         rtm_type: libc::RTN_UNICAST,
         rtm_flags: 0,
     };
-    let Some(flags) = netlink_request_flags() else {
+    let Some(flags) = libc_c_int_to_u16(libc::NLM_F_REQUEST) else {
         return;
     };
     let _ = send_netlink_message(libc::RTM_DELROUTE, flags, &route);
@@ -197,16 +189,6 @@ pub(crate) fn flush_ipv6_default_route() {
 
 #[cfg(not(target_os = "linux"))]
 pub(crate) const fn flush_ipv6_default_route() {}
-
-#[cfg(target_os = "linux")]
-fn netlink_request_flags() -> Option<u16> {
-    libc_c_int_to_u16(libc::NLM_F_REQUEST)
-}
-
-#[cfg(target_os = "linux")]
-fn netlink_create_flags() -> Option<u16> {
-    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
-}
 
 #[cfg(target_os = "linux")]
 fn send_netlink_message<T>(
@@ -318,7 +300,7 @@ fn append_struct_bytes<T>(buffer: &mut Vec<u8>, value: &T) {
 #[cfg(target_os = "linux")]
 fn append_attr(buffer: &mut Vec<u8>, attr: &NetlinkAttr) {
     let length = RTATTR_HEADER_LEN + attr.value.len();
-    buffer.extend_from_slice(&usize_to_u16_saturating(length).to_ne_bytes());
+    buffer.extend_from_slice(&u16::try_from(length).unwrap_or(u16::MAX).to_ne_bytes());
     buffer.extend_from_slice(&attr.kind.to_ne_bytes());
     buffer.extend_from_slice(&attr.value);
     let padded = align4(length);
@@ -348,11 +330,6 @@ fn libc_c_int_to_sock_family(value: libc::c_int) -> Option<libc::sa_family_t> {
 #[cfg(target_os = "linux")]
 fn libc_socklen(value: usize) -> Option<libc::socklen_t> {
     libc::socklen_t::try_from(value).ok()
-}
-
-#[cfg(target_os = "linux")]
-fn usize_to_u16_saturating(value: usize) -> u16 {
-    u16::try_from(value).unwrap_or(u16::MAX)
 }
 
 #[cfg(target_os = "linux")]
