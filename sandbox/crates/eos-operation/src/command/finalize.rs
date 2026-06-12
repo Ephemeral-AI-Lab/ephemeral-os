@@ -67,7 +67,7 @@ pub(crate) fn finalize_ephemeral_command(
     Ok(command_response(
         WorkspaceKind::Ephemeral,
         request,
-        CommandSettlement {
+        CommandFinalization {
             success: command_success && publish_success,
             changed_paths: changeset.published_paths(),
             changed_path_kinds,
@@ -114,7 +114,7 @@ pub(crate) fn finalize_isolated_command(
     let mut response = command_response(
         WorkspaceKind::Isolated,
         request,
-        CommandSettlement {
+        CommandFinalization {
             success: command_success,
             changed_paths,
             changed_path_kinds,
@@ -136,7 +136,7 @@ pub(crate) fn discarded_response(
     command_response(
         workspace_kind,
         request,
-        CommandSettlement {
+        CommandFinalization {
             success: false,
             changed_paths: Vec::new(),
             changed_path_kinds: ChangedPathKinds::default(),
@@ -149,7 +149,7 @@ pub(crate) fn discarded_response(
     )
 }
 
-struct CommandSettlement {
+struct CommandFinalization {
     success: bool,
     changed_paths: Vec<String>,
     changed_path_kinds: ChangedPathKinds,
@@ -163,7 +163,7 @@ struct CommandSettlement {
 fn command_response(
     workspace_kind: WorkspaceKind,
     request: FinalizeCommandRequest,
-    settlement: CommandSettlement,
+    finalization: CommandFinalization,
 ) -> CommandResponse {
     CommandResponse {
         status: request.status,
@@ -171,18 +171,18 @@ fn command_response(
         stdout: request.stdout,
         stderr: request.stderr,
         command_id: request.command_id.map(CommandId::new),
-        settled: Some(CommandMetadata {
+        finalized: Some(CommandMetadata {
             core: MutationCore {
-                success: settlement.success,
-                changed_paths: settlement.changed_paths,
-                changed_path_kinds: settlement.changed_path_kinds,
-                mutation_source: settlement.mutation_source,
-                conflict: settlement.conflict,
-                conflict_reason: settlement.conflict_reason,
-                timings: settlement.timings,
+                success: finalization.success,
+                changed_paths: finalization.changed_paths,
+                changed_path_kinds: finalization.changed_path_kinds,
+                mutation_source: finalization.mutation_source,
+                conflict: finalization.conflict,
+                conflict_reason: finalization.conflict_reason,
+                timings: finalization.timings,
             },
             workspace: workspace_kind,
-            extras: settlement.extras,
+            extras: finalization.extras,
         }),
     }
 }

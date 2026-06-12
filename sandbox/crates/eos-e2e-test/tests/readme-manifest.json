@@ -48,11 +48,11 @@
       "page": "workspace-publish-gate/index.html"
     },
     {
-      "name": "workspace-runtime-command-session",
-      "displayName": "workspace-runtime-command-session",
-      "cargoTestName": "workspace-runtime-command-session",
-      "path": "workspace-runtime-command-session/readme.json",
-      "page": "workspace-runtime-command-session/index.html"
+      "name": "workspace-runtime-command",
+      "displayName": "workspace-runtime-command",
+      "cargoTestName": "workspace-runtime-command",
+      "path": "workspace-runtime-command/readme.json",
+      "page": "workspace-runtime-command/index.html"
     },
     {
       "name": "pressure",

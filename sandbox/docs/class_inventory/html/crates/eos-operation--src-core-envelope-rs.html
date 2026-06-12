@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-operation · src/core/envelope.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-operation File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>46</b><span>modules</span></div>
+  <div><b>462</b><span>items</span></div>
+  <div><b>594</b><span>fields</span></div>
+  <div><b>209</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">checkpoint</span><ul class="file-tree"><li><a class="file-link" href="eos-operation.html"><span>commit.rs</span><small>2/20</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-contract-rs.html"><span>contract.rs</span><small>11/1</small></a></li><li><a class="file-link" href="eos-operation--src-checkpoint-lib-rs.html"><span>lib.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">command</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-command-contract-rs.html"><span>contract.rs</span><small>11/4</small></a></li><li><a class="file-link" href="eos-operation--src-command-finalize-rs.html"><span>finalize.rs</span><small>1/15</small></a></li><li><a class="file-link" href="eos-operation--src-command-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-outcome-rs.html"><span>outcome.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-command-prepare-rs.html"><span>prepare.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-command-registry-rs.html"><span>registry.rs</span><small>5/1</small></a></li><li><a class="file-link" href="eos-operation--src-command-runtime-rs.html"><span>runtime.rs</span><small>0/10</small></a></li><li><a class="file-link" href="eos-operation--src-command-service-rs.html"><span>service.rs</span><small>2/2</small></a></li></ul></li><li><span class="folder">control</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-control-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-control-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">core</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-core-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-catalog-rs.html"><span>catalog.rs</span><small>5/6</small></a></li><li><a class="file-link active" href="eos-operation--src-core-envelope-rs.html"><span>envelope.rs</span><small>8/3</small></a></li><li><a class="file-link" href="eos-operation--src-core-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-fault-rs.html"><span>fault.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-id-rs.html"><span>id.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-operation--src-core-request-rs.html"><span>request.rs</span><small>4/12</small></a></li><li><a class="file-link" href="eos-operation--src-core-response-rs.html"><span>response.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-core-workspace-outcome-rs.html"><span>workspace_outcome.rs</span><small>6/3</small></a></li></ul></li><li><span class="folder">file</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-file-contract-rs.html"><span>contract.rs</span><small>4/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-direct-rs.html"><span>direct.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-operation--src-file-isolated-rs.html"><span>isolated.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-file-lib-rs.html"><span>lib.rs</span><small>11/7</small></a></li><li><a class="file-link" href="eos-operation--src-file-tests-rs.html"><span>tests.rs</span><small>1/7</small></a></li></ul></li><li><span class="folder">isolation</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-isolation-contract-rs.html"><span>contract.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-operation--src-isolation-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li><li><a class="file-link" href="eos-operation--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">plugin</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-plugin-callbacks-rs.html"><span>callbacks.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-contract-rs.html"><span>contract.rs</span><small>9/7</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-dispatch-rs.html"><span>dispatch.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-ensure-rs.html"><span>ensure.rs</span><small>1/12</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-lib-rs.html"><span>lib.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-overlay-rs.html"><span>overlay.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-package-rs.html"><span>package.rs</span><small>3/24</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-process-rs.html"><span>process.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-refresh-rs.html"><span>refresh.rs</span><small>3/3</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-route-rs.html"><span>route.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-service-rs.html"><span>service.rs</span><small>2/19</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-state-rs.html"><span>state.rs</span><small>3/5</small></a></li><li><a class="file-link" href="eos-operation--src-plugin-transport-rs.html"><span>transport.rs</span><small>4/7</small></a></li></ul></li><li><span class="folder">workspace_run</span><ul class="file-tree"><li><a class="file-link" href="eos-operation--src-workspace-run-contract-rs.html"><span>contract.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-operation--src-workspace-run-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="core::envelope crates/eos-operation/src/core/envelope.rs OperationStatus TraceRef impl TraceRef OperationWarning StepSummary ResourceSummary ResponseMeta impl ResponseMeta OperationEnvelope impl OperationEnvelope &lt; T &gt; impl OperationEnvelope &lt; T &gt; V1FlatteningAdapter impl V1FlatteningAdapter legacy_fault serializes_each_status_with_one_discriminant v1_adapter_is_confined_to_legacy_wire_shape">
+  <div class="module-head">
+    <div>
+      <h2>src/core/envelope.rs</h2>
+      <p class="path">module <code>core::envelope</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>8 types</span>
+      <span>5 impls</span>
+      <span>3 fns</span>
+      <span>14 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-TraceRef-19" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TraceRef pub pub struct TraceRef crates/eos-operation/src/core/envelope.rs trace_id String request_id Option &lt; String &gt; root_span_id Option &lt; u64 &gt; sidecar_event_count u64 degraded bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TraceRef</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>trace_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>root_span_id</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>sidecar_event_count</td><td><code>u64</code></td></tr><tr><td>pub</td><td>degraded</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-31"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a> (trace_id : &amp; TraceId) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(trace_id: &amp;<span class="rs-type">TraceId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            trace_id: trace_id.to_string(),
+            request_id: <span class="rs-type">None</span>,
+            root_span_id: <span class="rs-type">None</span>,
+            sidecar_event_count: 0,
+            degraded: <span class="rs-kw">false</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-request-42"><td>method</td><td>with_request</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-with-request-42">with_request</a> (mut self , request_id : &amp; RequestId) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-request-42">with_request</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.request_id = <span class="rs-type">Some</span>(request_id.to_string());
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-root-span-48"><td>method</td><td>with_root_span</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-with-root-span-48">with_root_span</a> (mut self , span_id : SpanUid) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-root-span-48">with_root_span</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, span_id: <span class="rs-type">SpanUid</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.root_span_id = <span class="rs-type">Some</span>(span_id.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>());
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-sidecar-event-count-54"><td>method</td><td>with_sidecar_event_count</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-with-sidecar-event-count-54">with_sidecar_event_count</a> (mut self , count : u64) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-sidecar-event-count-54">with_sidecar_event_count</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, count: u64) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.sidecar_event_count = count;
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-degraded-60"><td>method</td><td>degraded</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-degraded-60">degraded</a> (mut self) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-degraded-60">degraded</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.degraded = <span class="rs-kw">true</span>;
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:19</p>
+</article><article id="item-struct-OperationWarning-67" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OperationWarning pub pub struct OperationWarning crates/eos-operation/src/core/envelope.rs kind String message String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OperationWarning</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationWarning-67">OperationWarning</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:67</p>
+</article><article id="item-struct-StepSummary-73" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StepSummary pub pub struct StepSummary crates/eos-operation/src/core/envelope.rs name String duration_us u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StepSummary</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-StepSummary-73">StepSummary</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>duration_us</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:73</p>
+</article><article id="item-struct-ResourceSummary-79" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ResourceSummary pub pub struct ResourceSummary crates/eos-operation/src/core/envelope.rs fields Map &lt; String , Value &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ResourceSummary</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResourceSummary-79">ResourceSummary</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>fields</td><td><code>Map &lt; String , Value &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:79</p>
+</article><article id="item-struct-ResponseMeta-85" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ResponseMeta pub pub struct ResponseMeta crates/eos-operation/src/core/envelope.rs trace Option &lt; TraceRef &gt; duration_us Option &lt; u64 &gt; steps Vec &lt; StepSummary &gt; modules_touched Vec &lt; String &gt; warnings Vec &lt; OperationWarning &gt; resource_summary Option &lt; ResourceSummary &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ResponseMeta</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>trace</td><td><code>Option &lt; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a> &gt;</code></td></tr><tr><td>pub</td><td>duration_us</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>steps</td><td><code>Vec &lt; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-StepSummary-73">StepSummary</a> &gt;</code></td></tr><tr><td>pub</td><td>modules_touched</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>warnings</td><td><code>Vec &lt; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationWarning-67">OperationWarning</a> &gt;</code></td></tr><tr><td>pub</td><td>resource_summary</td><td><code>Option &lt; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResourceSummary-79">ResourceSummary</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-with-trace-102"><td>method</td><td>with_trace</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-with-trace-102">with_trace</a> (mut self , trace : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-trace-102">with_trace</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, trace: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.trace = <span class="rs-type">Some</span>(trace);
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:85</p>
+</article><article id="item-struct-OperationEnvelope-109" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OperationEnvelope pub pub struct OperationEnvelope&lt; T &gt; crates/eos-operation/src/core/envelope.rs status OperationStatus result Option &lt; T &gt; error Option &lt; OperationFault &gt; meta ResponseMeta ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>OperationEnvelope</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt; T &gt;</code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a></code></td></tr><tr><td>pub</td><td>result</td><td><code>Option &lt; T &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> &gt;</code></td></tr><tr><td>pub</td><td>meta</td><td><code><a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-ok-121"><td>associated-fn</td><td>ok</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a> (result : T , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(result: <span class="rs-type">T</span>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Ok</span>,
+            result: <span class="rs-type">Some</span>(result),
+            error: <span class="rs-type">None</span>,
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-running-131"><td>associated-fn</td><td>running</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-running-179">running</a> (result : T , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-running-179">running</a>(result: <span class="rs-type">T</span>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Running</span>,
+            result: <span class="rs-type">Some</span>(result),
+            error: <span class="rs-type">None</span>,
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-rejected-143"><td>associated-fn</td><td>rejected</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-rejected-143">rejected</a> (error : <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-rejected-143">rejected</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Rejected</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancelled-153"><td>associated-fn</td><td>cancelled</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-cancelled-191">cancelled</a> (error : <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-cancelled-191">cancelled</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Cancelled</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-timed-out-163"><td>associated-fn</td><td>timed_out</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-timed-out-163">timed_out</a> (error : <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-timed-out-163">timed_out</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">TimedOut</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-error-173"><td>associated-fn</td><td>error</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a> (error : <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> , meta : <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:109</p>
+</article><article id="item-struct-V1FlatteningAdapter-184" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct V1FlatteningAdapter pub pub struct V1FlatteningAdapter crates/eos-operation/src/core/envelope.rs  ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>V1FlatteningAdapter</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a></code>
+  <p class="docstring">Phase-01 migration bridge for old v1 flat responses. Phase 06 deletes this.</p>
+  <div class="tags"></div>
+  <h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-legacy-value-188"><td>constructor</td><td>from_legacy_value</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-from-legacy-value-188">from_legacy_value</a> (value : Value) -&gt; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a> &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-from-legacy-value-188">from_legacy_value</a>(value: <span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">if</span> value.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;success&quot;).and_then(<span class="rs-type">Value</span>::as_bool) == <span class="rs-type">Some</span>(<span class="rs-kw">false</span>) {
+            <span class="rs-kw">let</span> error = value.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;error&quot;).cloned().unwrap_or_else(|| json!({}));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-legacy-fault-232">legacy_fault</a>(error), <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default());
+        }
+        <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(value, <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default())
+    }
+</code></pre>
+</details></td></tr><tr id="method-to-legacy-value-197"><td>associated-fn</td><td>to_legacy_value</td><td><code>pub fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#method-to-legacy-value-197">to_legacy_value</a> &lt; T : Serialize &gt; (envelope : &amp; <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a> &lt; T &gt;) -&gt; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> to_legacy_value&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(envelope: &amp;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">match</span> envelope.status {
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Ok</span> | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Running</span> =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = envelope
+                    .result
+                    .as_ref()
+                    .and_then(|result| serde_json::to_value(result).<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>())
+                    .unwrap_or_else(|| json!({}));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(object) = &amp;<span class="rs-kw">mut</span> value {
+                    object
+                        .entry(&quot;success&quot;.to_owned())
+                        .or_insert(<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>));
+                }
+                value
+            }
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Rejected</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Cancelled</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">TimedOut</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span> =&gt; {
+                <span class="rs-kw">let</span> fault = envelope.error.as_ref().cloned().unwrap_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;internal_error&quot;, &quot;operation failed without a fault&quot;)
+                });
+                json!({
+                    &quot;success&quot;: <span class="rs-kw">false</span>,
+                    &quot;warnings&quot;: envelope.meta.warnings.iter().map(|warning| {
+                        json!({&quot;kind&quot;: warning.kind, &quot;message&quot;: warning.message})
+                    }).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+                    &quot;timings&quot;: {},
+                    &quot;error&quot;: fault,
+                })
+            }
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:184</p>
+</article><article id="item-enum-OperationStatus-8" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OperationStatus pub pub enum OperationStatus crates/eos-operation/src/core/envelope.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>OperationStatus</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Ok</td><td><code></code></td></tr><tr><td>Running</td><td><code></code></td></tr><tr><td>Rejected</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr><tr><td>TimedOut</td><td><code></code></td></tr><tr><td>Error</td><td><code></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:8</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-legacy-fault-232" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn legacy_fault private fn legacy_fault (error : Value) -&gt; OperationFault crates/eos-operation/src/core/envelope.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>legacy_fault</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-fn-legacy-fault-232">legacy_fault</a> (error : Value) -&gt; <a class="symbol-link" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-legacy-fault-232">legacy_fault</a>(error: <span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> {
+    <span class="rs-kw">let</span> kind = error
+        .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;kind&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;internal_error&quot;);
+    <span class="rs-kw">let</span> message = error
+        .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;message&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;operation failed&quot;);
+    <span class="rs-kw">let</span> details = error.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;details&quot;).cloned().unwrap_or_else(|| json!({}));
+    <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(kind, message)
+        .<a class="symbol-link rs-fn" href="eos-operation--src-core-error-rs.html#method-with-details-21">with_details</a>(<span class="rs-kw">super</span>::fault::<a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-FaultDetails-20">FaultDetails</a>::default().<a class="symbol-link rs-fn" href="eos-operation--src-core-fault-rs.html#method-with-field-37">with_field</a>(&quot;legacy_details&quot;, details))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:232</p>
+</article><article id="item-fn-serializes-each-status-with-one-discriminant-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serializes_each_status_with_one_discriminant private fn serializes_each_status_with_one_discriminant () crates/eos-operation/src/core/envelope.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>serializes_each_status_with_one_discriminant</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-fn-serializes-each-status-with-one-discriminant-251">serializes_each_status_with_one_discriminant</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-serializes-each-status-with-one-discriminant-251">serializes_each_status_with_one_discriminant</a>() {
+        <span class="rs-kw">let</span> meta = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default();
+        <span class="rs-kw">let</span> envelopes = [
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(json!({&quot;ready&quot;: <span class="rs-kw">true</span>}), meta.clone()),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-running-179">running</a>(json!({&quot;command_id&quot;: &quot;cmd-1&quot;}), meta.clone()),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-rejected-143">rejected</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;forbidden&quot;, &quot;blocked&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-cancelled-191">cancelled</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;cancelled&quot;, &quot;cancelled by caller&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-timed-out-163">timed_out</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;timed_out&quot;, &quot;deadline exceeded&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-fault-rs.html#method-internal-74">internal</a>(&quot;failed&quot;, <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-FaultDetails-20">FaultDetails</a>::default()),
+                meta,
+            ),
+        ];
+
+        <span class="rs-kw">let</span> statuses = envelopes.map(|envelope| {
+            serde_json::to_value(envelope)
+                .expect(&quot;envelope serializes&quot;)
+                .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;status&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .expect(&quot;status string&quot;)
+                .to_owned()
+        });
+
+        assert_eq!(
+            statuses,
+            [
+                &quot;ok&quot;,
+                &quot;running&quot;,
+                &quot;rejected&quot;,
+                &quot;cancelled&quot;,
+                &quot;timed_out&quot;,
+                &quot;error&quot;
+            ]
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:251</p>
+</article><article id="item-fn-v1-adapter-is-confined-to-legacy-wire-shape-297" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn v1_adapter_is_confined_to_legacy_wire_shape private fn v1_adapter_is_confined_to_legacy_wire_shape () crates/eos-operation/src/core/envelope.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>v1_adapter_is_confined_to_legacy_wire_shape</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-operation--src-core-envelope-rs.html#item-fn-v1-adapter-is-confined-to-legacy-wire-shape-297">v1_adapter_is_confined_to_legacy_wire_shape</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-v1-adapter-is-confined-to-legacy-wire-shape-297">v1_adapter_is_confined_to_legacy_wire_shape</a>() {
+        <span class="rs-kw">let</span> legacy = json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;error&quot;: {
+                &quot;kind&quot;: &quot;bad_json&quot;,
+                &quot;message&quot;: &quot;bad request&quot;,
+                &quot;details&quot;: {&quot;line&quot;: 1}
+            }
+        });
+
+        <span class="rs-kw">let</span> envelope = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-from-legacy-value-188">from_legacy_value</a>(legacy);
+        assert_eq!(envelope.status, <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span>);
+        assert_eq!(envelope.error.expect(&quot;fault&quot;).kind, &quot;bad_json&quot;);
+
+        <span class="rs-kw">let</span> legacy_again = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-to-legacy-value-197">to_legacy_value</a>(&amp;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(
+            json!({&quot;ready&quot;: <span class="rs-kw">true</span>}),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default(),
+        ));
+        assert_eq!(legacy_again[&quot;success&quot;], <span class="rs-kw">true</span>);
+        assert_eq!(legacy_again[&quot;ready&quot;], <span class="rs-kw">true</span>);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-operation/src/core/envelope.rs:297</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-operation/src/core/envelope.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> eos_trace::{<span class="rs-type">RequestId</span>, <span class="rs-type">SpanUid</span>, <span class="rs-type">TraceId</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::fault::<a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a> {
+    <span class="rs-type">Ok</span>,
+    <span class="rs-type">Running</span>,
+    <span class="rs-type">Rejected</span>,
+    <span class="rs-type">Cancelled</span>,
+    <span class="rs-type">TimedOut</span>,
+    <span class="rs-type">Error</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a> {
+    <span class="rs-kw">pub</span> trace_id: <span class="rs-type">String</span>,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> root_span_id: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-kw">pub</span> sidecar_event_count: u64,
+    <span class="rs-kw">pub</span> degraded: bool,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(trace_id: &amp;<span class="rs-type">TraceId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            trace_id: trace_id.to_string(),
+            request_id: <span class="rs-type">None</span>,
+            root_span_id: <span class="rs-type">None</span>,
+            sidecar_event_count: 0,
+            degraded: <span class="rs-kw">false</span>,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-request-42">with_request</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.request_id = <span class="rs-type">Some</span>(request_id.to_string());
+        <span class="rs-self">self</span>
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-root-span-48">with_root_span</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, span_id: <span class="rs-type">SpanUid</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.root_span_id = <span class="rs-type">Some</span>(span_id.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>());
+        <span class="rs-self">self</span>
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-sidecar-event-count-54">with_sidecar_event_count</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, count: u64) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.sidecar_event_count = count;
+        <span class="rs-self">self</span>
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-degraded-60">degraded</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.degraded = <span class="rs-kw">true</span>;
+        <span class="rs-self">self</span>
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationWarning-67">OperationWarning</a> {
+    <span class="rs-kw">pub</span> kind: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-StepSummary-73">StepSummary</a> {
+    <span class="rs-kw">pub</span> name: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> duration_us: u64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResourceSummary-79">ResourceSummary</a> {
+    #[serde(default)]
+    <span class="rs-kw">pub</span> fields: <span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a> {
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> trace: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a>&gt;,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> duration_us: <span class="rs-type">Option</span>&lt;u64&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Vec</span>::is_empty&quot;)]
+    <span class="rs-kw">pub</span> steps: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-StepSummary-73">StepSummary</a>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Vec</span>::is_empty&quot;)]
+    <span class="rs-kw">pub</span> modules_touched: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Vec</span>::is_empty&quot;)]
+    <span class="rs-kw">pub</span> warnings: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationWarning-67">OperationWarning</a>&gt;,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> resource_summary: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResourceSummary-79">ResourceSummary</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-with-trace-102">with_trace</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, trace: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-TraceRef-19">TraceRef</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">self</span>.trace = <span class="rs-type">Some</span>(trace);
+        <span class="rs-self">self</span>
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> result: <span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> error: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>,
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">T</span>&gt; {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(result: <span class="rs-type">T</span>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Ok</span>,
+            result: <span class="rs-type">Some</span>(result),
+            error: <span class="rs-type">None</span>,
+            meta,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-running-179">running</a>(result: <span class="rs-type">T</span>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Running</span>,
+            result: <span class="rs-type">Some</span>(result),
+            error: <span class="rs-type">None</span>,
+            meta,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">T</span>&gt; {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-rejected-143">rejected</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Rejected</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-cancelled-191">cancelled</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Cancelled</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-timed-out-163">timed_out</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">TimedOut</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(error: <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>, meta: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            status: <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span>,
+            result: <span class="rs-type">None</span>,
+            error: <span class="rs-type">Some</span>(error),
+            meta,
+        }
+    }
+}
+
+<span class="rs-comment">/// Phase-01 migration bridge for old v1 flat responses. Phase 06 deletes this.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a>;
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-from-legacy-value-188">from_legacy_value</a>(value: <span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">if</span> value.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;success&quot;).and_then(<span class="rs-type">Value</span>::as_bool) == <span class="rs-type">Some</span>(<span class="rs-kw">false</span>) {
+            <span class="rs-kw">let</span> error = value.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;error&quot;).cloned().unwrap_or_else(|| json!({}));
+            <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-legacy-fault-232">legacy_fault</a>(error), <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default());
+        }
+        <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(value, <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default())
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> to_legacy_value&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(envelope: &amp;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">match</span> envelope.status {
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Ok</span> | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Running</span> =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = envelope
+                    .result
+                    .as_ref()
+                    .and_then(|result| serde_json::to_value(result).<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>())
+                    .unwrap_or_else(|| json!({}));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(object) = &amp;<span class="rs-kw">mut</span> value {
+                    object
+                        .entry(&quot;success&quot;.to_owned())
+                        .or_insert(<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>));
+                }
+                value
+            }
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Rejected</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Cancelled</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">TimedOut</span>
+            | <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span> =&gt; {
+                <span class="rs-kw">let</span> fault = envelope.error.as_ref().cloned().unwrap_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;internal_error&quot;, &quot;operation failed without a fault&quot;)
+                });
+                json!({
+                    &quot;success&quot;: <span class="rs-kw">false</span>,
+                    &quot;warnings&quot;: envelope.meta.warnings.iter().map(|warning| {
+                        json!({&quot;kind&quot;: warning.kind, &quot;message&quot;: warning.message})
+                    }).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+                    &quot;timings&quot;: {},
+                    &quot;error&quot;: fault,
+                })
+            }
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-legacy-fault-232">legacy_fault</a>(error: <span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a> {
+    <span class="rs-kw">let</span> kind = error
+        .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;kind&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;internal_error&quot;);
+    <span class="rs-kw">let</span> message = error
+        .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;message&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;operation failed&quot;);
+    <span class="rs-kw">let</span> details = error.<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;details&quot;).cloned().unwrap_or_else(|| json!({}));
+    <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(kind, message)
+        .<a class="symbol-link rs-fn" href="eos-operation--src-core-error-rs.html#method-with-details-21">with_details</a>(<span class="rs-kw">super</span>::fault::<a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-FaultDetails-20">FaultDetails</a>::default().<a class="symbol-link rs-fn" href="eos-operation--src-core-fault-rs.html#method-with-field-37">with_field</a>(&quot;legacy_details&quot;, details))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::<a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-FaultDetails-20">FaultDetails</a>;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-serializes-each-status-with-one-discriminant-251">serializes_each_status_with_one_discriminant</a>() {
+        <span class="rs-kw">let</span> meta = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default();
+        <span class="rs-kw">let</span> envelopes = [
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(json!({&quot;ready&quot;: <span class="rs-kw">true</span>}), meta.clone()),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-running-179">running</a>(json!({&quot;command_id&quot;: &quot;cmd-1&quot;}), meta.clone()),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-rejected-143">rejected</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;forbidden&quot;, &quot;blocked&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-cancelled-191">cancelled</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;cancelled&quot;, &quot;cancelled by caller&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-timed-out-163">timed_out</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-new-60">new</a>(&quot;timed_out&quot;, &quot;deadline exceeded&quot;),
+                meta.clone(),
+            ),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::&lt;<span class="rs-type">Value</span>&gt;::<a class="symbol-link rs-fn" href="eos-operation--src-command-contract-rs.html#method-error-203">error</a>(
+                <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-OperationFault-50">OperationFault</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-fault-rs.html#method-internal-74">internal</a>(&quot;failed&quot;, <a class="symbol-link rs-type" href="eos-operation--src-core-fault-rs.html#item-struct-FaultDetails-20">FaultDetails</a>::default()),
+                meta,
+            ),
+        ];
+
+        <span class="rs-kw">let</span> statuses = envelopes.map(|envelope| {
+            serde_json::to_value(envelope)
+                .expect(&quot;envelope serializes&quot;)
+                .<a class="symbol-link rs-fn" href="eos-operation--src-command-registry-rs.html#method-get-84">get</a>(&quot;status&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .expect(&quot;status string&quot;)
+                .to_owned()
+        });
+
+        assert_eq!(
+            statuses,
+            [
+                &quot;ok&quot;,
+                &quot;running&quot;,
+                &quot;rejected&quot;,
+                &quot;cancelled&quot;,
+                &quot;timed_out&quot;,
+                &quot;error&quot;
+            ]
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#item-fn-v1-adapter-is-confined-to-legacy-wire-shape-297">v1_adapter_is_confined_to_legacy_wire_shape</a>() {
+        <span class="rs-kw">let</span> legacy = json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;error&quot;: {
+                &quot;kind&quot;: &quot;bad_json&quot;,
+                &quot;message&quot;: &quot;bad request&quot;,
+                &quot;details&quot;: {&quot;line&quot;: 1}
+            }
+        });
+
+        <span class="rs-kw">let</span> envelope = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-from-legacy-value-188">from_legacy_value</a>(legacy);
+        assert_eq!(envelope.status, <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-enum-OperationStatus-8">OperationStatus</a>::<span class="rs-type">Error</span>);
+        assert_eq!(envelope.error.expect(&quot;fault&quot;).kind, &quot;bad_json&quot;);
+
+        <span class="rs-kw">let</span> legacy_again = <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-V1FlatteningAdapter-184">V1FlatteningAdapter</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-to-legacy-value-197">to_legacy_value</a>(&amp;<a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-OperationEnvelope-109">OperationEnvelope</a>::<a class="symbol-link rs-fn" href="eos-operation--src-core-envelope-rs.html#method-ok-121">ok</a>(
+            json!({&quot;ready&quot;: <span class="rs-kw">true</span>}),
+            <a class="symbol-link rs-type" href="eos-operation--src-core-envelope-rs.html#item-struct-ResponseMeta-85">ResponseMeta</a>::default(),
+        ));
+        assert_eq!(legacy_again[&quot;success&quot;], <span class="rs-kw">true</span>);
+        assert_eq!(legacy_again[&quot;ready&quot;], <span class="rs-kw">true</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

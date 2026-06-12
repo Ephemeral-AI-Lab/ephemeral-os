@@ -88,7 +88,7 @@ pub fn recover_orphaned_commands() {
                         stdout: String::new(),
                         stderr: "orphan_recovered: daemon restarted".to_owned(),
                         command_id: Some(CommandId::new(id.to_owned())),
-                        settled: None,
+                        finalized: None,
                     };
                     command_ops().push_completed(CommandCompletion {
                         command_id: id.to_owned(),

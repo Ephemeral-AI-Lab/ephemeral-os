@@ -16,6 +16,8 @@ use crate::runtime::{
     container_labels, docker, resolve_published_addr, running_container_ids, ContainerLifetime,
     ContainerSpec, DaemonContainer, DaemonSpec,
 };
+use crate::trace_store::{RequestStartInput, TraceStore, TraceStoreError};
+use eos_trace::{RequestId, TraceId};
 
 #[derive(Debug, Clone)]
 pub struct HostConfig {
@@ -62,6 +64,7 @@ pub struct SandboxHost {
     config: HostConfig,
     config_yaml: String,
     registry: SandboxRegistry,
+    trace_store: TraceStore,
 }
 
 impl SandboxHost {
@@ -74,10 +77,12 @@ impl SandboxHost {
         })?;
         let registry = SandboxRegistry::open(config.state_dir.clone())?;
         registry.rebuild_from_docker();
+        let trace_store = TraceStore::open(&config.state_dir)?;
         Ok(Self {
             config,
             config_yaml,
             registry,
+            trace_store,
         })
     }
 
@@ -163,6 +168,7 @@ impl SandboxHost {
         Some(forward_request(
             &record,
             &self.config,
+            &self.trace_store,
             mutates_state,
             op,
             invocation_id,
@@ -378,6 +384,7 @@ fn resolve_endpoint(record: &SandboxRecord) -> Result<SocketAddr> {
 fn forward_request(
     record: &SandboxRecord,
     config: &HostConfig,
+    trace_store: &TraceStore,
     mutates_state: bool,
     op: &str,
     invocation_id: &str,
@@ -385,6 +392,23 @@ fn forward_request(
 ) -> Result<Value, ForwardError> {
     let mut tcp_line = encode_request_with_metadata(op, invocation_id, args, Some(&record.token));
     tcp_line.push(b'\n');
+    let request_id = RequestId::parse(invocation_id.to_owned()).unwrap_or_default();
+    let trace_id = TraceId::new();
+    let family = host_family_from_op(op);
+    let caller_id = args.get("caller_id").and_then(Value::as_str);
+    trace_store
+        .prepare_forward(RequestStartInput {
+            sandbox_id: &record.sandbox_id,
+            trace_id,
+            request_id,
+            op,
+            family: &family,
+            caller_id,
+            mutates_state,
+            args: args.clone(),
+            forwarded_bytes: &tcp_line,
+        })
+        .map_err(ForwardError::TraceUnavailable)?;
     let attempt = ForwardAttempt {
         record,
         config,
@@ -399,10 +423,16 @@ fn forward_request(
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForwardError {
+    #[error("trace store unavailable before forwarding: {0}")]
+    TraceUnavailable(TraceStoreError),
     #[error("sandbox unavailable: {0}")]
     SandboxUnavailable(String),
     #[error("uncertain outcome: {0}")]
     UncertainOutcome(String),
+}
+
+fn host_family_from_op(op: &str) -> String {
+    op.split('.').nth(1).unwrap_or("unknown").to_owned()
 }
 
 struct ForwardAttempt<'a> {

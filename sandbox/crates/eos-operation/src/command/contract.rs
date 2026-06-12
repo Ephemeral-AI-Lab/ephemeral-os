@@ -172,7 +172,7 @@ pub struct CommandResponse {
     pub stdout: String,
     pub stderr: String,
     pub command_id: Option<CommandId>,
-    pub settled: Option<CommandMetadata>,
+    pub finalized: Option<CommandMetadata>,
 }
 
 impl CommandResponse {
@@ -184,7 +184,7 @@ impl CommandResponse {
             stdout,
             stderr: String::new(),
             command_id: Some(CommandId::new(command_id)),
-            settled: None,
+            finalized: None,
         }
     }
 
@@ -196,7 +196,7 @@ impl CommandResponse {
             stdout,
             stderr: String::new(),
             command_id: None,
-            settled: None,
+            finalized: None,
         }
     }
 
@@ -208,7 +208,7 @@ impl CommandResponse {
             stdout: String::new(),
             stderr: stderr.into(),
             command_id: None,
-            settled: None,
+            finalized: None,
         }
     }
 
@@ -231,11 +231,11 @@ impl CommandResponse {
         if let Some(command_id) = self.command_id.as_ref() {
             response["command_id"] = json!(command_id.as_str());
         }
-        let Some(settled) = self.settled.as_ref() else {
+        let Some(finalized) = self.finalized.as_ref() else {
             return response;
         };
         let Value::Object(core) =
-            serde_json::to_value(&settled.core).expect("serialize command mutation core")
+            serde_json::to_value(&finalized.core).expect("serialize command mutation core")
         else {
             unreachable!("MutationCore serializes to a JSON object");
         };
@@ -245,8 +245,8 @@ impl CommandResponse {
         for (key, value) in core {
             object.insert(key, value);
         }
-        object.insert("workspace".to_owned(), json!(settled.workspace.as_str()));
-        for (key, value) in &settled.extras {
+        object.insert("workspace".to_owned(), json!(finalized.workspace.as_str()));
+        for (key, value) in &finalized.extras {
             object.insert(key.clone(), value.clone());
         }
         response
@@ -312,7 +312,7 @@ mod tests {
     use crate::{ChangedPathKind, MutationSource, WorkspaceConflict};
 
     #[test]
-    fn settled_response_splices_typed_metadata_extras() {
+    fn finalized_response_splices_typed_metadata_extras() {
         let mut changed_path_kinds = crate::ChangedPathKinds::default();
         changed_path_kinds.insert("src/main.rs".to_owned(), ChangedPathKind::Write);
         let mut extras = Map::new();
@@ -328,7 +328,7 @@ mod tests {
             stdout: "done\n".to_owned(),
             stderr: String::new(),
             command_id: Some(CommandId::new("cmd_1")),
-            settled: Some(CommandMetadata {
+            finalized: Some(CommandMetadata {
                 core: MutationCore {
                     success: true,
                     changed_paths: vec!["src/main.rs".to_owned()],
@@ -366,7 +366,7 @@ mod tests {
             stdout: String::new(),
             stderr: String::new(),
             command_id: None,
-            settled: Some(CommandMetadata {
+            finalized: Some(CommandMetadata {
                 core: MutationCore {
                     success: false,
                     mutation_source: None,
@@ -396,7 +396,7 @@ mod tests {
             stdout: String::new(),
             stderr: String::new(),
             command_id: Some(CommandId::new("cmd_conflict")),
-            settled: Some(CommandMetadata {
+            finalized: Some(CommandMetadata {
                 core: MutationCore {
                     success: false,
                     changed_paths: vec!["src/main.rs".to_owned()],

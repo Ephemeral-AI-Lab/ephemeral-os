@@ -10,14 +10,14 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command-session cancellation, plugin refresh, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `api.v1.write_file`, `api.v1.read_file`, `api.v1.exec_command`, `api.v1.command_cancel`, `api.v1.command_session_count`, `api.layer_metrics`, `api.runtime.ready`, `api.plugin.ensure`, `api.plugin.status`, `plugin.generic.query`, and `api.isolated_workspace.*`. Module config: `crates/eos-e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract.",
+    "summary": "`pressure` owns cross-subsystem stress coverage for live `eosd`: concurrent direct file ops, reads, ephemeral exec, LayerStack auto-squash, OCC disjoint publish, command cancellation, plugin refresh, isolated handle pressure, post-cancel daemon readiness, and JSON resource reports. It exercises daemon ops including `api.v1.write_file`, `api.v1.read_file`, `api.v1.exec_command`, `api.v1.command_cancel`, `api.v1.command_count`, `api.layer_metrics`, `api.runtime.ready`, `api.plugin.ensure`, `api.plugin.status`, `plugin.generic.query`, and `api.isolated_workspace.*`. Module config: `crates/eos-e2e-test/tests/pressure/config/default.test.yml`. This is one unified E2E contract.",
     "moduleConfig": "crates/eos-e2e-test/tests/pressure/config/default.test.yml",
     "ops": [
       "api.v1.write_file",
       "api.v1.read_file",
       "api.v1.exec_command",
       "api.v1.command_cancel",
-      "api.v1.command_session_count",
+      "api.v1.command_count",
       "api.layer_metrics",
       "api.runtime.ready",
       "api.plugin.ensure",
@@ -89,7 +89,7 @@
     {
       "id": "pressure-recovery-cleanup",
       "title": "Recovery Cleanup",
-      "description": "Midflight cancel and cancel bursts leave daemon readiness intact and drain command sessions, active leases, and marker work.",
+      "description": "Midflight cancel and cancel bursts leave daemon readiness intact and drain commands, active leases, and marker work.",
       "tags": [
         "pressure"
       ]
@@ -161,7 +161,7 @@
     {
       "id": "pressure-soak",
       "title": "Soak",
-      "description": "A mixed file/exec/command-cancel round over a fixed working set, repeated many times, keeps the leak counters (active leases and command sessions) at zero every round, auto-squash bounds manifest depth and reclaims storage as a sawtooth so storage does not creep with round count, and the daemon stays ready throughout.",
+      "description": "A mixed file/exec/command-cancel round over a fixed working set, repeated many times, keeps the leak counters (active leases and commands) at zero every round, auto-squash bounds manifest depth and reclaims storage as a sawtooth so storage does not creep with round count, and the daemon stays ready throughout.",
       "tags": [
         "pressure"
       ]
@@ -193,8 +193,8 @@
     {
       "id": "pressure-command-cancel-drain",
       "name": "pressure-command-cancel-drain",
-      "description": "Groups `daemon_recovers_after_midflight_cancel`, `cancel_burst_returns_sessions_and_leases_to_zero`, `cancel_storm`, and `command_sessions_ladder_1_3_6_12` so command pressure proves daemon readiness, structured cancel status, zero session count, and zero active leases after bursts.",
-      "command": "cargo test -p eos-e2e-test --features e2e --test pressure command_sessions_ladder_1_3_6_12 -- --nocapture",
+      "description": "Groups `daemon_recovers_after_midflight_cancel`, `cancel_burst_returns_commands_and_leases_to_zero`, `cancel_storm`, and `commands_ladder_1_3_6_12` so command pressure proves daemon readiness, structured cancel status, zero command count, and zero active leases after bursts.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test pressure commands_ladder_1_3_6_12 -- --nocapture",
       "checklist": [
         "pressure-ladder-command",
         "pressure-recovery-cleanup",
@@ -229,7 +229,7 @@
     {
       "id": "pressure-resource-report-and-leak-oracles",
       "name": "pressure-resource-report-and-leak-oracles",
-      "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command-session, and OCC-backed write samples.",
+      "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command, and OCC-backed write samples.",
       "command": "cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture",
       "checklist": [
         "pressure-resource-report",
@@ -293,7 +293,7 @@
     {
       "id": "pressure-mixed-workload-soak",
       "name": "pressure-mixed-workload-soak",
-      "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and command sessions return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage (sawtooth, no per-round creep), and the daemon stays ready after the soak.",
+      "description": "Uses `mixed_workload_soak_keeps_counters_and_storage_bounded`: a mixed fanout-write / overlay-exec / command-cancel round over a fixed working set runs many times; active leases and commands return to zero every round, auto-squash keeps manifest depth bounded and reclaims storage (sawtooth, no per-round creep), and the daemon stays ready after the soak.",
       "command": "cargo test -p eos-e2e-test --features e2e --test pressure mixed_workload_soak -- --nocapture",
       "checklist": [
         "pressure-soak",

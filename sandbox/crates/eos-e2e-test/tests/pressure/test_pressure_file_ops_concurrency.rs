@@ -78,7 +78,7 @@ fn n_concurrent_mixed_ops() -> Result<()> {
             "mixed pressure op should return a structured payload: {response}"
         );
     }
-    // Poll: lease release is asynchronous, so a settled exec's lease may still be
+    // Poll: lease release is asynchronous, so a finalized exec's lease may still be
     // draining the instant the loop ends.
     wait_for_active_leases(&lease, 0)?;
     Ok(())

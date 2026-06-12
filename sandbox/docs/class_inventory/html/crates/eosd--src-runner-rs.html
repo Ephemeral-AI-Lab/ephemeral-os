@@ -205,7 +205,7 @@
         }
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">ConfigureDns</span> =&gt; eos_namespace::protocol::<span class="rs-type">RunResult</span> {
             exit_code: 0,
-            tool_result: eos_namespace::runner::setns::configure_dns(&amp;request)
+            payload: eos_namespace::runner::setns::configure_dns(&amp;request)
                 .context(&quot;ns-runner configure dns failed&quot;)?,
         },
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">Run</span> =&gt; {
@@ -232,7 +232,7 @@
   <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#item-fn-ok-result-46">ok_result</a>() -&gt; eos_namespace::protocol::<span class="rs-type">RunResult</span> {
     eos_namespace::protocol::<span class="rs-type">RunResult</span> {
         exit_code: 0,
-        tool_result: serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;ok&quot;}),
+        payload: serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;ok&quot;}),
     }
 }
 </code></pre>
@@ -400,7 +400,7 @@
         }
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">ConfigureDns</span> =&gt; eos_namespace::protocol::<span class="rs-type">RunResult</span> {
             exit_code: 0,
-            tool_result: eos_namespace::runner::setns::configure_dns(&amp;request)
+            payload: eos_namespace::runner::setns::configure_dns(&amp;request)
                 .context(&quot;ns-runner configure dns failed&quot;)?,
         },
         <a class="symbol-link rs-type" href="eosd--src-runner-rs.html#item-enum-RunnerCliMode-62">RunnerCliMode</a>::<span class="rs-type">Run</span> =&gt; {
@@ -414,7 +414,7 @@
 <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eosd--src-runner-rs.html#item-fn-ok-result-46">ok_result</a>() -&gt; eos_namespace::protocol::<span class="rs-type">RunResult</span> {
     eos_namespace::protocol::<span class="rs-type">RunResult</span> {
         exit_code: 0,
-        tool_result: serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;ok&quot;}),
+        payload: serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;status&quot;: &quot;ok&quot;}),
     }
 }
 

@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command-session.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>7/0</small></a></li><li><a class="file-link active" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>9/9</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">configs</span><ul class="file-tree"><li><a class="file-link" href="eos-config.html"><span>command.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-daemon-rs.html"><span>daemon.rs</span><small>7/0</small></a></li><li><a class="file-link active" href="eos-config--src-configs-e2e-test-rs.html"><span>e2e-test.rs</span><small>9/9</small></a></li><li><a class="file-link" href="eos-config--src-configs-isolated-workspace-rs.html"><span>isolated-workspace.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-runner-rs.html"><span>runner.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-config--src-configs-validate-rs.html"><span>validate.rs</span><small>1/11</small></a></li></ul></li><li><a class="file-link" href="eos-config--src-document-rs.html"><span>document.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-config--src-lib-rs.html"><span>lib.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-config--src-merge-rs.html"><span>merge.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-config--src-paths-rs.html"><span>paths.rs</span><small>1/4</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="configs::e2e-test crates/eos-config/src/configs/e2e-test.rs NodeMode impl NodeMode Config WorkloadConfig EosE2eTestConfig E2eDockerConfig E2ePoolConfig E2eNodeMode E2eTimeoutConfig E2eWorkloadConfig impl EosE2eTestConfig impl Config resolve_eosd_path require_non_empty require_non_empty_path require_absolute require_non_empty_items require_concurrency_levels require_u16_nonzero require_u64_at_least require_usize_at_least">
   <div class="module-head">
     <div>
@@ -77,7 +77,7 @@
             .section::&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-isolated-workspace-rs.html#item-struct-IsolatedWorkspaceConfig-15">IsolatedWorkspaceConfig</a>&gt;(&quot;isolated_workspace&quot;)
             .context(&quot;deserialize isolated_workspace config section&quot;)?;
         isolated
-            .<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>()
+            .<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>()
             .context(&quot;validate isolated_workspace config&quot;)?;
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-from-sections-275">from_sections</a>(e2e, isolated)
     }
@@ -161,17 +161,17 @@
         <span class="rs-kw">let</span> config = doc
             .section::&lt;<span class="rs-self">Self</span>&gt;(&quot;eos_e2e_test&quot;)
             .context(&quot;deserialize eos_e2e_test config section&quot;)?;
-        config.<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>()?;
         <span class="rs-type">Ok</span>(config)
     }
 </code></pre>
-</details></td></tr><tr id="method-validate-179"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a> (&amp; self) -&gt; Result &lt; () &gt;</code><p class="docstring">Validate semantic constraints that YAML deserialization cannot express.<br># Errors<br>Returns an error when a field violates E2E harness policy.</p><details class="function-source">
+</details></td></tr><tr id="method-validate-179"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a> (&amp; self) -&gt; Result &lt; () &gt;</code><p class="docstring">Validate semantic constraints that YAML deserialization cannot express.<br># Errors<br>Returns an error when a field violates E2E harness policy.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Validate semantic constraints that YAML deserialization cannot express.</span>
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error when a field violates E2E harness policy.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(&amp;<span class="rs-self">self</span>.docker.image, &quot;eos_e2e_test.docker.image&quot;)?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(platform) = &amp;<span class="rs-self">self</span>.docker.platform {
             <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(platform, &quot;eos_e2e_test.docker.platform&quot;)?;
@@ -707,7 +707,7 @@
         <span class="rs-kw">let</span> config = doc
             .section::&lt;<span class="rs-self">Self</span>&gt;(&quot;eos_e2e_test&quot;)
             .context(&quot;deserialize eos_e2e_test config section&quot;)?;
-        config.<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>()?;
+        config.<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>()?;
         <span class="rs-type">Ok</span>(config)
     }
 
@@ -715,7 +715,7 @@
     <span class="rs-comment">///</span>
     <span class="rs-comment">/// # Errors</span>
     <span class="rs-comment">/// Returns an error when a field violates E2E harness policy.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
         <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(&amp;<span class="rs-self">self</span>.docker.image, &quot;eos_e2e_test.docker.image&quot;)?;
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(platform) = &amp;<span class="rs-self">self</span>.docker.platform {
             <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#item-fn-require-non-empty-321">require_non_empty</a>(platform, &quot;eos_e2e_test.docker.platform&quot;)?;
@@ -802,7 +802,7 @@
             .section::&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-isolated-workspace-rs.html#item-struct-IsolatedWorkspaceConfig-15">IsolatedWorkspaceConfig</a>&gt;(&quot;isolated_workspace&quot;)
             .context(&quot;deserialize isolated_workspace config section&quot;)?;
         isolated
-            .<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-100">validate</a>()
+            .<a class="symbol-link rs-fn" href="eos-config--src-configs-daemon-rs.html#method-validate-101">validate</a>()
             .context(&quot;validate isolated_workspace config&quot;)?;
         <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-from-sections-275">from_sections</a>(e2e, isolated)
     }

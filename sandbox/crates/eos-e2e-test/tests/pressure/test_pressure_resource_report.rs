@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use crate::helpers::{pressure_levels, workload_timeout_s};
 use crate::support::{
     as_bool, as_i64, as_str, finalize_foreground_command, live_pool_or_skip, seed_base_files,
-    wait_for_active_leases, wait_for_session_count,
+    wait_for_active_leases, wait_for_command_count,
 };
 
 #[test]
@@ -98,9 +98,9 @@ fn resource_report_smoke() -> Result<()> {
             matches!(as_str(&cancel, "status")?, "cancelled" | "ok" | "error"),
             "resource report cancel should return structured status: {cancel}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         let metrics = wait_for_active_leases(&lease, 0)?;
-        let session_count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
+        let command_count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
 
         samples.push(json!({
             "sample": sample,
@@ -111,7 +111,7 @@ fn resource_report_smoke() -> Result<()> {
             "command_status": as_str(&session, "status")?,
             "cancel_status": as_str(&cancel, "status")?,
             "metrics": metrics,
-            "session_count": session_count,
+            "command_count": command_count,
         }));
     }
 

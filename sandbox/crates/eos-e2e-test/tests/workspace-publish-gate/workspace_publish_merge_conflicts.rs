@@ -8,8 +8,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip,
-    wait_for_command_stdout_contains, wait_for_session_count,
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, wait_for_command_count,
+    wait_for_command_stdout_contains,
 };
 
 #[test]
@@ -257,19 +257,19 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
             "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let session_id = as_str(&exec, "command_id")?.to_owned();
+    let command_id = as_str(&exec, "command_id")?.to_owned();
     // The marker can slip past the 500ms yield window under emulation (a slow
     // boot-to-dispatch leaves stdout uncaptured at yield), so poll read_progress
     // until it surfaces instead of asserting on the yielded snapshot. This also
     // pins the snapshot-taken sync point before the concurrent direct write below.
-    wait_for_command_stdout_contains(&lease, &session_id, "SNAPSHOT_READY")?;
+    wait_for_command_stdout_contains(&lease, &command_id, "SNAPSHOT_READY")?;
 
     let body = (|| -> Result<()> {
         lease.call_ok(
             catalog::SANDBOX_FILE_WRITE,
             json!({"path": &conflicted, "content": "newer\n", "overwrite": true}),
         )?;
-        let result = wait_for_completion(&lease, &session_id)?;
+        let result = wait_for_completion(&lease, &command_id)?;
         assert_eq!(
             as_str(&result, "status")?,
             "ok",
@@ -288,7 +288,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
             array(&result, "changed_paths")?.is_empty(),
             "atomic stale conflict must not publish any changed paths: {result}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
 
         let conflicted_read =
             lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": &conflicted}))?;
@@ -308,9 +308,9 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": session_id}),
+            json!({"command_id": command_id}),
         );
-        let _ = wait_for_session_count(&lease, 0);
+        let _ = wait_for_command_count(&lease, 0);
     }
     body
 }
@@ -335,12 +335,12 @@ fn publish_accounting() -> Result<()> {
     Ok(())
 }
 
-fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, session_id: &str) -> Result<Value> {
+fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, command_id: &str) -> Result<Value> {
     let deadline = Instant::now() + Duration::from_secs(8);
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_ids": [session_id]}),
+            json!({"command_ids": [command_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return completion
@@ -349,7 +349,7 @@ fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, session_id: &str) ->
                 .context("completion missing result");
         }
         if Instant::now() >= deadline {
-            bail!("session {session_id} never completed");
+            bail!("session {command_id} never completed");
         }
         thread::sleep(Duration::from_millis(100));
     }

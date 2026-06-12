@@ -80,6 +80,10 @@ message RequestStart {
   string args_summary_sha256 = 8;
   uint64 args_summary_original_len = 9;
   uint64 started_at_unix_ms = 10;
+  string caller_id = 11;
+  string host_boot_id = 12;
+  uint64 args_len = 13;
+  string args_digest = 14;
 }
 
 message SandboxStatusSnapshot {

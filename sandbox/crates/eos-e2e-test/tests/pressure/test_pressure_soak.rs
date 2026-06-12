@@ -9,7 +9,7 @@ use serde_json::json;
 use crate::helpers::request_with_identity;
 use crate::support::{
     as_bool, as_i64, as_str, finalize_foreground_command, live_pool_or_skip,
-    wait_for_active_leases, wait_for_session_count,
+    wait_for_active_leases, wait_for_command_count,
 };
 
 /// Point-in-time leak checks (`active_leases == 0` after one drain) can miss a
@@ -90,7 +90,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
             catalog::SANDBOX_COMMAND_CANCEL,
             json!({"command_id": as_str(&command, "command_id")?}),
         )?;
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
 
         // Overwrite a single hot path repeatedly so the manifest crosses the
         // auto-squash depth target over the soak; squash must reclaim so storage

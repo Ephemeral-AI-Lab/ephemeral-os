@@ -56,7 +56,7 @@
     },
     {
       "id": "core-wire-message-guards",
-      "title": "WireMessage Guards",
+      "title": "Wire Message Guards",
       "description": "Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors.",
       "tags": [
         "core"

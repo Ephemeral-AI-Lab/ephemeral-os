@@ -17,7 +17,7 @@ eos-sandbox-host   (lib, host)   owns and reaches sandboxes: host engine,
    │  loopback TCP (docker-published port) + auth token; `docker exec` fallback
    ▼
 eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
-                                 stack + OCC), command sessions (PTY), isolated
+                                 stack + OCC), commands (PTY), isolated
                                  workspaces, plugins (PPC), audit, checkpoint.
 ```
 
@@ -44,7 +44,7 @@ The shared artifacts are `crates/eos-operation/ops.json` plus `contract/`
 - `crates/` — the workspace. Host side: `eos-sandbox-gateway`,
   `eos-sandbox-host`. Box
   side: `eosd` (binary), `eos-daemon` (server + `wire/` protocol),
-  `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command-session`,
+  `eos-layerstack`, `eos-overlay`, `eos-namespace`, `eos-command`,
   `eos-operation`, `eos-workspace`, and `eos-plugin`.
 - `docs/API.md` — the public op reference, generated from
   `crates/eos-operation/ops.json` (`cargo run -p xtask -- gen-docs`).

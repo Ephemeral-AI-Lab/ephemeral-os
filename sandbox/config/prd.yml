@@ -20,8 +20,8 @@ daemon:
     max_command_s: 21600
     transcript_timestamp_timezone: UTC
 
-  isolated_sweeper:
-    ttl_sweep_interval_ms: 500
+  idle_workspace_eviction:
+    interval_ms: 500
 
   plugin:
     ppc_root: /eos/plugin/ppc

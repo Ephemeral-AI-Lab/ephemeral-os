@@ -1,9 +1,9 @@
-//! Background-PTY command-session semantics (spec point 5).
+//! Background-PTY command semantics (spec point 5).
 //!
-//! The session exit condition is process-GROUP based: a foreground command that
+//! The command exit condition is process-GROUP based: a foreground command that
 //! backgrounds a same-pgid child stays RUNNING until ALL members exit (a fresh-ns
 //! exec is NEWUSER|NEWNS only, so the runner scope-waits on the whole group). A
-//! command-session cancel kills the entire group, and no descendant is left
+//! command cancel kills the entire group, and no descendant is left
 //! behind. All children use BOUNDED sleeps + unique markers so any
 //! early-return leak self-heals and never collides with another test.
 
@@ -16,7 +16,7 @@ use serde_json::json;
 
 use crate::support::{
     array, as_i64, as_str, finalize_foreground_command, live_pool_or_skip, stdout,
-    wait_for_active_leases, wait_for_command_session_transcript_recycled, wait_for_session_count,
+    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -43,7 +43,7 @@ fn lingering_child_keeps_session_running() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // The foreground finishes (prints "done") but backgrounds a same-pgid child:
-    // the session must stay running and uncollectable while the child lives.
+    // the command must stay running and uncollectable while the child lives.
     let exec = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -54,7 +54,7 @@ fn lingering_child_keeps_session_running() -> Result<()> {
     assert_eq!(
         as_str(&exec, "status")?,
         "running",
-        "a lingering background child must keep the session running: {exec}"
+        "a lingering background child must keep the command running: {exec}"
     );
     assert!(
         stdout(&exec).contains("done"),
@@ -63,7 +63,7 @@ fn lingering_child_keeps_session_running() -> Result<()> {
     let id = as_str(&exec, "command_id")?.to_owned();
 
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
-    assert_eq!(as_i64(&count, "count")?, 1, "session must be live: {count}");
+    assert_eq!(as_i64(&count, "count")?, 1, "command must be live: {count}");
 
     let collected = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
@@ -71,7 +71,7 @@ fn lingering_child_keeps_session_running() -> Result<()> {
     )?;
     assert!(
         array(&collected, "completions")?.is_empty(),
-        "session must not be finalized while the child lives: {collected}"
+        "command must not be finalized while the child lives: {collected}"
     );
 
     cancel(&lease, &id)?;
@@ -107,7 +107,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         }
         if Instant::now() >= deadline {
             cancel(&lease, &id)?;
-            bail!("session never completed after the background child exited");
+            bail!("command never completed after the background child exited");
         }
         std::thread::sleep(Duration::from_millis(100));
     };
@@ -120,8 +120,8 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         Some("ok"),
         "completion must report ok once all subprocesses exited: {completion}"
     );
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -143,15 +143,15 @@ fn cancel_kills_whole_session() -> Result<()> {
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_id")?.to_owned();
 
-    // Cancel kills the whole session, so its hardened outcome is
+    // Cancel kills the whole command, so its hardened outcome is
     // success:false; use `call` to read the terminal response, not `call_ok`.
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
     assert!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
-        "cancel must drive the session to a terminal status: {cancelled}"
+        "cancel must drive the command to a terminal status: {cancelled}"
     );
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -177,14 +177,14 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
     );
 
     cancel(&lease, &id)?;
-    // The group-targeted cancel must reap the same-pgid descendant: no orphan.
+    // The group-targeted cancel must remove the same-pgid descendant: no orphan.
     wait_for_marker_count(&lease, &marker, 0)?;
     Ok(())
 }
 
 fn cancel(lease: &NodeLease<'_>, id: &str) -> Result<()> {
     lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
-    wait_for_command_session_transcript_recycled(lease, id)?;
+    wait_for_command_transcript_recycled(lease, id)?;
     Ok(())
 }
 
@@ -231,7 +231,7 @@ fn wait_for_marker_count(lease: &NodeLease<'_>, marker: &str, expected: i64) -> 
 }
 
 /// Signal every container process whose argv carries `marker`, from a process
-/// outside the session (a container `python3` exec), excluding the scanner's own
+/// outside the command (a container `python3` exec), excluding the scanner's own
 /// pid. Used to clean up an intentionally-leaked escaped descendant.
 fn kill_marker(lease: &NodeLease<'_>, marker: &str, signal: i32) -> Result<()> {
     let script = format!(
@@ -262,7 +262,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // The foreground exits after backgrounding a same-pgid child that KEEPS
-    // emitting. The session must stay running, and read_progress must surface
+    // emitting. The command must stay running, and read_progress must surface
     // output progressively from the timestamped transcript.
     let exec = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
@@ -311,13 +311,13 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
         }
         if Instant::now() >= cdeadline {
             cancel(&lease, &id)?;
-            bail!("live background emitter session never completed");
+            bail!("live background emitter command never completed");
         }
         std::thread::sleep(Duration::from_millis(100));
     };
     assert_eq!(completion["command_id"], json!(&id), "{completion}");
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -330,7 +330,7 @@ fn running_stderr_only_emitter_is_visible() -> Result<()> {
     // "Returns a stderr but remains running": a never-exiting process that writes
     // ONLY to stderr. The PTY merges stderr into stdout, so the text must be
     // visible in output.stdout while status == running, and the structured stderr
-    // field stays empty even for a non-exiting session.
+    // field stays empty even for a non-exiting command.
     let exec = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -358,7 +358,7 @@ fn running_stderr_only_emitter_is_visible() -> Result<()> {
     );
     let id = as_str(&exec, "command_id")?.to_owned();
     cancel(&lease, &id)?;
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     Ok(())
 }
 
@@ -370,10 +370,10 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
     let lease = pool.acquire()?;
     let marker = format!("eos_e2e_escape_{}", unique_suffix().replace('-', "_"));
     // A `setsid` child gets a NEW process group, so the pgid scope-wait cannot see
-    // it: the session COMPLETES immediately (unlike a same-pgid nohup/`&` child).
-    // The ephemeral path reaps by pgid only (no PID-ns, no cgroup backstop), so the
-    // descendant LEAKS past session completion and lease release. This pins that
-    // contract; the isolated counterpart proves the cgroup-backed mode reaps it. A
+    // it: the command COMPLETES immediately (unlike a same-pgid nohup/`&` child).
+    // The ephemeral path removes by pgid only (no PID-ns, no cgroup backstop), so the
+    // descendant LEAKS past command completion and lease release. This pins that
+    // contract; the isolated counterpart proves the cgroup-backed mode removes it. A
     // self-healing `sleep 30` keeps CI from accumulating ghosts, and a future
     // teardown backstop would flip the post-release marker assertion to 0.
     let completed = lease.call_ok(
@@ -388,17 +388,17 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
     assert_eq!(
         as_str(&completed, "status")?,
         "ok",
-        "a setsid child escapes the pgid, so the session completes: {completed}"
+        "a setsid child escapes the pgid, so the command completes: {completed}"
     );
     assert!(
         completed.get("command_id").is_none(),
-        "a completed escaped-child command must not leave a session handle: {completed}"
+        "a completed escaped-child command must not leave a command handle: {completed}"
     );
     assert!(stdout(&completed).contains("escaped-ready"), "{completed}");
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     // The escaped descendant is still alive AFTER the lease released: ephemeral mode
-    // reaps by pgid only and never killpg'd this escaped group.
+    // removes by pgid only and never killpg'd this escaped group.
     assert!(
         marker_count(&lease, &marker)? >= 1,
         "ephemeral mode leaks the escaped setsid descendant past lease release"
@@ -415,7 +415,7 @@ fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // "Other cases": disown and subshell-background do NOT change the process
-    // group, so — unlike setsid — they stay tracked and keep the session running.
+    // group, so — unlike setsid — they stay tracked and keep the command running.
     // pgid membership, not the detach idiom, is the tracking boundary.
     for (label, cmd) in [
         ("disown", "bash -lc 'sleep 30 & disown; echo disowned'"),
@@ -431,7 +431,7 @@ fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
         assert_eq!(
             as_str(&exec, "status")?,
             "running",
-            "{label}: a same-pgid background child must keep the session running: {exec}"
+            "{label}: a same-pgid background child must keep the command running: {exec}"
         );
         let id = as_str(&exec, "command_id")?.to_owned();
         let collected = lease.call_ok(
@@ -440,10 +440,10 @@ fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
         )?;
         assert!(
             array(&collected, "completions")?.is_empty(),
-            "{label}: session must not finalize while the same-pgid child lives: {collected}"
+            "{label}: command must not finalize while the same-pgid child lives: {collected}"
         );
         cancel(&lease, &id)?;
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
     }
     Ok(())
 }

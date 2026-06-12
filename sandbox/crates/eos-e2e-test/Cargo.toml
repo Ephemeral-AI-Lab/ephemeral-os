@@ -49,8 +49,8 @@ name = "workspace-publish-gate"
 path = "tests/workspace-publish-gate/mod.rs"
 
 [[test]]
-name = "workspace-runtime-command-session"
-path = "tests/workspace-runtime-command-session/mod.rs"
+name = "workspace-runtime-command"
+path = "tests/workspace-runtime-command/mod.rs"
 
 [[test]]
 name = "pressure"

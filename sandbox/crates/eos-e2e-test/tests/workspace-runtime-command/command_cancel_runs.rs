@@ -1,5 +1,5 @@
 //! Workspace-run cancel surface (§7): the per-caller and whole-sandbox cancel
-//! ops tear down command sessions (cancel → discard, never publish), keyed by
+//! ops tear down commands (cancel → discard, never publish), keyed by
 //! `caller_id == agent_run_id`.
 
 use std::time::{Duration, Instant};
@@ -11,10 +11,10 @@ use serde_json::json;
 
 use crate::support::{
     array, as_bool, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_session_count,
+    wait_for_command_count,
 };
 
-/// Start a `sleep 60` session for `caller_id` (or the lease default when `None`).
+/// Start a `sleep 60` command for `caller_id` (or the lease default when `None`).
 fn start_sleeping(lease: &NodeLease<'_>, caller_id: Option<&str>, marker: &str) -> Result<String> {
     let mut args = json!({
         "cmd": format!("sh -c 'echo {marker}; sleep 60'"),
@@ -29,7 +29,7 @@ fn start_sleeping(lease: &NodeLease<'_>, caller_id: Option<&str>, marker: &str) 
     Ok(as_str(&started, "command_id")?.to_owned())
 }
 
-/// Live command-session count for one caller (empty `caller_id` counts all).
+/// Live command count for one caller (empty `caller_id` counts all).
 fn count_for(lease: &NodeLease<'_>, caller_id: &str) -> Result<i64> {
     let count = lease.call_ok(
         catalog::SANDBOX_COMMAND_COUNT,
@@ -38,20 +38,20 @@ fn count_for(lease: &NodeLease<'_>, caller_id: &str) -> Result<i64> {
     as_i64(&count, "count")
 }
 
-/// Poll a session's transcript until `marker` appears, confirming the command's
+/// Poll a command's transcript until `marker` appears, confirming the command's
 /// write reached the overlay before we cancel it.
-fn wait_for_progress(lease: &NodeLease<'_>, session_id: &str, marker: &str) -> Result<()> {
+fn wait_for_progress(lease: &NodeLease<'_>, command_id: &str, marker: &str) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_id": session_id, "last_n_lines": 10}),
+            json!({"command_id": command_id, "last_n_lines": 10}),
         )?;
         if stdout(&progress).contains(marker) {
             return Ok(());
         }
         if Instant::now() >= deadline {
-            bail!("session {session_id} never produced {marker:?}: {progress}");
+            bail!("command {command_id} never produced {marker:?}: {progress}");
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -79,7 +79,7 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
 
     let cancelled = lease.call_ok(catalog::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
     assert_eq!(
-        as_i64(&cancelled, "cancelled_command_sessions")?,
+        as_i64(&cancelled, "cancelled_commands")?,
         2,
         "per-caller cancel tears down exactly the owner's two runs: {cancelled}"
     );
@@ -90,21 +90,21 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
     );
 
     // The owner's runs are gone (lease caller == owner); the sibling is spared.
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     assert_eq!(
         count_for(&lease, &sibling)?,
         1,
         "cancelling one caller must not touch a sibling caller's run"
     );
 
-    // Cancel discards — no completion is parked for the torn-down sessions.
+    // Cancel discards — no completion is parked for the torn-down commands.
     let drained = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
         json!({"command_ids": [a, b]}),
     )?;
     assert!(
         array(&drained, "completions")?.is_empty(),
-        "a cancelled session must not park a completion: {drained}"
+        "a cancelled command must not park a completion: {drained}"
     );
 
     // Tear the sibling down too and confirm every overlay lease released.
@@ -114,32 +114,32 @@ fn cancel_workspace_runs_by_caller_id_discards_owner_and_spares_sibling() -> Res
 }
 
 #[test]
-fn cancel_workspace_runs_sweeps_every_caller() -> Result<()> {
+fn cancel_workspace_runs_cancels_every_caller() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
     let other = format!("{}-other", lease.caller_id());
 
-    start_sleeping(&lease, None, "sweep-a")?;
-    start_sleeping(&lease, Some(&other), "sweep-b")?;
+    start_sleeping(&lease, None, "cancel-all-a")?;
+    start_sleeping(&lease, Some(&other), "cancel-all-b")?;
     assert_eq!(
         count_for(&lease, "")?,
         2,
         "two runs across two callers are live"
     );
 
-    let swept = lease.call_ok(catalog::SANDBOX_RUN_CANCEL_ALL, json!({}))?;
+    let cancelled_all = lease.call_ok(catalog::SANDBOX_RUN_CANCEL_ALL, json!({}))?;
     assert_eq!(
-        as_i64(&swept, "cancelled_command_sessions")?,
+        as_i64(&cancelled_all, "cancelled_commands")?,
         2,
-        "the whole-sandbox sweep tears down every caller's runs: {swept}"
+        "the whole-sandbox cancel tears down every caller's runs: {cancelled_all}"
     );
 
     assert_eq!(
         count_for(&lease, "")?,
         0,
-        "no command session survives the sweep"
+        "no command survives the cancel-all"
     );
     wait_for_active_leases(&lease, 0)?;
     Ok(())
@@ -171,17 +171,13 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
-    let session_id = as_str(&started, "command_id")?.to_owned();
-    wait_for_progress(&lease, &session_id, "wrote")?;
+    let command_id = as_str(&started, "command_id")?.to_owned();
+    wait_for_progress(&lease, &command_id, "wrote")?;
 
     // Cancel the caller's run mid-write via the per-caller op.
     let cancelled = lease.call_ok(catalog::SANDBOX_RUN_END, json!({"caller_id": owner}))?;
-    assert_eq!(
-        as_i64(&cancelled, "cancelled_command_sessions")?,
-        1,
-        "{cancelled}"
-    );
-    wait_for_session_count(&lease, 0)?;
+    assert_eq!(as_i64(&cancelled, "cancelled_commands")?, 1, "{cancelled}");
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
 
     // The shared LayerStack manifest is unchanged — the cancelled write never merged.
@@ -201,10 +197,10 @@ fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
 }
 
 /// §10 F3 regression: a backgrounded command that hits its timeout is killed by
-/// the reaper SWEEP (no foreground poller), which must PARK a collectable
-/// completion. Before the fix the sweep treated the deadline kill as a cancel and
-/// pushed nothing, so a fire-and-forget timed-out session was dropped silently and
-/// its agent-core background session stayed Running forever. The load-bearing
+/// background command advancement (no foreground poller), which must PARK a collectable
+/// completion. Before the fix background advancement treated the deadline kill as a cancel and
+/// pushed nothing, so a fire-and-forget timed-out command was dropped silently and
+/// its agent-core background command stayed Running forever. The load-bearing
 /// assertion is that a completion is parked and drains at all; the status set
 /// tolerates the runner-vs-daemon timeout race.
 #[test]
@@ -214,7 +210,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // Background a never-finishing command with a short timeout, then DON'T poll
-    // it — only the periodic reaper sweep can reap and park its completion.
+    // it — only the periodic background command advancement can finalize and park its completion.
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -236,7 +232,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
             break completion.clone();
         }
         if Instant::now() >= deadline {
-            bail!("timed-out background session never parked a completion (F3 regression): {id}");
+            bail!("timed-out background command never parked a completion (F3 regression): {id}");
         }
         std::thread::sleep(Duration::from_millis(200));
     };
@@ -258,7 +254,7 @@ fn background_timeout_parks_collectable_completion() -> Result<()> {
         array(&redelivered, "completions")?.is_empty(),
         "collect_completed must remove the delivered timeout completion: {redelivered}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }

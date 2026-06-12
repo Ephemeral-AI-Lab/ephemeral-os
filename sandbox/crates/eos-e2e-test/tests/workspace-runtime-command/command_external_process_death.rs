@@ -8,10 +8,10 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, clean_stdout, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled, wait_for_session_count,
+    wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
-struct MarkerSession {
+struct MarkerCommand {
     id: String,
     marker: String,
 }
@@ -22,14 +22,14 @@ fn external_sigterm_child_finalizes_via_collect_completed() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let session = start_waiting_marker_child(&lease, "external_child")?;
+    let command = start_waiting_marker_child(&lease, "external_child")?;
 
     let body = (|| -> Result<()> {
-        wait_for_marker_at_least(&lease, &session.marker, 1)?;
-        signal_marker(&lease, &session.marker, "TERM", SignalTarget::Pid)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
+        wait_for_marker_at_least(&lease, &command.marker, 1)?;
+        signal_marker(&lease, &command.marker, "TERM", SignalTarget::Pid)?;
+        wait_for_marker_count(&lease, &command.marker, 0, Duration::from_secs(10))?;
 
-        let completion = wait_for_completion(&lease, &session.id, Duration::from_secs(15))?;
+        let completion = wait_for_completion(&lease, &command.id, Duration::from_secs(15))?;
         let result = completion.get("result").context("completion result")?;
         ensure!(
             as_str(result, "status")? == "error",
@@ -39,14 +39,14 @@ fn external_sigterm_child_finalizes_via_collect_completed() -> Result<()> {
             as_i64(result, "exit_code")? != 0,
             "externally terminated child should preserve a nonzero exit code: {completion}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_command_session_transcript_recycled(&lease, &session.id)?;
+        wait_for_command_transcript_recycled(&lease, &command.id)?;
         Ok(())
     })();
 
     if body.is_err() {
-        let _ = cancel_session(&lease, &session.id);
+        let _ = cancel_command(&lease, &command.id);
     }
     body
 }
@@ -57,50 +57,50 @@ fn external_sigkill_process_group_is_observed_by_read_progress() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let session = start_waiting_marker_child(&lease, "external_pgid")?;
+    let command = start_waiting_marker_child(&lease, "external_pgid")?;
 
     let body = (|| -> Result<()> {
-        wait_for_marker_at_least(&lease, &session.marker, 1)?;
-        signal_marker(&lease, &session.marker, "KILL", SignalTarget::ProcessGroup)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
+        wait_for_marker_at_least(&lease, &command.marker, 1)?;
+        signal_marker(&lease, &command.marker, "KILL", SignalTarget::ProcessGroup)?;
+        wait_for_marker_count(&lease, &command.marker, 0, Duration::from_secs(10))?;
 
         let terminal =
-            wait_for_read_progress_terminal(&lease, &session.id, Duration::from_secs(15))?;
+            wait_for_read_progress_terminal(&lease, &command.id, Duration::from_secs(15))?;
         ensure!(
             matches!(as_str(&terminal, "status")?, "error" | "cancelled"),
             "read_progress should observe externally killed process group as terminal: {terminal}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_command_session_transcript_recycled(&lease, &session.id)?;
+        wait_for_command_transcript_recycled(&lease, &command.id)?;
         Ok(())
     })();
 
     if body.is_err() {
-        let _ = cancel_session(&lease, &session.id);
+        let _ = cancel_command(&lease, &command.id);
     }
     body
 }
 
 #[test]
-fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
+fn silent_redirected_subprocess_keeps_command_running() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let session = start_silent_marker_child(&lease)?;
+    let command = start_silent_marker_child(&lease)?;
 
     let body = (|| -> Result<()> {
-        wait_for_marker_at_least(&lease, &session.marker, 1)?;
+        wait_for_marker_at_least(&lease, &command.marker, 1)?;
         let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
         ensure!(
             as_i64(&count, "count")? == 1,
-            "silent same-pgid subprocess should keep the session live: {count}"
+            "silent same-pgid subprocess should keep the command live: {count}"
         );
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_ids": [session.id.clone()]}),
+            json!({"command_ids": [command.id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
@@ -110,7 +110,7 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_id": &session.id,
+                "command_id": &command.id,
                 "last_n_lines": 4,
             }),
         )?;
@@ -120,23 +120,23 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
         );
         ensure!(
             stdout(&progress).contains("silent-parent-done"),
-            "read_progress should expose the transcript tail for the running session: {progress}"
+            "read_progress should expose the transcript tail for the running command: {progress}"
         );
 
-        cancel_session(&lease, &session.id)?;
-        wait_for_session_count(&lease, 0)?;
+        cancel_command(&lease, &command.id)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(10))?;
+        wait_for_marker_count(&lease, &command.marker, 0, Duration::from_secs(10))?;
         Ok(())
     })();
 
     if body.is_err() {
-        let _ = cancel_session(&lease, &session.id);
+        let _ = cancel_command(&lease, &command.id);
     }
     body
 }
 
-fn start_waiting_marker_child(lease: &NodeLease<'_>, label: &str) -> Result<MarkerSession> {
+fn start_waiting_marker_child(lease: &NodeLease<'_>, label: &str) -> Result<MarkerCommand> {
     let cmd = format!(
         "python3 -u - <<'PY'\n\
 import os, subprocess, sys, time\n\
@@ -148,10 +148,10 @@ rc = child.wait()\n\
 sys.exit(128 + (-rc) if rc < 0 else rc)\n\
 PY"
     );
-    start_marker_session(lease, cmd, "child-ready")
+    start_marker_command(lease, cmd, "child-ready")
 }
 
-fn start_silent_marker_child(lease: &NodeLease<'_>) -> Result<MarkerSession> {
+fn start_silent_marker_child(lease: &NodeLease<'_>) -> Result<MarkerCommand> {
     let cmd = concat!(
         "python3 -u - <<'PY'\n",
         "import os, subprocess, time\n",
@@ -166,14 +166,14 @@ fn start_silent_marker_child(lease: &NodeLease<'_>) -> Result<MarkerSession> {
         "print(\"silent-parent-done\", flush=True)\n",
         "PY"
     );
-    start_marker_session(lease, cmd, "silent-parent-done")
+    start_marker_command(lease, cmd, "silent-parent-done")
 }
 
-fn start_marker_session(
+fn start_marker_command(
     lease: &NodeLease<'_>,
     cmd: impl Into<String>,
     readiness: &str,
-) -> Result<MarkerSession> {
+) -> Result<MarkerCommand> {
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -187,13 +187,13 @@ fn start_marker_session(
     );
     let id = as_str(&started, "command_id")?.to_owned();
     let marker = wait_for_stdout_marker(lease, &id, &started)?;
-    wait_for_session_stdout_contains(lease, &id, &started, readiness)?;
-    Ok(MarkerSession { id, marker })
+    wait_for_command_stdout_contains(lease, &id, &started, readiness)?;
+    Ok(MarkerCommand { id, marker })
 }
 
 fn wait_for_stdout_marker(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     initial: &Value,
 ) -> Result<String> {
     // Slow python/ns-runner startup under x86-on-arm64 emulation can delay the
@@ -205,16 +205,16 @@ fn wait_for_stdout_marker(
             return Ok(marker);
         }
         if Instant::now() >= deadline {
-            bail!("session output never contained generated marker: {last}");
+            bail!("command output never contained generated marker: {last}");
         }
-        last = poll_session_output(lease, session_id, 250)?;
+        last = poll_command_output(lease, command_id, 250)?;
         thread::sleep(Duration::from_millis(50));
     }
 }
 
-fn wait_for_session_stdout_contains(
+fn wait_for_command_stdout_contains(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     initial: &Value,
     needle: &str,
 ) -> Result<()> {
@@ -226,9 +226,9 @@ fn wait_for_session_stdout_contains(
     let mut last = initial.clone();
     loop {
         if Instant::now() >= deadline {
-            bail!("session output never contained {needle}: {last}");
+            bail!("command output never contained {needle}: {last}");
         }
-        let poll = poll_session_output(lease, session_id, 250)?;
+        let poll = poll_command_output(lease, command_id, 250)?;
         if stdout(&poll).contains(needle) {
             return Ok(());
         }
@@ -237,15 +237,15 @@ fn wait_for_session_stdout_contains(
     }
 }
 
-fn poll_session_output(
+fn poll_command_output(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     last_n_lines: u64,
 ) -> Result<Value> {
     lease.call_ok(
         catalog::SANDBOX_COMMAND_POLL,
         json!({
-            "command_id": session_id,
+            "command_id": command_id,
             "last_n_lines": last_n_lines,
         }),
     )
@@ -335,20 +335,20 @@ print(len(sent))
 
 fn wait_for_completion(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     timeout: Duration,
 ) -> Result<Value> {
     let deadline = Instant::now() + timeout;
     loop {
         let collected = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_ids": [session_id]}),
+            json!({"command_ids": [command_id]}),
         )?;
         if let Some(completion) = array(&collected, "completions")?.first() {
             return Ok(completion.clone());
         }
         if Instant::now() >= deadline {
-            bail!("session completion was not parked before deadline: {collected}");
+            bail!("command completion was not parked before deadline: {collected}");
         }
         thread::sleep(Duration::from_millis(100));
     }
@@ -356,7 +356,7 @@ fn wait_for_completion(
 
 fn wait_for_read_progress_terminal(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     timeout: Duration,
 ) -> Result<Value> {
     let deadline = Instant::now() + timeout;
@@ -365,7 +365,7 @@ fn wait_for_read_progress_terminal(
         let response = lease.call(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_id": session_id,
+                "command_id": command_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -438,8 +438,8 @@ fn wait_for_marker_count(
     }
 }
 
-fn cancel_session(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
+fn cancel_command(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
-    wait_for_command_session_transcript_recycled(lease, id)?;
+    wait_for_command_transcript_recycled(lease, id)?;
     Ok(cancelled)
 }

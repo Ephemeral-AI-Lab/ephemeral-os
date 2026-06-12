@@ -73,7 +73,7 @@
     {
       "id": "plugin-service-cleanup",
       "title": "Service Cleanup",
-      "description": "Reload removes old routes, PPC clients, service snapshots, staged uploads, and worker processes. Socket-path unlink is not asserted: `sandbox/crates/eos-runtime/src/plugin/process.rs` removes stale socket paths before bind, while `PluginServiceProcess::teardown` only terminates the child process.",
+      "description": "Reload removes old routes, PPC clients, service snapshots, staged uploads, and worker processes. Socket-path unlink is not asserted: `sandbox/crates/eos-operation/plugin-ops/src/process.rs` removes stale socket paths before bind, while `PluginServiceProcess::teardown` only terminates the child process.",
       "tags": [
         "plugin"
       ]

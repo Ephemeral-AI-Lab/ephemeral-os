@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>4</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>69</b><span>fields</span></div>
-  <div><b>43</b><span>methods</span></div>
+  <div><b>5</b><span>modules</span></div>
+  <div><b>101</b><span>items</span></div>
+  <div><b>167</b><span>fields</span></div>
+  <div><b>67</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/12</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/13</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-trace-store-rs.html"><span>trace_store.rs</span><small>16/22</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-sandbox-host/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -69,8 +69,9 @@
 <span class="rs-kw">mod</span> host;
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> protocol;
 <span class="rs-kw">mod</span> runtime;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> trace_store;
 
-<span class="rs-kw">pub</span> <span class="rs-kw">use</span> host::{<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-400">ForwardError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-HostConfig-20">HostConfig</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxHost-61">SandboxHost</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxStatus-52">SandboxStatus</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> host::{<a class="symbol-link rs-type" href="eos-sandbox-host.html#item-enum-ForwardError-424">ForwardError</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-HostConfig-22">HostConfig</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxHost-63">SandboxHost</a>, <a class="symbol-link rs-type" href="eos-sandbox-host.html#item-struct-SandboxStatus-54">SandboxStatus</a>};
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> protocol::<span class="rs-type">MAX_REQUEST_BYTES</span>;
 
 <span class="rs-kw">pub</span> <span class="rs-kw">mod</span> e2e_support {

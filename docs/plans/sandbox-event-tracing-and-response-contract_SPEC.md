@@ -53,8 +53,8 @@ Current phase status:
 
 | Phase | Status | Completion evidence |
 | --- | --- | --- |
-| Phase 01 - Contracts first | Pending | |
-| Phase 02 - Host store | Blocked | |
+| Phase 01 - Contracts first | Complete | `cargo test -p eos-trace -p eos-operation` passed on 2026-06-12 after adding `eos-trace`, protobuf codec/layer tests, `OperationEnvelope`, and the temporary v1 flattening adapter. |
+| Phase 02 - Host store | Pending | |
 | Phase 03 - Gateway, host, and daemon propagation | Blocked | |
 | Phase 04 - Subsystem events and resource stats | Blocked | |
 | Phase 05 - Response and e2e migration | Blocked | |
@@ -1910,27 +1910,27 @@ in the live checkout.
 
 Acceptance checklist:
 
-- [ ] `sandbox/crates/eos-trace` owns `TraceId`, `RequestId`, `SpanUid`,
+- [x] `sandbox/crates/eos-trace` owns `TraceId`, `RequestId`, `SpanUid`,
   `TraceRecord`, `SpanRecord`, `EventRecord`, `TraceResource`, `TraceLink`,
   `WorkspaceRoute`, `TraceKind`, `SpanKind`, bounded-detail helpers, and the
   closed subsystem mapping.
-- [ ] `eos-trace/proto/eos/trace/v1` defines protobuf `TraceBatch`,
+- [x] `eos-trace/proto/eos/trace/v1` defines protobuf `TraceBatch`,
   `TraceSpan`, `TraceEvent`, `TraceResource`, `TraceLink`, `RequestStart`,
   `SandboxStatusSnapshot`, and `ResponseTraceRef`; JSON is not a daemon-host
   audit payload.
-- [ ] `eos-operation` exposes `OperationEnvelope<T>`, `ResponseMeta`,
+- [x] `eos-operation` exposes `OperationEnvelope<T>`, `ResponseMeta`,
   `OperationFault`, and per-family result DTO skeletons without leaking raw
   `serde_json::Value` as the public response contract.
-- [ ] Bounded-detail budgets are enforced in shared constructors; truncation
+- [x] Bounded-detail budgets are enforced in shared constructors; truncation
   records `{truncated, original_len, sha256}`.
-- [ ] A short-lived v1 flattening adapter exists only inside this migration
+- [x] A short-lived v1 flattening adapter exists only inside this migration
   phase ladder and is marked for deletion in Phase 06.
-- [ ] `cargo test -p eos-trace -p eos-operation`
-- [ ] Protobuf golden compatibility fixtures decode successfully after schema
+- [x] `cargo test -p eos-trace -p eos-operation`
+- [x] Protobuf golden compatibility fixtures decode successfully after schema
   regeneration.
-- [ ] Envelope/adapter golden tests cover `ok`, `running`, `rejected`,
+- [x] Envelope/adapter golden tests cover `ok`, `running`, `rejected`,
   `cancelled`, `timed_out`, and `error`.
-- [ ] Update the progress tracker with Phase 01 evidence and mark Phase 01
+- [x] Update the progress tracker with Phase 01 evidence and mark Phase 01
   `Complete`.
 
 Phase gate:

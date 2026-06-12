@@ -1,238 +1,198 @@
-# Command Git Metadata OCC Policy
+# Command Git Metadata OCC Rules
 
 ## Purpose
 
-Allow agents to run ordinary Git workflows through `sandbox.command.exec`, including
+Define the architecture rules for Git metadata changes produced by
+`sandbox.command.exec`.
+
+Agents must be able to use normal Git commands from the command surface:
 `git add`, `git commit`, `git commit --amend`, clean `git revert`, clean
-`git cherry-pick`, and clean squash workflows, without using
-`sandbox.checkpoint.commit_to_git`.
+`git cherry-pick`, clean squash commits, and clean completed rebase/squash
+flows. These workflows are valid when the final repository state is complete and
+healthy.
 
-The rule is not "publish everything under `.git`." The rule is: command capture
-may publish healthy Git metadata updates through OCC, while destructive Git
-metadata damage is rejected and rolled back with the ephemeral overlay.
+The architecture does not make `.git` generally mutable. It creates one narrow
+rule: command-produced Git metadata may publish through OCC only when it is
+non-destructive, complete, and conflict-checked.
 
-## Current Behavior
+## Architecture Boundary
 
-The command path is:
+```mermaid
+flowchart TD
+    Command["sandbox.command.exec"] --> Overlay["ephemeral command overlay"]
+    Overlay --> Capture["captured command delta"]
+    Capture --> GitRules["Git metadata rules"]
+    GitRules --> OCC["OCC gated publish"]
+    OCC --> LayerStack["shared LayerStack"]
 
-```text
-sandbox.command.exec
-  -> ephemeral overlay command
-  -> capture upperdir
-  -> eos_layerstack::service::publish_capture
-  -> OCC route policy
+    FileApi["file/edit APIs"] --> Protected[".git protected"]
+    PluginApi["plugin callbacks"] --> Protected
+    Isolated["isolated workspace"] --> Private["private, no shared .git publish"]
 ```
 
-The current OCC route policy treats `.git` and `.git/*` as `Drop`. That protects
-the shared LayerStack from accidental repository deletion, but it also means a
-shell command can run `git add` or `git commit` and then lose the resulting
-`.git/index`, object, ref, and log changes at publish time.
+The command surface is the only shared publish source that may carry `.git`
+metadata. Direct file/edit APIs, plugin callbacks, and isolated workspaces do not
+gain a general `.git` write capability.
 
-The desired behavior is command-specific. Direct file/edit APIs and plugin
-callbacks must not gain a broad `.git` mutation path.
+## Core Invariants
 
-## Target Rule
+1. `.git` is repository state, not ordinary workspace content.
+2. Command Git metadata is allowed only when the final repository is healthy.
+3. Destructive Git metadata changes are forbidden.
+4. All accepted `.git` changes publish through OCC as gated paths.
+5. `.gitignore` never makes `.git` direct or ungated.
+6. A command publishes normal files and Git metadata atomically.
+7. A rejected command publishes nothing; rollback is the discarded overlay.
+8. Half-completed Git operations are not durable shared state.
 
-`.git` mutations are permitted only for command capture, only through the gated
-OCC lane, and only after a Git metadata validator proves the final repository
-state is complete and non-destructive.
+## Source Policy
 
-| Producer | `.git` policy |
+| Source | `.git` rule |
 | --- | --- |
-| `sandbox.file.write` / `sandbox.file.edit` | Reject or drop `.git` paths. |
-| Plugin OCC callbacks | Reject or drop `.git` paths unless a future plugin contract explicitly opts in. |
-| `sandbox.command.exec` ephemeral capture | Allow validated `.git` changes through gated OCC. |
-| Isolated workspace command capture | Keep private; do not publish `.git` to the shared LayerStack. |
-| `sandbox.checkpoint.commit_to_git` | Remains separate and unchanged. |
+| `sandbox.command.exec` in ephemeral mode | May publish validated `.git` metadata through gated OCC. |
+| `sandbox.file.write` and `sandbox.file.edit` | Must reject or drop `.git` paths. |
+| Plugin OCC callbacks | Must reject or drop `.git` paths unless a future explicit plugin contract opts in. |
+| Isolated workspace commands | Keep `.git` changes private; do not publish to the shared LayerStack. |
+| `sandbox.checkpoint.commit_to_git` | Separate operator checkpoint path; not the command Git architecture. |
 
-Every command `.git` path must be `Gated`; `.gitignore` must never route `.git`
-metadata to `Direct`.
+## Ignore Rule Architecture
 
-## Allowed Git Workflows
+OCC routing has an ignore-rule lane for ordinary non-Git workspace paths. That
+lane is based on `.gitignore` pattern semantics, but it is not based on Git
+repository state.
 
-These workflows are allowed when they complete cleanly in one command and the
-final repository passes validation:
-
-| Workflow | Expected final `.git` shape |
+| Question | Rule |
 | --- | --- |
-| `git add` plus `git commit` | new objects, updated index, updated refs, updated logs, updated `HEAD` if needed |
-| `git commit --amend` | new commit object, ref/log rewrite, updated index |
-| clean `git revert` | new commit object, updated index, refs, logs |
-| clean `git cherry-pick` | new commit object, updated index, refs, logs |
-| clean squash commit, such as `git merge --squash ... && git commit` | updated index followed by normal commit metadata |
-| clean rebase/squash completed inside one command | final refs/logs/index updated with no remaining rebase/sequencer state |
+| Are nested `.gitignore` files considered? | Yes. `.gitignore` files under workspace subdirectories apply to their own subtree. |
+| Are `.gitignore` files from newer LayerStack layers considered? | Yes. The active merged LayerStack view is the source of truth. |
+| Does OCC shell out to `git check-ignore`? | No. OCC routing must not depend on a Git subprocess. |
+| Does OCC use the Git index, tracked/untracked state, or `git status`? | No. OCC routing is independent of Git repository state. |
+| Does OCC use `.gitignore` syntax? | Yes. The route oracle uses `.gitignore` pattern semantics for non-`.git` paths. |
+| Can `.gitignore` affect `.git` metadata? | No. `.git` metadata is handled by the Git metadata rules before ordinary ignore routing. |
 
-"Clean" means the command exits successfully and the final Git repository is not
-left in an in-progress merge, revert, cherry-pick, bisect, or rebase state.
+The architecture is therefore a LayerStack-aware ignore oracle: it reads
+`.gitignore` content from the active LayerStack view, including ancestor and
+nested subtree rules, and applies those rules without invoking Git. This preserves
+Git-compatible ignore behavior for generated/cache paths while keeping OCC
+independent from local checkout state and Git index state.
 
-## Forbidden Git Metadata Changes
+## Git State Lanes
 
-The validator must reject a command capture before OCC publish when any of these
-conditions is present:
+| Lane | Examples | Rule |
+| --- | --- | --- |
+| Repository identity | `.git/HEAD`, `.git/config`, `.git/commondir`, `.git/gitdir` | Writes are allowed only if final repo health passes; deletes are forbidden. |
+| Index state | `.git/index` | Writes are allowed; deletes and lock leftovers are forbidden. |
+| Object database | `.git/objects/**` | New object writes are allowed; object deletion is forbidden. |
+| References | `.git/refs/**`, `.git/packed-refs` | Writes are allowed; deletes are forbidden unless a future rule explicitly supports ref deletion safely. |
+| Reflogs | `.git/logs/**` | Writes are allowed; destructive replacement is forbidden. |
+| Operation messages | `.git/COMMIT_EDITMSG`, `.git/MERGE_MSG` | Allowed when no incomplete operation markers remain. |
+| Operation control state | `.git/CHERRY_PICK_HEAD`, `.git/REVERT_HEAD`, `.git/MERGE_HEAD`, `.git/sequencer/**`, `.git/rebase-merge/**`, `.git/rebase-apply/**` | Must not remain after a published command. |
+| Locks | `.git/**/*.lock` | Must not remain after a published command. |
+| Hooks | `.git/hooks/**` | Forbidden for shared publish. |
 
-| Condition | Reason |
+## Allowed Final States
+
+These command outcomes are valid when the command exits successfully, no
+incomplete operation markers remain, no lock files remain, and repository health
+checks pass:
+
+| Workflow | Shared-state interpretation |
 | --- | --- |
-| `.git` root deletion or `.git` root opaque directory replacement | Destroys the repository. |
-| `Delete` or `OpaqueDir` under `.git/objects` | Can remove reachable objects and corrupt history. |
-| `Delete` or `OpaqueDir` under `.git/refs` | Can remove branch or tag references. |
-| `Delete` or `OpaqueDir` for `.git/HEAD`, `.git/index`, `.git/config`, `.git/packed-refs`, or `.git/shallow` | Removes core repository control files. |
-| final `.git/*.lock` or nested lock file remains | Indicates an interrupted Git operation. |
-| final `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `REBASE_HEAD`, `BISECT_LOG`, `sequencer/`, `rebase-merge/`, or `rebase-apply/` remains | Indicates an incomplete multi-step operation. |
-| `hooks/` writes or executable hook changes | Allows hidden command execution on future Git operations. |
-| unreadable, non-UTF-8 path, unsupported special file, device, FIFO, or socket under `.git` | Not a normal Git metadata result. |
+| `git add . && git commit -m ...` | Normal commit: object, index, ref, HEAD/log updates are allowed. |
+| `git commit --amend` | Ref/log rewrite with a new commit object is allowed. |
+| clean `git revert --no-edit <sha>` | A new commit that reverses content is allowed. |
+| clean `git cherry-pick <sha>` | A new commit from another history point is allowed. |
+| `git merge --squash ... && git commit -m ...` | Squash result is allowed as a normal final commit. |
+| clean completed rebase/squash inside one command | Allowed only if no rebase or sequencer state remains. |
 
-This list is intentionally conservative. A later implementation can relax a rule
-only with a targeted test that proves the final repo remains healthy and the
-relaxed mutation is required by a real Git workflow.
+The contract allows Git history-changing workflows when they end in a coherent
+repository. It does not require the sandbox to understand Git intent; it requires
+the final metadata state to be non-destructive and healthy.
 
-## Validator Semantics
+## Forbidden Final States
 
-Command finalization must validate Git metadata in two layers.
+The shared LayerStack must not accept a command result containing:
 
-### 1. Captured Delta Validation
-
-Inspect captured `LayerChange`s before publish:
-
-```text
-for each change:
-  if path is not .git or under .git:
-    continue
-  reject forbidden delete/opaque/lock/hook/special-file patterns
-  require command Git metadata mode
-  force route = Gated
-```
-
-This step prevents obviously destructive changes from reaching the OCC queue.
-
-### 2. Candidate Repository Validation
-
-Build the candidate final repository state from the command snapshot plus the
-captured delta, then run Git health checks before publish.
-
-Minimum checks:
-
-```text
-git rev-parse --git-dir
-git fsck --connectivity-only
-git status --porcelain=v1 --untracked-files=no
-```
-
-The health check must also assert that no in-progress operation markers remain.
-If validation fails, return a `git_metadata_protected` or
-`git_operation_incomplete` conflict and do not publish any captured changes.
-
-The implementation may use the command overlay worktree directly when it still
-contains the final state. If that is not reliable, project the snapshot to a
-temporary worktree, apply the captured delta, validate, then delete the temporary
-worktree.
-
-## OCC Semantics
-
-Command Git metadata uses the same atomic publish contract as ordinary command
-capture:
-
-```text
-normal files + .git metadata publish together, or none publish
-```
-
-Additional rules:
-
-- All `.git` paths are `Gated`, never `Direct`.
-- The command publish remains `atomic = true`.
-- Any `.git` conflict rejects the whole command publish.
-- Concurrent commands that update the same ref, index, or control file must
-  conflict instead of last-writer-wins.
-- New Git object files can be gated with an absent base hash. If a same object
-  path already exists with identical content, the publish may treat it as
-  accepted; differing content at the same object path is a hard conflict.
-
-## Rollback Behavior
-
-Do not silently restore `.git` by writing repair layers.
-
-When validation rejects the command:
-
-1. Return a structured conflict or error, such as `git_metadata_protected`.
-2. Publish nothing from that command, including non-Git file changes.
-3. Drop the ephemeral overlay.
-4. Leave the shared LayerStack unchanged.
-
-This gives restore semantics through transaction rollback: destructive command
-effects disappear with the discarded overlay.
-
-## API and Ownership Changes
-
-Implement this as a narrow command publish policy, not as a global LayerStack
-permission change.
-
-Target ownership:
-
-| Area | Change |
+| State | Reason |
 | --- | --- |
-| `eos-layerstack::commit` | Add a Git metadata route policy, for example `GitMetadataPolicy::{Drop, Gated}`. |
-| `eos-layerstack::service` | Keep `publish_capture` defaulting to `Drop`; add `publish_command_capture` using `Gated` plus validation. |
-| `eos-operation::command::finalize` | Call `publish_command_capture` for ephemeral commands. |
-| `eos-operation::file` | Keep direct file/edit `.git` writes rejected or dropped. |
-| `eos-operation::plugin` | Keep plugin `.git` callback writes rejected or dropped. |
-| `eos-e2e-test` | Replace the old `.git` drop expectation for command capture with validated Git workflow tests; keep direct file `.git` protection tests. |
+| `.git` root deletion or opaque replacement | Destroys repository identity. |
+| Deleted Git objects | Can corrupt reachable history. |
+| Deleted refs, `HEAD`, index, config, packed refs, shallow metadata, or commondir/gitdir files | Can orphan history or break repository resolution. |
+| Lock files | Indicates interrupted Git mutation. |
+| Remaining merge, revert, cherry-pick, bisect, sequencer, or rebase state | Requires a later human or agent continuation and is not an atomic final state. |
+| Hook writes | Adds hidden future command execution behavior. |
+| Devices, sockets, FIFOs, or unsupported special files under `.git` | Not normal Git metadata. |
+| A repository that fails Git health validation | Would publish broken shared state. |
 
-Avoid pushing Git subprocess logic into the OCC single-writer itself. OCC should
-own routing, base hashes, and atomic publish. Command finalization should own
-command-specific Git metadata validation because it knows the mutation source.
+## OCC Rules
 
-## Test Plan
+All accepted `.git` paths use the gated OCC lane.
 
-Unit tests:
+| Rule | Consequence |
+| --- | --- |
+| `.git` is never direct | `.gitignore` cannot bypass conflict checks for Git metadata. |
+| command publish is atomic | normal file changes and Git metadata publish together or not at all. |
+| same ref/index/control-file races conflict | two agents cannot last-writer-wins the same branch or index state. |
+| new object paths may start absent | object creation is valid when the base path did not exist. |
+| same object path with different content is invalid | Git object identity makes this a hard corruption signal. |
+| validation failure rejects the whole command publish | partial normal-file publish is not allowed after Git metadata failure. |
 
-- Route policy: `.git/config` is `Drop` for default publish and `Gated` for
-  command publish.
-- `.gitignore` cannot route `.git/*` to `Direct`.
-- Git validator accepts normal commit metadata writes.
-- Git validator rejects `.git` root deletion.
-- Git validator rejects object, ref, index, `HEAD`, config, and packed-ref
-  deletes.
-- Git validator rejects lock files and incomplete sequencer/rebase state.
-- Git validator rejects hook writes.
+## Rollback Rule
 
-Package tests:
+Rejected Git metadata is not repaired in place.
 
-```text
-cargo test -p eos-layerstack --all-targets
-cargo test -p eos-operation --all-targets
-cargo test -p eos-daemon --all-targets
-```
+When a command produces destructive or incomplete Git state:
 
-Live E2E tests:
+1. The shared LayerStack remains unchanged.
+2. The command response reports a Git metadata conflict or protection failure.
+3. The ephemeral overlay is discarded.
+4. Later commands observe the previous healthy shared repository.
 
-- `sandbox.command.exec` can run `git add . && git commit -m "agent commit"` and
-  the resulting commit is visible from a later command.
-- `git commit --amend` publishes the amended commit metadata.
-- clean `git revert --no-edit <sha>` publishes.
-- clean `git cherry-pick <sha>` publishes.
-- a conflicting cherry-pick is rejected with `git_operation_incomplete` and the
-  shared LayerStack remains unchanged.
-- `rm -rf .git` exits successfully inside the shell only if the shell permits it,
-  but command finalization rejects the publish and later commands still see the
-  original repository.
-- direct `sandbox.file.write` to `.git/config` remains rejected or dropped.
-- two concurrent command commits against the same branch produce one success and
-  one OCC conflict, not two last-writer-wins ref updates.
+This is the restore model: transaction rollback, not automatic repair layers.
 
-## Non-Goals
+## Architectural Ownership
 
-- Do not make `.git` generally mutable through direct file APIs.
-- Do not use `sandbox.checkpoint.commit_to_git` as the command implementation.
-- Do not allow persistent half-completed cherry-pick, revert, merge, or rebase
-  state in the initial implementation.
-- Do not implement automatic Git repair layers after destructive commands.
-- Do not allow hook installation as part of command capture.
+| Owner | Responsibility |
+| --- | --- |
+| Command finalization | Classifies command-produced Git metadata and rejects destructive or incomplete final states. |
+| OCC publish path | Enforces gated conflict checking and atomic publish. |
+| LayerStack | Stores accepted layers and projects healthy state; it does not infer Git intent. |
+| File/edit APIs | Preserve `.git` protection outside command capture. |
+| Plugin callbacks | Preserve `.git` protection unless a future contract explicitly adds a Git-aware mode. |
+| Isolated workspaces | Keep private Git mutations private. |
 
-## Open Follow-Ups
+## Acceptance Criteria
 
-- Decide whether durable staged-only state from `git add` without `git commit`
-  is acceptable. If not, require either a commit or a clean no-op index.
-- Decide whether `git gc` and pack pruning should remain forbidden. The initial
-  policy should forbid object deletion because agent commit workflows do not
-  require pruning reachable objects.
-- Decide whether multi-command conflict resolution should use isolated
-  workspaces or a future explicit Git transaction/session model.
+A conforming implementation must satisfy these externally visible rules:
+
+- command `git add . && git commit -m ...` creates a durable commit visible to a
+  later command.
+- command `git commit --amend` creates a durable amended commit when clean.
+- command clean `git revert` publishes when clean.
+- command clean `git cherry-pick` publishes when clean.
+- command clean squash flow publishes when clean.
+- command conflicting cherry-pick or revert does not publish shared state.
+- command `rm -rf .git` does not damage the shared repository.
+- command leaving `.git/**/*.lock` does not publish shared state.
+- command writing Git hooks does not publish shared state.
+- direct file/edit writes to `.git` remain rejected or dropped.
+- `.gitignore` never causes `.git` metadata to bypass OCC.
+- nested `.gitignore` files under subdirectories affect only their subtree.
+- `.gitignore` files published in newer LayerStack layers affect later OCC
+  routing.
+- OCC ignore routing does not call `git`, read the Git index, or depend on
+  tracked/untracked state.
+- concurrent command commits against the same ref produce conflict behavior, not
+  last-writer-wins shared metadata.
+
+## Open Policy Decisions
+
+- Durable staged-only state: decide whether `git add` without a commit should be
+  valid shared state or rejected as an incomplete workflow.
+- Ref deletion: decide whether deliberate branch/tag deletion should ever be
+  supported, and if so under which explicit command contract.
+- Git GC and pruning: keep object deletion forbidden until a separate rule proves
+  reachable object safety.
+- Multi-command conflict resolution: use isolated workspaces or a future explicit
+  Git transaction/session model if durable incomplete Git operations become
+  required.

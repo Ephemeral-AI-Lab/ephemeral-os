@@ -134,7 +134,7 @@ absolute / `..` / NUL. Reproduce it as a `parse`-style constructor (`api-parse-d
   - `eos-workspace` → reusable per-operation overlay workspace helpers plus
     isolated session lifecycle, network setup, TTL/GC; isolated code must not
     publish workspace changes.
-  - `eos-command-session` / `eos_operation::command` → command-session
+  - `eos-command` / `eos_operation::command` → command-process
     mechanics and command runtime policy.
   - `eos_operation::core` → static operation contracts, catalog rendering, and
     shared operation outcome contracts.

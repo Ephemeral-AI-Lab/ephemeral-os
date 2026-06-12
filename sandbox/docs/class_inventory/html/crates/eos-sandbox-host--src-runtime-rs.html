@@ -22,10 +22,10 @@
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
-  <div><b>4</b><span>modules</span></div>
-  <div><b>59</b><span>items</span></div>
-  <div><b>69</b><span>fields</span></div>
-  <div><b>43</b><span>methods</span></div>
+  <div><b>5</b><span>modules</span></div>
+  <div><b>101</b><span>items</span></div>
+  <div><b>167</b><span>fields</span></div>
+  <div><b>67</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -41,7 +41,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/12</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>host.rs</span><small>7/13</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-protocol-rs.html"><span>protocol.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-runtime-rs.html"><span>runtime.rs</span><small>5/19</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-trace-store-rs.html"><span>trace_store.rs</span><small>16/22</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime crates/eos-sandbox-host/src/runtime.rs ContainerLifetime ContainerSpec DaemonSpec DaemonContainer impl DaemonContainer impl Drop for DaemonContainer placeholder_addr await_ready docker_exec_args docker running_container_ids container_label container_labels copy_file_into copy_bytes_into path_str copy_path_into validate_remote_name container_copy_target remote_path TempUploadFile impl TempUploadFile impl Drop for TempUploadFile resolve_published_addr wait_for_published_addr parse_published_addr docker_available remove_labeled_containers">
   <div class="module-head">
     <div>
@@ -140,7 +140,7 @@
 
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-docker-326">docker</a>(run).with_context(|| format!(&quot;docker run <span class="rs-kw">for</span> {}&quot;, container.name))?;
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(
             container.name.clone(),
             auth_token.clone(),
             daemon,
@@ -209,7 +209,7 @@
             .context(&quot;spawn eosd daemon&quot;)?;
 
         <span class="rs-kw">let</span> addr = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-wait-for-published-addr-504">wait_for_published_addr</a>(&amp;<span class="rs-self">self</span>.name, daemon.tcp_port)?;
-        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(addr, <span class="rs-type">Some</span>(<span class="rs-self">self</span>.token.clone()), daemon.request_timeout);
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(addr, <span class="rs-type">Some</span>(<span class="rs-self">self</span>.token.clone()), daemon.request_timeout);
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-await-ready-293">await_ready</a>(&amp;client, daemon.ready_timeout)?;
         <span class="rs-type">Ok</span>(client)
     }
@@ -292,23 +292,23 @@
         daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>,
         endpoint: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(name, auth_token, daemon, endpoint, <span class="rs-kw">true</span>)
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(name, auth_token, daemon, endpoint, <span class="rs-kw">true</span>)
     }
 </code></pre>
 </details></td></tr><tr id="method-adopt-135"><td>associated-fn</td><td>adopt</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-runtime-rs.html#method-adopt-135">adopt</a> (id : &amp; str , auth_token : String , daemon : &amp; <a class="symbol-link" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>) -&gt; Result &lt; Self &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#method-adopt-135">adopt</a>(id: &amp;str, auth_token: <span class="rs-type">String</span>, daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(id.to_owned(), auth_token.clone(), daemon, <span class="rs-type">None</span>, <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(id.to_owned(), auth_token.clone(), daemon, <span class="rs-type">None</span>, <span class="rs-kw">true</span>);
         <span class="rs-kw">let</span> addr = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-wait-for-published-addr-504">wait_for_published_addr</a>(id, daemon.tcp_port)?;
-        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(addr, <span class="rs-type">Some</span>(auth_token), daemon.request_timeout);
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(addr, <span class="rs-type">Some</span>(auth_token), daemon.request_timeout);
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-await-ready-293">await_ready</a>(&amp;client, daemon.ready_timeout)?;
         handle.client = client;
         <span class="rs-type">Ok</span>(handle)
     }
 </code></pre>
-</details></td></tr><tr id="method-handle-144"><td>associated-fn</td><td>handle</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-handle-549">handle</a> (name : String , auth_token : String , daemon : &amp; <a class="symbol-link" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a> , endpoint : Option &lt; SocketAddr &gt; , keep : bool ,) -&gt; Self</code><details class="function-source">
+</details></td></tr><tr id="method-handle-144"><td>associated-fn</td><td>handle</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-handle-579">handle</a> (name : String , auth_token : String , daemon : &amp; <a class="symbol-link" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a> , endpoint : Option &lt; SocketAddr &gt; , keep : bool ,) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(
         name: <span class="rs-type">String</span>,
         auth_token: <span class="rs-type">String</span>,
         daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>,
@@ -317,7 +317,7 @@
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             name,
-            client: <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(
+            client: <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(
                 endpoint.unwrap_or_else(placeholder_addr),
                 <span class="rs-type">Some</span>(auth_token.clone()),
                 daemon.request_timeout,
@@ -416,7 +416,7 @@
         args.push(format!(&quot;label={}&quot;, filter.as_ref()));
     }
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-docker-326">docker</a>(args) <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
+        <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>();
     };
     out.split_whitespace().map(str::to_owned).collect()
 }
@@ -516,7 +516,7 @@
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
         .join(&quot; &quot;);
-    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(&quot;docker&quot;)
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(&quot;docker&quot;)
         .args(&amp;args)
         .output()
         .with_context(|| format!(&quot;spawn docker {display}&quot;))?;
@@ -548,7 +548,7 @@
     ids: &amp;[<span class="rs-type">String</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, serde_json::<span class="rs-type">Value</span>&gt;&gt;&gt; {
     <span class="rs-kw">if</span> ids.is_empty() {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>());
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = vec![
         &quot;inspect&quot;.to_owned(),
@@ -983,7 +983,7 @@
 
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-docker-326">docker</a>(run).with_context(|| format!(&quot;docker run <span class="rs-kw">for</span> {}&quot;, container.name))?;
 
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(
             container.name.clone(),
             auth_token.clone(),
             daemon,
@@ -1008,19 +1008,19 @@
         daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>,
         endpoint: <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt;,
     ) -&gt; <span class="rs-self">Self</span> {
-        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(name, auth_token, daemon, endpoint, <span class="rs-kw">true</span>)
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(name, auth_token, daemon, endpoint, <span class="rs-kw">true</span>)
     }
 
     <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#method-adopt-135">adopt</a>(id: &amp;str, auth_token: <span class="rs-type">String</span>, daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(id.to_owned(), auth_token.clone(), daemon, <span class="rs-type">None</span>, <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(id.to_owned(), auth_token.clone(), daemon, <span class="rs-type">None</span>, <span class="rs-kw">true</span>);
         <span class="rs-kw">let</span> addr = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-wait-for-published-addr-504">wait_for_published_addr</a>(id, daemon.tcp_port)?;
-        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(addr, <span class="rs-type">Some</span>(auth_token), daemon.request_timeout);
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(addr, <span class="rs-type">Some</span>(auth_token), daemon.request_timeout);
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-await-ready-293">await_ready</a>(&amp;client, daemon.ready_timeout)?;
         handle.client = client;
         <span class="rs-type">Ok</span>(handle)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-549">handle</a>(
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-handle-579">handle</a>(
         name: <span class="rs-type">String</span>,
         auth_token: <span class="rs-type">String</span>,
         daemon: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-runtime-rs.html#item-struct-DaemonSpec-32">DaemonSpec</a>,
@@ -1029,7 +1029,7 @@
     ) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> {
             name,
-            client: <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(
+            client: <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(
                 endpoint.unwrap_or_else(placeholder_addr),
                 <span class="rs-type">Some</span>(auth_token.clone()),
                 daemon.request_timeout,
@@ -1091,7 +1091,7 @@
             .context(&quot;spawn eosd daemon&quot;)?;
 
         <span class="rs-kw">let</span> addr = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-wait-for-published-addr-504">wait_for_published_addr</a>(&amp;<span class="rs-self">self</span>.name, daemon.tcp_port)?;
-        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(addr, <span class="rs-type">Some</span>(<span class="rs-self">self</span>.token.clone()), daemon.request_timeout);
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-sandbox-host--src-protocol-rs.html#item-struct-ProtocolClient-42">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(addr, <span class="rs-type">Some</span>(<span class="rs-self">self</span>.token.clone()), daemon.request_timeout);
         <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-await-ready-293">await_ready</a>(&amp;client, daemon.ready_timeout)?;
         <span class="rs-type">Ok</span>(client)
     }
@@ -1216,7 +1216,7 @@
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
         .join(&quot; &quot;);
-    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>(&quot;docker&quot;)
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>(&quot;docker&quot;)
         .args(&amp;args)
         .output()
         .with_context(|| format!(&quot;spawn docker {display}&quot;))?;
@@ -1237,7 +1237,7 @@
         args.push(format!(&quot;label={}&quot;, filter.as_ref()));
     }
     <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-runtime-rs.html#item-fn-docker-326">docker</a>(args) <span class="rs-kw">else</span> {
-        <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>();
+        <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>();
     };
     out.split_whitespace().map(str::to_owned).collect()
 }
@@ -1259,7 +1259,7 @@
     ids: &amp;[<span class="rs-type">String</span>],
 ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, serde_json::<span class="rs-type">Value</span>&gt;&gt;&gt; {
     <span class="rs-kw">if</span> ids.is_empty() {
-        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-220">new</a>());
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host.html#method-new-226">new</a>());
     }
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> args = vec![
         &quot;inspect&quot;.to_owned(),

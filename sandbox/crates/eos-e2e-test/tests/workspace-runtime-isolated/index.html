@@ -92,7 +92,7 @@
     {
       "id": "isolated_workspace-exit-cleanup",
       "title": "Isolated Workspace Exit Cleanup",
-      "description": "Exit or cancel drains long-lived isolated command sessions and removes namespace resources so re-enter starts cleanly.",
+      "description": "Exit or cancel drains long-lived isolated commands and removes namespace resources so re-enter starts cleanly.",
       "tags": [
         "workspace-runtime-isolated"
       ]
@@ -177,7 +177,7 @@
     {
       "id": "isolated_workspace_lifecycle_gates_and_audit",
       "name": "isolated_workspace_lifecycle_gates_and_audit",
-      "description": "Uses `enter_rejects_active_command_session_and_repeated_enter_reports_already_open`: active command sessions block enter and repeated enter reports already-open, with teardown keeping cleanup and no-publish fields response-visible.",
+      "description": "Uses `enter_rejects_active_command_and_repeated_enter_reports_already_open`: active commands block enter and repeated enter reports already-open, with teardown keeping cleanup and no-publish fields response-visible.",
       "command": "cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture",
       "checklist": [
         "isolated_workspace-lifecycle-gates",

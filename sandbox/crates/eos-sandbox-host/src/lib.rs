@@ -3,6 +3,7 @@
 mod host;
 pub mod protocol;
 mod runtime;
+pub mod trace_store;
 
 pub use host::{ForwardError, HostConfig, SandboxHost, SandboxStatus};
 pub use protocol::MAX_REQUEST_BYTES;

@@ -7,8 +7,8 @@ use eos_operation::core::catalog;
 use serde_json::json;
 
 use crate::support::{
-    as_i64, as_str, live_pool_or_skip, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled, wait_for_command_stdout_contains,
+    as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_command_stdout_contains,
+    wait_for_command_transcript_recycled,
 };
 
 fn command_line_marker_count(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<i64> {
@@ -58,7 +58,7 @@ fn wait_for_command_line_marker_count(
 }
 
 #[test]
-fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
+fn commands_accept_stdin_and_release_on_cancel() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -75,7 +75,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    let session_id = as_str(&started, "command_id")?.to_owned();
+    let command_id = as_str(&started, "command_id")?.to_owned();
     assert!(
         started["output"]["stdout"]
             .as_str()
@@ -92,12 +92,12 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
     let stdin = lease.call_ok(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
         json!({
-            "command_id": session_id,
+            "command_id": command_id,
             "chars": "line-one\n",
             "yield_time_ms": 2000,}),
     )?;
     if as_str(&stdin, "status")? != "running" {
-        bail!("expected session to keep running after stdin write: {stdin}");
+        bail!("expected command to keep running after stdin write: {stdin}");
     }
     assert!(
         stdin["output"]["stdout"]
@@ -109,7 +109,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
 
     let cancel = lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_id": &session_id}),
+        json!({"command_id": &command_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
@@ -124,12 +124,12 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         0,
         "cancelled command should release its layer lease: {released}"
     );
-    wait_for_command_session_transcript_recycled(&lease, &session_id)?;
+    wait_for_command_transcript_recycled(&lease, &command_id)?;
     Ok(())
 }
 
 #[test]
-fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
+fn commands_cancel_cleans_descendant_processes() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -143,11 +143,11 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
             "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
-    let session_id = as_str(&started, "command_id")?.to_owned();
+    let command_id = as_str(&started, "command_id")?.to_owned();
     // Emulation can slip the `echo descendant-ready` past the first 500ms yield;
     // poll the transcript for it instead of reading only the initial snapshot.
-    wait_for_command_stdout_contains(&lease, &session_id, "descendant-ready")?;
-    // The session's own `bash -lc '...MARKER...'` carries the marker in its argv
+    wait_for_command_stdout_contains(&lease, &command_id, "descendant-ready")?;
+    // The command's own `bash -lc '...MARKER...'` carries the marker in its argv
     // alongside the `exec -a MARKER sleep 60` descendant, so poll for >= 1 marker
     // process (not an exact count) — it can also lag into /proc under emulation.
     let marker_deadline = Instant::now() + Duration::from_secs(15);
@@ -160,13 +160,13 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
 
     let cancel = lease.call(
         catalog::SANDBOX_COMMAND_CANCEL,
-        json!({"command_id": &session_id}),
+        json!({"command_id": &command_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
         "cancelled" | "ok" | "error"
     ));
     wait_for_command_line_marker_count(&lease, &marker, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &session_id)?;
+    wait_for_command_transcript_recycled(&lease, &command_id)?;
     Ok(())
 }

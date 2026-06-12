@@ -27,13 +27,13 @@ The complete public vocabulary served on the `eos-sandbox-gateway` client socket
 | `sandbox.isolation.enter` | daemon | IsolatedWorkspace | yes | Enter isolated workspace mode for a caller. |
 | `sandbox.isolation.exit` | daemon | IsolatedWorkspace | yes | Exit isolated workspace mode for a caller. |
 | `sandbox.isolation.status` | daemon | IsolatedWorkspace | no | Inspect isolated workspace status. |
-| `sandbox.command.exec` | daemon | CommandSession | yes | Run a foreground command or start a command session. |
-| `sandbox.command.write_stdin` | daemon | CommandSession | yes | Write stdin to a command session. |
-| `sandbox.command.poll` | daemon | CommandSession | no | Poll command-session progress without writing stdin. |
-| `sandbox.command.cancel` | daemon | CommandSession | yes | Cancel a command session. |
-| `sandbox.command.collect_completed` | daemon | CommandSession | yes | Collect completed command-session notifications. |
-| `sandbox.command.count` | daemon | CommandSession | no | Count live command sessions. |
-| `sandbox.run.end` | daemon | WorkspaceRun | yes | End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace. |
+| `sandbox.command.exec` | daemon | Command | yes | Run a foreground command or start a background command. |
+| `sandbox.command.write_stdin` | daemon | Command | yes | Write stdin to a command. |
+| `sandbox.command.poll` | daemon | Command | no | Poll command progress without writing stdin. |
+| `sandbox.command.cancel` | daemon | Command | yes | Cancel a command. |
+| `sandbox.command.collect_completed` | daemon | Command | yes | Collect completed command notifications. |
+| `sandbox.command.count` | daemon | Command | no | Count live commands. |
+| `sandbox.run.end` | daemon | WorkspaceRun | yes | End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated workspace. |
 
 ## Operator ops (operator socket)
 

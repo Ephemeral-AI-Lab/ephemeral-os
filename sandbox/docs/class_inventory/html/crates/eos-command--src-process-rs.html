@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-command · src/process.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <a class="central-link" href="/" title="Return to all class inventories">&larr; All inventories</a>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-command File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">sandbox</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>52</b><span>items</span></div>
+  <div><b>63</b><span>fields</span></div>
+  <div><b>48</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command.html"><span>contract.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-command--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-command--src-process-rs.html"><span>process.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-command--src-pty-rs.html"><span>pty.rs</span><small>6/9</small></a></li><li><a class="file-link" href="eos-command--src-transcript-rs.html"><span>transcript.rs</span><small>2/6</small></a></li><li><a class="file-link" href="eos-command--src-yield-wait-loop-rs.html"><span>yield_wait_loop.rs</span><small>2/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="process crates/eos-command/src/process.rs CommandProcess CommandProcessSpec CommandProcessSpawn CommandProcessExit CommandProcessRuntime impl CommandProcessRuntime impl CommandProcess impl CommandWaitTarget &lt; CommandProcessExit &gt; for CommandProcess duration_from_secs_f64 transcript_len write_final_response lock">
+  <div class="module-head">
+    <div>
+      <h2>src/process.rs</h2>
+      <p class="path">module <code>process</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>5 types</span>
+      <span>3 impls</span>
+      <span>4 fns</span>
+      <span>23 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandProcess-24" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandProcess pub pub struct CommandProcess crates/eos-command/src/process.rs id String caller_id String command String started_at Instant timeout Option &lt; Duration &gt; runtime CommandProcessRuntime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcess</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcess-24">CommandProcess</a></code>
+  <p class="docstring">PTY/process substrate for one command. It owns the child process, transcript,<br>and cancel flag, but no workspace policy: the run that owns this process<br>decides publish-vs-discard.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>id</td><td><code>String</code></td></tr><tr><td>private</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>private</td><td>command</td><td><code>String</code></td></tr><tr><td>private</td><td>started_at</td><td><code>Instant</code></td></tr><tr><td>private</td><td>timeout</td><td><code>Option &lt; Duration &gt;</code></td></tr><tr><td>private</td><td>runtime</td><td><code><a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-124"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-new-87">new</a> (spec : <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>) -&gt; Self</code><p class="docstring">Process-free scaffold for registry and identity tests.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Process-free scaffold for registry and identity tests.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>())
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-runtime-153"><td>constructor</td><td>with_runtime</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a> (spec : <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a> , runtime : <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>, runtime: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            id: spec.id,
+            caller_id: spec.caller_id,
+            command: spec.command,
+            started_at: <span class="rs-type">Instant</span>::now(),
+            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
+            runtime,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-id-164"><td>method</td><td>id</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-id-164">id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-id-164">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.id
+    }
+</code></pre>
+</details></td></tr><tr id="method-caller-id-169"><td>method</td><td>caller_id</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-caller-id-169">caller_id</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-caller-id-169">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.caller_id
+    }
+</code></pre>
+</details></td></tr><tr id="method-command-174"><td>method</td><td>command</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-command-174">command</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-command-174">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.command
+    }
+</code></pre>
+</details></td></tr><tr id="method-started-at-179"><td>method</td><td>started_at</td><td><code>pub const fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-started-at-179">started_at</a> (&amp; self) -&gt; Instant</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-started-at-179">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
+        <span class="rs-self">self</span>.started_at
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-process-stdin-185"><td>method</td><td>write_process_stdin</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-write-process-stdin-185">write_process_stdin</a> (&amp; self , chars : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command.html#item-enum-CommandError-5">CommandError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-write-process-stdin-185">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-write-stdin-188">write_stdin</a>(chars.as_bytes())?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-process-190"><td>method</td><td>cancel_process</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-cancel-process-190">cancel_process</a> (&amp; self)</code><p class="docstring">Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run<br>teardown): record the reason and kill the process group. A cancel always<br>wins over a later timeout mark.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run</span>
+    <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
+    <span class="rs-comment">/// wins over a later timeout mark.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-cancel-process-190">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
+        *<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+    }
+</code></pre>
+</details></td></tr><tr id="method-time-out-process-198"><td>method</td><td>time_out_process</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-time-out-process-198">time_out_process</a> (&amp; self)</code><p class="docstring">Kill a command that exceeded its deadline (the deadline backstop). Records<br>`TimedOut` only if no kill reason is set yet, so a prior user cancel keeps<br>its `Cancelled` label; either way the process group is killed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Kill a command that exceeded its deadline (the deadline backstop). Records</span>
+    <span class="rs-comment">/// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps</span>
+    <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-time-out-process-198">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
+        {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            <span class="rs-kw">if</span> kill.is_none() {
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">TimedOut</span>);
+            }
+        }
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-recent-output-211"><td>method</td><td>read_recent_output</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-read-recent-output-211">read_recent_output</a> (&amp; self , last_n_lines : usize) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-recent-output-211">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-tail-84">read_transcript_tail</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path, last_n_lines)
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-output-since-216"><td>method</td><td>read_output_since</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-since-80">read_transcript_since</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path, start_offset)
+    }
+</code></pre>
+</details></td></tr><tr id="method-transcript-len-221"><td>method</td><td>transcript_len</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path)
+    }
+</code></pre>
+</details></td></tr><tr id="method-is-past-deadline-226"><td>method</td><td>is_past_deadline</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-is-past-deadline-226">is_past_deadline</a> (&amp; self , now : Instant , max_command_s : u64) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-is-past-deadline-226">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_command_s: u64) -&gt; bool {
+        <span class="rs-kw">let</span> timeout = <span class="rs-self">self</span>
+            .timeout
+            .unwrap_or_else(|| <span class="rs-type">Duration</span>::from_secs(max_command_s));
+        now.duration_since(<span class="rs-self">self</span>.started_at) &gt;= timeout
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-exit-234"><td>method</td><td>take_exit</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> &gt;</code><p class="docstring">Take the child exit if it has completed, returning the raw command<br>result. Returns `None` while the process is still running or the exit has<br>already been taken. This only takes the process exit; it does not publish<br>or discard. The owning run decides that from `CommandProcessExit::kill`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Take the child exit if it has completed, returning the raw command</span>
+    <span class="rs-comment">/// result. Returns `None` while the process is still running or the exit has</span>
+    <span class="rs-comment">/// already been taken. This only takes the process exit; it does not publish</span>
+    <span class="rs-comment">/// or discard. The owning run decides that from `CommandProcessExit::kill`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_taken = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.exit_taken);
+        <span class="rs-kw">if</span> *exit_taken {
+            <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+        }
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>() {
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-PtyProcessExit-61">PtyProcessExit</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-PtyProcessExit-61">PtyProcessExit</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
+        };
+        *exit_taken = <span class="rs-kw">true</span>;
+        drop(exit_taken);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+        <span class="rs-self">self</span>.runtime
+            .process
+            .<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-wait-for-reader-done-251">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-read-from-path-133">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+        <span class="rs-kw">let</span> completion =
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-from-process-and-runner-86">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> {
+            status: completion.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-status-114">status</a>().to_owned(),
+            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-exit-code-55">exit_code</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-value-170">value</a>().clone()),
+            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-final-stdout-283">final_stdout</a>(),
+            elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
+            kill,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-persist-final-267"><td>method</td><td>persist_final</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-persist-final-267">persist_final</a> (&amp; self , response : &amp; serde_json :: Value)</code><p class="docstring">Persist the run's final response to `final_path` for crash recovery and<br>remove the transcript. Best-effort: `final_path` is only a crash-recovery<br>convenience, so a write failure does not undo the already-decided<br>publish/discard or fail the operation.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Persist the run's final response to `final_path` for crash recovery and</span>
+    <span class="rs-comment">/// remove the transcript. Best-effort: `final_path` is only a crash-recovery</span>
+    <span class="rs-comment">/// convenience, so a write failure does not undo the already-decided</span>
+    <span class="rs-comment">/// publish/discard or fail the operation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-persist-final-267">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;serde_json::<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-write-final-response-317">write_final_response</a>(&amp;<span class="rs-self">self</span>.runtime.final_path, response);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-remove-transcript-file-276">remove_transcript_file</a>();
+    }
+</code></pre>
+</details></td></tr><tr id="method-remove-transcript-file-276"><td>method</td><td>remove_transcript_file</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-remove-transcript-file-276">remove_transcript_file</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-remove-transcript-file-276">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.runtime.transcript_path.as_os_str().is_empty() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;<span class="rs-self">self</span>.runtime.transcript_path);
+    }
+</code></pre>
+</details></td></tr><tr id="method-final-stdout-283"><td>method</td><td>final_stdout</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-final-stdout-283">final_stdout</a> (&amp; self) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-final-stdout-283">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-stdout-76">read_transcript_stdout</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path)
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-130"><td>associated-fn</td><td>spawn</td><td><code>pub fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-spawn-130">spawn</a> (spec : <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a> , parts : <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpawn-43">CommandProcessSpawn</a> &lt; &#x27;_ &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-command.html#item-enum-CommandError-5">CommandError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-spawn-130">spawn</a>(
+        spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>,
+        parts: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpawn-43">CommandProcessSpawn</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+        <span class="rs-kw">let</span> process = <a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#item-fn-spawn-current-exe-ns-runner-259">spawn_current_exe_ns_runner</a>(
+            &amp;parts.request_path,
+            &amp;parts.run_request,
+            &amp;parts.output_path,
+            parts.transcript_path.clone(),
+            parts.transcript_timestamp_timezone,
+        )?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(
+            spec,
+            <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+                process,
+                parts.output_path,
+                parts.final_path,
+                parts.transcript_path,
+                parts.output_drain_grace_ms,
+            ),
+        ))
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-command--src-yield-wait-loop-rs.html#item-trait-CommandWaitTarget-6">CommandWaitTarget</a> &lt; <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> &gt; for <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcess-24">CommandProcess</a></code></summary><table><tbody><tr id="method-take-exit-289"><td>method</td><td>take_exit</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-transcript-len-293"><td>method</td><td>transcript_len</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a> (&amp; self) -&gt; u64</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(<span class="rs-self">self</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-output-since-297"><td>method</td><td>read_output_since</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a> (&amp; self , start_offset : u64) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-command/src/process.rs:24</p>
+</article><article id="item-struct-CommandProcessSpec-36" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandProcessSpec pub pub struct CommandProcessSpec crates/eos-command/src/process.rs id String caller_id String command String timeout_seconds Option &lt; f64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcessSpec</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a></code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command/src/process.rs:36</p>
+</article><article id="item-struct-CommandProcessSpawn-43" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandProcessSpawn pub pub struct CommandProcessSpawn&lt; 'a &gt; crates/eos-command/src/process.rs run_request Value request_path PathBuf output_path PathBuf final_path PathBuf transcript_path PathBuf transcript_timestamp_timezone &amp; 'a str output_drain_grace_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcessSpawn</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpawn-43">CommandProcessSpawn</a>&lt; &#x27;a &gt;</code>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>run_request</td><td><code>Value</code></td></tr><tr><td>pub</td><td>request_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_timestamp_timezone</td><td><code>&amp; &#x27;a str</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command/src/process.rs:43</p>
+</article><article id="item-struct-CommandProcessExit-53" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandProcessExit pub pub struct CommandProcessExit crates/eos-command/src/process.rs status String exit_code i64 runner_result Option &lt; Value &gt; stdout String elapsed_s f64 kill Option &lt; KillReason &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcessExit</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a></code>
+  <p class="docstring">The raw, policy-free result of a finished command process. The substrate<br>produces this; the owning workspace run turns it into a<br>rendered operation response by publishing (complete) or discarding (cancel).<br>Keeping the publish/discard decision out of the process is the structural<br>guarantee that a cancelled command never reaches the OCC merge.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i64</code></td></tr><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>kill</td><td><code>Option &lt; <a class="symbol-link" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command/src/process.rs:53</p>
+</article><article id="item-struct-CommandProcessRuntime-71" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandProcessRuntime private struct CommandProcessRuntime crates/eos-command/src/process.rs process PtyProcess output_path PathBuf final_path PathBuf transcript_path PathBuf kill Mutex &lt; Option &lt; KillReason &gt; &gt; output_drain_grace_ms u64 exit_taken Mutex &lt; bool &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CommandProcessRuntime</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a></code>
+  <p class="docstring">Per-command process state: the child, its paths, and the kill/exit flags.</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>process</td><td><code><a class="symbol-link" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a></code></td></tr><tr><td>private</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>transcript_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kill</td><td><code>Mutex &lt; Option &lt; <a class="symbol-link" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>private</td><td>exit_taken</td><td><code>Mutex &lt; bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-87"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-new-87">new</a> (process : <a class="symbol-link" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a> , output_path : PathBuf , final_path : PathBuf , transcript_path : PathBuf , output_drain_grace_ms : u64 ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+        process: <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>,
+        output_path: <span class="rs-type">PathBuf</span>,
+        final_path: <span class="rs-type">PathBuf</span>,
+        transcript_path: <span class="rs-type">PathBuf</span>,
+        output_drain_grace_ms: u64,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            process,
+            output_path,
+            final_path,
+            transcript_path,
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(<span class="rs-type">None</span>),
+            output_drain_grace_ms,
+            exit_taken: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(<span class="rs-kw">false</span>),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-inactive-105"><td>associated-fn</td><td>inactive</td><td><code>fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a> () -&gt; Self</code><p class="docstring">`/dev/null`-backed runtime so scaffold processes can exist in tests<br>without a live child.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// `/dev/null`-backed runtime so scaffold processes can exist in tests</span>
+    <span class="rs-comment">/// without a live child.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>()
+            .read(<span class="rs-kw">true</span>)
+            .write(<span class="rs-kw">true</span>)
+            .open(&quot;/dev/null&quot;)
+            .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command process&quot;);
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>(writer),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            0,
+        )
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command/src/process.rs:71</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-duration-from-secs-f64-302" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn duration_from_secs_f64 private fn duration_from_secs_f64 (seconds : f64) -&gt; Option &lt; Duration &gt; crates/eos-command/src/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>duration_from_secs_f64</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command--src-process-rs.html#item-fn-duration-from-secs-f64-302">duration_from_secs_f64</a> (seconds : f64) -&gt; Option &lt; Duration &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-duration-from-secs-f64-302">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
+    <span class="rs-kw">if</span> seconds.is_finite() &amp;&amp; seconds &gt; 0.0 {
+        <span class="rs-type">Some</span>(<span class="rs-type">Duration</span>::from_secs_f64(seconds))
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">None</span>
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command/src/process.rs:302</p>
+</article><article id="item-fn-transcript-len-310" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn transcript_len private fn transcript_len (path : &amp; Path) -&gt; u64 crates/eos-command/src/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>transcript_len</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a> (path : &amp; Path) -&gt; u64</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
+    <span class="rs-kw">if</span> path.as_os_str().is_empty() {
+        <span class="rs-kw">return</span> 0;
+    }
+    std::fs::metadata(path).map_or(0, |metadata| metadata.len())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command/src/process.rs:310</p>
+</article><article id="item-fn-write-final-response-317" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_final_response private fn write_final_response (path : &amp; Path , response : &amp; serde_json :: Value) -&gt; Result &lt; () , CommandError &gt; crates/eos-command/src/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>write_final_response</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command--src-process-rs.html#item-fn-write-final-response-317">write_final_response</a> (path : &amp; Path , response : &amp; serde_json :: Value) -&gt; Result &lt; () , <a class="symbol-link" href="eos-command.html#item-enum-CommandError-5">CommandError</a> &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-write-final-response-317">write_final_response</a>(path: &amp;<span class="rs-type">Path</span>, response: &amp;serde_json::<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+    <span class="rs-kw">if</span> path.as_os_str().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec_pretty(response).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>::<span class="rs-type">InvalidRequest</span>(format!(&quot;serialize final command response: {error}&quot;))
+    })?;
+    std::fs::write(path, bytes)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command/src/process.rs:317</p>
+</article><article id="item-fn-lock-328" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command/src/process.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>lock</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-command/src/process.rs:328</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-command/src/process.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! One command process: the child process, PTY transcript, kill/exit state,</span>
+<span class="rs-comment">//! and final-response persistence.</span>
+
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::pty::<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::pty::{
+    spawn_current_exe_ns_runner, <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>, <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>, <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>,
+    <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-PtyProcessExit-61">PtyProcessExit</a>,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::yield_wait_loop::<a class="symbol-link rs-type" href="eos-command--src-yield-wait-loop-rs.html#item-trait-CommandWaitTarget-6">CommandWaitTarget</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>;
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/process.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+
+<span class="rs-comment">/// PTY/process substrate for one command. It owns the child process, transcript,</span>
+<span class="rs-comment">/// and cancel flag, but no workspace policy: the run that owns this process</span>
+<span class="rs-comment">/// decides publish-vs-discard.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcess-24">CommandProcess</a> {
+    id: <span class="rs-type">String</span>,
+    caller_id: <span class="rs-type">String</span>,
+    command: <span class="rs-type">String</span>,
+    started_at: <span class="rs-type">Instant</span>,
+    timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;,
+    runtime: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>,
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a> {
+    <span class="rs-kw">pub</span> id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> command: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpawn-43">CommandProcessSpawn</a>&lt;&#x27;a&gt; {
+    <span class="rs-kw">pub</span> run_request: <span class="rs-type">Value</span>,
+    <span class="rs-kw">pub</span> request_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> output_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> final_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> transcript_timestamp_timezone: &amp;&#x27;a str,
+    <span class="rs-kw">pub</span> output_drain_grace_ms: u64,
+}
+
+<span class="rs-comment">/// The raw, policy-free result of a finished command process. The substrate</span>
+<span class="rs-comment">/// produces this; the owning workspace run turns it into a</span>
+<span class="rs-comment">/// rendered operation response by publishing (complete) or discarding (cancel).</span>
+<span class="rs-comment">/// Keeping the publish/discard decision out of the process is the structural</span>
+<span class="rs-comment">/// guarantee that a cancelled command never reaches the OCC merge.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> {
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> exit_code: i64,
+    <span class="rs-kw">pub</span> runner_result: <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;,
+    <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> elapsed_s: f64,
+    <span class="rs-comment">/// Why the substrate killed this process, if it did. `None` is a natural</span>
+    <span class="rs-comment">/// exit; `Some(_)` means a kill (cancel or timeout) and the owning run</span>
+    <span class="rs-comment">/// DISCARDS rather than publishes.</span>
+    <span class="rs-kw">pub</span> kill: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>&gt;,
+}
+
+<span class="rs-comment">/// Per-command process state: the child, its paths, and the kill/exit flags.</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a> {
+    process: <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>,
+    output_path: <span class="rs-type">PathBuf</span>,
+    final_path: <span class="rs-type">PathBuf</span>,
+    transcript_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-comment">/// Why this process was killed, if it has been. Set once by `cancel_process`</span>
+    <span class="rs-comment">/// (user cancel) or `time_out_process` (deadline backstop); a user cancel</span>
+    <span class="rs-comment">/// wins, so a cancelled command is never relabeled as timed-out.</span>
+    kill: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>&gt;&gt;,
+    output_drain_grace_ms: u64,
+    <span class="rs-comment">/// Exit-taken guard so two pollers can't both finalize the same child.</span>
+    exit_taken: <span class="rs-type">Mutex</span>&lt;bool&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+        process: <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>,
+        output_path: <span class="rs-type">PathBuf</span>,
+        final_path: <span class="rs-type">PathBuf</span>,
+        transcript_path: <span class="rs-type">PathBuf</span>,
+        output_drain_grace_ms: u64,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            process,
+            output_path,
+            final_path,
+            transcript_path,
+            kill: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(<span class="rs-type">None</span>),
+            output_drain_grace_ms,
+            exit_taken: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(<span class="rs-kw">false</span>),
+        }
+    }
+
+    <span class="rs-comment">/// `/dev/null`-backed runtime so scaffold processes can exist in tests</span>
+    <span class="rs-comment">/// without a live child.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> writer = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>()
+            .read(<span class="rs-kw">true</span>)
+            .write(<span class="rs-kw">true</span>)
+            .open(&quot;/dev/null&quot;)
+            .expect(&quot;open /dev/null <span class="rs-kw">for</span> inactive command process&quot;);
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-PtyProcess-28">PtyProcess</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>(writer),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(),
+            0,
+        )
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcess-24">CommandProcess</a> {
+    <span class="rs-comment">/// Process-free scaffold for registry and identity tests.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(spec, <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-inactive-105">inactive</a>())
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-spawn-130">spawn</a>(
+        spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>,
+        parts: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpawn-43">CommandProcessSpawn</a>&lt;&#x27;_&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+        <span class="rs-kw">let</span> process = <a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#item-fn-spawn-current-exe-ns-runner-259">spawn_current_exe_ns_runner</a>(
+            &amp;parts.request_path,
+            &amp;parts.run_request,
+            &amp;parts.output_path,
+            parts.transcript_path.clone(),
+            parts.transcript_timestamp_timezone,
+        )?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(
+            spec,
+            <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-new-87">new</a>(
+                process,
+                parts.output_path,
+                parts.final_path,
+                parts.transcript_path,
+                parts.output_drain_grace_ms,
+            ),
+        ))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-with-runtime-153">with_runtime</a>(spec: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessSpec-36">CommandProcessSpec</a>, runtime: <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessRuntime-71">CommandProcessRuntime</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            id: spec.id,
+            caller_id: spec.caller_id,
+            command: spec.command,
+            started_at: <span class="rs-type">Instant</span>::now(),
+            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
+            runtime,
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-id-164">id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.id
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-caller-id-169">caller_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.caller_id
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-command-174">command</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.command
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-started-at-179">started_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Instant</span> {
+        <span class="rs-self">self</span>.started_at
+    }
+
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-write-process-stdin-185">write_process_stdin</a>(&amp;<span class="rs-self">self</span>, chars: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-write-stdin-188">write_stdin</a>(chars.as_bytes())?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run</span>
+    <span class="rs-comment">/// teardown): record the reason and kill the process group. A cancel always</span>
+    <span class="rs-comment">/// wins over a later timeout mark.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-cancel-process-190">cancel_process</a>(&amp;<span class="rs-self">self</span>) {
+        *<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill) = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+    }
+
+    <span class="rs-comment">/// Kill a command that exceeded its deadline (the deadline backstop). Records</span>
+    <span class="rs-comment">/// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps</span>
+    <span class="rs-comment">/// its `Cancelled` label; either way the process group is killed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-time-out-process-198">time_out_process</a>(&amp;<span class="rs-self">self</span>) {
+        {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kill = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+            <span class="rs-kw">if</span> kill.is_none() {
+                *kill = <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-KillReason-67">KillReason</a>::<span class="rs-type">TimedOut</span>);
+            }
+        }
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-recent-output-211">read_recent_output</a>(&amp;<span class="rs-self">self</span>, last_n_lines: usize) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-tail-84">read_transcript_tail</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path, last_n_lines)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-since-80">read_transcript_since</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path, start_offset)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-is-past-deadline-226">is_past_deadline</a>(&amp;<span class="rs-self">self</span>, now: <span class="rs-type">Instant</span>, max_command_s: u64) -&gt; bool {
+        <span class="rs-kw">let</span> timeout = <span class="rs-self">self</span>
+            .timeout
+            .unwrap_or_else(|| <span class="rs-type">Duration</span>::from_secs(max_command_s));
+        now.duration_since(<span class="rs-self">self</span>.started_at) &gt;= timeout
+    }
+
+    <span class="rs-comment">/// Take the child exit if it has completed, returning the raw command</span>
+    <span class="rs-comment">/// result. Returns `None` while the process is still running or the exit has</span>
+    <span class="rs-comment">/// already been taken. This only takes the process exit; it does not publish</span>
+    <span class="rs-comment">/// or discard. The owning run decides that from `CommandProcessExit::kill`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> exit_taken = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.exit_taken);
+        <span class="rs-kw">if</span> *exit_taken {
+            <span class="rs-kw">return</span> <span class="rs-type">None</span>;
+        }
+        <span class="rs-kw">let</span> process_exit = <span class="rs-kw">match</span> <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>() {
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-PtyProcessExit-61">PtyProcessExit</a>::<span class="rs-type">Running</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-enum-PtyProcessExit-61">PtyProcessExit</a>::<span class="rs-type">Exited</span>(exit) =&gt; exit,
+        };
+        *exit_taken = <span class="rs-kw">true</span>;
+        drop(exit_taken);
+        <span class="rs-self">self</span>.runtime.process.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-terminate-226">terminate</a>();
+        <span class="rs-self">self</span>.runtime
+            .process
+            .<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-wait-for-reader-done-251">wait_for_reader_done</a>(<span class="rs-type">Duration</span>::from_millis(<span class="rs-self">self</span>.runtime.output_drain_grace_ms));
+        <span class="rs-kw">let</span> runner = <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandRunnerResult-125">CommandRunnerResult</a>::<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-read-from-path-133">read_from_path</a>(&amp;<span class="rs-self">self</span>.runtime.output_path);
+        <span class="rs-kw">let</span> kill = *<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>(&amp;<span class="rs-self">self</span>.runtime.kill);
+        <span class="rs-kw">let</span> completion =
+            <a class="symbol-link rs-type" href="eos-command--src-pty-rs.html#item-struct-CommandCompletionStatus-79">CommandCompletionStatus</a>::<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-from-process-and-runner-86">from_process_and_runner</a>(process_exit, runner.as_ref(), kill);
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a> {
+            status: completion.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-status-114">status</a>().to_owned(),
+            exit_code: completion.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-exit-code-55">exit_code</a>(),
+            runner_result: runner.map(|runner| runner.<a class="symbol-link rs-fn" href="eos-command--src-pty-rs.html#method-value-170">value</a>().clone()),
+            stdout: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-final-stdout-283">final_stdout</a>(),
+            elapsed_s: <span class="rs-self">self</span>.started_at.elapsed().as_secs_f64(),
+            kill,
+        })
+    }
+
+    <span class="rs-comment">/// Persist the run's final response to `final_path` for crash recovery and</span>
+    <span class="rs-comment">/// remove the transcript. Best-effort: `final_path` is only a crash-recovery</span>
+    <span class="rs-comment">/// convenience, so a write failure does not undo the already-decided</span>
+    <span class="rs-comment">/// publish/discard or fail the operation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-persist-final-267">persist_final</a>(&amp;<span class="rs-self">self</span>, response: &amp;serde_json::<span class="rs-type">Value</span>) {
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-write-final-response-317">write_final_response</a>(&amp;<span class="rs-self">self</span>.runtime.final_path, response);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-remove-transcript-file-276">remove_transcript_file</a>();
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-remove-transcript-file-276">remove_transcript_file</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.runtime.transcript_path.as_os_str().is_empty() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;<span class="rs-self">self</span>.runtime.transcript_path);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-final-stdout-283">final_stdout</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <a class="symbol-link rs-fn" href="eos-command--src-transcript-rs.html#item-fn-read-transcript-stdout-76">read_transcript_stdout</a>(&amp;<span class="rs-self">self</span>.runtime.transcript_path)
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command--src-yield-wait-loop-rs.html#item-trait-CommandWaitTarget-6">CommandWaitTarget</a>&lt;<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcess-24">CommandProcess</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command--src-process-rs.html#item-struct-CommandProcessExit-53">CommandProcessExit</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-take-exit-234">take_exit</a>()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(&amp;<span class="rs-self">self</span>) -&gt; u64 {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(<span class="rs-self">self</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(&amp;<span class="rs-self">self</span>, start_offset: u64) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-read-output-since-216">read_output_since</a>(<span class="rs-self">self</span>, start_offset)
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-duration-from-secs-f64-302">duration_from_secs_f64</a>(seconds: f64) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt; {
+    <span class="rs-kw">if</span> seconds.is_finite() &amp;&amp; seconds &gt; 0.0 {
+        <span class="rs-type">Some</span>(<span class="rs-type">Duration</span>::from_secs_f64(seconds))
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">None</span>
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#method-transcript-len-221">transcript_len</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; u64 {
+    <span class="rs-kw">if</span> path.as_os_str().is_empty() {
+        <span class="rs-kw">return</span> 0;
+    }
+    std::fs::metadata(path).map_or(0, |metadata| metadata.len())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-write-final-response-317">write_final_response</a>(path: &amp;<span class="rs-type">Path</span>, response: &amp;serde_json::<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>&gt; {
+    <span class="rs-kw">if</span> path.as_os_str().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">let</span> bytes = serde_json::to_vec_pretty(response).map_err(|error| {
+        <a class="symbol-link rs-type" href="eos-command.html#item-enum-CommandError-5">CommandError</a>::<span class="rs-type">InvalidRequest</span>(format!(&quot;serialize final command response: {error}&quot;))
+    })?;
+    std::fs::write(path, bytes)?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-command--src-process-rs.html#item-fn-lock-328">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

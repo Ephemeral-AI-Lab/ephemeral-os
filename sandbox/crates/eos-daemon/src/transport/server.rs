@@ -49,7 +49,7 @@ pub struct DaemonServer {
     services: Arc<RuntimeServices>,
     file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
-    isolated_sweeper_interval_ms: u64,
+    idle_workspace_eviction_interval_ms: u64,
     shutdown: CancellationToken,
 }
 
@@ -73,7 +73,7 @@ impl DaemonServer {
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
             )),
-            isolated_sweeper_interval_ms: 500,
+            idle_workspace_eviction_interval_ms: 500,
             shutdown: CancellationToken::new(),
         }
     }
@@ -102,7 +102,7 @@ impl DaemonServer {
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,
             )),
-            isolated_sweeper_interval_ms: daemon_config.isolated_sweeper.ttl_sweep_interval_ms,
+            idle_workspace_eviction_interval_ms: daemon_config.idle_workspace_eviction.interval_ms,
             shutdown: CancellationToken::new(),
         }
     }
@@ -141,7 +141,7 @@ impl DaemonServer {
         };
         let _isolated_ttl_task = {
             let shutdown = server.shutdown.clone();
-            let eviction_interval_ms = server.isolated_sweeper_interval_ms;
+            let eviction_interval_ms = server.idle_workspace_eviction_interval_ms;
             let services = Arc::clone(&server.services);
             tokio::spawn(async move {
                 loop {

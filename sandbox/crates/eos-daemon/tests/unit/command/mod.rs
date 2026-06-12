@@ -239,7 +239,7 @@ fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandCompletion
         stdout: stdout.to_owned(),
         stderr: String::new(),
         command_id: Some(CommandId::new(id.to_owned())),
-        settled: None,
+        finalized: None,
     };
     CommandCompletion {
         command_id: id.to_owned(),

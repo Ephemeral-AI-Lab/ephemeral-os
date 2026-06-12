@@ -11,8 +11,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_command_stdout_contains,
-    wait_for_session_count,
+    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_command_count,
+    wait_for_command_stdout_contains,
 };
 
 #[test]
@@ -90,7 +90,7 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
 }
 
 #[test]
-fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open() -> Result<()> {
+fn enter_rejects_active_command_and_repeated_enter_reports_already_open() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -103,17 +103,17 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
             "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
-    let session_id = as_str(&exec, "command_id")?.to_owned();
+    let command_id = as_str(&exec, "command_id")?.to_owned();
     // `printf ACTIVE` may not reach the transcript within the 500ms yield under
-    // emulation; poll until it does (still proves the session is actively live).
-    wait_for_command_stdout_contains(&lease, &session_id, "ACTIVE")?;
+    // emulation; poll until it does (still proves the command is actively live).
+    wait_for_command_stdout_contains(&lease, &command_id, "ACTIVE")?;
 
     let body = (|| -> Result<()> {
         let rejected = lease.call(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert_eq!(
             rejected.get("success").and_then(Value::as_bool),
             Some(false),
-            "enter must reject instead of silently cleaning up an active command session: {rejected}"
+            "enter must reject instead of silently cleaning up an active command: {rejected}"
         );
         assert_eq!(
             rejected
@@ -121,23 +121,23 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
                 .and_then(|error| error.get("kind"))
                 .and_then(Value::as_str),
             Some("active_background_work"),
-            "active command session rejection should use a stable error kind: {rejected}"
+            "active command rejection should use a stable error kind: {rejected}"
         );
         assert_eq!(
             rejected
                 .get("error")
                 .and_then(|error| error.get("details"))
-                .and_then(|details| details.get("active_command_sessions"))
+                .and_then(|details| details.get("active_commands"))
                 .and_then(Value::as_i64),
             Some(1),
-            "rejection should report active session count: {rejected}"
+            "rejection should report active command count: {rejected}"
         );
 
         lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": session_id}),
+            json!({"command_id": command_id}),
         )?;
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
 
         let enter = lease.call_ok(catalog::SANDBOX_ISOLATION_ENTER, json!({}))?;
         assert!(
@@ -165,10 +165,10 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": session_id}),
+            json!({"command_id": command_id}),
         );
         let _ = lease.call(catalog::SANDBOX_ISOLATION_EXIT, json!({"grace_s": 0.0}));
-        let _ = wait_for_session_count(&lease, 0);
+        let _ = wait_for_command_count(&lease, 0);
     }
     body
 }

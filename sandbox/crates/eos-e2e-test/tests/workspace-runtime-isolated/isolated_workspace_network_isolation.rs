@@ -83,12 +83,12 @@ fn wait_for_output(
     if stdout(response).contains(marker) {
         return Ok(());
     }
-    let session_id = as_str(response, "command_id")?;
+    let command_id = as_str(response, "command_id")?;
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut last = response.clone();
     loop {
         let mut poll_args = json!({
-            "command_id": session_id,
+            "command_id": command_id,
             "last_n_lines": 8,
         });
         if let Some(caller) = caller_id {
@@ -101,7 +101,7 @@ fn wait_for_output(
             last = poll;
         }
 
-        let mut collect_args = json!({"command_ids": [session_id]});
+        let mut collect_args = json!({"command_ids": [command_id]});
         if let Some(caller) = caller_id {
             collect_args["caller_id"] = json!(caller);
         }
@@ -114,7 +114,7 @@ fn wait_for_output(
         if let Some(completion) = completions.first() {
             let result = completion
                 .get("result")
-                .context("command session completion result")?;
+                .context("command completion result")?;
             if stdout(result).contains(marker) {
                 return Ok(());
             }
@@ -122,7 +122,7 @@ fn wait_for_output(
         }
 
         if Instant::now() >= deadline {
-            bail!("session output never contained {marker}: {last}");
+            bail!("command output never contained {marker}: {last}");
         }
         thread::sleep(Duration::from_millis(100));
     }
@@ -339,8 +339,8 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
         Ok(())
     })();
 
-    for (caller_id, session_id) in &sessions {
-        cancel(&lease, Some(caller_id), session_id);
+    for (caller_id, command_id) in &sessions {
+        cancel(&lease, Some(caller_id), command_id);
     }
     let _ = lease.call(
         catalog::SANDBOX_ISOLATION_EXIT,
@@ -452,8 +452,8 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
         Ok(())
     })();
 
-    for (caller_id, session_id) in &sessions {
-        cancel(&lease, Some(caller_id), session_id);
+    for (caller_id, command_id) in &sessions {
+        cancel(&lease, Some(caller_id), command_id);
     }
     let _ = lease.call(
         catalog::SANDBOX_ISOLATION_EXIT,

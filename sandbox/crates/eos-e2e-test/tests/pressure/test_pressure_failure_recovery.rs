@@ -7,7 +7,7 @@ use serde_json::json;
 
 use crate::helpers::{pressure_levels, request_with_identity, workload_timeout_s};
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_session_count,
+    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_command_count,
 };
 
 fn start_sleep(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
@@ -39,24 +39,24 @@ fn daemon_recovers_after_midflight_cancel() -> Result<()> {
     assert_eq!(
         as_i64(&count, "count")?,
         0,
-        "cancel should not strand sessions: {count}"
+        "cancel should not strand commands: {count}"
     );
     Ok(())
 }
 
 #[test]
-fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
+fn cancel_burst_returns_commands_and_leases_to_zero() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    // Five long-running sessions occupy BOTH leak surfaces at once: the command
+    // Five long-running commands occupy BOTH leak surfaces at once: the command
     // session manager (PTY children) and the LayerStack lease registry.
     let ids: Vec<String> = (0..5)
         .map(|index| start_sleep(&lease, &format!("burst-{index}")))
         .collect::<Result<_>>()?;
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
-    assert_eq!(as_i64(&count, "count")?, 5, "five live sessions: {count}");
+    assert_eq!(as_i64(&count, "count")?, 5, "five live commands: {count}");
     let leased = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert!(
         as_i64(&leased, "active_leases")? >= 5,
@@ -68,14 +68,14 @@ fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
     }
     // Both surfaces must drain together: a leak in either (stranded PTY child OR
     // stranded layer lease) leaves a nonzero count.
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     let released = wait_for_active_leases(&lease, 0)?;
     assert_eq!(as_i64(&released, "active_leases")?, 0, "{released}");
     Ok(())
 }
 
 #[test]
-fn command_sessions_ladder_1_3_6_12() -> Result<()> {
+fn commands_ladder_1_3_6_12() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -113,7 +113,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
             assert_eq!(
                 as_str(&response, "status")?,
                 "running",
-                "command ladder should start long-running sessions at level {level}: {response}"
+                "command ladder should start long-running commands at level {level}: {response}"
             );
             ids.push(as_str(&response, "command_id")?.to_owned());
         }
@@ -122,12 +122,12 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
         assert_eq!(
             as_i64(&count, "count")?,
             i64::try_from(level).unwrap_or(i64::MAX),
-            "command ladder should expose all running sessions at level {level}: {count}"
+            "command ladder should expose all running commands at level {level}: {count}"
         );
         let leased = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
         assert!(
             as_i64(&leased, "active_leases")? >= i64::try_from(level).unwrap_or(i64::MAX),
-            "running command sessions should each hold a lease at level {level}: {leased}"
+            "running commands should each hold a lease at level {level}: {leased}"
         );
 
         for id in ids {
@@ -137,7 +137,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
                 "cancel should return structured status at level {level}: {cancel}"
             );
         }
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         let released = wait_for_active_leases(&lease, 0)?;
         assert_eq!(
             as_i64(&released, "active_leases")?,

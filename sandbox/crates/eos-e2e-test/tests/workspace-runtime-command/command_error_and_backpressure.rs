@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 
 use crate::support::{
     array, as_i64, as_str, clean_stdout, finalize_foreground_command, live_pool_or_skip, stdout,
-    wait_for_active_leases, wait_for_command_session_transcript_recycled, wait_for_session_count,
+    wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
 #[test]
@@ -43,7 +43,7 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
         stderr(&failed).is_empty(),
         "stderr field should stay empty for merged PTY output: {failed}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -73,13 +73,13 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         stderr(&started).is_empty(),
         "stderr field should stay empty for merged PTY output: {started}"
     );
-    let session_id = as_str(&started, "command_id")?.to_owned();
+    let command_id = as_str(&started, "command_id")?.to_owned();
 
     let body = (|| -> Result<()> {
         let answered = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_id": &session_id,
+                "command_id": &command_id,
                 "chars": "payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -96,7 +96,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         } else {
             poll_read_progress_until_stdout_contains(
                 &lease,
-                &session_id,
+                &command_id,
                 "stderr-reply:payload",
                 Instant::now() + Duration::from_secs(10),
             )?
@@ -108,7 +108,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_ids": [session_id.clone()]}),
+            json!({"command_ids": [command_id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
@@ -117,30 +117,30 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
 
         let cancelled = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
             "cancel should return terminal-ish status after long-lived stderr/stdin output: {cancelled}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
+        wait_for_command_transcript_recycled(&lease, &command_id)?;
         Ok(())
     })();
 
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         );
-        let _ = wait_for_session_count(&lease, 0);
+        let _ = wait_for_command_count(&lease, 0);
     }
     body
 }
 
 #[test]
-fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
+fn missing_command_and_invalid_command_ids_are_structured() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -166,7 +166,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     );
 
     let bogus = format!(
-        "missing-session-{}",
+        "missing-command-{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     let stdin = lease.call(
@@ -178,11 +178,11 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     )?;
     ensure!(
         as_str(&stdin, "status")? == "error",
-        "write_stdin against an unknown session should return a structured error: {stdin}"
+        "write_stdin against an unknown command should return a structured error: {stdin}"
     );
     ensure!(
-        stderr(&stdin).contains("command_session_not_found"),
-        "write_stdin unknown-session error should carry a stable diagnostic: {stdin}"
+        stderr(&stdin).contains("command_not_found"),
+        "write_stdin unknown-command error should carry a stable diagnostic: {stdin}"
     );
 
     let cancel = lease.call(
@@ -191,11 +191,11 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     )?;
     ensure!(
         as_str(&cancel, "status")? == "error",
-        "cancel against an unknown session should return a structured error: {cancel}"
+        "cancel against an unknown command should return a structured error: {cancel}"
     );
     ensure!(
-        stderr(&cancel).contains("command_session_not_found"),
-        "cancel unknown-session error should carry a stable diagnostic: {cancel}"
+        stderr(&cancel).contains("command_not_found"),
+        "cancel unknown-command error should carry a stable diagnostic: {cancel}"
     );
 
     let collect = lease.call_ok(
@@ -204,9 +204,9 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
     )?;
     ensure!(
         array(&collect, "completions")?.is_empty(),
-        "collect_completed for an unknown session should be an empty read, not an error: {collect}"
+        "collect_completed for an unknown command should be an empty read, not an error: {collect}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -233,14 +233,14 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
         "initial output should expose the timestamped transcript burst: {started}"
     );
     ensure_valid_utf8_prefix(&started)?;
-    let session_id = as_str(&started, "command_id")?.to_owned();
+    let command_id = as_str(&started, "command_id")?.to_owned();
 
     let body = (|| -> Result<()> {
         for _ in 0..2 {
             let poll = lease.call_ok(
                 catalog::SANDBOX_COMMAND_POLL,
                 json!({
-                    "command_id": &session_id,
+                    "command_id": &command_id,
                     "last_n_lines": 1,
                 }),
             )?;
@@ -252,24 +252,24 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
         }
         let cancelled = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
             "cancel should return a terminal-ish status after output pressure: {cancelled}"
         );
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
+        wait_for_command_transcript_recycled(&lease, &command_id)?;
         Ok(())
     })();
 
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         );
-        let _ = wait_for_session_count(&lease, 0);
+        let _ = wait_for_command_count(&lease, 0);
     }
     body
 }
@@ -290,7 +290,7 @@ fn ensure_valid_utf8_prefix(response: &Value) -> Result<()> {
 
 fn poll_read_progress_until_stdout_contains(
     lease: &eos_e2e_test::NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     needle: &str,
     deadline: Instant,
 ) -> Result<Value> {
@@ -299,7 +299,7 @@ fn poll_read_progress_until_stdout_contains(
         let poll = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_id": session_id,
+                "command_id": command_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -327,7 +327,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // A consumer that never reads stdin. A small stdin write fits the PTY buffer
-    // and returns immediately while the session stays cancellable. The over-buffer
+    // and returns immediately while the command stays cancellable. The over-buffer
     // case (where the non-blocking writer must bound the push by a deadline) is
     // covered by `over_buffer_stdin_to_non_reading_consumer_returns_backpressure`.
     let started = lease.call_ok(
@@ -354,7 +354,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     )?;
     ensure!(
         as_str(&wrote, "status")? == "running",
-        "session should stay running after stdin to a non-reading consumer: {wrote}"
+        "command should stay running after stdin to a non-reading consumer: {wrote}"
     );
     ensure!(
         write_started.elapsed() < Duration::from_secs(10),
@@ -365,10 +365,10 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
     ensure!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
-        "session must stay cancellable after stdin pressure: {cancelled}"
+        "command must stay cancellable after stdin pressure: {cancelled}"
     );
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -382,8 +382,8 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     // A consumer that never reads stdin, plus a payload far larger than the kernel
     // PTY input buffer. The non-blocking writer must bound the push by a deadline
     // and return a structured backpressure error instead of wedging, and the
-    // session must stay cancellable. (Before the non-blocking rewrite this write
-    // blocked until the session timeout.)
+    // command must stay cancellable. (Before the non-blocking rewrite this write
+    // blocked until the command timeout.)
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -424,9 +424,9 @@ fn over_buffer_stdin_to_non_reading_consumer_returns_backpressure() -> Result<()
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": &id}))?;
     ensure!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
-        "session must stay cancellable after backpressure: {cancelled}"
+        "command must stay cancellable after backpressure: {cancelled}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }

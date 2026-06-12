@@ -72,7 +72,7 @@ pub(crate) fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
 /// # Errors
 /// Returns an error if the count op fails or never reaches `expected` within
 /// the deadline.
-pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Result<()> {
+pub(crate) fn wait_for_command_count(lease: &NodeLease<'_>, expected: i64) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(5);
     loop {
         let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
@@ -80,13 +80,13 @@ pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Re
             return Ok(());
         }
         if Instant::now() >= deadline {
-            bail!("command_session_count did not reach {expected}: {count}");
+            bail!("command_count did not reach {expected}: {count}");
         }
         thread::sleep(Duration::from_millis(50));
     }
 }
 
-/// Settle a foreground `exec_command` response to its terminal outcome.
+/// Finalize a foreground `exec_command` response to its terminal outcome.
 ///
 /// Native runs of a quick command finish inside the yield window and return
 /// status `"ok"` directly. Under x86-on-arm64 emulation the ns-runner spawn,
@@ -110,7 +110,7 @@ pub(crate) fn finalize_foreground_command(
     if as_str(&response, "status")? != "running" {
         return Ok(response);
     }
-    let session_id = as_str(&response, "command_id")?.to_owned();
+    let command_id = as_str(&response, "command_id")?.to_owned();
     loop {
         // `call` (not `call_ok`): a command that finalizes to a NON-zero exit
         // returns `success:false`, which is a valid terminal outcome here, not a
@@ -118,7 +118,7 @@ pub(crate) fn finalize_foreground_command(
         // finalization.
         let progress = lease.call(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_id": &session_id, "last_n_lines": 50}),
+            json!({"command_id": &command_id, "last_n_lines": 50}),
         )?;
         // A `read_progress` finalizes with `publish_completion = false`
         // and removes the run, so a second poll would 404. Stop on the first
@@ -133,13 +133,13 @@ pub(crate) fn finalize_foreground_command(
             return Ok(progress);
         }
         if Instant::now() >= deadline {
-            bail!("foreground command {session_id} did not finalize before deadline: {progress}");
+            bail!("foreground command {command_id} did not finalize before deadline: {progress}");
         }
         thread::sleep(Duration::from_millis(50));
     }
 }
 
-/// Poll `read_progress` for `session_id` until its transcript contains `needle`
+/// Poll `read_progress` for `command_id` until its transcript contains `needle`
 /// (timestamp prefix stripped). Tolerates output slipping past the first yield
 /// window under emulation while still REQUIRING the needle to appear — it bails
 /// (fails the test) if the deadline passes without it.
@@ -149,14 +149,14 @@ pub(crate) fn finalize_foreground_command(
 /// the deadline.
 pub(crate) fn wait_for_command_stdout_contains(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     needle: &str,
 ) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
-            json!({"command_id": session_id, "last_n_lines": 50}),
+            json!({"command_id": command_id, "last_n_lines": 50}),
         )?;
         if clean_stdout(&progress).contains(needle) {
             return Ok(());
@@ -200,52 +200,52 @@ pub(crate) fn wait_for_container_path(
     }
 }
 
-pub(crate) fn command_session_transcript_path(session_id: &str) -> String {
-    format!("/eos/scratch/command-sessions/{session_id}/transcript.log")
+pub(crate) fn command_transcript_path(command_id: &str) -> String {
+    format!("/eos/scratch/commands/{command_id}/transcript.log")
 }
 
-pub(crate) fn isolated_command_session_transcript_path(
+pub(crate) fn isolated_command_transcript_path(
     workspace_handle_id: &str,
-    session_id: &str,
+    command_id: &str,
 ) -> String {
-    format!("/eos/scratch/isolated/{workspace_handle_id}/sessions/{session_id}/transcript.log")
+    format!("/eos/scratch/isolated/{workspace_handle_id}/commands/{command_id}/transcript.log")
 }
 
-pub(crate) fn command_session_transcript_logs(lease: &NodeLease<'_>) -> Result<Vec<String>> {
+pub(crate) fn command_transcript_logs(lease: &NodeLease<'_>) -> Result<Vec<String>> {
     let script = r#"import json
 import pathlib
 
 paths = []
-for root in [pathlib.Path("/eos/scratch/command-sessions"), pathlib.Path("/eos/scratch/isolated")]:
+for root in [pathlib.Path("/eos/scratch/commands"), pathlib.Path("/eos/scratch/isolated")]:
     if root.exists():
         paths.extend(str(path) for path in root.rglob("transcript.log"))
 print(json.dumps(sorted(paths)))
 "#;
     let output = lease.container().exec(&["python3", "-c", script])?;
     serde_json::from_str(output.trim())
-        .with_context(|| format!("parse command-session transcript log paths from {output:?}"))
+        .with_context(|| format!("parse command transcript log paths from {output:?}"))
 }
 
-pub(crate) fn wait_for_command_session_transcript_recycled(
+pub(crate) fn wait_for_command_transcript_recycled(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
 ) -> Result<()> {
     wait_for_container_path(
         lease,
-        &command_session_transcript_path(session_id),
+        &command_transcript_path(command_id),
         false,
         Duration::from_secs(3),
     )
 }
 
-pub(crate) fn wait_for_isolated_command_session_transcript_recycled(
+pub(crate) fn wait_for_isolated_command_transcript_recycled(
     lease: &NodeLease<'_>,
     workspace_handle_id: &str,
-    session_id: &str,
+    command_id: &str,
 ) -> Result<()> {
     wait_for_container_path(
         lease,
-        &isolated_command_session_transcript_path(workspace_handle_id, session_id),
+        &isolated_command_transcript_path(workspace_handle_id, command_id),
         false,
         Duration::from_secs(3),
     )
@@ -312,7 +312,7 @@ pub(crate) fn stdout(value: &Value) -> &str {
 
 /// Command stdout with the per-line `[ISO-8601] ` transcript timestamp prefix
 /// removed. The daemon's PTY reader prepends a wall-clock timestamp to every
-/// transcript line (for `read_progress` monitoring), so a settled command's
+/// transcript line (for `read_progress` monitoring), so a finalized command's
 /// `output.stdout` carries those prefixes. Tests that assert on the command's
 /// actual output strip the environment-dependent timestamp first; lines without
 /// a timestamp prefix pass through unchanged.

@@ -36,7 +36,7 @@ eos-sandbox-host   (lib, host)   owns and reaches sandboxes: host engine,
    │  loopback TCP (docker-published port) + auth token; `docker exec` fallback
    ▼
 eosd / eos-daemon  (bin+lib, in-container)   executes in-box ops: files (layer
-                                 stack + OCC), command sessions (PTY), isolated
+                                 stack + OCC), commands (PTY), isolated
                                  workspaces, plugins (PPC), checkpoint.
 ```
 
@@ -260,7 +260,7 @@ sandbox/
 │   ├── eos-layerstack/             CAS hashes, storage, leases, commit queue
 │   ├── eos-overlay/                overlayfs mount/capture leaf
 │   ├── eos-namespace/              holder + runner namespace child support
-│   ├── eos-command-session/        PTY-backed command sessions
+│   ├── eos-command/        PTY-backed commands
 │   ├── eos-workspace/              ephemeral + isolated workspace policy
 │   ├── eos-plugin/                 plugin contracts and PPC protocol
 │   ├── eos-operation/

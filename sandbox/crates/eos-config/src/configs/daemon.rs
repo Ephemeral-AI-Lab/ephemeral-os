@@ -21,7 +21,7 @@ pub struct DaemonConfig {
     pub inflight: InflightConfig,
     #[serde(rename = "command_sessions")]
     pub commands: CommandConfig,
-    pub isolated_sweeper: IsolatedSweeperConfig,
+    pub idle_workspace_eviction: IdleWorkspaceEvictionConfig,
     pub plugin: PluginRuntimeConfig,
     pub layer_stack: LayerStackConfig,
     pub files: FileLimitsConfig,
@@ -44,8 +44,8 @@ pub struct InflightConfig {
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct IsolatedSweeperConfig {
-    pub ttl_sweep_interval_ms: u64,
+pub struct IdleWorkspaceEvictionConfig {
+    pub interval_ms: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -155,9 +155,9 @@ impl DaemonConfig {
             "daemon.command_sessions.transcript_timestamp_timezone",
         )?;
         require_u64_at_least(
-            self.isolated_sweeper.ttl_sweep_interval_ms,
+            self.idle_workspace_eviction.interval_ms,
             1,
-            "daemon.isolated_sweeper.ttl_sweep_interval_ms",
+            "daemon.idle_workspace_eviction.interval_ms",
         )?;
         require_absolute(&self.plugin.ppc_root, "daemon.plugin.ppc_root")?;
         require_u64_at_least(

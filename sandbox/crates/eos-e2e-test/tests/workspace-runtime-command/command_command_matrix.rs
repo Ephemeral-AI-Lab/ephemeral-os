@@ -8,9 +8,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, command_session_transcript_logs, finalize_foreground_command,
-    live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled, wait_for_session_count,
+    array, as_i64, as_str, command_transcript_logs, finalize_foreground_command, live_pool_or_skip,
+    stdout, wait_for_active_leases, wait_for_command_count, wait_for_command_transcript_recycled,
 };
 
 struct CommandFamily {
@@ -81,7 +80,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
 
     let started = Instant::now();
     let mut executed = 0;
-    let before_transcripts = command_session_transcript_logs(&lease)?;
+    let before_transcripts = command_transcript_logs(&lease)?;
     ensure!(
         family.variants.len() >= 2,
         "command family {} should have multiple variants",
@@ -128,9 +127,9 @@ fn run_command_family(family_name: &str) -> Result<()> {
         "command family {} should stay bounded by the per-command timeout",
         family.name
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
-    let after_transcripts = command_session_transcript_logs(&lease)?;
+    let after_transcripts = command_transcript_logs(&lease)?;
     ensure!(
         after_transcripts == before_transcripts,
         "foreground command family should recycle transient transcripts; before={before_transcripts:?} after={after_transcripts:?}"
@@ -164,15 +163,15 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
     )?;
     ensure!(
         output_contains(&started, "prompt:one"),
-        "prompt session should expose the first prompt: {started}"
+        "prompt command should expose the first prompt: {started}"
     );
-    let session_id = as_str(&started, "command_id")?.to_owned();
+    let command_id = as_str(&started, "command_id")?.to_owned();
 
     let body = (|| -> Result<()> {
         let first = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_id": &session_id,
+                "command_id": &command_id,
                 "chars": "alpha payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -189,7 +188,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         let progress = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_id": &session_id,
+                "command_id": &command_id,
                 "last_n_lines": 4,
             }),
         )?;
@@ -201,7 +200,7 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
         let second = lease.call_ok(
             catalog::SANDBOX_COMMAND_WRITE_STDIN,
             json!({
-                "command_id": &session_id,
+                "command_id": &command_id,
                 "chars": "beta payload\n",
                 "yield_time_ms": 1500,}),
         )?;
@@ -216,30 +215,30 @@ fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
 
         let not_done = lease.call_ok(
             catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
-            json!({"command_ids": [session_id.clone()]}),
+            json!({"command_ids": [command_id.clone()]}),
         )?;
         ensure!(
             array(&not_done, "completions")?.is_empty(),
-            "sleeping prompt session must not produce a completion before cancellation: {not_done}"
+            "sleeping prompt command must not produce a completion before cancellation: {not_done}"
         );
 
         let cancel = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         )?;
         ensure_terminalish_status(&cancel)?;
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
-        wait_for_command_session_transcript_recycled(&lease, &session_id)?;
+        wait_for_command_transcript_recycled(&lease, &command_id)?;
         Ok(())
     })();
 
     if body.is_err() {
         let _ = lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": &session_id}),
+            json!({"command_id": &command_id}),
         );
-        let _ = wait_for_session_count(&lease, 0);
+        let _ = wait_for_command_count(&lease, 0);
     }
     body
 }
@@ -252,7 +251,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
     let levels = pool.workload().concurrency_levels.clone();
     ensure!(
         levels == [1, 3, 6, 12],
-        "command-session workload.concurrency_levels should use [1, 3, 6, 12], got {levels:?}"
+        "command workload.concurrency_levels should use [1, 3, 6, 12], got {levels:?}"
     );
     let lease = pool.acquire()?;
     let timeout_s = workload_timeout_s(&pool);
@@ -262,7 +261,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
             "command-load/level-{level}/{}",
             unique_suffix().replace('-', "_")
         );
-        let before_transcripts = command_session_transcript_logs(&lease)?;
+        let before_transcripts = command_transcript_logs(&lease)?;
         let barrier = Arc::new(Barrier::new(level));
         let handles: Vec<_> = (0..level)
             .map(|index| {
@@ -325,13 +324,13 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
             as_i64(&metrics, "active_leases")? == 0,
             "parallel command level {level} should not leak leases: {metrics}"
         );
-        let after_transcripts = command_session_transcript_logs(&lease)?;
+        let after_transcripts = command_transcript_logs(&lease)?;
         ensure!(
             after_transcripts == before_transcripts,
             "parallel foreground command level {level} should recycle transient transcripts; before={before_transcripts:?} after={after_transcripts:?}"
         );
     }
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     Ok(())
 }
 
@@ -343,13 +342,13 @@ fn parallel_prompt_sessions_ladder_stays_isolated_and_bounded() -> Result<()> {
     let levels = pool.workload().concurrency_levels.clone();
     ensure!(
         levels == [1, 3, 6, 12],
-        "command-session workload.concurrency_levels should use [1, 3, 6, 12], got {levels:?}"
+        "command workload.concurrency_levels should use [1, 3, 6, 12], got {levels:?}"
     );
     let lease = pool.acquire()?;
     let timeout_s = workload_timeout_s(&pool);
 
     for level in levels {
-        let before_transcripts = command_session_transcript_logs(&lease)?;
+        let before_transcripts = command_transcript_logs(&lease)?;
         let barrier = Arc::new(Barrier::new(level));
         let handles: Vec<_> = (0..level)
             .map(|index| {
@@ -382,7 +381,7 @@ time.sleep(60)'"
                         as_str(&started, "status")? == "running",
                         "parallel prompt worker should stay running: {started}"
                     );
-                    let session_id = as_str(&started, "command_id")?.to_owned();
+                    let command_id = as_str(&started, "command_id")?.to_owned();
                     let prompt_needle = format!("prompt:{marker}");
                     let reply_needle = format!("reply:{marker}:payload-{level}-{index}");
                     // Under emulation python startup can outlast the 500ms yield,
@@ -395,7 +394,7 @@ time.sleep(60)'"
                             &client,
                             &root,
                             &caller_id,
-                            &session_id,
+                            &command_id,
                             &prompt_needle,
                             Instant::now() + Duration::from_secs(timeout_s.min(15)),
                         )?
@@ -411,7 +410,7 @@ time.sleep(60)'"
                         &root,
                         &caller_id,
                         json!({
-                            "command_id": &session_id,
+                            "command_id": &command_id,
                             "chars": format!("payload-{level}-{index}\n"),
                             "yield_time_ms": 1500,}),
                     )?;
@@ -426,7 +425,7 @@ time.sleep(60)'"
                             &client,
                             &root,
                             &caller_id,
-                            &session_id,
+                            &command_id,
                             &reply_needle,
                             Instant::now() + Duration::from_secs(timeout_s.min(15)),
                         )?
@@ -442,7 +441,7 @@ time.sleep(60)'"
                         &root,
                         &caller_id,
                         json!({
-                            "command_id": &session_id,
+                            "command_id": &command_id,
                             "last_n_lines": 4,
                         }),
                     )?;
@@ -456,7 +455,7 @@ time.sleep(60)'"
                         catalog::SANDBOX_COMMAND_CANCEL,
                         &root,
                         &caller_id,
-                        json!({"command_id": &session_id}),
+                        json!({"command_id": &command_id}),
                     )?;
                     ensure_terminalish_status(&cancel)?;
                     Ok(())
@@ -469,16 +468,16 @@ time.sleep(60)'"
                 .join()
                 .map_err(|_| anyhow!("parallel prompt worker panicked"))??;
         }
-        wait_for_session_count(&lease, 0)?;
+        wait_for_command_count(&lease, 0)?;
         let metrics = wait_for_active_leases(&lease, 0)?;
         ensure!(
             as_i64(&metrics, "active_leases")? == 0,
             "parallel prompt level {level} should not leak leases: {metrics}"
         );
-        let after_transcripts = command_session_transcript_logs(&lease)?;
+        let after_transcripts = command_transcript_logs(&lease)?;
         ensure!(
             after_transcripts == before_transcripts,
-            "parallel prompt level {level} should recycle command-session transcripts; before={before_transcripts:?} after={after_transcripts:?}"
+            "parallel prompt level {level} should recycle command transcripts; before={before_transcripts:?} after={after_transcripts:?}"
         );
     }
     Ok(())
@@ -488,7 +487,7 @@ fn poll_read_progress_until_contains(
     client: &eos_e2e_test::client::ProtocolClient,
     root: &str,
     caller_id: &str,
-    session_id: &str,
+    command_id: &str,
     needle: &str,
     deadline: Instant,
 ) -> Result<Value> {
@@ -500,7 +499,7 @@ fn poll_read_progress_until_contains(
             root,
             caller_id,
             json!({
-                "command_id": session_id,
+                "command_id": command_id,
                 "last_n_lines": 8,
             }),
         )?;
@@ -776,7 +775,7 @@ fn assert_command_ok(response: &Value, family: &str, variant: &str) -> Result<()
     );
     ensure!(
         response.get("command_id").is_none(),
-        "{family}:{variant} should not leave a command session handle: {response}"
+        "{family}:{variant} should not leave a command handle: {response}"
     );
     Ok(())
 }

@@ -7,12 +7,12 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_i64, as_str, command_session_transcript_logs, command_session_transcript_path,
+    array, as_i64, as_str, command_transcript_logs, command_transcript_path,
     finalize_foreground_command, live_pool_or_skip, stdout, wait_for_active_leases,
-    wait_for_command_session_transcript_recycled, wait_for_container_path, wait_for_session_count,
+    wait_for_command_count, wait_for_command_transcript_recycled, wait_for_container_path,
 };
 
-fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
+fn start_sleeping_command(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -24,21 +24,21 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
     assert_eq!(as_str(&started, "status")?, "running");
     assert!(
         stdout(&started).contains(marker),
-        "session should print marker before returning: {started}"
+        "command should print marker before returning: {started}"
     );
     Ok(as_str(&started, "command_id")?.to_owned())
 }
 
-fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
+fn cancel_command(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(catalog::SANDBOX_COMMAND_CANCEL, json!({"command_id": id}))?;
-    wait_for_command_session_transcript_recycled(lease, id)?;
+    wait_for_command_transcript_recycled(lease, id)?;
     Ok(cancelled)
 }
 
 fn wait_for_transcript_logs(lease: &NodeLease<'_>, expected: &[String]) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
-        let current = command_session_transcript_logs(lease)?;
+        let current = command_transcript_logs(lease)?;
         if current == expected {
             return Ok(());
         }
@@ -50,13 +50,10 @@ fn wait_for_transcript_logs(lease: &NodeLease<'_>, expected: &[String]) -> Resul
 }
 
 fn process_marker() -> String {
-    format!(
-        "eos_e2e_command_session_{}",
-        unique_suffix().replace('-', "_")
-    )
+    format!("eos_e2e_command_{}", unique_suffix().replace('-', "_"))
 }
 
-fn assert_teardown_control_reaps_marker_process(
+fn assert_teardown_control_removes_marker_process(
     lease: &NodeLease<'_>,
     label: &str,
     chars: &str,
@@ -91,22 +88,22 @@ fn assert_teardown_control_reaps_marker_process(
     assert_eq!(
         as_str(&cancelled, "status")?,
         "cancelled",
-        "{label} should route to command-session cancel: {cancelled}"
+        "{label} should route to command cancel: {cancelled}"
     );
-    // When the cancel reaps the child within cancel_wait_ms the daemon returns
-    // the reaped shape (exit_code 130). Under qemu emulation the reap can exceed
+    // When cancellation collects the child exit within cancel_wait_ms the daemon returns
+    // the finalized shape (exit_code 130). Under qemu emulation that can exceed
     // that window, so the daemon returns the inline cancelled response with a
     // null exit_code instead. Both are valid cancelled shapes; the authoritative
-    // teardown (process group killed, session + leases drained) is verified by
-    // the marker/session/lease waits below, so accept either exit shape here.
+    // teardown (process group killed, command + leases drained) is verified by
+    // the marker/command/lease waits below, so accept either exit shape here.
     if let Some(exit_code) = cancelled.get("exit_code").and_then(Value::as_i64) {
         assert_eq!(
             exit_code, 130,
             "{label} cancelled exit_code, when present, must be 130: {cancelled}"
         );
     }
-    wait_for_session_count(lease, 0)?;
-    wait_for_command_session_transcript_recycled(lease, &id)?;
+    wait_for_command_count(lease, 0)?;
+    wait_for_command_transcript_recycled(lease, &id)?;
     wait_for_active_leases(lease, 0)?;
     wait_for_marker_count(lease, &marker, 0, Duration::from_secs(3))?;
     Ok(())
@@ -149,14 +146,14 @@ fn has_timestamp_prefix(line: &str) -> bool {
 }
 
 #[test]
-fn exec_returns_session_id() -> Result<()> {
+fn exec_returns_command_id() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let id = start_sleeping_session(&lease, "session-started")?;
+    let id = start_sleeping_command(&lease, "command-started")?;
     assert!(!id.is_empty());
-    cancel_session(&lease, &id)?;
+    cancel_command(&lease, &id)?;
     Ok(())
 }
 
@@ -182,7 +179,7 @@ fn exec_command_outputs_timestamped_transcript_lines() -> Result<()> {
         "completed command should return its transcript output: {completed}"
     );
     assert_timestamped_lines(stdout(&completed), &completed);
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -202,7 +199,7 @@ fn write_stdin_echo() -> Result<()> {
         }),
     )?;
     let id = as_str(&started, "command_id")?.to_owned();
-    let transcript_path = command_session_transcript_path(&id);
+    let transcript_path = command_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
     let stdin = lease.call_ok(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
@@ -224,7 +221,7 @@ fn write_stdin_echo() -> Result<()> {
         "stdin-triggered completion should return the full captured output: {stdin}"
     );
     assert_timestamped_lines(stdout(&stdin), &stdin);
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_container_path(&lease, &transcript_path, false, Duration::from_secs(3))?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
@@ -292,12 +289,12 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
             && !stdout(&tail).contains("progress-first"),
         "last_n_lines should bound the read-progress tail without consuming state: {tail}"
     );
-    cancel_session(&lease, &id)?;
+    cancel_command(&lease, &id)?;
     Ok(())
 }
 
 #[test]
-fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -> Result<()> {
+fn read_command_progress_finalizes_completed_command_and_recycles_transcript() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -312,7 +309,7 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     let id = as_str(&started, "command_id")?.to_owned();
-    let transcript_path = command_session_transcript_path(&id);
+    let transcript_path = command_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -333,11 +330,11 @@ fn read_command_progress_finalizes_completed_session_and_recycles_transcript() -
             break;
         }
         if Instant::now() >= deadline {
-            bail!("read_progress did not finalize the completed session: {progress}");
+            bail!("read_progress did not finalize the completed command: {progress}");
         }
         thread::sleep(Duration::from_millis(100));
     }
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_container_path(&lease, &transcript_path, false, Duration::from_secs(3))?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
@@ -374,7 +371,7 @@ fn collect_completed_drains() -> Result<()> {
             break;
         }
         if Instant::now() >= deadline {
-            bail!("session completion was not parked before deadline");
+            bail!("command completion was not parked before deadline");
         }
         thread::sleep(Duration::from_millis(100));
     }
@@ -386,7 +383,7 @@ fn collect_completed_drains() -> Result<()> {
         array(&redelivered, "completions")?.is_empty(),
         "collect_completed should remove delivered completions: {redelivered}"
     );
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -435,7 +432,7 @@ fn collect_completed_preserves_full_timestamped_transcript() -> Result<()> {
         "completion stdout lost transcript suffix; bytes={}",
         output.len()
     );
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     Ok(())
 }
 
@@ -445,7 +442,7 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before = command_session_transcript_logs(&lease)?;
+    let before = command_transcript_logs(&lease)?;
     let marker = format!(
         "finite-transcript-{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
@@ -464,7 +461,7 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
     );
     assert!(
         completed.get("command_id").is_none(),
-        "finite command should not expose a background session handle: {completed}"
+        "finite command should not expose a background command handle: {completed}"
     );
     assert!(
         stdout(&completed).contains(&format!("{marker}-a"))
@@ -472,14 +469,14 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
             && stdout(&completed).contains(&format!("{marker}-c")),
         "finite command should return its full stdout in the initial response: {completed}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     wait_for_transcript_logs(&lease, &before)?;
     Ok(())
 }
 
 #[test]
-fn completed_session_removes_transcript_file() -> Result<()> {
+fn completed_command_removes_transcript_file() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -494,7 +491,7 @@ fn completed_session_removes_transcript_file() -> Result<()> {
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     let id = as_str(&started, "command_id")?.to_owned();
-    let transcript_path = command_session_transcript_path(&id);
+    let transcript_path = command_transcript_path(&id);
     wait_for_container_path(&lease, &transcript_path, true, Duration::from_secs(3))?;
 
     let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
@@ -503,7 +500,7 @@ fn completed_session_removes_transcript_file() -> Result<()> {
         stdout(result).contains("transcript-start") && stdout(result).contains("transcript-end"),
         "completion should carry the final stdout: {completion}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_container_path(&lease, &transcript_path, false, Duration::from_secs(3))?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
@@ -515,8 +512,8 @@ fn cancel_unblocks() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let id = start_sleeping_session(&lease, "cancel-ready")?;
-    let cancel = cancel_session(&lease, &id)?;
+    let id = start_sleeping_command(&lease, "cancel-ready")?;
+    let cancel = cancel_command(&lease, &id)?;
     assert!(
         matches!(as_str(&cancel, "status")?, "cancelled" | "error" | "ok"),
         "cancel should return a terminal-ish status: {cancel}"
@@ -525,26 +522,26 @@ fn cancel_unblocks() -> Result<()> {
 }
 
 #[test]
-fn session_count_accuracy() -> Result<()> {
+fn command_count_accuracy() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let first = start_sleeping_session(&lease, "count-one")?;
-    let second = start_sleeping_session(&lease, "count-two")?;
+    let first = start_sleeping_command(&lease, "count-one")?;
+    let second = start_sleeping_command(&lease, "count-two")?;
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         2,
-        "two live sessions expected: {count}"
+        "two live commands expected: {count}"
     );
-    cancel_session(&lease, &first)?;
-    cancel_session(&lease, &second)?;
+    cancel_command(&lease, &first)?;
+    cancel_command(&lease, &second)?;
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         0,
-        "cancel should remove sessions: {count}"
+        "cancel should remove commands: {count}"
     );
     Ok(())
 }
@@ -555,7 +552,7 @@ fn exec_timeout() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let before = command_session_transcript_logs(&lease)?;
+    let before = command_transcript_logs(&lease)?;
     let start = Instant::now();
     let timed_out = lease.call(
         catalog::SANDBOX_COMMAND_EXEC,
@@ -577,13 +574,13 @@ fn exec_timeout() -> Result<()> {
     );
     assert!(
         matches!(as_i64(&timed_out, "exit_code")?, 124 | -9 | 130),
-        "timeout may surface as runner timeout or daemon reaper kill: {timed_out}"
+        "timeout may surface as runner timeout or daemon timeout kill: {timed_out}"
     );
     assert!(
         timed_out.get("command_id").is_none(),
         "foreground timeout should not expose a recycled background handle: {timed_out}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     wait_for_transcript_logs(&lease, &before)?;
     Ok(())
@@ -611,7 +608,7 @@ fn output_burst_returns_full_timestamped_transcript() -> Result<()> {
     );
     assert_timestamped_lines(stdout(&exec), &exec);
     let id = as_str(&exec, "command_id")?;
-    cancel_session(&lease, id)?;
+    cancel_command(&lease, id)?;
     Ok(())
 }
 
@@ -631,16 +628,16 @@ fn cancel_by_invocation_id_reports_already_done_for_idle_id() -> Result<()> {
 }
 
 #[test]
-fn write_stdin_ctrl_d_reaps_marker_process() -> Result<()> {
+fn write_stdin_ctrl_d_removes_marker_process() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    assert_teardown_control_reaps_marker_process(&lease, "ctrl-d", "\u{4}")
+    assert_teardown_control_removes_marker_process(&lease, "ctrl-d", "\u{4}")
 }
 
 #[test]
-fn nohup_child_keeps_session_running() -> Result<()> {
+fn nohup_child_keeps_command_running() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -659,10 +656,10 @@ fn nohup_child_keeps_session_running() -> Result<()> {
     assert_eq!(
         as_str(&started, "status")?,
         "running",
-        "plain nohup stays in the runner process group and keeps the session live: {started}"
+        "plain nohup stays in the runner process group and keeps the command live: {started}"
     );
     let id = as_str(&started, "command_id")?.to_owned();
-    wait_for_session_stdout(&lease, &id, &started, "nohup-ready")?;
+    wait_for_command_stdout(&lease, &id, &started, "nohup-ready")?;
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
     let collected = lease.call_ok(
@@ -674,7 +671,7 @@ fn nohup_child_keeps_session_running() -> Result<()> {
         "nohup child in the same process group must not finalize early: {collected}"
     );
 
-    cancel_session(&lease, &id)?;
+    cancel_command(&lease, &id)?;
     wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(3))?;
     Ok(())
 }
@@ -703,21 +700,21 @@ fn setsid_nohup_contract() -> Result<()> {
     );
     assert!(
         completed.get("command_id").is_none(),
-        "completed setsid command must not leave a command session handle: {completed}"
+        "completed setsid command must not leave a command handle: {completed}"
     );
     assert!(
         stdout(&completed).contains("setsid-ready"),
         "foreground shell should report the detached launch: {completed}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_marker_at_least(&lease, &marker, 1)?;
     wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(6))?;
     Ok(())
 }
 
-fn wait_for_session_stdout(
+fn wait_for_command_stdout(
     lease: &NodeLease<'_>,
-    session_id: &str,
+    command_id: &str,
     initial: &Value,
     marker: &str,
 ) -> Result<()> {
@@ -729,12 +726,12 @@ fn wait_for_session_stdout(
     let mut last = initial.clone();
     loop {
         if Instant::now() >= deadline {
-            bail!("session output never contained {marker}: {last}");
+            bail!("command output never contained {marker}: {last}");
         }
         let poll = lease.call_ok(
             catalog::SANDBOX_COMMAND_POLL,
             json!({
-                "command_id": session_id,
+                "command_id": command_id,
                 "last_n_lines": 20
             }),
         )?;
@@ -804,7 +801,7 @@ fn wait_for_marker_count(
 }
 
 /// Send `signal` to every container process whose argv carries `marker`, from a
-/// process fully outside the command session (a container `python3` exec). This
+/// process fully outside the command (a container `python3` exec). This
 /// is the "killed by another process" path: termination that did NOT come from
 /// the `cancel` / Ctrl-C/Ctrl-D write_stdin API. The scanner excludes its own pid so
 /// it never signals itself (its argv carries `marker` too).
@@ -830,8 +827,8 @@ for proc in pathlib.Path("/proc").iterdir():
     Ok(())
 }
 
-/// Poll `collect_completed` until the session parks a terminal completion. A
-/// fire-and-forget session (no live poller) finalizes through the reaper, so the
+/// Poll `collect_completed` until the command parks a terminal completion. A
+/// fire-and-forget command (no live poller) finalizes through background command advancement, so the
 /// completion arrives asynchronously and must be polled for.
 fn collect_completion(lease: &NodeLease<'_>, id: &str, within: Duration) -> Result<Value> {
     let deadline = Instant::now() + within;
@@ -844,7 +841,7 @@ fn collect_completion(lease: &NodeLease<'_>, id: &str, within: Duration) -> Resu
             return Ok(completion.clone());
         }
         if Instant::now() >= deadline {
-            bail!("session {id} never parked a completion within {within:?}");
+            bail!("command {id} never parked a completion within {within:?}");
         }
         thread::sleep(Duration::from_millis(100));
     }
@@ -866,9 +863,9 @@ fn external_signal_kill_is_structured() -> Result<()> {
     let lease = pool.acquire()?;
     let marker = process_marker();
     // A separate container process SIGKILLs the foreground out from under the
-    // session — no cancel API call is involved. The runner must reap the
-    // signal death, finalize the session, park exactly one completion, and release
-    // the lease.
+    // command — no cancel API call is involved. The runner must capture the
+    // signal death, finalize the command, park exactly one completion, and
+    // release the lease.
     let started = lease.call_ok(
         catalog::SANDBOX_COMMAND_EXEC,
         json!({
@@ -889,7 +886,7 @@ fn external_signal_kill_is_structured() -> Result<()> {
     assert_ne!(
         as_str(result, "status")?,
         "ok",
-        "an externally killed session must not report ok: {completion}"
+        "an externally killed command must not report ok: {completion}"
     );
     assert!(
         signal_coded_exit(as_i64(result, "exit_code")?),
@@ -899,8 +896,8 @@ fn external_signal_kill_is_structured() -> Result<()> {
         stdout(result).contains("kill-ready"),
         "external SIGKILL completion should preserve output captured before death: {completion}"
     );
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
     wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(3))?;
     Ok(())
@@ -933,7 +930,7 @@ fn self_kill_reports_signal_exit() -> Result<()> {
             signal_coded_exit(as_i64(result, "exit_code")?),
             "self-kill should surface a signal-coded exit_code: {completion}"
         );
-        wait_for_command_session_transcript_recycled(&lease, &id)?;
+        wait_for_command_transcript_recycled(&lease, &id)?;
     } else {
         assert_ne!(
             as_str(&exec, "status")?,
@@ -945,7 +942,7 @@ fn self_kill_reports_signal_exit() -> Result<()> {
             "self-kill should surface a signal-coded exit_code: {exec}"
         );
     }
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
@@ -959,7 +956,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     let fg = process_marker();
     let peer = format!("{}_peer", process_marker());
     // A foreground plus a same-pgid background peer. Killing ONLY the foreground by
-    // external signal must NOT finalize the session: the pgid scope-wait keeps it
+    // external signal must NOT finalize the command: the pgid scope-wait keeps it
     // running until the surviving peer also exits. This is the intersection of
     // "killed by other process" and "remains running".
     let started = lease.call_ok(
@@ -981,13 +978,13 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     kill_marker(&lease, &fg, 9)?;
     wait_for_marker_count(&lease, &fg, 0, Duration::from_secs(3))?;
 
-    // Peer still alive keeps the pgid non-empty, so the session stays running and
+    // Peer still alive keeps the pgid non-empty, so the command stays running and
     // does not finalize.
     let count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     assert_eq!(
         as_i64(&count, "count")?,
         1,
-        "a surviving same-pgid peer must keep the session running: {count}"
+        "a surviving same-pgid peer must keep the command running: {count}"
     );
     let still = lease.call_ok(
         catalog::SANDBOX_COMMAND_COLLECT_COMPLETED,
@@ -995,27 +992,27 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     )?;
     assert!(
         array(&still, "completions")?.is_empty(),
-        "session must not finalize while the peer lives: {still}"
+        "command must not finalize while the peer lives: {still}"
     );
 
-    // The peer now exits too, so the scope-wait empties and the session finalizes.
+    // The peer now exits too, so the scope-wait empties and the command finalizes.
     kill_marker(&lease, &peer, 9)?;
     wait_for_marker_count(&lease, &peer, 0, Duration::from_secs(3))?;
     let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
     assert_eq!(completion["command_id"], json!(&id), "{completion}");
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
 
 #[test]
-fn write_stdin_to_completed_session_is_structured() -> Result<()> {
+fn write_stdin_to_completed_command_is_structured() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    // A session that finishes on its own and is left uncollected. A late
+    // A command that finishes on its own and is left uncollected. A late
     // write_stdin against the finished id must return a structured terminal
     // response (not a hang or a running zombie), distinct from the not-found error
     // returned for an id that never existed.
@@ -1028,10 +1025,10 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
         }),
     )?;
     let id = as_str(&started, "command_id")?.to_owned();
-    // Count returning to zero means the session left the live registry (finished);
+    // Count returning to zero means the command left the live registry (finished);
     // its completion is parked but uncollected.
-    wait_for_session_count(&lease, 0)?;
-    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_command_count(&lease, 0)?;
+    wait_for_command_transcript_recycled(&lease, &id)?;
 
     let late = lease.call(
         catalog::SANDBOX_COMMAND_WRITE_STDIN,
@@ -1043,7 +1040,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     )?;
     assert!(
         matches!(as_str(&late, "status")?, "ok" | "error" | "cancelled"),
-        "write_stdin to a finished session must return a structured terminal status: {late}"
+        "write_stdin to a finished command must return a structured terminal status: {late}"
     );
 
     // Drain the parked completion so a recycled container starts clean.
@@ -1056,12 +1053,12 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
 }
 
 #[test]
-fn ctrl_c_char_cancels_command_session() -> Result<()> {
+fn ctrl_c_char_cancels_command() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    assert_teardown_control_reaps_marker_process(&lease, "ctrl-c", "\u{3}")
+    assert_teardown_control_removes_marker_process(&lease, "ctrl-c", "\u{3}")
 }
 
 #[test]
@@ -1088,7 +1085,7 @@ fn model_shell_sees_masked_proc() -> Result<()> {
         stdout(&exec).contains("procvisible=0"),
         "model shell must see an empty masked /proc (no host process list): {exec}"
     );
-    wait_for_session_count(&lease, 0)?;
+    wait_for_command_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
