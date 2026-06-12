@@ -147,6 +147,11 @@ impl InFlightRegistry {
             .count()
     }
 
+    /// Count all tracked invocations, including foreground work.
+    pub fn inflight_count(&self) -> usize {
+        self.lock_state().len()
+    }
+
     /// Cancel every background entry idle past the TTL.
     pub fn ttl_sweep(&self) {
         let mut state = self.lock_state();

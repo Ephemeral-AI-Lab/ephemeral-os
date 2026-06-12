@@ -29,6 +29,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     let workspace = EphemeralWorkspace::create(&scratch, "test", id).expect("scaffold workspace");
     Arc::new(ActiveCommand::Ephemeral(EphemeralRun {
         process,
+        trace_origin: CommandTraceOrigin::default(),
         root: PathBuf::from("/layers"),
         snapshot: Snapshot {
             lease_id: "lease".to_owned(),
@@ -59,6 +60,24 @@ fn insert_get_count_remove_track_caller_runs() {
     assert!(registry.remove("cmd_1").is_some());
     assert_eq!(registry.count_by_caller(Some("caller")), 0);
     assert_eq!(registry.live().len(), 1);
+}
+
+#[test]
+fn command_trace_origin_copies_start_request_identity() {
+    let request = StartCommand {
+        invocation_id: "invoke-command".to_owned(),
+        caller_id: "caller".to_owned(),
+        cmd: "echo ok".to_owned(),
+        trace_id: Some("trace-command".to_owned()),
+        request_id: Some("request-command".to_owned()),
+        timeout_seconds: None,
+        yield_time_ms: 0,
+    };
+
+    let origin = CommandTraceOrigin::from_start(&request);
+
+    assert_eq!(origin.trace_id.as_deref(), Some("trace-command"));
+    assert_eq!(origin.request_id.as_deref(), Some("request-command"));
 }
 
 #[test]

@@ -14,6 +14,8 @@ pub struct DispatchContext<'ctx> {
     file_limits: Option<FileLimitsConfig>,
     read_request_s: Option<f64>,
     trace_events: Option<RequestTraceEventSink>,
+    trace_id: Option<String>,
+    request_id: Option<String>,
 }
 
 impl<'ctx> DispatchContext<'ctx> {
@@ -26,6 +28,8 @@ impl<'ctx> DispatchContext<'ctx> {
             file_limits: None,
             read_request_s: None,
             trace_events: None,
+            trace_id: None,
+            request_id: None,
         }
     }
 
@@ -38,6 +42,8 @@ impl<'ctx> DispatchContext<'ctx> {
             file_limits: None,
             read_request_s: None,
             trace_events: None,
+            trace_id: None,
+            request_id: None,
         }
     }
 
@@ -50,6 +56,8 @@ impl<'ctx> DispatchContext<'ctx> {
             file_limits: None,
             read_request_s: None,
             trace_events: None,
+            trace_id: None,
+            request_id: None,
         }
     }
 
@@ -68,12 +76,21 @@ impl<'ctx> DispatchContext<'ctx> {
             file_limits: Some(file_limits),
             read_request_s: Some(read_request_s),
             trace_events: None,
+            trace_id: None,
+            request_id: None,
         }
     }
 
     #[must_use]
     pub(crate) fn with_trace_events(mut self, trace_events: RequestTraceEventSink) -> Self {
         self.trace_events = Some(trace_events);
+        self
+    }
+
+    #[must_use]
+    pub(crate) fn with_trace_identity(mut self, trace_id: String, request_id: String) -> Self {
+        self.trace_id = Some(trace_id);
+        self.request_id = Some(request_id);
         self
     }
 
@@ -106,6 +123,14 @@ impl<'ctx> DispatchContext<'ctx> {
         self.read_request_s
     }
 
+    pub(crate) fn trace_id(&self) -> Option<&str> {
+        self.trace_id.as_deref()
+    }
+
+    pub(crate) fn request_id(&self) -> Option<&str> {
+        self.request_id.as_deref()
+    }
+
     pub(crate) fn record_trace_event(
         &self,
         module: impl Into<String>,
@@ -125,6 +150,8 @@ impl<'ctx> DispatchContext<'ctx> {
             file_limits: None,
             read_request_s: Some(read_request_s),
             trace_events: None,
+            trace_id: None,
+            request_id: None,
         }
     }
 }

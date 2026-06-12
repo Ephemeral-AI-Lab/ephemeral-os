@@ -527,19 +527,21 @@ impl DaemonServer {
         let file_limits = self.file_limits;
         let trace_events = crate::trace::RequestTraceEventSink::default();
         let task_trace_events = trace_events.clone();
+        let task_trace_identity = trace.clone();
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
-            crate::dispatcher::dispatch_with_context(
-                &request,
-                DispatchContext::with_runtime_config(
-                    &task_services,
-                    &task_registry,
-                    file_limits,
-                    read_request_s,
-                )
-                .with_trace_events(task_trace_events),
+            let mut context = DispatchContext::with_runtime_config(
+                &task_services,
+                &task_registry,
+                file_limits,
+                read_request_s,
             )
+            .with_trace_events(task_trace_events);
+            if let Some(trace) = task_trace_identity {
+                context = context.with_trace_identity(trace.trace_id, trace.request_id);
+            }
+            crate::dispatcher::dispatch_with_context(&request, context)
         });
         registry.register(&invocation_id, task.abort_handle(), &caller_id, background);
         let _ = start_tx.send(());

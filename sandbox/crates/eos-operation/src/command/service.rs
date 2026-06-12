@@ -20,7 +20,9 @@ use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse
 use super::finalize::{discarded_response, finalize_ephemeral_command, finalize_isolated_command};
 use super::outcome::FinalizeCommandRequest;
 use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
-use super::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
+use super::registry::{
+    ActiveCommand, CommandRegistry, CommandTraceOrigin, EphemeralRun, IsolatedRun,
+};
 
 pub enum ExecTarget {
     Ephemeral {
@@ -136,10 +138,12 @@ impl CommandOps {
                 return Err(error);
             }
         };
+        let trace_origin = CommandTraceOrigin::from_start(request);
         Ok(
             self.register_and_wait(process, yield_time_ms, move |process| {
                 ActiveCommand::Ephemeral(EphemeralRun {
                     process,
+                    trace_origin,
                     root,
                     snapshot,
                     workspace,
@@ -170,9 +174,14 @@ impl CommandOps {
         )?;
         let process = self.spawn_process(spec, prepared)?;
         let binding = *binding;
+        let trace_origin = CommandTraceOrigin::from_start(request);
         Ok(
             self.register_and_wait(process, yield_time_ms, move |process| {
-                ActiveCommand::Isolated(IsolatedRun { process, binding })
+                ActiveCommand::Isolated(IsolatedRun {
+                    process,
+                    trace_origin,
+                    binding,
+                })
             }),
         )
     }

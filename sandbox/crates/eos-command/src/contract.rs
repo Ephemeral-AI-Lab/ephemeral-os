@@ -27,6 +27,8 @@ pub struct StartCommand {
     pub invocation_id: String,
     pub caller_id: String,
     pub cmd: String,
+    pub trace_id: Option<String>,
+    pub request_id: Option<String>,
     pub timeout_seconds: Option<f64>,
     pub yield_time_ms: u64,
 }

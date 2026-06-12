@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::path::PathBuf;
 
 use eos_command::process::CommandProcess;
-use eos_command::CollectCompleted;
+use eos_command::{CollectCompleted, StartCommand};
 use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
@@ -17,6 +17,7 @@ use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse
 
 pub(crate) struct EphemeralRun {
     pub(crate) process: CommandProcess,
+    pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
     pub(crate) workspace: EphemeralWorkspace,
@@ -24,7 +25,23 @@ pub(crate) struct EphemeralRun {
 
 pub(crate) struct IsolatedRun {
     pub(crate) process: CommandProcess,
+    pub(crate) trace_origin: CommandTraceOrigin,
     pub(crate) binding: IsolatedWorkspaceBinding,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct CommandTraceOrigin {
+    pub(crate) trace_id: Option<String>,
+    pub(crate) request_id: Option<String>,
+}
+
+impl CommandTraceOrigin {
+    pub(crate) fn from_start(request: &StartCommand) -> Self {
+        Self {
+            trace_id: request.trace_id.clone(),
+            request_id: request.request_id.clone(),
+        }
+    }
 }
 
 pub(crate) enum ActiveCommand {
@@ -37,6 +54,13 @@ impl ActiveCommand {
         match self {
             Self::Ephemeral(run) => &run.process,
             Self::Isolated(run) => &run.process,
+        }
+    }
+
+    pub(crate) fn trace_origin(&self) -> &CommandTraceOrigin {
+        match self {
+            Self::Ephemeral(run) => &run.trace_origin,
+            Self::Isolated(run) => &run.trace_origin,
         }
     }
 }

@@ -7,11 +7,11 @@ use eos_operation::file::contract::{EditFileInput, ReadFileInput, ReadFileOutput
 use eos_operation::file::{
     edit_file as edit_with_backend, read_file as read_with_backend,
     write_file as write_with_backend, DirectBackend, EditFileOutcome, EditFileRequest,
-    FileOpsError, IsolatedBackend, ReadFileOutcome, ReadFileRequest, WriteFileOutcome,
-    WriteFileRequest,
+    FileOpsError, IsolatedBackend, ReadFileOutcome, ReadFileRequest, WorkspaceTimings,
+    WriteFileOutcome, WriteFileRequest,
 };
 use eos_workspace::IsolatedWorkspaceBinding;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use thiserror::Error;
 
 use crate::error::DaemonError;
@@ -49,11 +49,17 @@ pub(crate) fn op_read_file(
     input: ReadFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    let max_read_bytes = context
+        .file_limits()
+        .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes);
+    record_file_event(
+        &context,
+        "read_started",
+        json!({"path": input.path, "max_read_bytes": max_read_bytes}),
+    );
     let request = ReadFileRequest {
         path: input.path,
-        max_read_bytes: context
-            .file_limits()
-            .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
+        max_read_bytes,
     };
     let caller_id = input.caller.to_string();
     let routed = route_read_file(
@@ -65,7 +71,9 @@ pub(crate) fn op_read_file(
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(&layer_stack_root, &mut outcome.timings, 0);
+        record_resource_stats_from_timings(&context, "after", &outcome.timings);
     }
+    record_read_finished(&context, &outcome);
     Ok(read_response(outcome))
 }
 
@@ -74,13 +82,25 @@ pub(crate) fn op_write_file(
     input: WriteFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    let max_file_bytes = context
+        .file_limits()
+        .map_or(MAX_FILE_BYTES, |limits| limits.max_write_bytes);
+    record_file_event(
+        &context,
+        "mutation_started",
+        json!({
+            "kind": "write",
+            "path": input.path,
+            "content_bytes": input.content.len(),
+            "overwrite": input.overwrite,
+            "max_file_bytes": max_file_bytes,
+        }),
+    );
     let request = WriteFileRequest {
         path: input.path,
         content: input.content.into_bytes(),
         overwrite: input.overwrite,
-        max_file_bytes: context
-            .file_limits()
-            .map_or(MAX_FILE_BYTES, |limits| limits.max_write_bytes),
+        max_file_bytes,
     };
     let caller_id = input.caller.to_string();
     let routed = route_write_file(
@@ -96,7 +116,9 @@ pub(crate) fn op_write_file(
             &mut outcome.core.timings,
             outcome.core.changed_paths.len(),
         );
+        record_resource_stats_from_timings(&context, "after", &outcome.core.timings);
     }
+    record_mutation_finished(&context, "write_applied", &outcome);
     Ok(to_wire_value(outcome))
 }
 
@@ -105,6 +127,15 @@ pub(crate) fn op_edit_file(
     input: EditFileInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_file_event(
+        &context,
+        "mutation_started",
+        json!({
+            "kind": "edit",
+            "path": input.path,
+            "edit_count": input.edits.len(),
+        }),
+    );
     let request = EditFileRequest {
         path: input.path,
         edits: input.edits,
@@ -123,7 +154,9 @@ pub(crate) fn op_edit_file(
             &mut mutation.core.timings,
             mutation.core.changed_paths.len(),
         );
+        record_resource_stats_from_timings(&context, "after", &mutation.core.timings);
     }
+    record_mutation_finished(&context, "edit_applied", &mutation);
     Ok(to_wire_value(mutation))
 }
 
@@ -159,6 +192,96 @@ fn record_file_route(context: &DispatchContext<'_>, route: &FileRoute) {
             }),
         ),
     }
+}
+
+fn record_file_event(context: &DispatchContext<'_>, name: &'static str, details: Value) {
+    context.record_trace_event("file", name, details);
+}
+
+fn record_read_finished(context: &DispatchContext<'_>, outcome: &ReadFileOutcome) {
+    record_file_event(
+        context,
+        "read_finished",
+        json!({
+            "workspace": outcome.workspace_kind.as_str(),
+            "success": outcome.success,
+            "exists": outcome.exists,
+            "encoding": outcome.encoding,
+            "content_bytes": outcome.content.len(),
+        }),
+    );
+}
+
+fn record_mutation_finished(
+    context: &DispatchContext<'_>,
+    name: &'static str,
+    outcome: &WriteFileOutcome,
+) {
+    record_file_event(
+        context,
+        name,
+        json!({
+            "workspace": outcome.workspace_kind.as_str(),
+            "success": outcome.core.success,
+            "published": outcome.published,
+            "status": outcome.status.as_str(),
+            "changed_paths": outcome.core.changed_paths,
+            "changed_path_count": outcome.core.changed_paths.len(),
+            "conflict_reason": outcome.core.conflict_reason,
+            "applied_edits": outcome.applied_edits,
+        }),
+    );
+}
+
+fn record_resource_stats_from_timings(
+    context: &DispatchContext<'_>,
+    phase: &'static str,
+    timings: &WorkspaceTimings,
+) {
+    let mut cpu = Map::new();
+    let mut memory = Map::new();
+    let mut io = Map::new();
+    let mut process = Map::new();
+    for (key, value) in timings {
+        if let Some(name) = key.strip_prefix("resource.cgroup.cpu_") {
+            cpu.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.memory_") {
+            memory.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.io_") {
+            io.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.process.") {
+            process.insert(name.to_owned(), value.clone());
+        }
+    }
+    let cgroup_available = !(cpu.is_empty() && memory.is_empty() && io.is_empty());
+    let process_available = !process.is_empty();
+    context.record_trace_event(
+        "resource",
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "cgroup_process",
+                "phase": phase,
+                "source": "daemon.response_timings",
+                "source_available": cgroup_available || process_available,
+                "read_error": (!(cgroup_available || process_available)).then_some("resource timings unavailable on this platform or request path"),
+                "sampler_duration_us": null,
+                "inflight_requests": context
+                    .invocation_registry()
+                    .map_or(0, crate::invocation_registry::InFlightRegistry::inflight_count),
+            },
+            "cgroup": {
+                "source_available": cgroup_available,
+                "cpu": cpu,
+                "memory": memory,
+                "io": io,
+            },
+            "process": {
+                "source_available": process_available,
+                "gauges": process,
+            },
+        }),
+    );
 }
 
 fn route_read_file(

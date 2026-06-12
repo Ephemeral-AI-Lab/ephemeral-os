@@ -615,6 +615,173 @@ async fn tcp_server_sidecar_records_transport_dispatch_and_op_spans() -> TestRes
 }
 
 #[tokio::test]
+async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
+    let (root, workspace) = seed_layer_stack("tcp_trace_file_route")?;
+    let runtime_dir = root
+        .parent()
+        .ok_or("seeded layer-stack root must have parent")?
+        .join("runtime");
+    std::fs::create_dir_all(&runtime_dir)?;
+    let probe = TcpListener::bind(("127.0.0.1", 0)).await?;
+    let port = probe.local_addr()?.port();
+    drop(probe);
+    let config = ServerConfig {
+        socket_path: runtime_dir.join("runtime.sock"),
+        pid_path: runtime_dir.join("runtime.pid"),
+        tcp_host: Some("127.0.0.1".to_owned()),
+        tcp_port: Some(port),
+        auth_token: Some("secret".to_owned()),
+    };
+    let server = DaemonServer::new(config.clone());
+    let shutdown = server.shutdown_token();
+    let task = tokio::spawn(server.serve());
+    for _ in 0..50 {
+        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            break;
+        }
+        sleep(Duration::from_millis(10)).await;
+    }
+
+    let request = json!({
+        "op": "sandbox.file.read",
+        "invocation_id": "request-file-route",
+        "args": {
+            "layer_stack_root": root,
+            "path": workspace.join("README.md"),
+            "_eos_daemon_protocol_version": 1,
+        },
+        "trace": {
+            "trace_id": "trace-file-route",
+            "request_id": "request-file-route",
+            "link_hints": [],
+            "capture_budget_version": 1,
+        },
+        DAEMON_AUTH_FIELD: "secret",
+    });
+    let mut line = serde_json::to_vec(&request)?;
+    line.push(b'\n');
+    let response = send_tcp_line(port, &line).await?;
+    shutdown.cancel();
+    let _ = timeout(Duration::from_secs(2), task).await??;
+
+    assert_eq!(response["success"], Value::Bool(true), "{response}");
+    let sidecar = response["_trace_events"]
+        .as_str()
+        .ok_or("response carries sidecar")?;
+    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let record = batch.records.first().ok_or("trace record")?;
+    let route_events: Vec<_> = record
+        .events
+        .iter()
+        .filter(|event| event.module == "workspace.route" && event.name == "route_selected")
+        .collect();
+    assert_eq!(route_events.len(), 1, "real file route suppresses fallback");
+    assert_eq!(route_events[0].details.value["kind"], json!("fast_path"));
+    assert_eq!(
+        route_events[0].details.value["reason"],
+        json!("no_isolated_workspace_for_caller")
+    );
+    assert!(
+        record.events.iter().any(|event| event.module == "file"
+            && event.name == "read_started"
+            && event.details.value["max_read_bytes"].is_number()),
+        "file read start event recorded"
+    );
+    assert!(
+        record.events.iter().any(|event| event.module == "file"
+            && event.name == "read_finished"
+            && event.details.value["exists"] == json!(true)
+            && event.details.value["content_bytes"] == json!(9)),
+        "file read finish event recorded"
+    );
+    assert!(
+        record.events.iter().any(|event| event.module == "resource"
+            && event.name == "resource_stats"
+            && event.details.value["meta"]["stats_kind"] == json!("cgroup_process")
+            && event.details.value["meta"]["phase"] == json!("after")
+            && event.details.value["meta"]["inflight_requests"].is_number()
+            && event.details.value["cgroup"]["source_available"].is_boolean()
+            && event.details.value["process"]["source_available"].is_boolean()),
+        "resource stats event recorded with source markers"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn tcp_server_sidecar_records_file_mutation_events() -> TestResult {
+    let (root, workspace) = seed_layer_stack("tcp_trace_file_mutation")?;
+    let runtime_dir = root
+        .parent()
+        .ok_or("seeded layer-stack root must have parent")?
+        .join("runtime");
+    std::fs::create_dir_all(&runtime_dir)?;
+    let probe = TcpListener::bind(("127.0.0.1", 0)).await?;
+    let port = probe.local_addr()?.port();
+    drop(probe);
+    let config = ServerConfig {
+        socket_path: runtime_dir.join("runtime.sock"),
+        pid_path: runtime_dir.join("runtime.pid"),
+        tcp_host: Some("127.0.0.1".to_owned()),
+        tcp_port: Some(port),
+        auth_token: Some("secret".to_owned()),
+    };
+    let server = DaemonServer::new(config.clone());
+    let shutdown = server.shutdown_token();
+    let task = tokio::spawn(server.serve());
+    for _ in 0..50 {
+        if TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
+            break;
+        }
+        sleep(Duration::from_millis(10)).await;
+    }
+
+    let request = json!({
+        "op": "sandbox.file.write",
+        "invocation_id": "request-file-mutation",
+        "args": {
+            "layer_stack_root": root,
+            "path": workspace.join("new.txt"),
+            "content": "hello\n",
+            "_eos_daemon_protocol_version": 1,
+        },
+        "trace": {
+            "trace_id": "trace-file-mutation",
+            "request_id": "request-file-mutation",
+            "link_hints": [],
+            "capture_budget_version": 1,
+        },
+        DAEMON_AUTH_FIELD: "secret",
+    });
+    let mut line = serde_json::to_vec(&request)?;
+    line.push(b'\n');
+    let response = send_tcp_line(port, &line).await?;
+    shutdown.cancel();
+    let _ = timeout(Duration::from_secs(2), task).await??;
+
+    assert_eq!(response["success"], Value::Bool(true), "{response}");
+    let sidecar = response["_trace_events"]
+        .as_str()
+        .ok_or("response carries sidecar")?;
+    let batch = decode_trace_batch(&base64::engine::general_purpose::STANDARD.decode(sidecar)?)?;
+    let record = batch.records.first().ok_or("trace record")?;
+    assert!(
+        record.events.iter().any(|event| event.module == "file"
+            && event.name == "mutation_started"
+            && event.details.value["kind"] == json!("write")
+            && event.details.value["content_bytes"] == json!(6)),
+        "file mutation start event recorded"
+    );
+    assert!(
+        record.events.iter().any(|event| event.module == "file"
+            && event.name == "write_applied"
+            && event.details.value["status"] == json!("committed")
+            && event.details.value["changed_paths"] == json!(["new.txt"])),
+        "file write completion event recorded"
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn tcp_server_sidecar_records_wire_error_paths() -> TestResult {
     let (root, _workspace) = seed_layer_stack("tcp_trace_wire_errors")?;
     let runtime_dir = root
