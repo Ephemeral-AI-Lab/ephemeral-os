@@ -263,7 +263,10 @@ fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) 
             let Some(value) = parts.next().and_then(|raw| raw.parse::<f64>().ok()) else {
                 continue;
             };
-            timings.insert(format!("resource.cgroup.memory_events_{name}"), json!(value));
+            timings.insert(
+                format!("resource.cgroup.memory_events_{name}"),
+                json!(value),
+            );
         }
     }
 
