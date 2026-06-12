@@ -17,6 +17,7 @@ fn occ_callback_applies_changeset_through_daemon_writer() -> TestResult {
         &fixture.root,
         PpcMessage {
             message_id: "callback-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: OCC_APPLY_CHANGESET_OP.to_owned(),
             body: serde_json::to_string(&json!({
@@ -49,6 +50,7 @@ fn occ_callback_rejects_unknown_callback_op() -> TestResult {
             &fixture.root,
             PpcMessage {
                 message_id: "callback-unknown".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: "daemon.unknown".to_owned(),
                 body: "{}".to_owned(),
@@ -71,6 +73,7 @@ fn occ_callback_rejects_ambiguous_write_content() -> TestResult {
             &fixture.root,
             PpcMessage {
                 message_id: "callback-bad-content".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: OCC_APPLY_CHANGESET_OP.to_owned(),
                 body: serde_json::to_string(&json!({
@@ -100,6 +103,7 @@ fn occ_callback_rejects_wrong_layer_stack_root() -> TestResult {
             &fixture.root,
             PpcMessage {
                 message_id: "callback-wrong-root".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: OCC_APPLY_CHANGESET_OP.to_owned(),
                 body: serde_json::to_string(&json!({

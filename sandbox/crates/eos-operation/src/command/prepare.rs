@@ -19,6 +19,12 @@ pub(crate) struct PreparedCommand {
     pub(crate) trace_events: Vec<CommandTraceEvent>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct CommandPrepareError {
+    pub(crate) error: WorkspaceApiError,
+    pub(crate) trace_events: Vec<CommandTraceEvent>,
+}
+
 pub(crate) struct PrepareInputs<'a> {
     pub(crate) caller_id: &'a str,
     pub(crate) command_id: &'a str,
@@ -35,7 +41,7 @@ pub(crate) fn prepare_ephemeral(
     layer_paths: &[PathBuf],
     dirs: &OverlayDirs,
     scratch_run_dir: &Path,
-) -> Result<PreparedCommand, WorkspaceApiError> {
+) -> Result<PreparedCommand, CommandPrepareError> {
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
         mode: RunMode::FreshNs,
@@ -59,7 +65,7 @@ pub(crate) fn prepare_ephemeral(
 pub(crate) fn prepare_isolated(
     inputs: PrepareInputs<'_>,
     binding: &IsolatedWorkspaceBinding,
-) -> Result<PreparedCommand, WorkspaceApiError> {
+) -> Result<PreparedCommand, CommandPrepareError> {
     let ns_fds = ns_fds_from_map(&binding.ns_fds);
     let tool_call = tool_call(&inputs);
     let run_request = RunRequest {
@@ -98,8 +104,9 @@ fn finish_prepare(
     run_request: RunRequest,
     request_path: PathBuf,
     output_path: PathBuf,
-) -> Result<PreparedCommand, WorkspaceApiError> {
-    std::fs::create_dir_all(&inputs.command_dir).map_err(prepare_error)?;
+) -> Result<PreparedCommand, CommandPrepareError> {
+    std::fs::create_dir_all(&inputs.command_dir)
+        .map_err(|error| prepare_artifact_error("artifact_dir", &inputs.command_dir, error))?;
     let metadata_path = inputs.command_dir.join("metadata.json");
     let metadata_bytes = serde_json::to_vec_pretty(&json!({
         "command_id": inputs.command_id,
@@ -109,10 +116,13 @@ fn finish_prepare(
         "command": inputs.cmd,
         "status": "running",
     }))
-    .map_err(prepare_error)?;
-    std::fs::write(&metadata_path, &metadata_bytes).map_err(prepare_error)?;
+    .map_err(|error| prepare_artifact_error("metadata", &metadata_path, error))?;
+    std::fs::write(&metadata_path, &metadata_bytes)
+        .map_err(|error| prepare_artifact_error("metadata", &metadata_path, error))?;
+    let run_request = serde_json::to_value(&run_request)
+        .map_err(|error| prepare_artifact_error("runner_request", &request_path, error))?;
     Ok(PreparedCommand {
-        run_request: serde_json::to_value(&run_request).map_err(prepare_error)?,
+        run_request,
         request_path,
         output_path,
         final_path: inputs.command_dir.join("final.json"),
@@ -144,8 +154,15 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
     })
 }
 
-fn prepare_error(error: impl std::fmt::Display) -> WorkspaceApiError {
-    WorkspaceApiError::new("command_prepare_failed", error.to_string())
+fn prepare_artifact_error(
+    artifact: &'static str,
+    path: &Path,
+    error: impl std::fmt::Display,
+) -> CommandPrepareError {
+    CommandPrepareError {
+        error: WorkspaceApiError::new("command_prepare_failed", error.to_string()),
+        trace_events: vec![CommandTraceEvent::artifact_failed(artifact, path, error)],
+    }
 }
 
 #[cfg(test)]

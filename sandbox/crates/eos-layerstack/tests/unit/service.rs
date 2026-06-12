@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use crate::commit::CommitWriter;
-use crate::test_fixture::{unique_suffix, TestResult};
+use crate::model::LayerChange;
+use crate::test_fixture::{lp, unique_suffix, Fixture, TestResult};
+use crate::{hash_current, service};
 
 use super::{normalize_root_key, snapshot_manifest, RootService, ServiceCache, SERVICE_CACHE_MAX};
 
@@ -33,6 +35,47 @@ fn snapshot_manifest_rejects_absolute_layer_paths_outside_root() {
         error.to_string().contains("outside /stack"),
         "unexpected error: {error}"
     );
+}
+
+#[test]
+fn commit_direct_trace_events_include_worker_handoff_and_batch_facts() -> TestResult {
+    let fixture = Fixture::new("worker_handoff_trace")?;
+    let base_hash =
+        hash_current(Some(b"# README\n"), true).ok_or_else(|| "missing base hash".to_owned())?;
+
+    let result = service::commit_direct(
+        &fixture.root,
+        Some(1),
+        &[LayerChange::Write {
+            path: lp("README.md")?,
+            content: b"# updated\n".to_vec(),
+        }],
+        &[(lp("README.md")?, Some(base_hash))],
+    )?;
+
+    assert!(result.success());
+    let events = result.trace_events();
+    let handoff = events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_handoff")
+        .expect("worker handoff event");
+    assert_eq!(handoff.details["path_count"], 1);
+    assert_eq!(handoff.details["publishable_change_count"], 1);
+    assert_eq!(handoff.details["atomic"], true);
+    assert_eq!(handoff.details["gated_path_count"], 1);
+    assert_eq!(handoff.details["direct_path_count"], 0);
+    assert_eq!(handoff.details["drop_path_count"], 0);
+
+    let batch = events
+        .iter()
+        .find(|event| event.module == "occ" && event.name == "worker_batch_finished")
+        .expect("worker batch event");
+    assert_eq!(batch.details["batch_item_count"], 1);
+    assert_eq!(batch.details["combined_path_count"], 1);
+    assert_eq!(batch.details["combined_change_count"], 1);
+    assert_eq!(batch.details["atomic"], true);
+    assert_eq!(batch.details["cas_retry_count"], 0);
+    Ok(())
 }
 
 #[test]

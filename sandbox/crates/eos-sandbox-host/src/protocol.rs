@@ -85,6 +85,24 @@ impl ProtocolClient {
         self.request_raw(&line)
     }
 
+    pub fn request_with_trace(
+        &self,
+        op: &str,
+        invocation_id: &str,
+        args: &Value,
+        trace: &TraceWireContext,
+    ) -> Result<Value, ClientError> {
+        let mut line = encode_request_with_trace_metadata(
+            op,
+            invocation_id,
+            args,
+            self.auth_token.as_deref(),
+            trace,
+        );
+        line.push(b'\n');
+        self.request_raw(&line)
+    }
+
     pub(crate) fn request_unstamped(
         &self,
         op: &str,

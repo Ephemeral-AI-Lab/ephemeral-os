@@ -765,6 +765,21 @@ impl TraceStore {
         Ok(rows)
     }
 
+    #[cfg(test)]
+    pub fn resource_span_ids_for_request(
+        &self,
+        request_id: &str,
+    ) -> Result<Vec<Option<i64>>, TraceStoreError> {
+        let conn = self.lock();
+        let mut stmt = conn.prepare(
+            "SELECT span_id FROM trace_resources WHERE request_id=?1 ORDER BY kind, span_id, ts_us",
+        )?;
+        let rows = stmt
+            .query_map(params![request_id], |row| row.get(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
     pub fn sqlite_posture(&self) -> Result<SqlitePosture, TraceStoreError> {
         let conn = self.lock();
         let journal_mode: String =
@@ -1227,10 +1242,11 @@ fn project_trace_batch_tx(
             tx.execute(
                 "INSERT INTO trace_resources
                  (trace_id, request_id, span_id, ts_us, kind, values_json)
-                 VALUES (?1, ?2, NULL, ?3, ?4, ?5)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     trace_id,
                     request_id,
+                    resource.span_id.map(|span_id| u64_to_i64(span_id.get())),
                     u64_to_i64(record.finished_at_unix_ms.saturating_mul(1000)),
                     resource.meta.stats_kind.as_str(),
                     values.to_string(),

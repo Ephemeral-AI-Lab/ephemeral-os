@@ -17,7 +17,9 @@ use crate::fs::{
     validate_layer_ref, write_layer_digest, write_manifest,
 };
 use crate::lock::StorageWriterLockLease;
-use crate::squash::{manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanEntry};
+use crate::squash::{
+    manifest_prefix_before_plan, LayerCheckpointSquasher, SquashPlanDecision, SquashPlanEntry,
+};
 use crate::workspace::build_workspace_base;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
@@ -305,6 +307,20 @@ impl LayerStack {
         Ok(squasher
             .plan(&active, max_depth, &lease_head_layers, 2)?
             .is_some())
+    }
+
+    pub(crate) fn squash_plan_decision(
+        &self,
+        max_depth: usize,
+        min_reduction: usize,
+    ) -> Result<(usize, SquashPlanDecision), LayerStackError> {
+        let active = self.read_active_manifest()?;
+        let depth = active.depth();
+        let squasher = LayerCheckpointSquasher::new(self.storage_root.clone());
+        let lease_head_layers = lock_shared_registry(&self.leases)?.lease_head_layers();
+        let decision =
+            squasher.plan_decision(&active, max_depth, &lease_head_layers, min_reduction)?;
+        Ok((depth, decision))
     }
 
     pub fn squash(&mut self, max_depth: usize) -> Result<Option<Manifest>, LayerStackError> {

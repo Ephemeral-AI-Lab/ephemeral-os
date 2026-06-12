@@ -13,9 +13,9 @@ pub mod shared;
 
 pub use ephemeral_workspace::{overlay_run_dirs, EphemeralWorkspace, EphemeralWorkspaceError};
 pub use isolated_workspace::{
-    CurrentExeNsRunnerLauncher, ExitOutcome, IsolatedError, IsolatedManager, IsolatedSnapshot,
-    IsolatedWorkspaceBinding, IsolatedWorkspaceId, LaunchError, NsRunnerLauncher, ResourceCaps,
-    Rfc1918Egress, WorkspaceHandle,
+    CurrentExeNsRunnerLauncher, DnsConfiguration, ExitOutcome, IsolatedError, IsolatedManager,
+    IsolatedSnapshot, IsolatedWorkspaceBinding, IsolatedWorkspaceId, LaunchError, NsRunnerLauncher,
+    ResourceCaps, Rfc1918Egress, WorkspaceHandle,
 };
 pub use shared::{
     capture_upperdir, CaptureError, CapturedChanges, DirAllocationError, OverlayDirs,

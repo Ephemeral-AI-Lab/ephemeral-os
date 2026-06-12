@@ -58,14 +58,47 @@ pub struct OverlayMount {
         not(target_os = "linux"),
         allow(dead_code, reason = "workspace_root is read by linux Drop unmount")
     )]
-    workspace_root: PathBuf,
+    workspace_root: Option<PathBuf>,
+}
+
+impl OverlayMount {
+    /// Explicitly unmount this overlay and report any teardown error.
+    ///
+    /// `Drop` remains best-effort for callers that only need cleanup, but
+    /// audited runners use this consuming method so unmount duration/failure can
+    /// be recorded in their result payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OverlayError::MountSyscall`] when the mountpoint cannot be
+    /// detached, or [`OverlayError::Unsupported`] on non-Linux targets.
+    #[cfg(target_os = "linux")]
+    pub fn unmount(mut self) -> Result<()> {
+        if let Some(workspace_root) = self.workspace_root.take() {
+            peel_unmounts(&workspace_root, true)?;
+        }
+        Ok(())
+    }
+
+    /// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off
+    /// Linux.
+    ///
+    /// # Errors
+    ///
+    /// Always returns [`OverlayError::Unsupported`].
+    #[cfg(not(target_os = "linux"))]
+    pub fn unmount(self) -> Result<()> {
+        Err(OverlayError::Unsupported)
+    }
 }
 
 impl Drop for OverlayMount {
     fn drop(&mut self) {
         // Best-effort cleanup; Drop cannot report cleanup errors.
         #[cfg(target_os = "linux")]
-        let _ = peel_unmounts(&self.workspace_root, false);
+        if let Some(workspace_root) = self.workspace_root.take() {
+            let _ = peel_unmounts(&workspace_root, false);
+        }
     }
 }
 
@@ -113,7 +146,7 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
     )
     .map_mount_syscall("move_mount workspace_root")?;
     Ok(OverlayMount {
-        workspace_root: inputs.workspace_root,
+        workspace_root: Some(inputs.workspace_root),
     })
 }
 

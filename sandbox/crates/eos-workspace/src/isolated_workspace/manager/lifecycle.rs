@@ -48,7 +48,7 @@ impl IsolatedManager {
             .mount_overlay(handle, &handle.layer_paths.clone())?;
         record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
         phase_start = Instant::now();
-        let _dns_fallback_applied = self
+        handle.dns_configuration = self
             .runtime
             .configure_dns(handle, &self.caps.fallback_dns)?;
         record_phase_ms(&mut phases_ms, "configure_dns", phase_start);
@@ -193,6 +193,7 @@ impl IsolatedManager {
             control_fd: -1,
             veth: None,
             cgroup_path: None,
+            dns_configuration: Default::default(),
             created_at: now,
             last_activity: now,
         };

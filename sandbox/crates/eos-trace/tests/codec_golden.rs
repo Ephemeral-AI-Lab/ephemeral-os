@@ -1,6 +1,7 @@
 use eos_trace::{
-    decode_trace_batch, encode_trace_batch, EventRecord, RequestId, SpanKind, SpanRecord, SpanUid,
-    TraceBatch, TraceId, TraceLink, TraceLinkKind, TraceRecord,
+    decode_trace_batch, encode_trace_batch, EventRecord, RequestId, ResourceStats,
+    ResourceStatsKind, SpanKind, SpanRecord, SpanUid, TraceBatch, TraceId, TraceLink,
+    TraceLinkKind, TraceRecord,
 };
 use serde_json::json;
 
@@ -26,6 +27,17 @@ fn round_trips_trace_batch_through_protobuf() {
         kind: TraceLinkKind::Command,
         value: "cmd-1".to_owned(),
     });
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::CgroupProcess,
+            Some("after".to_owned()),
+            "command.process.wait",
+            7,
+            1,
+            json!({"cpu": {"usage_usec": 42}}),
+        )
+        .with_span_id(SpanUid::ROOT),
+    );
 
     let encoded = encode_trace_batch(&TraceBatch::single(record.clone()));
     let decoded = decode_trace_batch(&encoded).expect("decode encoded trace batch");

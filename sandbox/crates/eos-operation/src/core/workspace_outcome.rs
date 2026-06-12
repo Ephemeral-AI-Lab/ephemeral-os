@@ -170,6 +170,8 @@ pub struct WorkspaceMutationOutcome {
     pub error: (),
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applied_edits: Option<i64>,
+    #[serde(skip)]
+    pub trace_events: Vec<eos_layerstack::OccTraceEvent>,
 }
 
 fn serialize_mutation_source<S>(

@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::time::Instant;
 
 use eos_layerstack::service::Snapshot;
 use eos_layerstack::{service, FileResult};
@@ -244,9 +245,18 @@ fn base_timings(root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
             );
         }
     }
-    insert_cgroup_resource_timings(&mut timings);
-    insert_process_resource_timings(&mut timings);
+    insert_cgroup_process_resource_timings(&mut timings);
     Ok(timings)
+}
+
+pub(crate) fn insert_cgroup_process_resource_timings(timings: &mut WorkspaceTimings) {
+    let sampler_start = Instant::now();
+    insert_cgroup_resource_timings(timings);
+    insert_process_resource_timings(timings);
+    timings.insert(
+        "resource.sampler.cgroup_process_duration_us".to_owned(),
+        json!(sampler_start.elapsed().as_micros()),
+    );
 }
 
 fn insert_cgroup_resource_timings(timings: &mut WorkspaceTimings) {
@@ -280,33 +290,69 @@ fn insert_cgroup_resource_timings(timings: &mut WorkspaceTimings) {
         }
     }
 
-    let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") else {
-        return;
-    };
-    let mut totals = std::collections::BTreeMap::<&str, f64>::from([
-        ("rbytes", 0.0),
-        ("wbytes", 0.0),
-        ("rios", 0.0),
-        ("wios", 0.0),
-        ("dbytes", 0.0),
-        ("dios", 0.0),
-    ]);
+    if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") {
+        let mut totals = std::collections::BTreeMap::<&str, f64>::from([
+            ("rbytes", 0.0),
+            ("wbytes", 0.0),
+            ("rios", 0.0),
+            ("wios", 0.0),
+            ("dbytes", 0.0),
+            ("dios", 0.0),
+        ]);
+        for line in raw.lines() {
+            for token in line.split_whitespace().skip(1) {
+                let Some((name, raw_value)) = token.split_once('=') else {
+                    continue;
+                };
+                let Some(total) = totals.get_mut(name) else {
+                    continue;
+                };
+                if let Ok(value) = raw_value.parse::<f64>() {
+                    *total += value;
+                }
+            }
+        }
+        for (name, value) in totals {
+            timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
+        }
+    }
+
+    for (path, prefix) in [
+        ("/sys/fs/cgroup/cpu.pressure", "cpu"),
+        ("/sys/fs/cgroup/memory.pressure", "memory"),
+        ("/sys/fs/cgroup/io.pressure", "io"),
+    ] {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            insert_pressure_timings(timings, prefix, &raw);
+        }
+    }
+}
+
+fn insert_pressure_timings(timings: &mut WorkspaceTimings, prefix: &str, raw: &str) {
+    for (key, value) in parse_pressure_metrics(prefix, raw) {
+        timings.insert(format!("resource.cgroup.psi_{key}"), json!(value));
+    }
+}
+
+fn parse_pressure_metrics(prefix: &str, raw: &str) -> std::collections::BTreeMap<String, f64> {
+    let mut metrics = std::collections::BTreeMap::new();
     for line in raw.lines() {
-        for token in line.split_whitespace().skip(1) {
-            let Some((name, raw_value)) = token.split_once('=') else {
-                continue;
-            };
-            let Some(total) = totals.get_mut(name) else {
+        let mut tokens = line.split_whitespace();
+        let Some(level @ ("some" | "full")) = tokens.next() else {
+            continue;
+        };
+        for token in tokens {
+            let Some((name @ ("avg10" | "avg60" | "avg300" | "total"), raw_value)) =
+                token.split_once('=')
+            else {
                 continue;
             };
             if let Ok(value) = raw_value.parse::<f64>() {
-                *total += value;
+                metrics.insert(format!("{prefix}_{level}_{name}"), value);
             }
         }
     }
-    for (name, value) in totals {
-        timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
-    }
+    metrics
 }
 
 fn insert_process_resource_timings(timings: &mut WorkspaceTimings) {
@@ -366,7 +412,19 @@ fn insert_tree_resource_timings(
     insert_resource_timing(timings, &format!("{prefix}_tree_file_count"), file_entries);
     insert_resource_timing(timings, &format!("{prefix}_tree_dir_count"), stats.dirs);
     insert_resource_timing(timings, &format!("{prefix}_tree_entry_count"), entry_count);
-    insert_resource_timing(timings, &format!("{prefix}_tree_truncated"), 0);
+    insert_resource_timing(
+        timings,
+        &format!("{prefix}_tree_truncated"),
+        u64::from(stats.truncated),
+    );
+    insert_resource_timing(
+        timings,
+        &format!("{prefix}_tree_read_error_count"),
+        stats.read_error_count,
+    );
+    if let Some(path) = &stats.first_error_path {
+        timings.insert(format!("{prefix}_tree_first_error_path"), json!(path));
+    }
 }
 
 fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64) {
@@ -379,4 +437,53 @@ fn usize_to_f64_saturating(value: usize) -> f64 {
 
 fn finalize_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("command_finalize_failed", error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use eos_workspace::TreeResourceStats;
+
+    use super::{insert_tree_resource_timings, parse_pressure_metrics};
+
+    #[test]
+    fn pressure_metrics_parse_some_and_full_levels() {
+        let metrics = parse_pressure_metrics(
+            "io",
+            "some avg10=2.50 avg60=1.50 avg300=0.50 total=100\nfull avg10=0.75 avg60=0.25 avg300=0.05 total=9\n",
+        );
+
+        assert_eq!(metrics.get("io_some_avg10").copied(), Some(2.5));
+        assert_eq!(metrics.get("io_some_total").copied(), Some(100.0));
+        assert_eq!(metrics.get("io_full_avg300").copied(), Some(0.05));
+        assert_eq!(metrics.get("io_full_total").copied(), Some(9.0));
+    }
+
+    #[test]
+    fn tree_resource_timings_forward_truncation_marker() {
+        let mut timings = crate::WorkspaceTimings::new();
+        let stats = TreeResourceStats {
+            files: 1,
+            dirs: 1,
+            symlinks: 0,
+            bytes: 10,
+            truncated: true,
+            read_error_count: 1,
+            first_error_path: Some("/tmp/missing".to_owned()),
+        };
+
+        insert_tree_resource_timings(&mut timings, "resource.command_exec.upperdir", &stats);
+
+        assert_eq!(
+            timings["resource.command_exec.upperdir_tree_truncated"],
+            serde_json::json!(1.0)
+        );
+        assert_eq!(
+            timings["resource.command_exec.upperdir_tree_read_error_count"],
+            serde_json::json!(1.0)
+        );
+        assert_eq!(
+            timings["resource.command_exec.upperdir_tree_first_error_path"],
+            serde_json::json!("/tmp/missing")
+        );
+    }
 }

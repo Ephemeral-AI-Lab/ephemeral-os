@@ -92,6 +92,54 @@ fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std
 }
 
 #[test]
+fn spawn_reports_runner_request_artifact_write_failure() -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::env::temp_dir().join(format!(
+        "eos-command-spawn-artifact-failure-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let request_path = root.join("missing-parent").join("runner-request.json");
+    let error = match CommandProcess::spawn(
+        CommandProcessSpec {
+            id: "cmd_1".to_owned(),
+            caller_id: "caller".to_owned(),
+            command: "echo ok".to_owned(),
+            timeout_seconds: None,
+        },
+        CommandProcessSpawn {
+            run_request: json!({"mode": "test"}),
+            request_path: request_path.clone(),
+            output_path: root.join("runner-result.json"),
+            final_path: root.join("final.json"),
+            transcript_path: root.join("transcript.log"),
+            transcript_timestamp_timezone: "UTC",
+            output_drain_grace_ms: 0,
+        },
+    ) {
+        Ok(_) => panic!("spawn should fail before opening a PTY"),
+        Err(error) => error,
+    };
+
+    match error {
+        CommandError::ArtifactWrite {
+            artifact,
+            path,
+            error,
+        } => {
+            assert_eq!(artifact, "runner_request");
+            assert_eq!(path, request_path);
+            assert!(!error.is_empty());
+        }
+        other => panic!("expected artifact write failure, got {other:?}"),
+    }
+
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
 fn persist_final_reports_final_and_transcript_failures() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::temp_dir().join(format!(
         "eos-command-persist-failures-{}-{}",

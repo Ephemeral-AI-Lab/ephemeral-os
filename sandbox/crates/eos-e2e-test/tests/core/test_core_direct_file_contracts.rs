@@ -10,8 +10,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_message, finalize_foreground_command,
-    live_pool_or_skip, wait_for_active_leases,
+    array, as_bool, as_i64, as_str, conflict_message, finalize_foreground_command, has_trace_event,
+    live_pool_or_skip, trace_record, wait_for_active_leases,
 };
 
 /// Read a nested `timings.<key>` number from a response.
@@ -267,6 +267,47 @@ fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
     assert!(
         timing_f64(&read, "api.read.layer_stack_read_s").is_some(),
         "fast-path read should surface api.read.layer_stack_read_s: {read}"
+    );
+    Ok(())
+}
+
+#[test]
+fn live_trace_file_fast_path_records_route_occ_and_no_workspace_facts() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let write = lease.call_ok(
+        catalog::SANDBOX_FILE_WRITE,
+        json!({"path": "fastpath/trace.txt", "content": "trace\n", "overwrite": true}),
+    )?;
+    let record = trace_record(&write)?;
+
+    assert!(
+        has_trace_event(&record, "workspace.route", "route_selected", |details| {
+            details["kind"] == "fast_path"
+                && details["reason"] == "no_isolated_workspace_for_caller"
+        }),
+        "fast-path file write should record direct no-workspace route facts: {record:?}"
+    );
+    assert!(
+        has_trace_event(&record, "occ", "commit_finished", |details| {
+            details["success"] == true
+                && details["published_file_count"]
+                    .as_i64()
+                    .is_some_and(|count| count >= 1)
+        }),
+        "fast-path file write should record OCC commit facts: {record:?}"
+    );
+    assert!(
+        has_trace_event(&record, "file", "write_applied", |details| {
+            details["workspace"] == "ephemeral"
+                && details["published"] == true
+                && details["changed_paths"]
+                    .as_array()
+                    .is_some_and(|paths| paths.iter().any(|path| path == "fastpath/trace.txt"))
+        }),
+        "fast-path file write should record file publish facts: {record:?}"
     );
     Ok(())
 }

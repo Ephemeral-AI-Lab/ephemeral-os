@@ -7,7 +7,7 @@
 //! `message_id`; self-managed plugin operations can also service
 //! plugin-originated callback requests on the same socket before their final
 //! operation reply arrives. Concurrent callback-capable operations are routed by
-//! `parent_message_id` in the callback body.
+//! typed `parent_message_id` on the callback message.
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -17,7 +17,7 @@ use std::thread;
 use std::time::Duration;
 
 use eos_plugin::{PluginError, PpcDirection, PpcMessage};
-use serde_json::json;
+use serde_json::{json, Value};
 
 use super::PpcError;
 
@@ -26,11 +26,56 @@ const MAX_PPC_MESSAGE_BYTES: usize = eos_plugin::wire::MAX_PPC_MESSAGE_BYTES;
 type CallbackHandler = Arc<dyn Fn(PpcMessage) -> Result<PpcMessage, PpcError> + Send + Sync>;
 type PpcResult = Result<PpcMessage, PpcError>;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PpcTraceEvent {
+    pub module: &'static str,
+    pub name: &'static str,
+    pub details: Value,
+}
+
+impl PpcTraceEvent {
+    #[must_use]
+    pub fn new(name: &'static str, details: Value) -> Self {
+        Self::in_module("plugin", name, details)
+    }
+
+    #[must_use]
+    pub fn in_module(module: &'static str, name: &'static str, details: Value) -> Self {
+        Self {
+            module,
+            name,
+            details,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct PpcTraceEventSink {
+    events: Arc<Mutex<Vec<PpcTraceEvent>>>,
+}
+
+impl PpcTraceEventSink {
+    fn push(&self, event: PpcTraceEvent) {
+        if let Ok(mut events) = self.events.lock() {
+            events.push(event);
+        }
+    }
+
+    #[must_use]
+    pub fn drain(&self) -> Vec<PpcTraceEvent> {
+        self.events
+            .lock()
+            .map(|mut events| events.drain(..).collect())
+            .unwrap_or_default()
+    }
+}
+
 /// A connected plugin service's PPC client: a synchronous request/reply façade
 /// over the service socket, multiplexed by a background reader thread.
 pub struct PpcClient {
     writer: MessageWriter,
     pending: PendingCalls,
+    trace_events: PpcTraceEventSink,
 }
 
 impl std::fmt::Debug for PpcClient {
@@ -42,11 +87,32 @@ impl std::fmt::Debug for PpcClient {
 impl PpcClient {
     /// Wrap a connected service `stream`, spawning the reply-routing reader.
     pub fn new(stream: UnixStream) -> Result<Self, PpcError> {
+        Self::new_with_trace_events(stream, PpcTraceEventSink::default())
+    }
+
+    pub fn new_with_trace_events(
+        stream: UnixStream,
+        trace_events: PpcTraceEventSink,
+    ) -> Result<Self, PpcError> {
         let reader_stream = stream.try_clone()?;
         let writer = MessageWriter::new(stream);
         let pending = PendingCalls::default();
-        spawn_reader_thread(reader_stream, writer.clone(), pending.clone())?;
-        Ok(Self { writer, pending })
+        spawn_reader_thread(
+            reader_stream,
+            writer.clone(),
+            pending.clone(),
+            trace_events.clone(),
+        )?;
+        Ok(Self {
+            writer,
+            pending,
+            trace_events,
+        })
+    }
+
+    #[must_use]
+    pub fn drain_trace_events(&self) -> Vec<PpcTraceEvent> {
+        self.trace_events.drain()
     }
 
     /// Send a request and await its reply (no callbacks serviced).
@@ -123,14 +189,20 @@ fn spawn_reader_thread(
     mut stream: UnixStream,
     writer: MessageWriter,
     pending: PendingCalls,
+    trace_events: PpcTraceEventSink,
 ) -> Result<(), PpcError> {
     thread::Builder::new()
         .name("eos-plugin-ppc-reader".to_owned())
-        .spawn(move || reader_loop(&mut stream, &writer, &pending))?;
+        .spawn(move || reader_loop(&mut stream, &writer, &pending, &trace_events))?;
     Ok(())
 }
 
-fn reader_loop(stream: &mut UnixStream, writer: &MessageWriter, pending: &PendingCalls) {
+fn reader_loop(
+    stream: &mut UnixStream,
+    writer: &MessageWriter,
+    pending: &PendingCalls,
+    trace_events: &PpcTraceEventSink,
+) {
     loop {
         let message = match read_message(stream) {
             Ok(message) => message,
@@ -141,23 +213,32 @@ fn reader_loop(stream: &mut UnixStream, writer: &MessageWriter, pending: &Pendin
         };
 
         match message.direction {
-            PpcDirection::Reply => pending.complete_reply(message),
-            PpcDirection::Request => handle_callback(message, writer, pending),
+            PpcDirection::Reply => pending.complete_reply(message, trace_events),
+            PpcDirection::Request => handle_callback(message, writer, pending, trace_events),
         }
     }
 }
 
-fn handle_callback(message: PpcMessage, writer: &MessageWriter, pending: &PendingCalls) {
+fn handle_callback(
+    message: PpcMessage,
+    writer: &MessageWriter,
+    pending: &PendingCalls,
+    trace_events: &PpcTraceEventSink,
+) {
     let callback_message_id = message.message_id.clone();
     let (owner_id, handler) = match pending.callback_handler_for_message(&message) {
-        Ok(found) => found,
-        Err(message) => {
-            let _ = write_callback_error(writer, &callback_message_id, &message);
+        Ok(found) => {
+            trace_events.push(callback_event("callback_request", &message, Some(&found.0)));
+            found
+        }
+        Err(error) => {
+            trace_events.push(callback_orphan_event(&message, &error));
+            let _ = write_callback_error(writer, &callback_message_id, &error.message);
             return;
         }
     };
 
-    match handler(message) {
+    match handler(message.clone()) {
         Ok(reply) => {
             if reply.direction != PpcDirection::Reply {
                 pending.fail_one(
@@ -178,6 +259,11 @@ fn handle_callback(message: PpcMessage, writer: &MessageWriter, pending: &Pendin
             }
             if let Err(err) = writer.write(&reply) {
                 pending.fail_one(&owner_id, err.to_string());
+            } else {
+                trace_events.push(callback_event("callback_response", &reply, Some(&owner_id)));
+                if let Some(event) = callback_occ_commit_event(&message, &reply, &owner_id) {
+                    trace_events.push(event);
+                }
             }
         }
         Err(err) => {
@@ -202,6 +288,7 @@ fn write_callback_error(
     });
     writer.write(&PpcMessage {
         message_id: callback_message_id.to_owned(),
+        parent_message_id: None,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
         body: body.to_string(),
@@ -311,13 +398,23 @@ impl PendingCalls {
         Ok(())
     }
 
-    fn complete_reply(&self, message: PpcMessage) {
+    fn complete_reply(&self, message: PpcMessage, trace_events: &PpcTraceEventSink) {
         let message_id = message.message_id.clone();
         let Ok(pending_request) = self.take(&message_id) else {
             return;
         };
         if let Some(pending_request) = pending_request {
             let _ = pending_request.reply_tx.send(Ok(message));
+        } else {
+            trace_events.push(PpcTraceEvent::new(
+                "ppc_reply_orphaned",
+                json!({
+                    "message_id": message_id,
+                    "direction": direction_label(message.direction),
+                    "op": message.op,
+                    "reason": "unknown_message_id",
+                }),
+            ));
         }
     }
 
@@ -350,25 +447,30 @@ impl PendingCalls {
     fn callback_handler_for_message(
         &self,
         message: &PpcMessage,
-    ) -> Result<(String, CallbackHandler), String> {
-        let pending = self
-            .inner
-            .lock()
-            .map_err(|_| "plugin ppc pending lock poisoned".to_owned())?;
-        if let Some(parent_id) = callback_parent_message_id(message) {
-            let pending_request = pending.get(&parent_id).ok_or_else(|| {
-                format!(
-                    "plugin PPC callback {} referenced unknown parent_message_id {}",
-                    message.message_id, parent_id
+    ) -> Result<(String, CallbackHandler), CallbackRouteError> {
+        let pending = self.inner.lock().map_err(|_| {
+            CallbackRouteError::new("lock_poisoned", "plugin ppc pending lock poisoned")
+        })?;
+        if let Some(parent_id) = message.parent_message_id.as_ref() {
+            let pending_request = pending.get(parent_id).ok_or_else(|| {
+                CallbackRouteError::new(
+                    "unknown_parent_message_id",
+                    format!(
+                        "plugin PPC callback {} referenced unknown parent_message_id {}",
+                        message.message_id, parent_id
+                    ),
                 )
             })?;
             let handler = pending_request.callback_handler.as_ref().ok_or_else(|| {
-                format!(
-                    "plugin PPC callback {} referenced read-only request {}",
-                    message.message_id, parent_id
+                CallbackRouteError::new(
+                    "read_only_parent_message_id",
+                    format!(
+                        "plugin PPC callback {} referenced read-only request {}",
+                        message.message_id, parent_id
+                    ),
                 )
             })?;
-            return Ok((parent_id, Arc::clone(handler)));
+            return Ok((parent_id.clone(), Arc::clone(handler)));
         }
 
         let callback_ready = pending
@@ -382,14 +484,20 @@ impl PendingCalls {
             .collect::<Vec<_>>();
         match callback_ready.as_slice() {
             [(message_id, handler)] => Ok((message_id.clone(), Arc::clone(handler))),
-            [] => Err(format!(
+            [] => Err(CallbackRouteError::new(
+                "no_callback_handler",
+                format!(
                 "unexpected plugin PPC callback {} while no callback-enabled operation is in flight",
                 message.op
+                ),
             )),
-            _ => Err(format!(
+            _ => Err(CallbackRouteError::new(
+                "ambiguous_parent_message_id",
+                format!(
                 "ambiguous plugin PPC callback {} without parent_message_id while {} callback-enabled operations are in flight",
                 message.op,
                 callback_ready.len()
+                ),
             )),
         }
     }
@@ -405,11 +513,92 @@ impl PendingCalls {
     }
 }
 
-fn callback_parent_message_id(message: &PpcMessage) -> Option<String> {
-    let body = serde_json::from_str::<serde_json::Value>(&message.body).ok()?;
-    body.get("parent_message_id")
-        .and_then(serde_json::Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
+struct CallbackRouteError {
+    reason: &'static str,
+    message: String,
+}
+
+impl CallbackRouteError {
+    fn new(reason: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            reason,
+            message: message.into(),
+        }
+    }
+}
+
+fn callback_orphan_event(message: &PpcMessage, error: &CallbackRouteError) -> PpcTraceEvent {
+    PpcTraceEvent::new(
+        "ppc_reply_orphaned",
+        json!({
+            "message_id": message.message_id,
+            "parent_message_id": message.parent_message_id,
+            "direction": direction_label(message.direction),
+            "op": message.op,
+            "reason": error.reason,
+            "error": error.message,
+        }),
+    )
+}
+
+fn callback_event(
+    name: &'static str,
+    message: &PpcMessage,
+    owner_id: Option<&str>,
+) -> PpcTraceEvent {
+    PpcTraceEvent::new(
+        name,
+        json!({
+            "message_id": message.message_id,
+            "parent_message_id": message.parent_message_id.as_deref().or(owner_id),
+            "direction": direction_label(message.direction),
+            "op": message.op,
+        }),
+    )
+}
+
+fn callback_occ_commit_event(
+    callback: &PpcMessage,
+    reply: &PpcMessage,
+    owner_id: &str,
+) -> Option<PpcTraceEvent> {
+    if callback.op != "daemon.occ.apply_changeset" {
+        return None;
+    }
+    let details = match serde_json::from_str::<Value>(&reply.body) {
+        Ok(body) => {
+            let files = body
+                .get("files")
+                .and_then(Value::as_array)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
+            let committed_count = files
+                .iter()
+                .filter(|file| file.get("status").and_then(Value::as_str) == Some("committed"))
+                .count();
+            json!({
+                "source": "plugin_callback",
+                "message_id": callback.message_id,
+                "parent_message_id": callback.parent_message_id.as_deref().unwrap_or(owner_id),
+                "success": body.get("success").and_then(Value::as_bool),
+                "published_manifest_version": body.get("published_manifest_version").and_then(Value::as_u64),
+                "file_count": files.len(),
+                "committed_count": committed_count,
+            })
+        }
+        Err(err) => json!({
+            "source": "plugin_callback",
+            "message_id": callback.message_id,
+            "parent_message_id": callback.parent_message_id.as_deref().unwrap_or(owner_id),
+            "response_parse_error": err.to_string(),
+        }),
+    };
+    Some(PpcTraceEvent::in_module("occ", "commit_finished", details))
+}
+
+const fn direction_label(direction: PpcDirection) -> &'static str {
+    match direction {
+        PpcDirection::Request => "request",
+        PpcDirection::Reply => "reply",
+    }
 }

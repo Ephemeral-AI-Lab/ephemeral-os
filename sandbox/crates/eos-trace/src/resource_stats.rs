@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::budget::{BoundedJson, DetailBudget};
+use crate::SpanUid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -41,6 +42,8 @@ pub struct ResourceStatsMeta {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ResourceStats {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub span_id: Option<SpanUid>,
     pub meta: ResourceStatsMeta,
     pub payload: BoundedJson,
 }
@@ -56,6 +59,7 @@ impl ResourceStats {
         payload: Value,
     ) -> Self {
         Self {
+            span_id: None,
             meta: ResourceStatsMeta {
                 stats_kind,
                 phase,
@@ -81,6 +85,7 @@ impl ResourceStats {
         inflight_requests: u64,
     ) -> Self {
         Self {
+            span_id: None,
             meta: ResourceStatsMeta {
                 stats_kind,
                 phase,
@@ -93,5 +98,11 @@ impl ResourceStats {
             },
             payload: BoundedJson::empty_object(),
         }
+    }
+
+    #[must_use]
+    pub const fn with_span_id(mut self, span_id: SpanUid) -> Self {
+        self.span_id = Some(span_id);
+        self
     }
 }

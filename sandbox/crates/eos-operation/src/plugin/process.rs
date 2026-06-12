@@ -7,8 +7,10 @@
 //! [`NsRunnerLauncher`]; the spec data, env
 //! construction, and socket-path derivation live host-side.
 
+use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
 use std::os::unix::net::UnixListener;
+use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -55,6 +57,7 @@ pub(super) fn spawn_connected_with_overlay(
 pub(super) fn spawn(spec: &PluginProcessSpec) -> Result<PluginServiceProcess, PluginRuntimeError> {
     let env = spec.environment();
     let mut command = Command::new(&spec.command[0]);
+    let stderr = open_service_stderr(&spec.stderr_path)?;
     command.args(&spec.command[1..]);
     if spec.working_dir.is_dir() {
         command.current_dir(&spec.working_dir);
@@ -63,7 +66,7 @@ pub(super) fn spawn(spec: &PluginProcessSpec) -> Result<PluginServiceProcess, Pl
         .envs(env)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stderr(stderr);
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -120,7 +123,10 @@ pub struct ServiceProcessStatus {
     pub process_group_id: Option<i32>,
     pub running: bool,
     pub exit_status: Option<i32>,
+    pub exit_signal: Option<i32>,
+    pub status_raw: Option<i32>,
     pub socket_path: PathBuf,
+    pub stderr_path: PathBuf,
 }
 
 #[derive(Debug)]
@@ -160,7 +166,10 @@ impl PluginServiceProcess {
             process_group_id: self.process_group_id,
             running: exit_status.is_none(),
             exit_status: exit_status.and_then(|status| status.code()),
+            exit_signal: exit_status.and_then(|status| status.signal()),
+            status_raw: exit_status.map(|status| status.into_raw()),
             socket_path: self.spec.socket_path.clone(),
+            stderr_path: self.spec.stderr_path.clone(),
         }
     }
 
@@ -240,6 +249,13 @@ fn bind_ppc_listener(socket_path: &Path) -> Result<UnixListener, PluginRuntimeEr
     let listener = UnixListener::bind(socket_path)?;
     listener.set_nonblocking(true)?;
     Ok(listener)
+}
+
+fn open_service_stderr(path: &Path) -> Result<File, PluginRuntimeError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    Ok(OpenOptions::new().create(true).append(true).open(path)?)
 }
 
 fn accept_ppc_client(

@@ -29,6 +29,8 @@ use super::RunnerError;
 #[cfg(target_os = "linux")]
 use crate::protocol::RunnerVerb;
 use crate::protocol::{RunRequest, RunResult};
+#[cfg(target_os = "linux")]
+use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
 mod child;
@@ -60,15 +62,17 @@ pub(crate) fn run_fresh_ns(
         upperdir: upperdir.clone(),
         workdir: workdir.clone(),
     };
-    let _mount_guard = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)?;
+    let mount_guard = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)?;
     let mount_s = mount_start.elapsed().as_secs_f64();
 
-    execute_tool(
+    let mut result = execute_tool(
         request,
         mount_s,
         Instant::now(),
         Some(&config.mount_mask.hidden_paths),
-    )
+    )?;
+    record_overlay_teardown(&mut result, mount_guard, request.layer_paths.len());
+    Ok(result)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -265,6 +269,44 @@ fn error_result(exit_code: i32, kind: &str, message: &str) -> RunResult {
             },
             "timings": {},
         }),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn record_overlay_teardown(
+    result: &mut RunResult,
+    mount_guard: eos_overlay::OverlayMount,
+    layer_count: usize,
+) {
+    let unmount_start = Instant::now();
+    let unmount_result = mount_guard.unmount();
+    let unmount_s = unmount_start.elapsed().as_secs_f64();
+    let fsconfig_calls = layer_count.saturating_add(3);
+
+    let Some(payload) = result.payload.as_object_mut() else {
+        return;
+    };
+    let timings = payload.entry("timings").or_insert_with(|| json!({}));
+    if let Some(timings) = timings.as_object_mut() {
+        timings.insert("workspace.unmount_s".to_owned(), json!(unmount_s));
+        timings.insert("workspace.layer_count".to_owned(), json!(layer_count));
+        timings.insert("workspace.fsconfig_calls".to_owned(), json!(fsconfig_calls));
+    }
+    match unmount_result {
+        Ok(()) => {
+            payload.insert("workspace_unmount_error".to_owned(), Value::Null);
+        }
+        Err(err) => {
+            let message = err.to_string();
+            payload.insert("workspace_unmount_error".to_owned(), json!(message));
+            let warnings = payload.entry("warnings").or_insert_with(|| json!([]));
+            if let Some(warnings) = warnings.as_array_mut() {
+                warnings.push(json!({
+                    "kind": "workspace_unmount_failed",
+                    "message": message,
+                }));
+            }
+        }
     }
 }
 

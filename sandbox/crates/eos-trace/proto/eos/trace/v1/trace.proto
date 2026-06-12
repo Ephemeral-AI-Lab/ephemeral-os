@@ -62,6 +62,7 @@ message TraceResource {
   bool payload_truncated = 10;
   string payload_sha256 = 11;
   uint64 payload_original_len = 12;
+  uint64 span_id = 13;
 }
 
 message TraceLink {

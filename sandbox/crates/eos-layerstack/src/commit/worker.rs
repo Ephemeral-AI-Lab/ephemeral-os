@@ -4,12 +4,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
 
+use serde_json::json;
+
 use crate::fs::resolve_layer_path;
 use crate::model::{LayerChange, LayerPath, Manifest};
 use crate::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
 
 use super::{
-    hash_current, ChangesetResult, CommitError, CommitStatus, FileResult, PublishDecision, Route,
+    hash_current, ChangesetResult, CommitError, CommitStatus, FileResult, OccTraceEvent,
+    PublishDecision, Route,
 };
 
 pub(crate) const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
@@ -167,7 +170,7 @@ fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
         return;
     };
     let mut attempts = 0;
-    let result = loop {
+    let mut result = loop {
         match transaction.revalidate_and_publish(&combined) {
             Ok(result) => break result,
             Err(conflict) => {
@@ -178,12 +181,27 @@ fn commit_batch(transaction: &CommitTransaction, batch: Vec<WorkItem>) {
             }
         }
     };
+    result.events.insert(
+        0,
+        OccTraceEvent::new(
+            "occ",
+            "worker_batch_finished",
+            json!({
+                "batch_item_count": batch.len(),
+                "combined_path_count": combined.path_groups.len(),
+                "combined_change_count": combined.changes.len(),
+                "atomic": combined.atomic,
+                "cas_retry_count": attempts,
+            }),
+        ),
+    );
     for item in batch {
         let files = result_files_for_item(&result, &item.prepared);
         let _ = item.reply.send(Ok(ChangesetResult {
             files,
             published_manifest_version: result.published_manifest_version,
             timings: result.timings.clone(),
+            events: result.events.clone(),
         }));
     }
 }
@@ -295,10 +313,22 @@ fn cas_exhaustion_result(
                 ),
                 Route::Direct | Route::Gated => (CommitStatus::AbortedVersion, message.clone()),
             };
+            let observed_version = if group.route == Route::Drop {
+                None
+            } else {
+                conflict.observed_version
+            };
+            let observed_state = if group.route == Route::Drop {
+                None
+            } else {
+                Some("manifest_conflict".to_owned())
+            };
             FileResult {
                 path: group.path.clone(),
                 status,
                 message,
+                observed_version,
+                observed_state,
             }
         })
         .collect();
@@ -306,6 +336,7 @@ fn cas_exhaustion_result(
         files,
         published_manifest_version: None,
         timings: commit_timings(prepared, 0.0, 0.0, 0.0),
+        events: Vec::new(),
     }
 }
 
@@ -339,6 +370,7 @@ impl CommitTransaction {
             Ok(manifest) => manifest,
             Err(err) => return Ok(failed_revalidate_result(combined, &err, total_start)),
         };
+        let active_lease_count = stack.active_lease_count();
         let view = MergedView::new(self.root.clone());
         let validations = validate_prepared(&self.root, &view, &active, combined);
         let validate_s = validate_start.elapsed().as_secs_f64();
@@ -367,14 +399,17 @@ impl CommitTransaction {
         match stack.publish_layer(&publishable_changes) {
             Ok(manifest) => {
                 let publish_s = publish_start.elapsed().as_secs_f64();
-                let auto_squash_timings = run_auto_squash(&mut stack);
+                let auto_squash = run_auto_squash(&mut stack);
                 Ok(committed_changeset_result(
                     combined,
                     validations,
                     manifest_version_u64_optional(manifest.version),
+                    &active,
+                    active_lease_count,
+                    &manifest,
                     validate_s,
                     publish_s,
-                    auto_squash_timings,
+                    auto_squash,
                     total_start,
                 ))
             }
@@ -437,6 +472,7 @@ fn atomic_validation_drop_result(
             0.0,
             total_start.elapsed().as_secs_f64(),
         ),
+        events: Vec::new(),
     }
 }
 
@@ -472,24 +508,50 @@ fn no_publish_result(
             0.0,
             total_start.elapsed().as_secs_f64(),
         ),
+        events: Vec::new(),
     }
 }
 
-fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
+struct AutoSquashTrace {
+    timings: BTreeMap<String, f64>,
+    events: Vec<OccTraceEvent>,
+}
+
+fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
     let mut timings = BTreeMap::new();
-    let Ok(active) = stack.read_active_manifest() else {
-        return timings;
-    };
     let max_depth = auto_squash_max_depth();
-    if !stack
-        .can_squash(max_depth)
-        .is_ok_and(|can_squash| can_squash)
-    {
-        return timings;
+    let (depth_before, decision) = match stack.squash_plan_decision(max_depth, 2) {
+        Ok(decision) => decision,
+        Err(err) => {
+            return AutoSquashTrace {
+                timings,
+                events: vec![auto_squash_event(
+                    "auto_squash_skipped",
+                    json!({
+                        "reason": "plan_failed",
+                        "error": err.to_string(),
+                        "max_depth": max_depth,
+                    }),
+                )],
+            };
+        }
+    };
+    if let Some(reason) = decision.skip_reason {
+        return AutoSquashTrace {
+            timings,
+            events: vec![auto_squash_event(
+                "auto_squash_skipped",
+                json!({
+                    "reason": reason.as_str(),
+                    "max_depth": max_depth,
+                    "depth_before": depth_before,
+                }),
+            )],
+        };
     }
 
     let squash_start = Instant::now();
-    let squashed = stack.squash(max_depth).ok().flatten();
+    let squashed = stack.squash(max_depth);
     let squash_elapsed_s = squash_start.elapsed().as_secs_f64();
     timings.insert(
         "layer_stack.auto_squash.total_s".to_owned(),
@@ -501,10 +563,10 @@ fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     );
     timings.insert(
         "layer_stack.auto_squash.depth_before".to_owned(),
-        usize_to_f64_saturating(active.depth()),
+        usize_to_f64_saturating(depth_before),
     );
     match squashed {
-        Some(manifest) => {
+        Ok(Some(manifest)) => {
             timings.insert(
                 "layer_stack.auto_squash.depth_after".to_owned(),
                 usize_to_f64_saturating(manifest.depth()),
@@ -513,21 +575,65 @@ fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
                 "layer_stack.auto_squash.manifest_version".to_owned(),
                 i64_to_f64_saturating(manifest.version),
             );
+            AutoSquashTrace {
+                timings,
+                events: vec![auto_squash_event(
+                    "auto_squash_finished",
+                    json!({
+                        "success": true,
+                        "max_depth": max_depth,
+                        "depth_before": depth_before,
+                        "depth_after": manifest.depth(),
+                        "manifest_version": manifest.version,
+                        "duration_s": squash_elapsed_s,
+                    }),
+                )],
+            }
         }
-        None => {
+        Ok(None) => {
             timings.insert("layer_stack.auto_squash.raced".to_owned(), 1.0);
+            AutoSquashTrace {
+                timings,
+                events: vec![auto_squash_event(
+                    "auto_squash_skipped",
+                    json!({
+                        "reason": "live_prefix_race",
+                        "max_depth": max_depth,
+                        "depth_before": depth_before,
+                        "duration_s": squash_elapsed_s,
+                    }),
+                )],
+            }
         }
+        Err(err) => AutoSquashTrace {
+            timings,
+            events: vec![auto_squash_event(
+                "auto_squash_failed",
+                json!({
+                    "error": err.to_string(),
+                    "max_depth": max_depth,
+                    "depth_before": depth_before,
+                    "duration_s": squash_elapsed_s,
+                }),
+            )],
+        },
     }
-    timings
+}
+
+fn auto_squash_event(name: &'static str, details: serde_json::Value) -> OccTraceEvent {
+    OccTraceEvent::new("layer_stack", name, details)
 }
 
 fn committed_changeset_result(
     combined: &PreparedChangeset,
     validations: Vec<FileResult>,
     published_manifest_version: Option<u64>,
+    active_manifest: &Manifest,
+    active_lease_count: usize,
+    published_manifest: &Manifest,
     validate_s: f64,
     publish_s: f64,
-    auto_squash_timings: BTreeMap<String, f64>,
+    auto_squash: AutoSquashTrace,
     total_start: Instant,
 ) -> ChangesetResult {
     let mut timings = commit_timings(
@@ -536,7 +642,32 @@ fn committed_changeset_result(
         publish_s,
         total_start.elapsed().as_secs_f64(),
     );
-    timings.extend(auto_squash_timings);
+    timings.extend(auto_squash.timings);
+    let mut events = vec![
+        OccTraceEvent::new(
+            "layer_stack",
+            "manifest_validated",
+            json!({
+                "manifest_version": active_manifest.version,
+                "manifest_depth": active_manifest.depth(),
+                "manifest_path_count": active_manifest.layers.len(),
+                "active_lease_count": active_lease_count,
+            }),
+        ),
+        OccTraceEvent::new(
+            "layer_stack",
+            "publish_layer_finished",
+            json!({
+                "success": true,
+                "manifest_version_before": active_manifest.version,
+                "manifest_version_after": published_manifest.version,
+                "published_manifest_version": published_manifest_version,
+                "published_layer_count": published_manifest.layers.len().saturating_sub(active_manifest.layers.len()),
+                "duration_s": publish_s,
+            }),
+        ),
+    ];
+    events.extend(auto_squash.events);
     ChangesetResult {
         files: validations
             .into_iter()
@@ -553,6 +684,7 @@ fn committed_changeset_result(
             .collect(),
         published_manifest_version,
         timings,
+        events,
     }
 }
 
@@ -574,6 +706,8 @@ fn validate_prepared(
                     .message
                     .clone()
                     .unwrap_or_else(|| "change dropped".to_owned()),
+                observed_version: None,
+                observed_state: None,
             },
             Route::Direct => accepted_file(&group.path),
             Route::Gated => validate_gated_group(
@@ -593,6 +727,8 @@ fn accepted_file(path: &LayerPath) -> FileResult {
         path: path.clone(),
         status: CommitStatus::Accepted,
         message: String::new(),
+        observed_version: None,
+        observed_state: None,
     }
 }
 
@@ -623,11 +759,15 @@ fn validate_gated_group(
             path: path.clone(),
             status: CommitStatus::AbortedVersion,
             message: "content changed".to_owned(),
+            observed_version: None,
+            observed_state: Some("content_changed".to_owned()),
         },
         Err(err) => FileResult {
             path: path.clone(),
             status: CommitStatus::Failed,
             message: err.to_string(),
+            observed_version: None,
+            observed_state: Some("read_failed".to_owned()),
         },
     }
 }
@@ -665,10 +805,13 @@ fn failed_changeset_with_timings(
                 path: group.path.clone(),
                 status: CommitStatus::Failed,
                 message: message.to_owned(),
+                observed_version: None,
+                observed_state: Some("storage_error".to_owned()),
             })
             .collect(),
         published_manifest_version: None,
         timings,
+        events: Vec::new(),
     }
 }
 

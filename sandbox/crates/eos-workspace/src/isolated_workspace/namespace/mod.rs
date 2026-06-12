@@ -31,7 +31,7 @@ use nix::unistd::{close, pipe2, read, Pid};
 use serde_json::{json, Value};
 
 use crate::isolated_workspace::error::IsolatedError;
-use crate::isolated_workspace::manager::WorkspaceHandle;
+use crate::isolated_workspace::manager::{DnsConfiguration, WorkspaceHandle};
 
 pub mod runner_launcher;
 
@@ -181,14 +181,14 @@ impl NamespaceRuntime {
         &self,
         handle: &WorkspaceHandle,
         fallback_dns: &str,
-    ) -> Result<bool, IsolatedError> {
+    ) -> Result<DnsConfiguration, IsolatedError> {
         if self.stub || handle.holder_pid <= 0 {
-            return Ok(false);
+            return Ok(DnsConfiguration::default());
         }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (handle, fallback_dns);
-            Ok(false)
+            Ok(DnsConfiguration::default())
         }
         #[cfg(target_os = "linux")]
         {
@@ -419,7 +419,9 @@ fn run_ns_runner_mount_overlay_child(request: &RunRequest) -> Result<(), Isolate
 }
 
 #[cfg(target_os = "linux")]
-fn run_ns_runner_configure_dns_child(request: &RunRequest) -> Result<bool, IsolatedError> {
+fn run_ns_runner_configure_dns_child(
+    request: &RunRequest,
+) -> Result<DnsConfiguration, IsolatedError> {
     let output = run_ns_runner_child(request, "--configure-dns", Stdio::piped())?;
     if !output.status.success() {
         return Err(IsolatedError::SetupFailed {
@@ -435,11 +437,18 @@ fn run_ns_runner_configure_dns_child(request: &RunRequest) -> Result<bool, Isola
             step: format!("invalid ns-runner configure dns output: {err}"),
         }
     })?;
-    Ok(result
-        .payload
-        .get("applied_fallback")
-        .and_then(Value::as_bool)
-        .unwrap_or(false))
+    Ok(DnsConfiguration {
+        fallback_applied: result
+            .payload
+            .get("applied_fallback")
+            .and_then(Value::as_bool)
+            .unwrap_or(false),
+        previous_first_nameserver: result
+            .payload
+            .get("previous_first_nameserver")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
+    })
 }
 
 #[cfg(target_os = "linux")]

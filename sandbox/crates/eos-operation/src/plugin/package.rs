@@ -15,6 +15,8 @@ use super::route::{
 };
 use super::PpcError;
 
+const SETUP_OUTPUT_TAIL_BYTES: usize = 4096;
+
 /// Outcome of a package ensure: whether the package contract is active, whether
 /// the caller must upload, and the resolved roots / publish + setup status.
 #[derive(Debug, Clone, Default)]
@@ -25,6 +27,19 @@ pub struct PackageEnsureReport {
     pub dependency_root: Option<PathBuf>,
     pub package_published: bool,
     pub setup_ran: bool,
+    pub setup: Option<PluginSetupReport>,
+}
+
+/// Bounded setup command facts for trace events.
+#[derive(Debug, Clone, Default)]
+pub struct PluginSetupReport {
+    pub plugin: String,
+    pub digest: String,
+    pub ran: bool,
+    pub success: bool,
+    pub exit_code: Option<i32>,
+    pub output_tail: Option<String>,
+    pub spawn_error: Option<String>,
 }
 
 /// Resolved package + dependency roots for a plugin digest.
@@ -71,7 +86,10 @@ pub(super) fn ensure_package(
     validate_staged_package(manifest, &staged_package_root)?;
 
     let package_published = publish_package(&staged_package_root, &paths)?;
-    let setup_ran = ensure_setup(manifest, &paths)?;
+    let setup = ensure_setup(manifest, &paths)?;
+    let setup_ran = setup
+        .as_ref()
+        .is_some_and(|report| report.ran && report.success);
     cleanup_upload_root(&staged_package_root, &paths.upload_digest_root);
 
     Ok(PackageEnsureReport {
@@ -81,6 +99,7 @@ pub(super) fn ensure_package(
         dependency_root: Some(paths.dependency_root),
         package_published,
         setup_ran,
+        setup,
     })
 }
 
@@ -116,6 +135,7 @@ fn warm_probe(manifest: &PluginManifest, paths: &PackagePaths) -> PackageEnsureR
         dependency_root: Some(paths.dependency_root.clone()),
         package_published: false,
         setup_ran: false,
+        setup: None,
     }
 }
 
@@ -354,13 +374,16 @@ fn copy_package_dir(
     Ok(())
 }
 
-fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool, PpcError> {
+fn ensure_setup(
+    manifest: &PluginManifest,
+    paths: &PackagePaths,
+) -> Result<Option<PluginSetupReport>, PpcError> {
     let Some(setup) = &manifest.setup else {
-        return Ok(false);
+        return Ok(None);
     };
     let setup_marker = paths.package_root.join(SETUP_SHA256_MARKER);
     if marker_matches(&setup_marker, &setup.setup_marker_digest) {
-        return Ok(false);
+        return Ok(None);
     }
     fs::create_dir_all(&paths.dependency_root)?;
     fs::create_dir_all(paths.dependency_root.join("cache"))?;
@@ -381,23 +404,59 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
         .stdin(Stdio::null())
         .output()
         .map_err(|err| {
-            PluginError::Ensure(format!(
+            let spawn_error = err.to_string();
+            let message = format!(
                 "plugin setup command {:?} failed to start in {}: {err}",
                 setup.command,
                 cwd.display()
-            ))
+            );
+            PpcError::SetupFailed {
+                report: PluginSetupReport {
+                    plugin: manifest.plugin_id.clone(),
+                    digest: manifest.plugin_digest.clone(),
+                    ran: false,
+                    success: false,
+                    exit_code: None,
+                    output_tail: None,
+                    spawn_error: Some(spawn_error),
+                },
+                message,
+            }
         })?;
+    let output_tail = setup_output_tail(&output.stdout, &output.stderr);
+    let report = PluginSetupReport {
+        plugin: manifest.plugin_id.clone(),
+        digest: manifest.plugin_digest.clone(),
+        ran: true,
+        success: output.status.success(),
+        exit_code: output.status.code(),
+        output_tail,
+        spawn_error: None,
+    };
     if !output.status.success() {
-        return Err(PluginError::Ensure(format!(
+        let message = format!(
             "plugin setup failed with status {:?}: {}{}",
             output.status.code(),
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
-        ))
-        .into());
+        );
+        return Err(PpcError::SetupFailed { report, message });
     }
     fs::write(setup_marker, &setup.setup_marker_digest)?;
-    Ok(true)
+    Ok(Some(report))
+}
+
+fn setup_output_tail(stdout: &[u8], stderr: &[u8]) -> Option<String> {
+    if stdout.is_empty() && stderr.is_empty() {
+        return None;
+    }
+    let mut combined = Vec::with_capacity(stdout.len().saturating_add(stderr.len()));
+    combined.extend_from_slice(stdout);
+    combined.extend_from_slice(stderr);
+    if combined.len() > SETUP_OUTPUT_TAIL_BYTES {
+        combined = combined[combined.len() - SETUP_OUTPUT_TAIL_BYTES..].to_vec();
+    }
+    Some(String::from_utf8_lossy(&combined).into_owned())
 }
 
 fn reject_forbidden_setup_roots(command: &[String], cwd: &Path) -> Result<(), PpcError> {

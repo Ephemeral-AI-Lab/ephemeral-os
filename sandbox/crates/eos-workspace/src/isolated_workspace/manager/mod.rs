@@ -33,6 +33,12 @@ pub struct IsolatedSnapshot {
     pub layer_paths: Vec<PathBuf>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DnsConfiguration {
+    pub fallback_applied: bool,
+    pub previous_first_nameserver: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceHandle {
     pub workspace_id: IsolatedWorkspaceId,
@@ -49,6 +55,7 @@ pub struct WorkspaceHandle {
     pub control_fd: i32,
     pub veth: Option<VethAllocation>,
     pub cgroup_path: Option<PathBuf>,
+    pub dns_configuration: DnsConfiguration,
     pub created_at: f64,
     pub last_activity: f64,
 }

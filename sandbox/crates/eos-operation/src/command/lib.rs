@@ -19,6 +19,7 @@ pub use runtime::{
     command_ops, command_scratch_root, configure_commands,
 };
 pub use service::{
-    CommandExecOutcome, CommandOps, CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
+    CommandExecError, CommandExecOutcome, CommandOps, CommandProgressTraceFacts,
+    CommandReadProgressOutcome, CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
 };
 pub use trace::CommandTraceEvent;

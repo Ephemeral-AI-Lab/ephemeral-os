@@ -9,6 +9,7 @@ pub use binding::IsolatedWorkspaceBinding;
 pub use caps::{ResourceCaps, Rfc1918Egress};
 pub use error::IsolatedError;
 pub use manager::{
-    ExitOutcome, IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId, WorkspaceHandle,
+    DnsConfiguration, ExitOutcome, IsolatedManager, IsolatedSnapshot, IsolatedWorkspaceId,
+    WorkspaceHandle,
 };
 pub use namespace::runner_launcher::{CurrentExeNsRunnerLauncher, LaunchError, NsRunnerLauncher};

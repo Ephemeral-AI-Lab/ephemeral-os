@@ -42,11 +42,11 @@ use self::state::{connected_ppc_routes, connected_ppc_services, setup_failure_ke
 
 pub use self::dispatch::PluginDispatchOutcome;
 pub use self::overlay::PluginOverlayOutcome;
-pub use self::package::{needs_upload_output, PackageEnsureReport};
+pub use self::package::{needs_upload_output, PackageEnsureReport, PluginSetupReport};
 pub use self::process::ServiceProcessStatus;
 pub use self::refresh::ServiceHealthReport;
 pub use self::state::{PluginRuntime, SetupFailure};
-pub use self::transport::{read_message_bytes, PpcClient};
+pub use self::transport::{read_message_bytes, PpcClient, PpcTraceEvent, PpcTraceEventSink};
 pub use eos_workspace::{LaunchError, NsRunnerLauncher};
 
 /// Failures surfaced by the plugin PPC transport and package pipeline.
@@ -68,6 +68,13 @@ pub enum PpcError {
     /// A socket / filesystem I/O operation failed.
     #[error("plugin ppc io error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// A package setup command failed after producing bounded trace facts.
+    #[error("{message}")]
+    SetupFailed {
+        report: self::package::PluginSetupReport,
+        message: String,
+    },
 
     /// A process-local PPC state mutex was poisoned.
     #[error("daemon state lock poisoned: {0}")]
@@ -146,6 +153,7 @@ pub struct EnsureReady {
     pub operation_routes: Vec<PluginOperationRoute>,
     pub services: Vec<PluginServiceStatus>,
     pub service_processes: Vec<PluginProcessSpec>,
+    pub started_service_processes: Vec<ServiceProcessStatus>,
     pub running_service_processes: Vec<ServiceProcessStatus>,
     pub connected_ppc_routes: Vec<String>,
     pub connected_ppc_services: Vec<String>,
@@ -167,6 +175,7 @@ pub struct LoadedPluginStatus {
 pub struct StatusOutcome {
     pub loaded_plugins: Vec<LoadedPluginStatus>,
     pub running_service_processes: Vec<ServiceProcessStatus>,
+    pub exited_service_processes: Vec<ServiceProcessStatus>,
     pub connected_ppc_routes: Vec<String>,
     pub connected_ppc_services: Vec<String>,
     pub setup_failures: Vec<SetupFailure>,
@@ -205,6 +214,17 @@ impl PluginRuntime {
             &mut state,
             layer_stack_root,
         ))
+    }
+
+    pub fn drain_ppc_trace_events(&self) -> Vec<PpcTraceEvent> {
+        let Ok(state) = self.lock_state() else {
+            return Vec::new();
+        };
+        state
+            .service_ppc_clients
+            .values()
+            .flat_map(|client| client.drain_trace_events())
+            .collect()
     }
 
     /// Register (or re-confirm) a plugin from its parsed ensure args, ensuring
@@ -267,7 +287,9 @@ impl PluginRuntime {
         };
         let started_services = self.spawn_service_processes(&specs_to_start)?;
         let mut state = self.lock_state()?;
-        let started_count = insert_started_service_processes(&mut state, started_services)?;
+        let started_service_processes =
+            insert_started_service_processes(&mut state, started_services)?;
+        let started_count = started_service_processes.len();
         let loaded = state
             .loaded
             .get(&plugin_id)
@@ -282,6 +304,7 @@ impl PluginRuntime {
             operation_routes: loaded.operation_routes.values().cloned().collect(),
             services: loaded.services.clone(),
             service_processes: loaded.service_processes.clone(),
+            started_service_processes,
             running_service_processes: running_process_statuses(&mut state),
             connected_ppc_routes: connected_ppc_routes(&state),
             connected_ppc_services: connected_ppc_services(&state),
@@ -308,13 +331,17 @@ impl PluginRuntime {
             .unwrap_or_else(|| Duration::from_millis(self.config.service_probe_timeout_ms));
         let probe_targets = {
             let mut state = self.lock_state()?;
-            reap_exited_processes(&mut state);
+            let exited_service_processes = reap_exited_processes(&mut state);
             if probe_services {
-                service_health_probe_targets(&state)
+                (
+                    service_health_probe_targets(&state),
+                    exited_service_processes,
+                )
             } else {
-                Vec::new()
+                (Vec::new(), exited_service_processes)
             }
         };
+        let (probe_targets, exited_service_processes) = probe_targets;
         let service_health = self.probe_service_health(probe_targets, probe_timeout);
         let mut state = self.lock_state()?;
         let running_service_processes = running_process_statuses(&mut state);
@@ -334,6 +361,7 @@ impl PluginRuntime {
         let outcome = StatusOutcome {
             loaded_plugins,
             running_service_processes,
+            exited_service_processes,
             connected_ppc_routes: connected_ppc_routes(&state),
             connected_ppc_services: connected_ppc_services(&state),
             setup_failures: state.setup_failures.values().cloned().collect(),

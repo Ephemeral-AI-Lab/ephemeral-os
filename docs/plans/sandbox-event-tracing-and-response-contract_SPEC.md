@@ -56,7 +56,7 @@ Current phase status:
 | Phase 01 - Contracts first | Complete | `cargo test -p eos-trace -p eos-operation` passed on 2026-06-12 after adding `eos-trace`, protobuf codec/layer tests, `OperationEnvelope`, and the temporary v1 flattening adapter. |
 | Phase 02 - Host store | Complete | `cargo test -p eos-sandbox-host` passed on 2026-06-12 after adding the host SQLite trace store, request-start fail-closed gate, projection rebuild, startup reconciliation, seal/prune verification, and indexed acceptance-query tests. |
 | Phase 03 - Gateway, host, and daemon propagation | Complete | `cargo test -p eos-daemon -p eos-sandbox-host -p eos-sandbox-gateway -p eos-trace` passed on 2026-06-12 after adding additive trace propagation, daemon protobuf sidecars with accepted-before-read root timing, bounded export spool/drainer, daemon peer/local transport facts, daemon response write/shutdown failure spooling, wire-error sidecars, host transport edge coverage, host sidecar ingest/strip, gateway declassification/write-failure events, boot `config_loaded`/`listen_bound` events, hot-path traced dispatch coverage, and host-store replay assertions. |
-| Phase 04 - Subsystem events and resource stats | In progress | Checkpoint worktree-mode/git command-step events, daemon-side `workspace.route` fast-path attribution, file read/write sidecar events, direct-file `resource_stats` projections from existing cheap samples, `ActiveCommand` trace-origin fields, background `CommandFinalize` roots, background-finalize completed-buffer eviction loss markers, request-sidecar `stdin_written` wait/backpressure facts, command final-response persistence/transcript failure trace events, and `exit_taken` signal facts are implemented; `cargo test -p eos-command -p eos-operation -p eos-daemon`, `cargo test -p eos-daemon`, and focused command-origin/background-finalize/stdin-trace/persistence/signal tests passed on 2026-06-12 for these Phase 04 slices. |
+| Phase 04 - Subsystem events and resource stats | In progress | Checkpoint worktree-mode/git command-step events, daemon-side `workspace.route` fast-path attribution, file read/write sidecar events, direct-file `resource_stats` projections from existing cheap samples with explicit cgroup CPU/memory/io/PSI/process groupings, source markers, and measured `sampler_duration_us`, command foreground wait before/after `resource_stats` pairs around `command.process.wait` with daemon `inflight_requests`, command foreground host `resource_stats` for daemon RSS/HWM gauges, command finalization tree `resource_stats` for existing upperdir/run-dir tree timings, command finalized sidecar overlay/capture, changed-path, and response-meta facts, plugin overlay before/after `resource_stats` and host RSS/HWM resource samples around `plugin.overlay.run`, typed sidecar-to-`trace_resources` promotion with span ids for same-span before/after resource queries, real bounded tree-walk truncation markers, plugin overlay `mount_cost` resource samples and host resource-query coverage for command/plugin before-after rows, tree truncation, and `duration_us`/`layer_count`/`fsconfig_calls`, `ActiveCommand` trace-origin fields, background `CommandFinalize` roots, background-finalize completed-buffer eviction loss markers, request-sidecar `stdin_written` wait/backpressure facts, request-sidecar `progress_read` facts, explicit command `cancelled`/`timed_out` finalize events, command final-response persistence/transcript failure trace events, `exit_taken` signal facts, command start `prepared`/`spawned` plus metadata/runner-request `artifact_written`/`artifact_failed` events, isolated enter/status/exit/recovery lifecycle sidecar events with DNS fallback/previous nameserver, teardown/mountinfo markers, and manager-json recovery errors, PPC typed `parent_message_id` plus orphan reply/refused-callback trace facts, plugin `setup_finished` exit/output/spawn facts, plugin `service_started` stderr-path facts with stderr capture, plugin `service_health_checked` state/restart/refresh/last-error facts plus `service_exited` exit-code/signal/raw-status facts, plugin overlay `overlay_started`/`overlay_finished` lifecycle facts plus `overlay.mount_finished`/`overlay.unmount_finished` from ns-runner `workspace.mount_s`/`workspace.unmount_s` with `layer_count` and `fsconfig_calls`, `overlay.capture_started`/`overlay.capture_finished` capture facts, OCC `commit_finished`/`conflict_detected` result facts with observed manifest version/state forwarding for file fast-path and plugin overlay publishes, OCC `worker_handoff`/`worker_batch_finished` queue facts, LayerStack `manifest_validated`/`publish_layer_finished` manifest and active-lease facts, and LayerStack auto-squash `auto_squash_skipped`/`auto_squash_finished`/`auto_squash_failed` trace facts are implemented; `cargo test -p eos-command -p eos-daemon`, `cargo test -p eos-operation`, focused command-origin/background-finalize/stdin-trace/progress-trace/persistence/signal/artifact tests, `cargo test -p eos-workspace -p eos-daemon`, `cargo test -p eos-plugin -p eos-operation`, `cargo test -p eos-operation --lib`, `cargo test -p eos-operation --test plugin_service_runtime`, `cargo test -p eos-layerstack --lib`, `cargo test -p eos-trace`, `cargo test -p eos-sandbox-host --lib`, `cargo test -p eos-daemon --lib`, `cargo test -p eos-e2e-test --features e2e --test core test_core_direct_file_contracts::live_trace_file_fast_path_records_route_occ_and_no_workspace_facts -- --exact --nocapture`, `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace test_ephemeral_workspace_overlay_exec::live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts -- --exact --nocapture`, `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated isolated_workspace_lifecycle::live_trace_isolated_enter_exec_status_exit_records_one_chain -- --exact --nocapture`, and `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command command_cancel_runs::live_trace_background_command_finalize_exports_root_linked_to_origin -- --exact --nocapture` passed on 2026-06-12/13 for these Phase 04 slices. |
 | Phase 05 - Response and e2e migration | Blocked | |
 | Phase 06 - Debt deletion | Blocked | |
 | Phase 07 - TypeScript mirror | Blocked | |
@@ -1540,12 +1540,22 @@ WHERE b.request_id=:request_id
   AND json_extract(a.values_json,'$.phase')='after';
 
 -- (7) Mount cost audit: duration should scale with layer_count, not content bytes
-SELECT json_extract(details_json,'$.layer_count') AS layer_count,
-       json_extract(details_json,'$.fsconfig_calls') AS fsconfig_calls,
-       json_extract(details_json,'$.duration_us') AS duration_us
-FROM trace_events
-WHERE event='mount_finished'
+SELECT json_extract(values_json,'$.payload.mount.layer_count') AS layer_count,
+       json_extract(values_json,'$.payload.mount.fsconfig_calls') AS fsconfig_calls,
+       json_extract(values_json,'$.payload.mount.duration_us') AS duration_us
+FROM trace_resources
+WHERE request_id=:request_id
+  AND kind='mount_cost'
 ORDER BY layer_count, duration_us;
+
+-- (8) Tree walk truncation audit: bounded walks expose real truncation
+SELECT json_extract(values_json,'$.payload.tree.entry_count') AS entry_count,
+       json_extract(values_json,'$.payload.tree.truncated') AS truncated
+FROM trace_resources
+WHERE request_id=:request_id
+  AND kind='tree'
+  AND json_extract(values_json,'$.payload.tree.truncated')=1
+ORDER BY ts_us;
 ```
 
 Retention: `prune_before(ms)` ships unwired (audit store; policy is an open
@@ -2041,41 +2051,41 @@ without daemon sidecars. Phase 04 remains Blocked until then.
 
 Acceptance checklist:
 
-- [ ] LayerStack/OCC emit worker-handoff spans, manifest/lease/squash events,
+- [x] LayerStack/OCC emit worker-handoff spans, manifest/lease/squash events,
   per-file conflict detail, and squash skip/fail reasons.
-- [ ] Overlay emits mount/capture/unmount events, mount cost fields, capture
+- [x] Overlay emits mount/capture/unmount events, mount cost fields, capture
   walk counters, failing paths, and real truncation.
-- [ ] Command adds `ActiveCommand` origin `trace_id`/`request_id`,
+- [x] Command adds `ActiveCommand` origin `trace_id`/`request_id`,
   background `CommandFinalize` roots, stdin wait/backpressure facts, kill
   signals, artifact write/failure events, transcript failure events, and
   completed-buffer eviction loss markers.
-- [ ] Isolated workspace emits enter/status/exit/recovery lifecycle facts,
+- [x] Isolated workspace emits enter/status/exit/recovery lifecycle facts,
   DNS fallback with previous nameserver when available, holder liveness,
   manager JSON errors, mountinfo scan errors, and orphan cleanup results.
-- [ ] Plugin/PPC emits setup/service health/state facts, typed
+- [x] Plugin/PPC emits setup/service health/state facts, typed
   `parent_message_id`, service stderr path, service exit raw status/signal,
   PPC orphan/late reply events, and overlay/callback parent handoff.
 - [x] Checkpoint/git operations emit command step events with exit codes and
   bounded stderr tails.
-- [ ] `ResourceStats` covers cgroup CPU/memory/io/PSI where available,
+- [x] `ResourceStats` covers cgroup CPU/memory/io/PSI where available,
   daemon RSS/HWM, tree stats, mount cost, source availability/error markers,
   sampler duration, and `inflight_requests`.
-- [ ] Always-on before/after pairs are limited to cheap kernel gauges around
+- [x] Always-on before/after pairs are limited to cheap kernel gauges around
   `command.process.wait` and `plugin.overlay.run`; tree walks occur only on
   spans that already perform or explicitly request a bounded walk.
-- [ ] Per-crate focused tests for `eos-layerstack`, `eos-workspace`,
+- [x] Per-crate focused tests for `eos-layerstack`, `eos-workspace`,
   `eos-command`, `eos-plugin`, `eos-operation`, and `eos-daemon`.
-- [ ] Live e2e trace query: file `fast_path` request produces route, OCC, and
+- [x] Live e2e trace query: file `fast_path` request produces route, OCC, and
   no-workspace facts.
-- [ ] Live e2e trace query: ephemeral exec produces command, overlay, capture,
+- [x] Live e2e trace query: ephemeral exec produces command, overlay, capture,
   resource before/after, changed-path, and response meta facts.
-- [ ] Live e2e trace query: isolated enter/exec/status/exit produces one chain
+- [x] Live e2e trace query: isolated enter/exec/status/exit produces one chain
   with lifecycle, command, teardown, and heartbeat-adjacent facts.
-- [ ] Live e2e trace query: background-cancelled command yields a
+- [x] Live e2e trace query: background-cancelled command yields a
   `CommandFinalize` background trace linked to the original command.
 - [ ] Live e2e trace query: plugin callback-driven OCC publish parents under
   the owning plugin op trace.
-- [ ] Resource query returns before/after rows for command/plugin spans, real
+- [x] Resource query returns before/after rows for command/plugin spans, real
   tree-walk truncation when the budget is exceeded, and mount cost
   `layer_count`/`fsconfig_calls`/`duration_us`.
 - [ ] Update the progress tracker with Phase 04 evidence and mark Phase 04

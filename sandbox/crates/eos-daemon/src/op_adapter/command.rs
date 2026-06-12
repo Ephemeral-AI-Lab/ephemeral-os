@@ -11,8 +11,8 @@ use eos_operation::command::contract::{
     ExecCommandInput, ReadProgressInput, WriteStdinInput,
 };
 use eos_operation::command::{
-    command_config, command_ops, command_scratch_root, CommandExecOutcome, CommandStdinTraceFacts,
-    CommandTraceEvent, ExecTarget,
+    command_config, command_ops, command_scratch_root, CommandExecError, CommandExecOutcome,
+    CommandProgressTraceFacts, CommandStdinTraceFacts, CommandTraceEvent, ExecTarget,
 };
 use eos_operation::control::contract::CallerCountInput;
 use serde_json::{json, Value};
@@ -44,7 +44,7 @@ enum CommandOpError {
     #[error(transparent)]
     LayerStack(#[from] eos_layerstack::LayerStackError),
     #[error(transparent)]
-    Command(#[from] CommandError),
+    Command(#[from] CommandExecError),
 }
 
 /// `sandbox.command.exec` - command start contract.
@@ -57,7 +57,7 @@ pub(crate) fn op_exec_command(
     let yield_time_ms = input
         .yield_time_ms
         .unwrap_or(command_config.default_yield_time_ms);
-    let outcome = exec_command(
+    let outcome = match exec_command(
         context.services().map(|services| &services.workspace),
         ExecCommandRequest {
             invocation_id: input.invocation_id.to_string(),
@@ -69,8 +69,14 @@ pub(crate) fn op_exec_command(
             timeout_seconds,
             yield_time_ms,
         },
-    )
-    .map_err(command_op_error)?;
+    ) {
+        Ok(outcome) => outcome,
+        Err(CommandOpError::Command(error)) => {
+            record_command_trace_events(&context, error.trace_events());
+            return Err(command_error(error.into_error()));
+        }
+        Err(error) => return Err(command_op_error(error)),
+    };
     record_command_trace_events(&context, &outcome.trace_events);
     let response = outcome.response;
     let running = response.status == CommandStatus::Running;
@@ -186,13 +192,19 @@ pub(crate) fn command_write_stdin(
 
 pub(crate) fn command_read_progress(
     input: ReadProgressInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = ReadCommandProgress {
         command_id: input.command_id.to_string(),
         last_n_lines: input.last_n_lines,
     };
-    command_response_to_wire(command_ops().read_command_progress(request))
+    match command_ops().read_command_progress_with_trace(request) {
+        Ok(outcome) => {
+            record_progress_read(&context, &outcome.trace);
+            command_response_to_wire(Ok(outcome.response))
+        }
+        Err(error) => command_response_to_wire(Err(error)),
+    }
 }
 
 pub(crate) fn command_cancel(
@@ -229,6 +241,9 @@ fn strip_command_id(mut response: Value) -> Value {
 fn command_error(error: CommandError) -> DaemonError {
     match error {
         CommandError::Io(message) => DaemonError::OverlayPipeline(message),
+        other @ CommandError::ArtifactWrite { .. } => {
+            DaemonError::OverlayPipeline(other.to_string())
+        }
         other => DaemonError::InvalidRequest(other.to_string()),
     }
 }
@@ -239,7 +254,7 @@ fn command_op_error(error: CommandOpError) -> DaemonError {
             DaemonError::InvalidRequest("layer_stack_root is required".to_owned())
         }
         CommandOpError::LayerStack(error) => DaemonError::LayerStack(error),
-        CommandOpError::Command(error) => command_error(error),
+        CommandOpError::Command(error) => command_error(error.into_error()),
     }
 }
 
@@ -256,8 +271,32 @@ fn collect_completed_request(input: CollectCompletedInput) -> CollectCompleted {
 
 fn record_command_trace_events(context: &DispatchContext<'_>, events: &[CommandTraceEvent]) {
     for event in events {
-        context.record_trace_event("command", event.name, event.details.clone());
+        if event.name == "resource_stats" {
+            context.record_trace_event(
+                "resource",
+                event.name,
+                command_resource_stats_details(context, &event.details),
+            );
+        } else if let Some(name) = event.name.strip_prefix("overlay_") {
+            context.record_trace_event("overlay", name, event.details.clone());
+        } else {
+            context.record_trace_event("command", event.name, event.details.clone());
+        }
     }
+}
+
+fn command_resource_stats_details(context: &DispatchContext<'_>, details: &Value) -> Value {
+    let mut details = details.clone();
+    if let Some(meta) = details.get_mut("meta").and_then(Value::as_object_mut) {
+        meta.insert(
+            "inflight_requests".to_owned(),
+            json!(context.invocation_registry().map_or(
+                0,
+                crate::invocation_registry::InFlightRegistry::inflight_count
+            )),
+        );
+    }
+    details
 }
 
 fn record_stdin_written(context: &DispatchContext<'_>, trace: &CommandStdinTraceFacts) {
@@ -270,6 +309,20 @@ fn record_stdin_written(context: &DispatchContext<'_>, trace: &CommandStdinTrace
             "wait_ms": trace.wait_ms,
             "waited_for_output": trace.waited_for_output,
             "status": trace.status.as_str(),
+        }),
+    );
+}
+
+fn record_progress_read(context: &DispatchContext<'_>, trace: &CommandProgressTraceFacts) {
+    context.record_trace_event(
+        "command",
+        "progress_read",
+        json!({
+            "command_id": trace.command_id,
+            "last_n_lines": trace.last_n_lines,
+            "status": trace.status.as_str(),
+            "source": trace.source,
+            "stdout_bytes": trace.stdout_bytes,
         }),
     );
 }

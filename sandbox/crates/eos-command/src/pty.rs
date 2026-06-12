@@ -18,7 +18,7 @@ use rustix::pty::ptsname;
 use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 use serde_json::Value;
 
-use crate::transcript::TranscriptTimestampPrefixer;
+use crate::{transcript::TranscriptTimestampPrefixer, CommandError};
 
 /// Cap on how long a single `write_stdin` pushes bytes into the PTY before
 /// returning a structured backpressure error. The master is non-blocking, so a
@@ -272,8 +272,9 @@ pub(crate) fn spawn_current_exe_ns_runner(
     output_path: &Path,
     transcript_path: PathBuf,
     transcript_timestamp_timezone: &str,
-) -> io::Result<PtyProcess> {
-    write_run_request(request_path, run_request)?;
+) -> Result<PtyProcess, CommandError> {
+    write_run_request(request_path, run_request)
+        .map_err(|error| CommandError::artifact_write("runner_request", request_path, error))?;
     let (master, slave) = open_pty_pair()?;
     // Non-blocking master OFD (shared by the writer dup and the reader): writes
     // can't wedge on a non-draining consumer, and the reader polls instead.

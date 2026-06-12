@@ -11,6 +11,7 @@ use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
 use eos_operation::core::catalog;
+use eos_sandbox_host::protocol::TraceWireContext;
 use serde_json::{json, Map, Value};
 
 use crate::client::{error_kind, is_success, ProtocolClient};
@@ -259,6 +260,28 @@ impl<'p> NodeLease<'p> {
             .or_insert_with(|| json!(self.caller_id));
         let iid = next_invocation_id();
         Ok(self.client().request(op, &iid, &Value::Object(obj))?)
+    }
+
+    /// Invoke `op` with explicit trace metadata, auto-injecting this lease's
+    /// standard daemon args exactly like [`Self::call`].
+    ///
+    /// # Errors
+    /// Returns an error when `args` is not an object or the daemon transport fails.
+    pub fn call_traced(&self, op: &str, args: Value, trace: &TraceWireContext) -> Result<Value> {
+        let mut obj = match args {
+            Value::Object(map) => map,
+            Value::Null => Map::new(),
+            other => {
+                bail!("call args must be a JSON object, got {other}");
+            }
+        };
+        obj.entry("layer_stack_root".to_owned())
+            .or_insert_with(|| json!(self.stack_root));
+        obj.entry("caller_id".to_owned())
+            .or_insert_with(|| json!(self.caller_id));
+        Ok(self
+            .client()
+            .request_with_trace(op, &trace.request_id, &Value::Object(obj), trace)?)
     }
 
     /// Like [`Self::call`] but asserts the response is a success payload.

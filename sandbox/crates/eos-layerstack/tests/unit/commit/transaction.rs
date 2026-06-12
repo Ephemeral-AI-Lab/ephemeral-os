@@ -7,7 +7,7 @@ use crate::model::LayerChange;
 use crate::test_fixture::{lp, Fixture, TestResult};
 use crate::LayerStack;
 
-use super::CommitTransaction;
+use super::{configure_auto_squash_max_depth, run_auto_squash, CommitTransaction};
 
 fn transaction(fixture: &Fixture) -> CommitTransaction {
     CommitTransaction {
@@ -76,6 +76,22 @@ fn gated_stale_base_aborts_without_publish() -> TestResult {
 
     assert_eq!(result.published_manifest_version, None);
     assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
+    assert_eq!(
+        result.files[0].observed_state.as_deref(),
+        Some("content_changed")
+    );
+    let events = result.trace_events();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].module, "occ");
+    assert_eq!(events[0].name, "commit_finished");
+    assert_eq!(events[0].details["success"], false);
+    assert_eq!(events[0].details["aborted_version_file_count"], 1);
+    assert_eq!(events[1].module, "occ");
+    assert_eq!(events[1].name, "conflict_detected");
+    assert_eq!(events[1].details["path"], "README.md");
+    assert_eq!(events[1].details["reason"], "aborted_version");
+    assert_eq!(events[1].details["message"], "content changed");
+    assert_eq!(events[1].details["observed_state"], "content_changed");
     assert_eq!(fixture.read_text("README.md")?, "# theirs\n");
     Ok(())
 }
@@ -105,7 +121,101 @@ fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
 
     assert!(result.success());
     assert_eq!(result.files[0].status, CommitStatus::Committed);
+    let events = result.trace_events();
+    let manifest = events
+        .iter()
+        .find(|event| event.module == "layer_stack" && event.name == "manifest_validated")
+        .expect("manifest validation event");
+    assert_eq!(manifest.details["manifest_version"], 2);
+    assert_eq!(manifest.details["manifest_depth"], 2);
+    assert_eq!(manifest.details["manifest_path_count"], 2);
+    assert_eq!(manifest.details["active_lease_count"], 0);
+    let published = events
+        .iter()
+        .find(|event| event.module == "layer_stack" && event.name == "publish_layer_finished")
+        .expect("publish layer event");
+    assert_eq!(published.details["success"], true);
+    assert_eq!(published.details["manifest_version_before"], 2);
+    assert_eq!(published.details["manifest_version_after"], 3);
+    assert_eq!(published.details["published_manifest_version"], 3);
+    assert_eq!(published.details["published_layer_count"], 1);
     assert_eq!(fixture.read_text("target/out.txt")?, "mine\n");
+    Ok(())
+}
+
+#[test]
+fn auto_squash_skip_reason_is_traced_when_stack_is_too_shallow() -> TestResult {
+    let fixture = Fixture::new("auto_squash_too_shallow")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+
+    let trace = run_auto_squash(&mut stack);
+
+    assert!(trace.timings.is_empty());
+    assert_eq!(trace.events.len(), 1);
+    assert_eq!(trace.events[0].module, "layer_stack");
+    assert_eq!(trace.events[0].name, "auto_squash_skipped");
+    assert_eq!(trace.events[0].details["reason"], "too_shallow");
+    assert_eq!(trace.events[0].details["max_depth"], 100);
+    assert_eq!(trace.events[0].details["depth_before"], 1);
+    Ok(())
+}
+
+#[test]
+fn auto_squash_finished_event_records_depth_and_manifest() -> TestResult {
+    let fixture = Fixture::new("auto_squash_finished")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 0..3 {
+        stack.publish_layer(&[LayerChange::Write {
+            path: lp(&format!("file-{index}.txt"))?,
+            content: format!("{index}\n").into_bytes(),
+        }])?;
+    }
+
+    configure_auto_squash_max_depth(2);
+    let trace = run_auto_squash(&mut stack);
+    configure_auto_squash_max_depth(crate::AUTO_SQUASH_MAX_DEPTH);
+
+    assert_eq!(trace.events.len(), 1);
+    assert_eq!(trace.events[0].module, "layer_stack");
+    assert_eq!(trace.events[0].name, "auto_squash_finished");
+    assert_eq!(trace.events[0].details["success"], true);
+    assert_eq!(trace.events[0].details["max_depth"], 2);
+    assert_eq!(trace.events[0].details["depth_before"], 4);
+    assert_eq!(trace.events[0].details["depth_after"], 1);
+    assert_eq!(trace.events[0].details["manifest_version"], 5);
+    assert!(trace
+        .timings
+        .contains_key("layer_stack.auto_squash.total_s"));
+    Ok(())
+}
+
+#[test]
+fn auto_squash_failed_event_records_error_reason() -> TestResult {
+    let fixture = Fixture::new("auto_squash_failed")?;
+    let mut stack = LayerStack::open(fixture.root.clone())?;
+    for index in 0..3 {
+        stack.publish_layer(&[LayerChange::Write {
+            path: lp(&format!("file-{index}.txt"))?,
+            content: format!("{index}\n").into_bytes(),
+        }])?;
+    }
+    let manifest = stack.read_active_manifest()?;
+    let missing_layer = fixture.root.join(&manifest.layers[1].path);
+    std::fs::remove_dir_all(missing_layer)?;
+
+    configure_auto_squash_max_depth(2);
+    let trace = run_auto_squash(&mut stack);
+    configure_auto_squash_max_depth(crate::AUTO_SQUASH_MAX_DEPTH);
+
+    assert_eq!(trace.events.len(), 1);
+    assert_eq!(trace.events[0].module, "layer_stack");
+    assert_eq!(trace.events[0].name, "auto_squash_failed");
+    assert_eq!(trace.events[0].details["max_depth"], 2);
+    assert_eq!(trace.events[0].details["depth_before"], 4);
+    assert!(trace.events[0].details["error"].is_string());
+    assert!(trace
+        .timings
+        .contains_key("layer_stack.auto_squash.total_s"));
     Ok(())
 }
 

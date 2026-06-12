@@ -3,12 +3,13 @@ use std::time::{Duration, Instant};
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_operation::core::catalog;
+use eos_trace::ResourceStatsKind;
 use serde_json::{json, Value};
 
 use crate::support::{
     array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, finalize_foreground_command,
-    live_pool_or_skip, seed_base_files, stdout, strip_transcript_timestamps,
-    wait_for_active_leases, wait_for_command_count,
+    has_trace_event, live_pool_or_skip, seed_base_files, stdout, strip_transcript_timestamps,
+    trace_record, wait_for_active_leases, wait_for_command_count,
 };
 
 /// Run a foreground `exec_command` and finalize it to its terminal outcome. Under
@@ -494,6 +495,80 @@ fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
         json!({"path": "overlay/exec.txt"}),
     )?;
     assert_eq!(as_str(&read, "content")?, "from-overlay");
+    Ok(())
+}
+
+#[test]
+fn live_trace_ephemeral_exec_records_command_overlay_resource_and_response_facts() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let exec = exec_settled(
+        &lease,
+        json!({
+            "cmd": "mkdir -p trace-exec && printf traced > trace-exec/out.txt",
+            "yield_time_ms": 8000,
+            "timeout_seconds": 10,
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    let record = trace_record(&exec)?;
+
+    assert!(
+        has_trace_event(&record, "command", "prepared", |_| true)
+            && has_trace_event(&record, "command", "spawned", |_| true),
+        "ephemeral exec trace should record command preparation and spawn: {record:?}"
+    );
+    assert!(
+        has_trace_event(&record, "overlay", "mount_finished", |details| {
+            details["workspace"] == "ephemeral"
+        }) && has_trace_event(&record, "overlay", "capture_finished", |details| {
+            details["workspace"] == "ephemeral"
+                && details["changed_paths"]
+                    .as_array()
+                    .is_some_and(|paths| paths.iter().any(|path| path == "trace-exec/out.txt"))
+        }),
+        "ephemeral exec trace should record overlay mount and capture facts: {record:?}"
+    );
+    assert!(
+        has_trace_event(&record, "command", "changed_paths_recorded", |details| {
+            details["changed_paths"]
+                .as_array()
+                .is_some_and(|paths| paths.iter().any(|path| path == "trace-exec/out.txt"))
+        }),
+        "ephemeral exec trace should record changed-path facts: {record:?}"
+    );
+    assert!(
+        has_trace_event(&record, "command", "response_meta", |details| {
+            details["status"] == "ok"
+                && details["exit_code"] == 0
+                && details["workspace"] == "ephemeral"
+                && details["success"] == true
+        }),
+        "ephemeral exec trace should record response meta facts: {record:?}"
+    );
+
+    let command_wait_phases = record
+        .resources
+        .iter()
+        .filter(|resource| {
+            resource.meta.stats_kind == ResourceStatsKind::CgroupProcess
+                && resource.meta.source == "command.process.wait"
+        })
+        .filter_map(|resource| resource.meta.phase.as_deref())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert!(
+        command_wait_phases.contains("before") && command_wait_phases.contains("after"),
+        "ephemeral exec trace should record command.process.wait resource before/after pairs: {record:?}"
+    );
+    assert!(
+        record.resources.iter().any(
+            |resource| resource.meta.stats_kind == ResourceStatsKind::Tree
+                && resource.meta.source == "resource.command_exec.upperdir"
+        ),
+        "ephemeral exec trace should record capture tree resource facts: {record:?}"
+    );
     Ok(())
 }
 

@@ -104,6 +104,9 @@ impl From<eos_operation::plugin::PpcError> for DaemonError {
                 Self::Plugin(eos_plugin::PluginError::Ppc(source.to_string()))
             }
             PpcError::Io(source) => Self::Io(source),
+            PpcError::SetupFailed { message, .. } => {
+                Self::Plugin(eos_plugin::PluginError::Ensure(message))
+            }
             PpcError::LockPoisoned(what) => Self::StateLockPoisoned(what),
             PpcError::Callback(message) => Self::Plugin(eos_plugin::PluginError::Ppc(message)),
         }

@@ -12,7 +12,7 @@
 //! callback) on the same channel. The `message_id` correlates a reply to its
 //! request and is carried as the wire message's `invocation_id` so the existing
 //! [`crate::wire::encode`]/[`crate::wire::decode`] message codec applies
-//! unchanged (no second wire format). Callback request bodies should include
+//! unchanged (no second wire format). Callback requests carry typed
 //! `parent_message_id` so the daemon can route callback replies while many
 //! callback-capable plugin ops are in flight on the same socket.
 //!
@@ -41,6 +41,9 @@ pub enum PpcDirection {
 pub struct PpcMessage {
     /// Correlates a reply to its request (== the wire `invocation_id`).
     pub message_id: String,
+    /// Callback request owner, when this message is a plugin-originated
+    /// callback that must route back to one in-flight daemon request.
+    pub parent_message_id: Option<String>,
     /// Request or reply. Callbacks are plugin-originated requests on the same
     /// bidirectional channel.
     pub direction: PpcDirection,
@@ -84,6 +87,7 @@ impl PpcMessage {
             invocation_id: self.message_id.clone(),
             args: json!({
                 "direction": direction_wire(self.direction),
+                "parent_message_id": self.parent_message_id,
                 "body": self.body,
             }),
         })
@@ -107,8 +111,16 @@ impl PpcMessage {
             .get("body")
             .and_then(serde_json::Value::as_str)
             .ok_or_else(|| PluginError::Ppc("ppc message missing body".to_owned()))?;
+        let parent_message_id = request
+            .args
+            .get("parent_message_id")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned);
         Ok(Self {
             message_id: request.invocation_id,
+            parent_message_id,
             direction,
             op: request.op,
             body: body.to_owned(),

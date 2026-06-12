@@ -18,14 +18,19 @@ use eos_trace::{
 };
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
-use serde_json::json;
+use serde_json::{json, Map, Value};
 
 use crate::WorkspaceKind;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse, CommandStatus};
-use super::finalize::{discarded_response, finalize_ephemeral_command, finalize_isolated_command};
-use super::outcome::FinalizeCommandRequest;
-use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
+use super::finalize::{
+    discarded_response, finalize_ephemeral_command, finalize_isolated_command,
+    insert_cgroup_process_resource_timings,
+};
+use super::outcome::{FinalizeCommandRequest, WorkspaceTimings};
+use super::prepare::{
+    prepare_ephemeral, prepare_isolated, CommandPrepareError, PrepareInputs, PreparedCommand,
+};
 use super::registry::{
     ActiveCommand, CommandRegistry, CommandTraceOrigin, CompletionBufferEviction, EphemeralRun,
     IsolatedRun,
@@ -63,10 +68,82 @@ pub struct CommandWriteStdinOutcome {
     pub trace: Option<CommandStdinTraceFacts>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandProgressTraceFacts {
+    pub command_id: String,
+    pub last_n_lines: usize,
+    pub status: CommandStatus,
+    pub source: &'static str,
+    pub stdout_bytes: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CommandReadProgressOutcome {
+    pub response: CommandResponse,
+    pub trace: CommandProgressTraceFacts,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandExecOutcome {
     pub response: CommandResponse,
     pub trace_events: Vec<CommandTraceEvent>,
+}
+
+#[derive(Debug)]
+pub struct CommandExecError {
+    error: CommandError,
+    trace_events: Vec<CommandTraceEvent>,
+}
+
+impl CommandExecError {
+    #[must_use]
+    pub fn new(error: CommandError) -> Self {
+        Self {
+            error,
+            trace_events: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_trace_events(error: CommandError, trace_events: Vec<CommandTraceEvent>) -> Self {
+        Self {
+            error,
+            trace_events,
+        }
+    }
+
+    #[must_use]
+    pub fn error(&self) -> &CommandError {
+        &self.error
+    }
+
+    #[must_use]
+    pub fn trace_events(&self) -> &[CommandTraceEvent] {
+        &self.trace_events
+    }
+
+    #[must_use]
+    pub fn into_error(self) -> CommandError {
+        self.error
+    }
+}
+
+impl From<CommandError> for CommandExecError {
+    fn from(error: CommandError) -> Self {
+        Self::new(error)
+    }
+}
+
+impl std::fmt::Display for CommandExecError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.error.fmt(formatter)
+    }
+}
+
+impl std::error::Error for CommandExecError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.error)
+    }
 }
 
 impl CommandOps {
@@ -85,17 +162,16 @@ impl CommandOps {
     ) -> Result<CommandResponse, CommandError> {
         self.exec_command_with_trace(request, target)
             .map(|outcome| outcome.response)
+            .map_err(CommandExecError::into_error)
     }
 
     pub fn exec_command_with_trace(
         &self,
         request: StartCommand,
         target: ExecTarget,
-    ) -> Result<CommandExecOutcome, CommandError> {
+    ) -> Result<CommandExecOutcome, CommandExecError> {
         if request.cmd.trim().is_empty() {
-            return Err(CommandError::InvalidRequest(
-                "cmd must be non-empty".to_owned(),
-            ));
+            return Err(CommandError::InvalidRequest("cmd must be non-empty".to_owned()).into());
         }
         let id = self.registry.next_id();
         let yield_time_ms = request.yield_time_ms;
@@ -138,19 +214,19 @@ impl CommandOps {
         workspace_root: PathBuf,
         scratch_root: PathBuf,
         yield_time_ms: u64,
-    ) -> Result<CommandExecOutcome, CommandError> {
+    ) -> Result<CommandExecOutcome, CommandExecError> {
         let request_id = format!("command:{}:{}", request.caller_id, request.invocation_id);
         let snapshot = service::acquire_snapshot(&root, &request_id)
-            .map_err(|error| CommandError::Workspace(error.to_string()))?;
+            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
         let writable_root = eos_overlay::overlay_writable_root()
-            .map_err(|error| CommandError::Workspace(error.to_string()));
+            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())));
         let result = writable_root.and_then(|writable_root| {
             let workspace = EphemeralWorkspace::create(
                 &writable_root.join("runtime"),
                 "sandbox-overlay",
                 &request.invocation_id,
             )
-            .map_err(|error| CommandError::Workspace(error.to_string()))?;
+            .map_err(|error| CommandExecError::new(CommandError::Workspace(error.to_string())))?;
             let prepared = prepare_ephemeral(
                 PrepareInputs {
                     caller_id: &request.caller_id,
@@ -165,7 +241,8 @@ impl CommandOps {
                 &snapshot.layer_paths,
                 workspace.dirs(),
                 &workspace.dirs().run_dir,
-            )?;
+            )
+            .map_err(command_prepare_error)?;
             let mut trace_events = prepared.trace_events.clone();
             let process = self.spawn_process(spec, prepared, &mut trace_events)?;
             Ok((workspace, process, trace_events))
@@ -201,7 +278,7 @@ impl CommandOps {
         command_id: &str,
         binding: Box<IsolatedWorkspaceBinding>,
         yield_time_ms: u64,
-    ) -> Result<CommandExecOutcome, CommandError> {
+    ) -> Result<CommandExecOutcome, CommandExecError> {
         let prepared = prepare_isolated(
             PrepareInputs {
                 caller_id: &request.caller_id,
@@ -213,7 +290,8 @@ impl CommandOps {
                 workspace_label: "isolated",
             },
             &binding,
-        )?;
+        )
+        .map_err(command_prepare_error)?;
         let mut trace_events = prepared.trace_events.clone();
         let process = self.spawn_process(spec, prepared, &mut trace_events)?;
         let binding = *binding;
@@ -237,7 +315,7 @@ impl CommandOps {
         spec: CommandProcessSpec,
         prepared: PreparedCommand,
         trace_events: &mut Vec<CommandTraceEvent>,
-    ) -> Result<CommandProcess, CommandError> {
+    ) -> Result<CommandProcess, CommandExecError> {
         let command_id = spec.id.clone();
         let request_path = prepared.request_path.clone();
         let process = CommandProcess::spawn(
@@ -251,7 +329,18 @@ impl CommandOps {
                 transcript_timestamp_timezone: &self.config.transcript_timestamp_timezone,
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
-        )?;
+        )
+        .map_err(|error| {
+            if let CommandError::ArtifactWrite {
+                artifact,
+                path,
+                error,
+            } = &error
+            {
+                trace_events.push(CommandTraceEvent::artifact_failed(artifact, path, error));
+            }
+            CommandExecError::with_trace_events(error, trace_events.clone())
+        })?;
         let request_bytes = std::fs::metadata(&request_path).map_or(0, |metadata| {
             usize::try_from(metadata.len()).unwrap_or(usize::MAX)
         });
@@ -279,9 +368,33 @@ impl CommandOps {
         let id = process.id().to_owned();
         let run = Arc::new(make_run(process));
         self.registry.insert(Arc::clone(&run));
+        let mut before_resource_timings = WorkspaceTimings::new();
+        insert_cgroup_process_resource_timings(&mut before_resource_timings);
         let response = self.wait_on_run(run, yield_time_ms, 0, |stdout| {
             CommandResponse::running(id, stdout)
         });
+        if let Some(finalized) = &response.finalized {
+            trace_events.push(command_process_wait_resource_stats_event(
+                "before",
+                &before_resource_timings,
+            ));
+            trace_events.push(command_process_wait_host_resource_stats_event(
+                "before",
+                &before_resource_timings,
+            ));
+            trace_events.push(command_process_wait_resource_stats_event(
+                "after",
+                &finalized.core.timings,
+            ));
+            trace_events.push(command_process_wait_host_resource_stats_event(
+                "after",
+                &finalized.core.timings,
+            ));
+            trace_events.extend(command_process_wait_tree_resource_stats_events(
+                &finalized.core.timings,
+            ));
+            trace_events.extend(command_response_trace_events(&response));
+        }
         trace_events.push(CommandTraceEvent::new(
             "yielded",
             json!({
@@ -365,27 +478,57 @@ impl CommandOps {
         &self,
         request: ReadCommandProgress,
     ) -> Result<CommandResponse, CommandError> {
+        self.read_command_progress_with_trace(request)
+            .map(|outcome| outcome.response)
+    }
+
+    pub fn read_command_progress_with_trace(
+        &self,
+        request: ReadCommandProgress,
+    ) -> Result<CommandReadProgressOutcome, CommandError> {
         if request.last_n_lines == 0 {
             return Err(CommandError::InvalidRequest(
                 "last_n_lines must be >= 1".to_owned(),
             ));
         }
         let Some(run) = self.registry.get(&request.command_id) else {
-            return self
+            let response = self
                 .registry
                 .completed_result(&request.command_id)
                 .map(|result| result.with_last_lines(request.last_n_lines))
-                .ok_or(CommandError::NotFound(request.command_id));
+                .ok_or_else(|| CommandError::NotFound(request.command_id.clone()))?;
+            return Ok(CommandReadProgressOutcome {
+                trace: progress_trace(
+                    &request.command_id,
+                    request.last_n_lines,
+                    "completed_buffer",
+                    &response,
+                ),
+                response,
+            });
         };
         if let Some(process_exit) = run.process().take_exit() {
-            return Ok(self
+            let response = self
                 .finalize_command(run, process_exit, false)
-                .with_last_lines(request.last_n_lines));
+                .with_last_lines(request.last_n_lines);
+            return Ok(CommandReadProgressOutcome {
+                trace: progress_trace(
+                    &request.command_id,
+                    request.last_n_lines,
+                    "finalized",
+                    &response,
+                ),
+                response,
+            });
         }
-        Ok(CommandResponse::running(
-            request.command_id,
+        let response = CommandResponse::running(
+            request.command_id.clone(),
             run.process().read_recent_output(request.last_n_lines),
-        ))
+        );
+        Ok(CommandReadProgressOutcome {
+            trace: progress_trace(&request.command_id, request.last_n_lines, "live", &response),
+            response,
+        })
     }
 
     pub fn cancel(&self, request: CancelCommand) -> Result<CommandResponse, CommandError> {
@@ -606,6 +749,201 @@ struct CommandFinalizeTraceFacts {
     evictions: Vec<CompletionBufferEviction>,
 }
 
+fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTraceEvent> {
+    let Some(finalized) = response.finalized.as_ref() else {
+        return Vec::new();
+    };
+    let changed_path_count = finalized.core.changed_paths.len();
+    let command_id = response.command_id.as_ref().map(ToString::to_string);
+    let workspace = finalized.workspace.as_str();
+    let capture_duration_s = finalized
+        .core
+        .timings
+        .get("command_exec.capture_upperdir_s")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let mount_duration_s = finalized
+        .core
+        .timings
+        .get("workspace.mount_s")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let layer_count = finalized
+        .core
+        .timings
+        .get("resource.layer_stack.manifest_depth")
+        .cloned()
+        .unwrap_or(Value::Null);
+    vec![
+        CommandTraceEvent::new(
+            "overlay_mount_finished",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "layer_count": layer_count,
+                "duration_s": mount_duration_s,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "overlay_capture_started",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "overlay_capture_finished",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "duration_s": capture_duration_s,
+                "changed_path_count": changed_path_count,
+                "changed_paths": finalized.core.changed_paths,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "changed_paths_recorded",
+            json!({
+                "command_id": command_id,
+                "workspace": workspace,
+                "changed_path_count": changed_path_count,
+                "changed_paths": finalized.core.changed_paths,
+            }),
+        ),
+        CommandTraceEvent::new(
+            "response_meta",
+            json!({
+                "command_id": command_id,
+                "status": response.status.as_str(),
+                "exit_code": response.exit_code,
+                "workspace": workspace,
+                "success": finalized.core.success,
+                "changed_path_count": changed_path_count,
+            }),
+        ),
+    ]
+}
+
+fn command_process_wait_resource_stats_event(
+    phase: &'static str,
+    timings: &WorkspaceTimings,
+) -> CommandTraceEvent {
+    let mut cpu = Map::new();
+    let mut memory = Map::new();
+    let mut io = Map::new();
+    let mut psi = Map::new();
+    let mut process = Map::new();
+    for (key, value) in timings {
+        if let Some(name) = key.strip_prefix("resource.cgroup.cpu_") {
+            cpu.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.memory_") {
+            memory.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.io_") {
+            io.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.psi_") {
+            psi.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.process.") {
+            process.insert(name.to_owned(), value.clone());
+        }
+    }
+    let cgroup_available =
+        !(cpu.is_empty() && memory.is_empty() && io.is_empty() && psi.is_empty());
+    let process_available = !process.is_empty();
+    let sampler_duration_us = timings
+        .get("resource.sampler.cgroup_process_duration_us")
+        .cloned()
+        .unwrap_or(Value::Null);
+    CommandTraceEvent::new(
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "cgroup_process",
+                "phase": phase,
+                "source": "command.process.wait",
+                "source_available": cgroup_available || process_available,
+                "read_error": (!(cgroup_available || process_available)).then_some("resource timings unavailable on this platform or request path"),
+                "sampler_duration_us": sampler_duration_us,
+            },
+            "cgroup": {
+                "source_available": cgroup_available,
+                "cpu": cpu,
+                "memory": memory,
+                "io": io,
+                "psi": psi,
+            },
+            "process": {
+                "source_available": process_available,
+                "gauges": process,
+            },
+        }),
+    )
+}
+
+fn command_process_wait_tree_resource_stats_events(
+    timings: &WorkspaceTimings,
+) -> Vec<CommandTraceEvent> {
+    let mut groups = std::collections::BTreeMap::<String, Map<String, Value>>::new();
+    for (key, value) in timings {
+        let Some(key) = key.strip_prefix("resource.") else {
+            continue;
+        };
+        let Some((source, metric)) = key.split_once("_tree_") else {
+            continue;
+        };
+        groups
+            .entry(source.to_owned())
+            .or_default()
+            .insert(metric.to_owned(), value.clone());
+    }
+    groups
+        .into_iter()
+        .map(|(source, tree)| {
+            CommandTraceEvent::new(
+                "resource_stats",
+                json!({
+                    "meta": {
+                        "stats_kind": "tree",
+                        "phase": "after",
+                        "source": format!("resource.{source}"),
+                        "source_available": true,
+                        "sampler_duration_us": 0,
+                    },
+                    "tree": tree,
+                }),
+            )
+        })
+        .collect()
+}
+
+fn command_process_wait_host_resource_stats_event(
+    phase: &'static str,
+    timings: &WorkspaceTimings,
+) -> CommandTraceEvent {
+    let mut process = Map::new();
+    for (key, value) in timings {
+        if let Some(name) = key.strip_prefix("resource.process.") {
+            process.insert(name.to_owned(), value.clone());
+        }
+    }
+    let source_available = !process.is_empty();
+    CommandTraceEvent::new(
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "host",
+                "phase": phase,
+                "source": "daemon.process",
+                "source_available": source_available,
+                "read_error": (!source_available).then_some("daemon process gauges unavailable on this platform"),
+                "sampler_duration_us": 0,
+            },
+            "host": {
+                "process": process,
+            },
+        }),
+    )
+}
+
 fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceRecord {
     let now = unix_now_ms();
     let mut span = SpanRecord::new(
@@ -652,6 +990,19 @@ fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceReco
             }),
         ),
     ];
+    if let Some(kill) = facts.kill {
+        events.push(EventRecord::new(
+            SpanUid::ROOT,
+            kill_reason_label(kill),
+            "command",
+            json!({
+                "command_id": facts.command_id,
+                "exit_code": facts.exit_code,
+                "signal": facts.signal,
+                "elapsed_s": facts.command_elapsed_s,
+            }),
+        ));
+    }
     events.extend(facts.evictions.iter().map(|eviction| {
         EventRecord::new(
             SpanUid::ROOT,
@@ -730,6 +1081,13 @@ fn append_persistence_events(
     }
 }
 
+fn command_prepare_error(error: CommandPrepareError) -> CommandExecError {
+    CommandExecError::with_trace_events(
+        CommandError::Workspace(error.error.to_string()),
+        error.trace_events,
+    )
+}
+
 fn trace_id_from_origin(origin: &CommandTraceOrigin) -> TraceId {
     origin
         .trace_id
@@ -764,6 +1122,21 @@ fn unix_now_ms() -> u64 {
 
 fn elapsed_ms(started: Instant) -> u64 {
     u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
+fn progress_trace(
+    command_id: &str,
+    last_n_lines: usize,
+    source: &'static str,
+    response: &CommandResponse,
+) -> CommandProgressTraceFacts {
+    CommandProgressTraceFacts {
+        command_id: command_id.to_owned(),
+        last_n_lines,
+        status: response.status,
+        source,
+        stdout_bytes: response.stdout.len(),
+    }
 }
 
 fn is_teardown_control(chars: &str) -> bool {

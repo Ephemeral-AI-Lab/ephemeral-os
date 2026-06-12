@@ -25,4 +25,16 @@ impl CommandTraceEvent {
             }),
         )
     }
+
+    #[must_use]
+    pub fn artifact_failed(artifact: &'static str, path: &Path, error: impl ToString) -> Self {
+        Self::new(
+            "artifact_failed",
+            json!({
+                "artifact": artifact,
+                "path": path.display().to_string(),
+                "error": error.to_string(),
+            }),
+        )
+    }
 }

@@ -34,6 +34,10 @@ pub(super) struct ServiceHealthProbeTarget {
     service_id: String,
     service_instance_id: String,
     manifest_key: String,
+    state: PluginServiceState,
+    restart_count: u64,
+    refresh_count: u64,
+    last_error: Option<String>,
     client: SharedPpcClient,
 }
 
@@ -45,6 +49,10 @@ pub struct ServiceHealthReport {
     pub service_id: String,
     pub service_instance_id: String,
     pub manifest_key: String,
+    pub state: PluginServiceState,
+    pub restart_count: u64,
+    pub refresh_count: u64,
+    pub last_error: Option<String>,
     pub accepted: Option<bool>,
     pub error: Option<String>,
     pub teardown_error: Option<String>,
@@ -66,6 +74,10 @@ pub(super) fn service_health_probe_targets(
                 service_id: status.key.service_id.clone(),
                 service_instance_id,
                 manifest_key: snapshot.manifest_key.clone(),
+                state: status.state,
+                restart_count: status.restart_count,
+                refresh_count: status.refresh_count,
+                last_error: status.last_error.clone(),
                 client: Arc::clone(client),
             })
         })
@@ -89,6 +101,10 @@ impl PluginRuntime {
                         service_id: target.service_id,
                         service_instance_id: target.service_instance_id,
                         manifest_key: target.manifest_key,
+                        state: target.state,
+                        restart_count: target.restart_count,
+                        refresh_count: target.refresh_count,
+                        last_error: target.last_error,
                         accepted: Some(accepted),
                         error: None,
                         teardown_error: None,
@@ -105,6 +121,10 @@ impl PluginRuntime {
                             service_id: target.service_id,
                             service_instance_id: target.service_instance_id,
                             manifest_key: target.manifest_key,
+                            state: target.state,
+                            restart_count: target.restart_count,
+                            refresh_count: target.refresh_count,
+                            last_error: target.last_error,
                             accepted: None,
                             error: Some(error),
                             teardown_error,
@@ -373,7 +393,7 @@ impl PluginRuntime {
         }
         let started = self.spawn_service_processes(&[spec])?;
         let mut state = self.lock_state()?;
-        insert_started_service_processes(&mut state, started)?;
+        let _ = insert_started_service_processes(&mut state, started)?;
         mark_service_restarted(&mut state, service_instance_id)?;
         Ok(state.service_ppc_clients.get(service_instance_id).cloned())
     }
@@ -442,6 +462,7 @@ fn probe_connected_service_health(
     };
     let message = PpcMessage {
         message_id: format!("sandbox.plugin.status:health:{index}"),
+        parent_message_id: None,
         direction: PpcDirection::Request,
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,
@@ -463,6 +484,7 @@ fn send_refresh_request(
 ) -> Result<(), PluginRuntimeError> {
     let message = PpcMessage {
         message_id: format!("{invocation_id}:refresh:{index}"),
+        parent_message_id: None,
         direction: PpcDirection::Request,
         op: WORKSPACE_SNAPSHOT_REFRESH_OP.to_owned(),
         body: serde_json::to_string(&request).map_err(|err| PluginError::Ppc(err.to_string()))?,

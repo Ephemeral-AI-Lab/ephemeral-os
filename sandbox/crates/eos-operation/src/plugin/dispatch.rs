@@ -130,6 +130,7 @@ impl PluginRuntime {
         let timeout = Duration::from_millis(route.timeout_ms.unwrap_or(self.config.ppc_timeout_ms));
         let request = PpcMessage {
             message_id: invocation_id.to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: route.public_op.clone(),
             body: serde_json::to_string(args).map_err(|err| PluginError::Ppc(err.to_string()))?,

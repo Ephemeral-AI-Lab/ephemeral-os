@@ -1,5 +1,7 @@
 //! Command substrate request DTOs and error type.
 
+use std::path::{Path, PathBuf};
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -14,11 +16,32 @@ pub enum CommandError {
     InvalidRequest(String),
     #[error("command io error: {0}")]
     Io(String),
+    #[error("command artifact write failed for {artifact} at {}: {error}", path.display())]
+    ArtifactWrite {
+        artifact: &'static str,
+        path: PathBuf,
+        error: String,
+    },
 }
 
 impl From<std::io::Error> for CommandError {
     fn from(error: std::io::Error) -> Self {
         Self::Io(error.to_string())
+    }
+}
+
+impl CommandError {
+    #[must_use]
+    pub fn artifact_write(
+        artifact: &'static str,
+        path: impl AsRef<Path>,
+        error: impl std::fmt::Display,
+    ) -> Self {
+        Self::ArtifactWrite {
+            artifact,
+            path: path.as_ref().to_path_buf(),
+            error: error.to_string(),
+        }
     }
 }
 

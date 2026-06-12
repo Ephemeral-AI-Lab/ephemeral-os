@@ -118,6 +118,7 @@ pub(crate) fn op_write_file(
         );
         record_resource_stats_from_timings(&context, "after", &outcome.core.timings);
     }
+    record_occ_trace_events(&context, &outcome.trace_events);
     record_mutation_finished(&context, "write_applied", &outcome);
     Ok(to_wire_value(outcome))
 }
@@ -156,6 +157,7 @@ pub(crate) fn op_edit_file(
         );
         record_resource_stats_from_timings(&context, "after", &mutation.core.timings);
     }
+    record_occ_trace_events(&context, &mutation.trace_events);
     record_mutation_finished(&context, "edit_applied", &mutation);
     Ok(to_wire_value(mutation))
 }
@@ -196,6 +198,15 @@ fn record_file_route(context: &DispatchContext<'_>, route: &FileRoute) {
 
 fn record_file_event(context: &DispatchContext<'_>, name: &'static str, details: Value) {
     context.record_trace_event("file", name, details);
+}
+
+fn record_occ_trace_events(
+    context: &DispatchContext<'_>,
+    events: &[eos_layerstack::OccTraceEvent],
+) {
+    for event in events {
+        context.record_trace_event(event.module, event.name, event.details.clone());
+    }
 }
 
 fn record_read_finished(context: &DispatchContext<'_>, outcome: &ReadFileOutcome) {
@@ -241,6 +252,7 @@ fn record_resource_stats_from_timings(
     let mut cpu = Map::new();
     let mut memory = Map::new();
     let mut io = Map::new();
+    let mut psi = Map::new();
     let mut process = Map::new();
     for (key, value) in timings {
         if let Some(name) = key.strip_prefix("resource.cgroup.cpu_") {
@@ -249,12 +261,19 @@ fn record_resource_stats_from_timings(
             memory.insert(name.to_owned(), value.clone());
         } else if let Some(name) = key.strip_prefix("resource.cgroup.io_") {
             io.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.psi_") {
+            psi.insert(name.to_owned(), value.clone());
         } else if let Some(name) = key.strip_prefix("resource.process.") {
             process.insert(name.to_owned(), value.clone());
         }
     }
-    let cgroup_available = !(cpu.is_empty() && memory.is_empty() && io.is_empty());
+    let cgroup_available =
+        !(cpu.is_empty() && memory.is_empty() && io.is_empty() && psi.is_empty());
     let process_available = !process.is_empty();
+    let sampler_duration_us = timings
+        .get("resource.sampler.cgroup_process_duration_us")
+        .cloned()
+        .unwrap_or(Value::Null);
     context.record_trace_event(
         "resource",
         "resource_stats",
@@ -265,7 +284,7 @@ fn record_resource_stats_from_timings(
                 "source": "daemon.response_timings",
                 "source_available": cgroup_available || process_available,
                 "read_error": (!(cgroup_available || process_available)).then_some("resource timings unavailable on this platform or request path"),
-                "sampler_duration_us": null,
+                "sampler_duration_us": sampler_duration_us,
                 "inflight_requests": context
                     .invocation_registry()
                     .map_or(0, crate::invocation_registry::InFlightRegistry::inflight_count),
@@ -275,6 +294,7 @@ fn record_resource_stats_from_timings(
                 "cpu": cpu,
                 "memory": memory,
                 "io": io,
+                "psi": psi,
             },
             "process": {
                 "source_available": process_available,

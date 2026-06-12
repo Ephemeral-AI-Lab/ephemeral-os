@@ -52,10 +52,13 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
 
     let expected_workspace_root = workspace_root.to_string_lossy().into_owned();
     assert_eq!(entered.workspace_root, expected_workspace_root);
+    assert!(!entered.dns_configuration.fallback_applied);
+    assert_eq!(entered.dns_configuration.previous_first_nameserver, None);
     let status = runtime
         .status("caller-bound-root")?
         .ok_or("status should report the open handle")?;
     assert_eq!(status.workspace_root, expected_workspace_root);
+    assert_eq!(status.dns_configuration, entered.dns_configuration);
     assert_eq!(runtime.list_open(), vec!["caller-bound-root".to_owned()]);
 
     runtime.exit("caller-bound-root", None)?;
@@ -117,9 +120,16 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
     )?;
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
 
-    let exited = runtime.test_reset();
+    let recovery = runtime.test_reset_report();
 
-    assert_eq!(exited, Vec::<String>::new());
+    assert_eq!(recovery.exited_callers, Vec::<String>::new());
+    assert!(
+        recovery
+            .manager_json_error
+            .as_deref()
+            .is_some_and(|error| error.contains("expected schema_version 1, got 999")),
+        "invalid manager schema must be retained in the recovery report"
+    );
     let rewritten = std::fs::read_to_string(scratch.join("manager.json"))?;
     assert_eq!(
         serde_json::from_str::<Value>(&rewritten)?,

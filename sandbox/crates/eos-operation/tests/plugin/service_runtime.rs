@@ -206,6 +206,7 @@ fn self_managed_service_refreshes_and_services_occ_callback() -> TestResult {
 
             let callback = PpcMessage {
                 message_id: "apply-callback".to_owned(),
+                parent_message_id: Some(request.message_id.clone()),
                 direction: PpcDirection::Request,
                 op: "daemon.occ.apply_changeset".to_owned(),
                 body: serde_json::to_string(&json!({
@@ -220,6 +221,7 @@ fn self_managed_service_refreshes_and_services_occ_callback() -> TestResult {
             stream.write_all(&callback.encode()?)?;
             let callback_reply = read_ppc_request(&mut stream, "read callback reply")?;
             assert_eq!(callback_reply.message_id, "apply-callback");
+            assert!(callback_reply.parent_message_id.is_none());
             let callback_body: Value = serde_json::from_str(&callback_reply.body)?;
             assert_eq!(callback_body["success"], true);
             assert_eq!(callback_body["files"][0]["status"], "committed");
@@ -750,6 +752,7 @@ fn write_ppc_reply(
 ) -> TestResult {
     let reply = PpcMessage {
         message_id,
+        parent_message_id: None,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
         body: body.to_owned(),
@@ -765,6 +768,7 @@ fn write_ppc_reply_json(
 ) -> TestResult {
     let reply = PpcMessage {
         message_id,
+        parent_message_id: None,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
         body: serde_json::to_string(body)?,

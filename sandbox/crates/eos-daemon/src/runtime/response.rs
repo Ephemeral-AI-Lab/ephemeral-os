@@ -24,7 +24,7 @@ pub(crate) fn usize_to_f64_saturating(value: usize) -> f64 {
 }
 use serde_json::{json, Value};
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct TreeResourceStats {
     exists: f64,
     bytes: f64,
@@ -32,6 +32,8 @@ pub(crate) struct TreeResourceStats {
     dir_count: f64,
     entry_count: f64,
     truncated: f64,
+    read_error_count: f64,
+    first_error_path: Option<String>,
 }
 
 impl TreeResourceStats {
@@ -44,7 +46,9 @@ impl TreeResourceStats {
             file_count: u64_to_f64_saturating(file_entries),
             dir_count: u64_to_f64_saturating(stats.dirs),
             entry_count: u64_to_f64_saturating(entry_count),
-            truncated: 0.0,
+            truncated: if stats.truncated { 1.0 } else { 0.0 },
+            read_error_count: u64_to_f64_saturating(stats.read_error_count),
+            first_error_path: stats.first_error_path.clone(),
         }
     }
 }
@@ -174,9 +178,18 @@ pub(crate) fn resource_timings(
     ] {
         insert_tree_resource_timings(&mut timings, prefix, &empty_stats);
     }
-    insert_cgroup_resource_timings(&mut timings);
-    insert_process_resource_timings(&mut timings);
+    insert_cgroup_process_resource_timings(&mut timings);
     timings
+}
+
+pub(crate) fn insert_cgroup_process_resource_timings(timings: &mut serde_json::Map<String, Value>) {
+    let sampler_start = Instant::now();
+    insert_cgroup_resource_timings(timings);
+    insert_process_resource_timings(timings);
+    timings.insert(
+        "resource.sampler.cgroup_process_duration_us".to_owned(),
+        json!(sampler_start.elapsed().as_micros()),
+    );
 }
 
 pub(crate) fn insert_tree_resource_timings(
@@ -193,6 +206,13 @@ pub(crate) fn insert_tree_resource_timings(
         json!(stats.entry_count),
     );
     timings.insert(format!("{prefix}_tree_truncated"), json!(stats.truncated));
+    timings.insert(
+        format!("{prefix}_tree_read_error_count"),
+        json!(stats.read_error_count),
+    );
+    if let Some(path) = &stats.first_error_path {
+        timings.insert(format!("{prefix}_tree_first_error_path"), json!(path));
+    }
 }
 
 fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) {
@@ -226,33 +246,69 @@ fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) 
         }
     }
 
-    let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") else {
-        return;
-    };
-    let mut totals = BTreeMap::<&str, f64>::from([
-        ("rbytes", 0.0),
-        ("wbytes", 0.0),
-        ("rios", 0.0),
-        ("wios", 0.0),
-        ("dbytes", 0.0),
-        ("dios", 0.0),
-    ]);
+    if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") {
+        let mut totals = BTreeMap::<&str, f64>::from([
+            ("rbytes", 0.0),
+            ("wbytes", 0.0),
+            ("rios", 0.0),
+            ("wios", 0.0),
+            ("dbytes", 0.0),
+            ("dios", 0.0),
+        ]);
+        for line in raw.lines() {
+            for token in line.split_whitespace().skip(1) {
+                let Some((name, raw_value)) = token.split_once('=') else {
+                    continue;
+                };
+                let Some(total) = totals.get_mut(name) else {
+                    continue;
+                };
+                if let Ok(value) = raw_value.parse::<f64>() {
+                    *total += value;
+                }
+            }
+        }
+        for (name, value) in totals {
+            timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
+        }
+    }
+
+    for (path, prefix) in [
+        ("/sys/fs/cgroup/cpu.pressure", "cpu"),
+        ("/sys/fs/cgroup/memory.pressure", "memory"),
+        ("/sys/fs/cgroup/io.pressure", "io"),
+    ] {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            insert_pressure_timings(timings, prefix, &raw);
+        }
+    }
+}
+
+fn insert_pressure_timings(timings: &mut serde_json::Map<String, Value>, prefix: &str, raw: &str) {
+    for (key, value) in parse_pressure_metrics(prefix, raw) {
+        timings.insert(format!("resource.cgroup.psi_{key}"), json!(value));
+    }
+}
+
+fn parse_pressure_metrics(prefix: &str, raw: &str) -> BTreeMap<String, f64> {
+    let mut metrics = BTreeMap::new();
     for line in raw.lines() {
-        for token in line.split_whitespace().skip(1) {
-            let Some((name, raw_value)) = token.split_once('=') else {
-                continue;
-            };
-            let Some(total) = totals.get_mut(name) else {
+        let mut tokens = line.split_whitespace();
+        let Some(level @ ("some" | "full")) = tokens.next() else {
+            continue;
+        };
+        for token in tokens {
+            let Some((name @ ("avg10" | "avg60" | "avg300" | "total"), raw_value)) =
+                token.split_once('=')
+            else {
                 continue;
             };
             if let Ok(value) = raw_value.parse::<f64>() {
-                *total += value;
+                metrics.insert(format!("{prefix}_{level}_{name}"), value);
             }
         }
     }
-    for (name, value) in totals {
-        timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
-    }
+    metrics
 }
 
 /// Emit daemon process memory from `/proc/self/status`: `VmRSS` (current

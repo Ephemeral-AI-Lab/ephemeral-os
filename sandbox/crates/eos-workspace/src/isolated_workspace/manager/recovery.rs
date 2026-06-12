@@ -153,6 +153,11 @@ impl IsolatedManager {
                         .cgroup_path
                         .as_ref()
                         .map(|path| path.to_string_lossy().into_owned()),
+                    "dns_fallback_applied": handle.dns_configuration.fallback_applied,
+                    "previous_first_nameserver": handle
+                        .dns_configuration
+                        .previous_first_nameserver
+                        .as_deref(),
                     "created_at": handle.created_at,
                     "last_activity": handle.last_activity,
                 })

@@ -4,8 +4,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
 use eos_trace::{
-    decode_trace_batch, encode_trace_batch, EventRecord, RequestId, SpanKind, SpanRecord, SpanUid,
-    TraceBatch, TraceId, TraceRecord, TraceSpool,
+    decode_trace_batch, encode_trace_batch, BoundedJson, DetailBudget, EventRecord, RequestId,
+    ResourceStats, ResourceStatsKind, ResourceStatsMeta, SpanKind, SpanRecord, SpanUid, TraceBatch,
+    TraceId, TraceRecord, TraceSpool,
 };
 use serde_json::{json, Value};
 
@@ -290,6 +291,10 @@ pub(crate) fn attach_request_sidecar_with_events(
     record.started_at_unix_ms = started_at;
     record.finished_at_unix_ms = now;
     record.spans = vec![root, transport, dispatch, operation];
+    record.resources = request_events
+        .iter()
+        .filter_map(resource_stats_from_event)
+        .collect();
     record.events = events;
 
     let encoded = encode_trace_batch(&TraceBatch::single(record));
@@ -357,6 +362,64 @@ fn op_verb(op: &str) -> &str {
 
 fn op_span_name(op: &str) -> String {
     format!("op.{}.{}", op_family(op), op_verb(op))
+}
+
+fn resource_stats_from_event(event: &RequestTraceEvent) -> Option<ResourceStats> {
+    if event.module != "resource" || event.name != "resource_stats" {
+        return None;
+    }
+    let details = event.details.as_object()?;
+    let meta = details.get("meta")?.as_object()?;
+    let stats_kind = resource_stats_kind(meta.get("stats_kind")?.as_str()?);
+    let source = meta.get("source")?.as_str()?.to_owned();
+    let source_available = meta
+        .get("source_available")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let phase = meta.get("phase").and_then(Value::as_str).map(str::to_owned);
+    let read_error = optional_string(meta.get("read_error"));
+    let parse_error = optional_string(meta.get("parse_error"));
+    let sampler_duration_us = optional_u64(meta.get("sampler_duration_us")).unwrap_or(0);
+    let inflight_requests = optional_u64(meta.get("inflight_requests")).unwrap_or(0);
+    let mut payload = event.details.clone();
+    if let Some(payload_object) = payload.as_object_mut() {
+        payload_object.remove("meta");
+    }
+    Some(ResourceStats {
+        span_id: Some(event.span_id),
+        meta: ResourceStatsMeta {
+            stats_kind,
+            phase,
+            source,
+            source_available,
+            read_error,
+            parse_error,
+            sampler_duration_us,
+            inflight_requests,
+        },
+        payload: BoundedJson::capture(payload, DetailBudget::EventDetails),
+    })
+}
+
+fn resource_stats_kind(label: &str) -> ResourceStatsKind {
+    match label {
+        "tree" => ResourceStatsKind::Tree,
+        "host" => ResourceStatsKind::Host,
+        "mount_cost" => ResourceStatsKind::MountCost,
+        _ => ResourceStatsKind::CgroupProcess,
+    }
+}
+
+fn optional_string(value: Option<&Value>) -> Option<String> {
+    value.and_then(Value::as_str).map(str::to_owned)
+}
+
+fn optional_u64(value: Option<&Value>) -> Option<u64> {
+    value.and_then(Value::as_u64).or_else(|| {
+        value
+            .and_then(Value::as_i64)
+            .and_then(|value| value.try_into().ok())
+    })
 }
 
 fn now_ms() -> u64 {
@@ -525,5 +588,152 @@ mod tests {
             .collect();
         assert_eq!(route_events.len(), 1, "real route suppresses fallback");
         assert_eq!(route_events[0].details.value["kind"], "fast_path");
+    }
+
+    #[test]
+    fn request_sidecar_promotes_resource_stats_events() {
+        let trace = RequestTraceContext {
+            trace_id: "trace-resource-events".to_owned(),
+            request_id: "request-resource-events".to_owned(),
+            parent_span_id: None,
+            link_hints: Vec::new(),
+            capture_budget_version: 1,
+        };
+        let facts = RequestTraceFacts {
+            connection_id: "daemon-conn-resource-events".to_owned(),
+            accepted_at_unix_ms: now_ms(),
+            listener_kind: "unix",
+            peer_addr: None,
+            local_addr: None,
+            is_tcp: false,
+            request_bytes: 96,
+            read_duration_us: 8,
+            auth_required: false,
+            auth_ok: true,
+            protocol_version: Some(1),
+        };
+        let response = attach_request_sidecar_with_events(
+            json!({"success": true}),
+            Some(&trace),
+            "sandbox.command.exec",
+            &facts,
+            &[
+                RequestTraceEvent::operation(
+                    "resource",
+                    "resource_stats",
+                    json!({
+                        "meta": {
+                            "stats_kind": "cgroup_process",
+                            "phase": "after",
+                            "source": "command.process.wait",
+                            "source_available": true,
+                            "sampler_duration_us": 17,
+                            "inflight_requests": 2,
+                        },
+                        "cgroup": {
+                            "source_available": true,
+                            "cpu": {"usage_usec": 42},
+                        },
+                        "process": {
+                            "source_available": true,
+                            "gauges": {"rss_bytes": 4096},
+                        },
+                    }),
+                ),
+                RequestTraceEvent::operation(
+                    "resource",
+                    "resource_stats",
+                    json!({
+                        "meta": {
+                            "stats_kind": "tree",
+                            "phase": "after",
+                            "source": "resource.command_exec.upperdir",
+                            "source_available": true,
+                            "sampler_duration_us": 0,
+                            "inflight_requests": 2,
+                        },
+                        "tree": {
+                            "bytes": 4096,
+                            "file_count": 1,
+                            "truncated": 1,
+                        },
+                    }),
+                ),
+                RequestTraceEvent::operation(
+                    "resource",
+                    "resource_stats",
+                    json!({
+                        "meta": {
+                            "stats_kind": "host",
+                            "phase": "after",
+                            "source": "daemon.process",
+                            "source_available": true,
+                            "sampler_duration_us": 0,
+                            "inflight_requests": 2,
+                        },
+                        "host": {
+                            "process": {
+                                "rss_bytes": 4096,
+                                "max_rss_bytes": 8192,
+                            },
+                        },
+                    }),
+                ),
+            ],
+        );
+
+        let encoded = response[TRACE_SIDECAR_FIELD]
+            .as_str()
+            .expect("trace sidecar");
+        let batch = decode_trace_batch(
+            &base64::engine::general_purpose::STANDARD
+                .decode(encoded)
+                .expect("base64"),
+        )
+        .expect("trace batch decodes");
+        let record = batch.records.first().expect("request trace record");
+        assert_eq!(record.resources.len(), 3);
+        let resource = record
+            .resources
+            .iter()
+            .find(|resource| resource.meta.stats_kind == ResourceStatsKind::CgroupProcess)
+            .expect("cgroup resource stats");
+        assert_eq!(resource.span_id, Some(SpanUid::new(4)));
+        assert_eq!(resource.meta.stats_kind, ResourceStatsKind::CgroupProcess);
+        assert_eq!(resource.meta.phase.as_deref(), Some("after"));
+        assert_eq!(resource.meta.source, "command.process.wait");
+        assert!(resource.meta.source_available);
+        assert_eq!(resource.meta.sampler_duration_us, 17);
+        assert_eq!(resource.meta.inflight_requests, 2);
+        assert_eq!(resource.payload.value["cgroup"]["cpu"]["usage_usec"], 42);
+        assert_eq!(
+            resource.payload.value["process"]["gauges"]["rss_bytes"],
+            4096
+        );
+        assert!(resource.payload.value.get("meta").is_none());
+        let tree = record
+            .resources
+            .iter()
+            .find(|resource| resource.meta.stats_kind == ResourceStatsKind::Tree)
+            .expect("tree resource stats");
+        assert_eq!(tree.span_id, Some(SpanUid::new(4)));
+        assert_eq!(tree.meta.source, "resource.command_exec.upperdir");
+        assert_eq!(tree.payload.value["tree"]["bytes"], 4096);
+        assert_eq!(tree.payload.value["tree"]["truncated"], 1);
+        let host = record
+            .resources
+            .iter()
+            .find(|resource| resource.meta.stats_kind == ResourceStatsKind::Host)
+            .expect("host resource stats");
+        assert_eq!(host.meta.source, "daemon.process");
+        assert_eq!(host.payload.value["host"]["process"]["rss_bytes"], 4096);
+        assert_eq!(host.payload.value["host"]["process"]["max_rss_bytes"], 8192);
+        assert!(
+            record
+                .events
+                .iter()
+                .any(|event| event.module == "resource" && event.name == "resource_stats"),
+            "resource_stats event remains queryable as an event"
+        );
     }
 }

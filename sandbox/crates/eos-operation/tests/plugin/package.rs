@@ -74,6 +74,17 @@ fn publish_package_replaces_existing_root_without_leaving_temps() -> TestResult 
     Ok(())
 }
 
+#[test]
+fn setup_output_tail_is_bounded_to_recent_output() {
+    let stdout = vec![b'a'; SETUP_OUTPUT_TAIL_BYTES + 10];
+    let stderr = b"stderr-tail".as_slice();
+
+    let tail = setup_output_tail(&stdout, stderr).expect("setup output tail");
+
+    assert_eq!(tail.len(), SETUP_OUTPUT_TAIL_BYTES);
+    assert!(tail.ends_with("stderr-tail"));
+}
+
 fn unique_temp_dir(label: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)

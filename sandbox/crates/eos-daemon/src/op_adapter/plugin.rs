@@ -12,17 +12,19 @@ use eos_operation::plugin::contract::{
 use eos_operation::plugin::needs_upload_output;
 use eos_operation::plugin::route::{PluginOperationRoute, PluginProcessSpec};
 use eos_operation::plugin::PackageEnsureReport;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use crate::error::DaemonError;
 use crate::response::{
-    attach_runner_shell_fields, insert_tree_resource_timings, merge_runner_timings,
-    plugin_overlay_changeset_response, resource_timings, TreeResourceStats,
+    attach_runner_shell_fields, insert_cgroup_process_resource_timings,
+    insert_tree_resource_timings, merge_runner_timings, plugin_overlay_changeset_response,
+    resource_timings, TreeResourceStats,
 };
 use crate::DispatchContext;
 use eos_operation::plugin::{
     EnsureOutcome, EnsureReady, LoadedPluginStatus, PluginDispatchOutcome, PluginOverlayOutcome,
-    ServiceHealthReport, StatusOutcome,
+    PluginRuntimeError, PluginSetupReport, PpcError, PpcTraceEvent, ServiceHealthReport,
+    ServiceProcessStatus, StatusOutcome,
 };
 
 use super::to_wire_value;
@@ -33,11 +35,16 @@ pub(crate) fn op_ensure(
 ) -> Result<Value, DaemonError> {
     let services = context.require_services()?;
     services.ensure_plugin_caller_allowed(&input.caller)?;
-    let output = match services.plugin.ensure(&input).map_err(DaemonError::from)? {
+    let ensure_result = services.plugin.ensure(&input);
+    if let Err(err) = &ensure_result {
+        record_plugin_ensure_error_trace_events(&context, err);
+    }
+    let output = match ensure_result.map_err(DaemonError::from)? {
         EnsureOutcome::NeedsUpload { manifest, report } => {
             PluginEnsureOutput::NeedsUpload(needs_upload_output(&manifest, &report))
         }
         EnsureOutcome::Ready(ready) => {
+            record_plugin_ensure_trace_events(&context, &ready);
             PluginEnsureOutput::Ready(Box::new(ensure_ready_output(&ready)))
         }
     };
@@ -55,6 +62,7 @@ pub(crate) fn op_status(
         .plugin
         .status(input.probe_services, probe_timeout)
         .map_err(DaemonError::from)?;
+    record_plugin_status_trace_events(&context, &outcome);
     Ok(status_response(&outcome))
 }
 
@@ -79,19 +87,27 @@ pub(crate) fn dispatch_registered_op(
         return Some(Err(DaemonError::from(err)));
     }
     let total_start = Instant::now();
+    let mut before_resource_timings = Map::new();
+    insert_cgroup_process_resource_timings(&mut before_resource_timings);
+    let _ = services.plugin.drain_ppc_trace_events();
     let outcome = services
         .plugin
         .dispatch_registered_op(op, invocation_id, args)?;
-    Some(
-        outcome
-            .map_err(DaemonError::from)
-            .and_then(|outcome| match outcome {
-                PluginDispatchOutcome::Response(response) => Ok(response),
-                PluginDispatchOutcome::OneshotOverlay(overlay) => {
-                    plugin_overlay_response(&overlay, total_start)
-                }
-            }),
-    )
+    let result = outcome
+        .map_err(DaemonError::from)
+        .and_then(|outcome| match outcome {
+            PluginDispatchOutcome::Response(response) => Ok(response),
+            PluginDispatchOutcome::OneshotOverlay(overlay) => plugin_overlay_response_with_trace(
+                &context,
+                op,
+                invocation_id,
+                &overlay,
+                &before_resource_timings,
+                total_start,
+            ),
+        });
+    record_ppc_trace_events(&context, services.plugin.drain_ppc_trace_events());
+    Some(result)
 }
 
 fn ensure_ready_output(ready: &EnsureReady) -> PluginEnsureReadyOutput {
@@ -156,6 +172,10 @@ fn service_health_value(health: &ServiceHealthReport) -> Value {
             "service_id": health.service_id,
             "service_instance_id": health.service_instance_id,
             "manifest_key": health.manifest_key,
+            "state": health.state,
+            "restart_count": health.restart_count,
+            "refresh_count": health.refresh_count,
+            "last_error": health.last_error,
             "accepted": health.accepted,
         })
     } else {
@@ -165,6 +185,10 @@ fn service_health_value(health: &ServiceHealthReport) -> Value {
             "service_id": health.service_id,
             "service_instance_id": health.service_instance_id,
             "manifest_key": health.manifest_key,
+            "state": health.state,
+            "restart_count": health.restart_count,
+            "refresh_count": health.refresh_count,
+            "last_error": health.last_error,
             "error": health.error,
             "teardown_error": health.teardown_error,
         })
@@ -207,6 +231,7 @@ fn process_spec_to_json(spec: &PluginProcessSpec) -> Value {
         "dependency_root": spec.dependency_root,
         "working_dir": spec.working_dir,
         "socket_path": spec.socket_path,
+        "stderr_path": spec.stderr_path,
         "env": spec.environment(),
         "ppc_protocol_version": spec.ppc_protocol_version,
         "process_started": false,
@@ -313,6 +338,457 @@ fn apply_plugin_overlay_status(
             response["status"] = json!("committed");
         }
     }
+}
+
+fn plugin_overlay_response_with_trace(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+    before_resource_timings: &Map<String, Value>,
+    total_start: Instant,
+) -> Result<Value, DaemonError> {
+    record_plugin_overlay_resource_stats(context, "before", before_resource_timings);
+    record_plugin_overlay_host_resource_stats(context, "before", before_resource_timings);
+    record_plugin_overlay_started(context, op, invocation_id, overlay);
+    record_plugin_overlay_mount_finished(context, op, invocation_id, overlay);
+    record_plugin_overlay_unmount_finished(context, op, invocation_id, overlay);
+    record_plugin_overlay_capture_started(context, op, invocation_id, overlay);
+    let result = plugin_overlay_response(overlay, total_start);
+    if let Ok(response) = &result {
+        if let Some(timings) = response.get("timings").and_then(Value::as_object) {
+            record_plugin_overlay_resource_stats(context, "after", timings);
+            record_plugin_overlay_host_resource_stats(context, "after", timings);
+        }
+    }
+    record_plugin_overlay_capture_finished(context, op, invocation_id, overlay);
+    record_occ_changeset_trace_events(context, &overlay.changeset);
+    match &result {
+        Ok(response) => {
+            record_plugin_overlay_finished(context, op, invocation_id, overlay, response, None)
+        }
+        Err(err) => record_plugin_overlay_finished(
+            context,
+            op,
+            invocation_id,
+            overlay,
+            &json!({ "success": false, "status": "error" }),
+            Some(err),
+        ),
+    }
+    result
+}
+
+fn record_plugin_overlay_started(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    context.record_trace_event(
+        "plugin",
+        "overlay_started",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "layer_stack_root": overlay.layer_stack_root,
+        }),
+    );
+}
+
+fn record_plugin_overlay_resource_stats(
+    context: &DispatchContext<'_>,
+    phase: &'static str,
+    timings: &Map<String, Value>,
+) {
+    let mut cpu = Map::new();
+    let mut memory = Map::new();
+    let mut io = Map::new();
+    let mut psi = Map::new();
+    let mut process = Map::new();
+    for (key, value) in timings {
+        if let Some(name) = key.strip_prefix("resource.cgroup.cpu_") {
+            cpu.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.memory_") {
+            memory.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.io_") {
+            io.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.cgroup.psi_") {
+            psi.insert(name.to_owned(), value.clone());
+        } else if let Some(name) = key.strip_prefix("resource.process.") {
+            process.insert(name.to_owned(), value.clone());
+        }
+    }
+    let cgroup_available =
+        !(cpu.is_empty() && memory.is_empty() && io.is_empty() && psi.is_empty());
+    let process_available = !process.is_empty();
+    let sampler_duration_us = timings
+        .get("resource.sampler.cgroup_process_duration_us")
+        .cloned()
+        .unwrap_or(Value::Null);
+    context.record_trace_event(
+        "resource",
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "cgroup_process",
+                "phase": phase,
+                "source": "plugin.overlay.run",
+                "source_available": cgroup_available || process_available,
+                "read_error": (!(cgroup_available || process_available)).then_some("resource timings unavailable on this platform or request path"),
+                "sampler_duration_us": sampler_duration_us,
+                "inflight_requests": context
+                    .invocation_registry()
+                    .map_or(0, crate::invocation_registry::InFlightRegistry::inflight_count),
+            },
+            "cgroup": {
+                "source_available": cgroup_available,
+                "cpu": cpu,
+                "memory": memory,
+                "io": io,
+                "psi": psi,
+            },
+            "process": {
+                "source_available": process_available,
+                "gauges": process,
+            },
+        }),
+    );
+}
+
+fn record_plugin_overlay_host_resource_stats(
+    context: &DispatchContext<'_>,
+    phase: &'static str,
+    timings: &Map<String, Value>,
+) {
+    let mut process = Map::new();
+    for (key, value) in timings {
+        if let Some(name) = key.strip_prefix("resource.process.") {
+            process.insert(name.to_owned(), value.clone());
+        }
+    }
+    let source_available = !process.is_empty();
+    context.record_trace_event(
+        "resource",
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "host",
+                "phase": phase,
+                "source": "daemon.process",
+                "source_available": source_available,
+                "read_error": (!source_available).then_some("daemon process gauges unavailable on this platform"),
+                "sampler_duration_us": 0,
+                "inflight_requests": context
+                    .invocation_registry()
+                    .map_or(0, crate::invocation_registry::InFlightRegistry::inflight_count),
+            },
+            "host": {
+                "process": process,
+            },
+        }),
+    );
+}
+
+fn record_plugin_overlay_mount_finished(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    let mount_s = runner_timing(&overlay.runner, "workspace.mount_s");
+    let fsconfig_calls = runner_timing(&overlay.runner, "workspace.fsconfig_calls");
+    let duration_us = mount_s.map(seconds_to_micros_saturating);
+    context.record_trace_event(
+        "overlay",
+        "mount_finished",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+            "success": mount_s.is_some(),
+            "duration_s": mount_s,
+            "duration_available": mount_s.is_some(),
+            "layer_count": overlay.layer_count,
+            "fsconfig_calls": fsconfig_calls,
+            "fsconfig_calls_available": fsconfig_calls.is_some(),
+        }),
+    );
+    context.record_trace_event(
+        "resource",
+        "resource_stats",
+        json!({
+            "meta": {
+                "stats_kind": "mount_cost",
+                "phase": "after",
+                "source": "plugin.overlay.mount",
+                "source_available": mount_s.is_some(),
+                "read_error": mount_s.is_none().then_some("overlay mount timing unavailable"),
+                "sampler_duration_us": 0,
+                "inflight_requests": context
+                    .invocation_registry()
+                    .map_or(0, crate::invocation_registry::InFlightRegistry::inflight_count),
+            },
+            "mount": {
+                "duration_us": duration_us,
+                "duration_available": duration_us.is_some(),
+                "layer_count": overlay.layer_count,
+                "fsconfig_calls": fsconfig_calls,
+                "fsconfig_calls_available": fsconfig_calls.is_some(),
+            },
+        }),
+    );
+}
+
+fn record_plugin_overlay_unmount_finished(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    let unmount_s = runner_timing(&overlay.runner, "workspace.unmount_s");
+    let unmount_error = overlay
+        .runner
+        .payload
+        .get("workspace_unmount_error")
+        .and_then(Value::as_str);
+    context.record_trace_event(
+        "overlay",
+        "unmount_finished",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+            "success": unmount_s.is_some() && unmount_error.is_none(),
+            "duration_s": unmount_s,
+            "duration_available": unmount_s.is_some(),
+            "layer_count": overlay.layer_count,
+            "error": unmount_error,
+        }),
+    );
+}
+
+fn runner_timing(runner: &eos_namespace::protocol::RunResult, key: &str) -> Option<f64> {
+    runner
+        .payload
+        .get("timings")
+        .and_then(Value::as_object)
+        .and_then(|timings| timings.get(key))
+        .and_then(Value::as_f64)
+}
+
+fn seconds_to_micros_saturating(seconds: f64) -> u64 {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return 0;
+    }
+    let micros = seconds * 1_000_000.0;
+    if micros >= u64::MAX as f64 {
+        u64::MAX
+    } else {
+        micros.round() as u64
+    }
+}
+
+fn record_plugin_overlay_capture_started(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    context.record_trace_event(
+        "overlay",
+        "capture_started",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+        }),
+    );
+}
+
+fn record_plugin_overlay_capture_finished(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+) {
+    context.record_trace_event(
+        "overlay",
+        "capture_finished",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "source": "plugin_oneshot_overlay",
+            "layer_stack_root": overlay.layer_stack_root,
+            "success": true,
+            "duration_s": overlay.capture_s,
+            "changed_path_count": overlay.path_kinds.len(),
+            "bytes": overlay.upperdir_stats.bytes,
+            "file_count": overlay.upperdir_stats.files,
+            "dir_count": overlay.upperdir_stats.dirs,
+            "symlink_count": overlay.upperdir_stats.symlinks,
+            "entry_count": overlay
+                .upperdir_stats
+                .files
+                .saturating_add(overlay.upperdir_stats.dirs)
+                .saturating_add(overlay.upperdir_stats.symlinks),
+            "truncated": overlay.upperdir_stats.truncated,
+            "read_error_count": overlay.upperdir_stats.read_error_count,
+            "failing_path": overlay.upperdir_stats.first_error_path.clone(),
+        }),
+    );
+}
+
+fn record_occ_changeset_trace_events(
+    context: &DispatchContext<'_>,
+    changeset: &eos_layerstack::ChangesetResult,
+) {
+    for event in changeset.trace_events() {
+        context.record_trace_event(event.module, event.name, event.details);
+    }
+}
+
+fn record_ppc_trace_events(context: &DispatchContext<'_>, events: Vec<PpcTraceEvent>) {
+    for event in events {
+        context.record_trace_event(event.module, event.name, event.details);
+    }
+}
+
+fn record_plugin_overlay_finished(
+    context: &DispatchContext<'_>,
+    op: &str,
+    invocation_id: &str,
+    overlay: &PluginOverlayOutcome,
+    response: &Value,
+    adapter_error: Option<&DaemonError>,
+) {
+    context.record_trace_event(
+        "plugin",
+        "overlay_finished",
+        json!({
+            "op": op,
+            "invocation_id": invocation_id,
+            "layer_stack_root": overlay.layer_stack_root,
+            "success": response.get("success").and_then(Value::as_bool).unwrap_or(false),
+            "status": response.get("status").and_then(Value::as_str),
+            "error_kind": response
+                .get("error")
+                .and_then(|error| error.get("kind"))
+                .and_then(Value::as_str),
+            "adapter_error": adapter_error.map(ToString::to_string),
+            "worker_exit_code": overlay.runner.exit_code,
+            "changed_path_count": overlay.path_kinds.len(),
+            "published_manifest_version": overlay.changeset.published_manifest_version,
+            "lease_acquire_s": overlay.lease_acquire_s,
+            "capture_s": overlay.capture_s,
+            "occ_s": overlay.occ_s,
+            "upperdir_files": overlay.upperdir_stats.files,
+            "upperdir_dirs": overlay.upperdir_stats.dirs,
+            "upperdir_symlinks": overlay.upperdir_stats.symlinks,
+            "upperdir_bytes": overlay.upperdir_stats.bytes,
+        }),
+    );
+}
+
+fn record_plugin_ensure_trace_events(context: &DispatchContext<'_>, ready: &EnsureReady) {
+    if let Some(setup) = &ready.package.setup {
+        record_plugin_setup_finished(context, setup);
+    }
+    for process in &ready.started_service_processes {
+        context.record_trace_event(
+            "plugin",
+            "service_started",
+            json!({
+                "plugin": ready.plugin_id,
+                "service_id": process.service_id,
+                "service_instance_id": process.service_instance_id,
+                "pid": process.pid,
+                "process_group_id": process.process_group_id,
+                "running": process.running,
+                "socket_path": process.socket_path,
+                "stderr_path": process.stderr_path,
+            }),
+        );
+    }
+}
+
+fn record_plugin_ensure_error_trace_events(
+    context: &DispatchContext<'_>,
+    err: &PluginRuntimeError,
+) {
+    if let PluginRuntimeError::Ppc(PpcError::SetupFailed { report, .. }) = err {
+        record_plugin_setup_finished(context, report);
+    }
+}
+
+fn record_plugin_setup_finished(context: &DispatchContext<'_>, report: &PluginSetupReport) {
+    context.record_trace_event(
+        "plugin",
+        "setup_finished",
+        json!({
+            "plugin": report.plugin,
+            "digest": report.digest,
+            "ran": report.ran,
+            "success": report.success,
+            "exit_code": report.exit_code,
+            "output_tail": report.output_tail,
+            "spawn_error": report.spawn_error,
+        }),
+    );
+}
+
+fn record_plugin_status_trace_events(context: &DispatchContext<'_>, outcome: &StatusOutcome) {
+    for health in &outcome.service_health {
+        context.record_trace_event(
+            "plugin",
+            "service_health_checked",
+            json!({
+                "plugin": health.plugin,
+                "service_id": health.service_id,
+                "service_instance_id": health.service_instance_id,
+                "manifest_key": health.manifest_key,
+                "state": health.state,
+                "restart_count": health.restart_count,
+                "refresh_count": health.refresh_count,
+                "last_error": health.last_error,
+                "accepted": health.accepted,
+                "success": health.success,
+                "error": health.error,
+                "teardown_error": health.teardown_error,
+            }),
+        );
+    }
+    for process in &outcome.exited_service_processes {
+        record_service_exited(context, process);
+    }
+    for process in outcome
+        .running_service_processes
+        .iter()
+        .filter(|process| !process.running)
+    {
+        record_service_exited(context, process);
+    }
+}
+
+fn record_service_exited(context: &DispatchContext<'_>, process: &ServiceProcessStatus) {
+    context.record_trace_event(
+        "plugin",
+        "service_exited",
+        json!({
+            "service_id": process.service_id,
+            "service_instance_id": process.service_instance_id,
+            "pid": process.pid,
+            "process_group_id": process.process_group_id,
+            "exit_code": process.exit_status,
+            "signal": process.exit_signal,
+            "status_raw": process.status_raw,
+            "socket_path": process.socket_path,
+            "stderr_path": process.stderr_path,
+        }),
+    );
 }
 
 #[cfg(test)]

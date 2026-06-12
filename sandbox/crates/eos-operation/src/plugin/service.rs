@@ -77,8 +77,8 @@ impl PluginRuntime {
 pub(super) fn insert_started_service_processes(
     state: &mut DaemonPluginState,
     started_services: Vec<StartedPluginService>,
-) -> Result<usize, PluginRuntimeError> {
-    let mut started_count = 0;
+) -> Result<Vec<super::process::ServiceProcessStatus>, PluginRuntimeError> {
+    let mut statuses = Vec::new();
     for started in started_services {
         if state
             .service_processes
@@ -100,12 +100,14 @@ pub(super) fn insert_started_service_processes(
         state
             .service_snapshots
             .insert(started.service_instance_id.clone(), started.snapshot);
+        let mut process = started.process;
+        let status = process.status();
         state
             .service_processes
-            .insert(started.service_instance_id, started.process);
-        started_count += 1;
+            .insert(started.service_instance_id, process);
+        statuses.push(status);
     }
-    Ok(started_count)
+    Ok(statuses)
 }
 
 pub(super) fn acquire_service_snapshot(
@@ -246,14 +248,20 @@ pub(super) fn running_process_statuses(
 
 /// Reap service processes whose child has exited — the teardown half of
 /// [`running_process_statuses`], for callers that only need the side effect.
-pub(super) fn reap_exited_processes(state: &mut DaemonPluginState) {
+pub(super) fn reap_exited_processes(
+    state: &mut DaemonPluginState,
+) -> Vec<super::process::ServiceProcessStatus> {
     let mut closed = Vec::new();
+    let mut statuses = Vec::new();
     for (service_instance_id, process) in &mut state.service_processes {
-        if !process.is_running() {
+        let status = process.status();
+        if !status.running {
             closed.push(service_instance_id.clone());
+            statuses.push(status);
         }
     }
     remove_service_instances(state, &closed);
+    statuses
 }
 
 /// Stop tracking each given service instance and release the snapshot lease it

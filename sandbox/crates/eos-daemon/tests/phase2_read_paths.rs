@@ -699,8 +699,10 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
             && event.name == "resource_stats"
             && event.details.value["meta"]["stats_kind"] == json!("cgroup_process")
             && event.details.value["meta"]["phase"] == json!("after")
+            && event.details.value["meta"]["sampler_duration_us"].is_number()
             && event.details.value["meta"]["inflight_requests"].is_number()
             && event.details.value["cgroup"]["source_available"].is_boolean()
+            && event.details.value["cgroup"]["psi"].is_object()
             && event.details.value["process"]["source_available"].is_boolean()),
         "resource stats event recorded with source markers"
     );

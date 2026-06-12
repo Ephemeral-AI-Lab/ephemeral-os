@@ -5,8 +5,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use base64::Engine as _;
 use eos_e2e_test::{live_pool_with_config, NodeLease, NodePool};
 use eos_operation::core::catalog;
+use eos_trace::{decode_trace_batch, TraceRecord};
 use serde_json::{json, Value};
 
 pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
@@ -272,6 +274,47 @@ pub(crate) fn seed_base_files(
         )?;
     }
     Ok(file_count * bytes_each)
+}
+
+pub(crate) fn trace_record(response: &Value) -> Result<TraceRecord> {
+    let mut response = response.clone();
+    let sidecar = eos_sandbox_host::protocol::take_trace_sidecar(&mut response)
+        .with_context(|| format!("response missing trace sidecar: {response}"))?;
+    let batch = decode_trace_batch(&sidecar).context("decode trace sidecar")?;
+    let mut records = batch.records;
+    if records.len() != 1 {
+        bail!(
+            "expected one trace record in response sidecar, got {}",
+            records.len()
+        );
+    }
+    Ok(records.remove(0))
+}
+
+pub(crate) fn trace_export_records(response: &Value) -> Result<Vec<TraceRecord>> {
+    let Some(encoded) = response.get("trace_batch_base64").and_then(Value::as_str) else {
+        if response.get("record_count").and_then(Value::as_i64) == Some(0) {
+            return Ok(Vec::new());
+        }
+        bail!("trace export missing trace_batch_base64: {response}");
+    };
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .context("decode trace export batch")?;
+    Ok(decode_trace_batch(&bytes)
+        .context("decode trace export protobuf")?
+        .records)
+}
+
+pub(crate) fn has_trace_event(
+    record: &TraceRecord,
+    module: &str,
+    name: &str,
+    predicate: impl Fn(&Value) -> bool,
+) -> bool {
+    record.events.iter().any(|event| {
+        event.module == module && event.name == name && predicate(&event.details.value)
+    })
 }
 
 pub(crate) fn as_bool(value: &Value, key: &str) -> Result<bool> {

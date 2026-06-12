@@ -41,6 +41,18 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
         timing_f64_value(&timings, "resource.command_exec.upperdir_tree_truncated"),
         0.0
     );
+
+    let truncated_upperdir_stats =
+        eos_workspace::TreeResourceStats::collect_with_entry_limit(&upperdir, 1);
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &TreeResourceStats::from_ephemeral(&truncated_upperdir_stats),
+    );
+    assert_eq!(
+        timing_f64_value(&timings, "resource.command_exec.upperdir_tree_truncated"),
+        1.0
+    );
     Ok(())
 }
 

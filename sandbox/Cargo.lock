@@ -302,9 +302,11 @@ name = "eos-e2e-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "eos-config",
  "eos-operation",
  "eos-sandbox-host",
+ "eos-trace",
  "serde_json",
  "sha2",
 ]

@@ -66,6 +66,7 @@ pub struct PluginProcessSpec {
     pub working_dir: PathBuf,
     pub ppc_protocol_version: u32,
     pub socket_path: PathBuf,
+    pub stderr_path: PathBuf,
 }
 
 impl PluginProcessSpec {
@@ -90,6 +91,7 @@ impl PluginProcessSpec {
             ));
         }
         let socket_path = socket_path_for_key(&key, socket_root.as_ref());
+        let stderr_path = stderr_path_for_socket(&socket_path);
         Ok(Self {
             key,
             command,
@@ -98,6 +100,7 @@ impl PluginProcessSpec {
             working_dir,
             ppc_protocol_version,
             socket_path,
+            stderr_path,
         })
     }
 
@@ -147,6 +150,10 @@ fn socket_path_for_key(key: &PluginServiceKey, socket_root: &Path) -> PathBuf {
     hasher.update(key.plugin_digest.as_bytes());
     let digest = hasher.finalize();
     socket_root.join(format!("{}.sock", lower_hex(&digest[..16])))
+}
+
+fn stderr_path_for_socket(socket_path: &Path) -> PathBuf {
+    socket_path.with_extension("stderr.log")
 }
 
 fn lower_hex(bytes: &[u8]) -> String {

@@ -79,7 +79,8 @@ fn process_spec_rejects_empty_command() -> TestResult {
 
 #[test]
 fn spawned_process_reports_running_then_tears_down() -> TestResult {
-    let spec = new_spec_for_test(
+    let root = test_socket_root("spawn-running");
+    let spec = new_spec_with_socket_root(
         key("profile-a")?,
         vec![
             "/bin/sh".to_owned(),
@@ -87,6 +88,7 @@ fn spawned_process_reports_running_then_tears_down() -> TestResult {
             "test \"$EOS_PLUGIN_SERVICE_ID\" = indexer && sleep 30".to_owned(),
         ],
         1,
+        &root,
     )?;
     let mut process = spawn(&spec)?;
 
@@ -94,10 +96,91 @@ fn spawned_process_reports_running_then_tears_down() -> TestResult {
     assert_eq!(status.service_id, "indexer");
     assert!(status.running);
     assert!(status.pid > 0);
+    assert_eq!(status.exit_status, None);
+    assert_eq!(status.exit_signal, None);
+    assert_eq!(status.status_raw, None);
+    assert_eq!(status.stderr_path, spec.stderr_path);
 
     process.teardown();
     let status = process.status();
     assert!(!status.running);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn spawned_process_reports_exit_code_and_raw_status() -> TestResult {
+    let root = test_socket_root("spawn-exit-status");
+    let spec = new_spec_with_socket_root(
+        key("profile-a")?,
+        vec!["/bin/sh".to_owned(), "-c".to_owned(), "exit 7".to_owned()],
+        1,
+        &root,
+    )?;
+    let mut process = spawn(&spec)?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+
+    let status = loop {
+        let status = process.status();
+        if !status.running {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            return Err(std::io::Error::new(
+                ErrorKind::TimedOut,
+                "timed out waiting for service process exit",
+            )
+            .into());
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    };
+
+    assert_eq!(status.exit_status, Some(7));
+    assert_eq!(status.exit_signal, None);
+    assert!(
+        status.status_raw.is_some(),
+        "raw wait status must be preserved"
+    );
+    assert_eq!(status.stderr_path, spec.stderr_path);
+    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[test]
+fn spawned_process_writes_stderr_to_service_log() -> TestResult {
+    let root = test_socket_root("spawn-stderr");
+    let spec = new_spec_with_socket_root(
+        key("profile-a")?,
+        vec![
+            "/bin/sh".to_owned(),
+            "-c".to_owned(),
+            "printf service-failed >&2".to_owned(),
+        ],
+        1,
+        &root,
+    )?;
+    let mut process = spawn(&spec)?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+
+    loop {
+        if !process.status().running {
+            break;
+        }
+        if Instant::now() >= deadline {
+            return Err(std::io::Error::new(
+                ErrorKind::TimedOut,
+                "timed out waiting for stderr-writing service process exit",
+            )
+            .into());
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    assert_eq!(
+        std::fs::read_to_string(&spec.stderr_path)?,
+        "service-failed"
+    );
+    let _ = std::fs::remove_dir_all(root);
     Ok(())
 }
 

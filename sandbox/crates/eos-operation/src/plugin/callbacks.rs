@@ -89,6 +89,7 @@ fn handle_apply_changeset(
     });
     Ok(PpcMessage {
         message_id: request.message_id,
+        parent_message_id: None,
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
         body: serde_json::to_string(&response_body)

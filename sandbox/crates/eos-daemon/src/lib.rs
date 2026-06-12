@@ -33,6 +33,7 @@ pub use invocation_registry::InFlightRegistry;
 pub(crate) use invocation_registry::{DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S};
 pub use runtime_services::RuntimeServices;
 pub use server::{DaemonServer, ServerConfig};
+pub(crate) use workspace_runtime::WorkspaceRecoveryReport;
 pub use workspace_runtime::{CallerCancel, ExitOutcome, WorkspaceEnterError, WorkspaceRuntime};
 
 pub(crate) mod config {

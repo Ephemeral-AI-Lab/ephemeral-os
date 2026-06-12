@@ -251,6 +251,13 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         SpanKind::Overlay,
         json!({"layer_count": 1}),
     ));
+    record.spans.push(SpanRecord::new(
+        SpanUid::new(2),
+        Some(SpanUid::ROOT),
+        "plugin_overlay_run",
+        SpanKind::Plugin,
+        json!({"op": "plugin.generic.query"}),
+    ));
     record.events.push(EventRecord::new(
         SpanUid::ROOT,
         "mount_finished",
@@ -261,15 +268,140 @@ fn acceptance_queries_use_indexes() -> Result<(), TraceStoreError> {
         kind: TraceLinkKind::Command,
         value: "cmd-plan".to_owned(),
     });
-    record.resources.push(ResourceStats::available(
-        ResourceStatsKind::CgroupProcess,
-        Some("before".to_owned()),
-        "cpu.stat",
-        1,
-        1,
-        json!({"phase": "before"}),
-    ));
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::CgroupProcess,
+            Some("before".to_owned()),
+            "command.process.wait",
+            1,
+            1,
+            json!({"cpu": {"usage_usec": 10}}),
+        )
+        .with_span_id(SpanUid::ROOT),
+    );
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::CgroupProcess,
+            Some("after".to_owned()),
+            "command.process.wait",
+            1,
+            1,
+            json!({"cpu": {"usage_usec": 15}}),
+        )
+        .with_span_id(SpanUid::ROOT),
+    );
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::CgroupProcess,
+            Some("before".to_owned()),
+            "plugin.overlay.run",
+            2,
+            1,
+            json!({"cpu": {"usage_usec": 20}}),
+        )
+        .with_span_id(SpanUid::new(2)),
+    );
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::CgroupProcess,
+            Some("after".to_owned()),
+            "plugin.overlay.run",
+            2,
+            1,
+            json!({"cpu": {"usage_usec": 25}}),
+        )
+        .with_span_id(SpanUid::new(2)),
+    );
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::MountCost,
+            Some("after".to_owned()),
+            "plugin.overlay.mount",
+            0,
+            1,
+            json!({
+                "mount": {
+                    "layer_count": 1,
+                    "fsconfig_calls": 3,
+                    "duration_us": 10,
+                },
+            }),
+        )
+        .with_span_id(SpanUid::ROOT),
+    );
+    record.resources.push(
+        ResourceStats::available(
+            ResourceStatsKind::Tree,
+            None,
+            "resource.command_exec.upperdir",
+            7,
+            1,
+            json!({
+                "tree": {
+                    "bytes": 4096,
+                    "entry_count": 2,
+                    "truncated": 1,
+                },
+            }),
+        )
+        .with_span_id(SpanUid::ROOT),
+    );
     store.ingest_trace_batch("sb-1", &encode_trace_batch(&TraceBatch::single(record)))?;
+
+    assert_eq!(
+        store.resource_span_ids_for_request("request-plan")?,
+        vec![Some(1), Some(1), Some(2), Some(2), Some(1), Some(1)]
+    );
+    let before_after_pair_count: i64 = store.lock().query_row(
+        "SELECT COUNT(*) FROM trace_resources b
+         JOIN trace_resources a
+           ON a.trace_id=b.trace_id
+          AND a.request_id=b.request_id
+          AND a.span_id=b.span_id
+          AND a.kind=b.kind
+         WHERE b.request_id='request-plan'
+           AND json_extract(b.values_json,'$.phase')='before'
+           AND json_extract(a.values_json,'$.phase')='after'",
+        [],
+        |row| row.get(0),
+    )?;
+    assert_eq!(before_after_pair_count, 2);
+    let paired_sources: String = store.lock().query_row(
+        "SELECT group_concat(DISTINCT json_extract(b.values_json,'$.source'))
+         FROM trace_resources b
+         JOIN trace_resources a
+           ON a.trace_id=b.trace_id
+          AND a.request_id=b.request_id
+          AND a.span_id=b.span_id
+          AND a.kind=b.kind
+         WHERE b.request_id='request-plan'
+           AND json_extract(b.values_json,'$.phase')='before'
+           AND json_extract(a.values_json,'$.phase')='after'",
+        [],
+        |row| row.get(0),
+    )?;
+    assert!(paired_sources.contains("command.process.wait"));
+    assert!(paired_sources.contains("plugin.overlay.run"));
+    let mount_cost: (i64, i64, i64) = store.lock().query_row(
+        "SELECT json_extract(values_json,'$.payload.mount.layer_count'),
+                json_extract(values_json,'$.payload.mount.fsconfig_calls'),
+                json_extract(values_json,'$.payload.mount.duration_us')
+         FROM trace_resources
+         WHERE request_id='request-plan'
+           AND kind='mount_cost'",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+    assert_eq!(mount_cost, (1, 3, 10));
+    let truncated_tree_count: i64 = store.lock().query_row(
+        "SELECT COUNT(*) FROM trace_resources
+         WHERE request_id='request-plan'
+           AND kind='tree'
+           AND json_extract(values_json,'$.payload.tree.truncated')=1",
+        [],
+        |row| row.get(0),
+    )?;
+    assert_eq!(truncated_tree_count, 1);
 
     for sql in acceptance_queries(trace_id.as_str()) {
         let plan = store.query_plan_for(&sql)?;
@@ -325,6 +457,7 @@ fn acceptance_queries(trace_id: &str) -> Vec<String> {
             "SELECT audit_seq, entry_kind, payload_sha256, prev_global_sha256, prev_sandbox_sha256, entry_sha256 FROM audit_entries WHERE trace_id='{trace_id}' ORDER BY audit_seq"
         ),
         "SELECT b.values_json AS before_values, a.values_json AS after_values FROM trace_resources b JOIN trace_resources a ON a.trace_id=b.trace_id AND a.request_id=b.request_id AND a.span_id=b.span_id AND a.kind=b.kind WHERE b.request_id='request-plan' AND json_extract(b.values_json,'$.phase')='before' AND json_extract(a.values_json,'$.phase')='after'".to_owned(),
-        "SELECT json_extract(details_json,'$.layer_count') AS layer_count, json_extract(details_json,'$.fsconfig_calls') AS fsconfig_calls, json_extract(details_json,'$.duration_us') AS duration_us FROM trace_events WHERE event='mount_finished' ORDER BY layer_count, duration_us".to_owned(),
+        "SELECT json_extract(values_json,'$.payload.mount.layer_count') AS layer_count, json_extract(values_json,'$.payload.mount.fsconfig_calls') AS fsconfig_calls, json_extract(values_json,'$.payload.mount.duration_us') AS duration_us FROM trace_resources WHERE request_id='request-plan' AND kind='mount_cost' ORDER BY layer_count, duration_us".to_owned(),
+        "SELECT json_extract(values_json,'$.payload.tree.entry_count') AS entry_count, json_extract(values_json,'$.payload.tree.truncated') AS truncated FROM trace_resources WHERE request_id='request-plan' AND kind='tree' AND json_extract(values_json,'$.payload.tree.truncated')=1 ORDER BY ts_us".to_owned(),
     ]
 }

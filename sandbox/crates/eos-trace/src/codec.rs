@@ -220,11 +220,13 @@ fn resource_to_proto(resource: &ResourceStats) -> proto::TraceResource {
         payload_truncated: resource.payload.truncated,
         payload_sha256: resource.payload.sha256.clone().unwrap_or_default(),
         payload_original_len: usize_to_u64(resource.payload.original_len),
+        span_id: resource.span_id.map_or(0, SpanUid::get),
     }
 }
 
 fn proto_to_resource(resource: proto::TraceResource) -> Option<ResourceStats> {
     Some(ResourceStats {
+        span_id: (resource.span_id != 0).then(|| SpanUid::new(resource.span_id)),
         meta: ResourceStatsMeta {
             stats_kind: resource_stats_kind_from_label(&resource.stats_kind),
             phase: empty_to_none(resource.phase),

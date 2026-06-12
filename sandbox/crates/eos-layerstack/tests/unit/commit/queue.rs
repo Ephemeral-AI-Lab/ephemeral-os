@@ -67,5 +67,18 @@ fn cas_retry_exhaustion_surfaces_aborted_version() -> TestResult {
     );
     assert!(!result.success());
     assert_eq!(result.files[0].status, CommitStatus::AbortedVersion);
+    assert_eq!(result.files[0].observed_version, Some(42));
+    assert_eq!(
+        result.files[0].observed_state.as_deref(),
+        Some("manifest_conflict")
+    );
+    let events = result.trace_events();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[1].module, "occ");
+    assert_eq!(events[1].name, "conflict_detected");
+    assert_eq!(events[1].details["path"], "a.txt");
+    assert_eq!(events[1].details["reason"], "aborted_version");
+    assert_eq!(events[1].details["observed_version"], 42);
+    assert_eq!(events[1].details["observed_state"], "manifest_conflict");
     Ok(())
 }

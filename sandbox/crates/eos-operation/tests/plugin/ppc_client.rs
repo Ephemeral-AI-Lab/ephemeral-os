@@ -5,7 +5,7 @@ use std::sync::{mpsc, Arc};
 use std::thread;
 use std::time::Duration;
 
-use eos_operation::plugin::{read_message_bytes, PpcClient};
+use eos_operation::plugin::{read_message_bytes, PpcClient, PpcTraceEventSink};
 use eos_plugin::{PpcDirection, PpcMessage};
 
 type TestResult = std::result::Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -17,6 +17,7 @@ fn ppc_client_round_trip_requires_matching_reply() -> TestResult {
         let request = PpcMessage::decode(&read_message_bytes(&mut server_stream)?)?;
         let reply = PpcMessage {
             message_id: request.message_id,
+            parent_message_id: None,
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: r#"{"success":true}"#.to_owned(),
@@ -25,10 +26,12 @@ fn ppc_client_round_trip_requires_matching_reply() -> TestResult {
         Ok(())
     });
 
-    let client = PpcClient::new(client_stream)?;
+    let sink = PpcTraceEventSink::default();
+    let client = PpcClient::new_with_trace_events(client_stream, sink.clone())?;
     let reply = client.round_trip(
         &PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: "plugin.echo.ping".to_owned(),
             body: r#"{"value":1}"#.to_owned(),
@@ -52,6 +55,7 @@ fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResul
         // cascade-fail the healthy in-flight request on the same client.
         let stray = PpcMessage {
             message_id: "ghost".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: "{}".to_owned(),
@@ -59,6 +63,7 @@ fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResul
         server_stream.write_all(&stray.encode()?)?;
         let reply = PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: r#"{"ok":true}"#.to_owned(),
@@ -67,10 +72,12 @@ fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResul
         Ok(())
     });
 
-    let client = PpcClient::new(client_stream)?;
+    let sink = PpcTraceEventSink::default();
+    let client = PpcClient::new_with_trace_events(client_stream, sink.clone())?;
     let reply = client.round_trip(
         &PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: "plugin.echo.ping".to_owned(),
             body: "{}".to_owned(),
@@ -80,6 +87,12 @@ fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResul
 
     assert_eq!(reply.message_id, "msg-1");
     assert_eq!(reply.body, r#"{"ok":true}"#);
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].name, "ppc_reply_orphaned");
+    assert_eq!(events[0].details["message_id"], "ghost");
+    assert_eq!(events[0].details["direction"], "reply");
+    assert_eq!(events[0].details["reason"], "unknown_message_id");
     join_server(server)?;
     Ok(())
 }
@@ -98,6 +111,7 @@ fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
         server_stream.write_all(
             &PpcMessage {
                 message_id: second.message_id,
+                parent_message_id: None,
                 direction: PpcDirection::Reply,
                 op: "reply".to_owned(),
                 body: r#"{"success":true,"seq":2}"#.to_owned(),
@@ -107,6 +121,7 @@ fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
         server_stream.write_all(
             &PpcMessage {
                 message_id: first.message_id,
+                parent_message_id: None,
                 direction: PpcDirection::Reply,
                 op: "reply".to_owned(),
                 body: r#"{"success":true,"seq":1}"#.to_owned(),
@@ -122,6 +137,7 @@ fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
         first_client.round_trip(
             &PpcMessage {
                 message_id: "msg-1".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: "plugin.echo.ping".to_owned(),
                 body: r#"{"seq":1}"#.to_owned(),
@@ -135,6 +151,7 @@ fn ppc_client_matches_out_of_order_replies_by_message_id() -> TestResult {
         second_client.round_trip(
             &PpcMessage {
                 message_id: "msg-2".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: "plugin.echo.ping".to_owned(),
                 body: r#"{"seq":2}"#.to_owned(),
@@ -166,6 +183,7 @@ fn ppc_client_services_callback_before_final_reply() -> TestResult {
 
         let callback = PpcMessage {
             message_id: "callback-1".to_owned(),
+            parent_message_id: Some(request.message_id.clone()),
             direction: PpcDirection::Request,
             op: "daemon.occ.apply_changeset".to_owned(),
             body: r#"{"changes":[]}"#.to_owned(),
@@ -179,6 +197,7 @@ fn ppc_client_services_callback_before_final_reply() -> TestResult {
 
         let reply = PpcMessage {
             message_id: request.message_id,
+            parent_message_id: None,
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: r#"{"success":true}"#.to_owned(),
@@ -191,6 +210,7 @@ fn ppc_client_services_callback_before_final_reply() -> TestResult {
     let reply = client.round_trip_with_callbacks(
         &PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: "plugin.generic.apply".to_owned(),
             body: r#"{"path":"main.py"}"#.to_owned(),
@@ -198,9 +218,11 @@ fn ppc_client_services_callback_before_final_reply() -> TestResult {
         Duration::from_secs(1),
         |callback| {
             assert_eq!(callback.message_id, "callback-1");
+            assert_eq!(callback.parent_message_id.as_deref(), Some("msg-1"));
             assert_eq!(callback.op, "daemon.occ.apply_changeset");
             Ok(PpcMessage {
                 message_id: callback.message_id,
+                parent_message_id: None,
                 direction: PpcDirection::Reply,
                 op: "reply".to_owned(),
                 body: r#"{"published":[]}"#.to_owned(),
@@ -224,6 +246,7 @@ fn ppc_client_services_multiple_callbacks_before_final_reply() -> TestResult {
         for index in 0..2 {
             let callback = PpcMessage {
                 message_id: format!("callback-{index}"),
+                parent_message_id: Some(request.message_id.clone()),
                 direction: PpcDirection::Request,
                 op: "daemon.occ.apply_changeset".to_owned(),
                 body: format!(r#"{{"changes":[{{"path":"file-{index}.txt"}}]}}"#),
@@ -241,6 +264,7 @@ fn ppc_client_services_multiple_callbacks_before_final_reply() -> TestResult {
 
         let reply = PpcMessage {
             message_id: request.message_id,
+            parent_message_id: None,
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: r#"{"success":true,"callback_count":2}"#.to_owned(),
@@ -255,6 +279,7 @@ fn ppc_client_services_multiple_callbacks_before_final_reply() -> TestResult {
     let reply = client.round_trip_with_callbacks(
         &PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: "plugin.generic.apply_multi".to_owned(),
             body: r#"{"paths":["file-0.txt","file-1.txt"]}"#.to_owned(),
@@ -267,10 +292,12 @@ fn ppc_client_services_multiple_callbacks_before_final_reply() -> TestResult {
                 format!(r#"{{"changes":[{{"path":"file-{callback_count}.txt"}}]}}"#);
             assert_eq!(callback.message_id, expected_id);
             assert_eq!(callback.op, "daemon.occ.apply_changeset");
+            assert_eq!(callback.parent_message_id.as_deref(), Some("msg-1"));
             assert_eq!(callback.body, expected_body);
             let body = format!(r#"{{"published":["file-{callback_count}.txt"]}}"#);
             Ok(PpcMessage {
                 message_id: callback.message_id,
+                parent_message_id: None,
                 direction: PpcDirection::Reply,
                 op: "reply".to_owned(),
                 body,
@@ -301,11 +328,10 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             server_stream.write_all(
                 &PpcMessage {
                     message_id: callback_id.clone(),
+                    parent_message_id: Some(message_id.to_owned()),
                     direction: PpcDirection::Request,
                     op: "daemon.occ.apply_changeset".to_owned(),
-                    body: format!(
-                        r#"{{"parent_message_id":"{message_id}","changes":[{{"path":"{path}"}}]}}"#
-                    ),
+                    body: format!(r#"{{"changes":[{{"path":"{path}"}}]}}"#),
                 }
                 .encode()?,
             )?;
@@ -318,6 +344,7 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             server_stream.write_all(
                 &PpcMessage {
                     message_id: message_id.to_owned(),
+                    parent_message_id: None,
                     direction: PpcDirection::Reply,
                     op: "reply".to_owned(),
                     body: format!(r#"{{"success":true,"path":"{path}"}}"#),
@@ -334,6 +361,7 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
         first_client.round_trip_with_callbacks(
             &PpcMessage {
                 message_id: "op-1".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: "plugin.generic.apply".to_owned(),
                 body: r#"{"path":"a.txt"}"#.to_owned(),
@@ -341,8 +369,10 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             Duration::from_secs(1),
             |callback| {
                 assert_eq!(callback.message_id, "op-1:occ");
+                assert_eq!(callback.parent_message_id.as_deref(), Some("op-1"));
                 Ok(PpcMessage {
                     message_id: callback.message_id,
+                    parent_message_id: None,
                     direction: PpcDirection::Reply,
                     op: "reply".to_owned(),
                     body: r#"{"published":["a.txt"]}"#.to_owned(),
@@ -356,6 +386,7 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
         second_client.round_trip_with_callbacks(
             &PpcMessage {
                 message_id: "op-2".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Request,
                 op: "plugin.generic.apply".to_owned(),
                 body: r#"{"path":"b.txt"}"#.to_owned(),
@@ -363,8 +394,10 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             Duration::from_secs(1),
             |callback| {
                 assert_eq!(callback.message_id, "op-2:occ");
+                assert_eq!(callback.parent_message_id.as_deref(), Some("op-2"));
                 Ok(PpcMessage {
                     message_id: callback.message_id,
+                    parent_message_id: None,
                     direction: PpcDirection::Reply,
                     op: "reply".to_owned(),
                     body: r#"{"published":["b.txt"]}"#.to_owned(),
@@ -388,12 +421,74 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
 }
 
 #[test]
+fn ppc_client_records_unknown_parent_callback_as_orphaned() -> TestResult {
+    let (client_stream, mut server_stream) = UnixStream::pair()?;
+    let server = thread::spawn(move || -> TestResult {
+        let request = PpcMessage::decode(&read_message_bytes(&mut server_stream)?)?;
+        assert_eq!(request.message_id, "msg-1");
+
+        server_stream.write_all(
+            &PpcMessage {
+                message_id: "callback-orphan".to_owned(),
+                parent_message_id: Some("missing-parent".to_owned()),
+                direction: PpcDirection::Request,
+                op: "daemon.occ.apply_changeset".to_owned(),
+                body: r#"{"changes":[]}"#.to_owned(),
+            }
+            .encode()?,
+        )?;
+        let callback_reply = PpcMessage::decode(&read_message_bytes(&mut server_stream)?)?;
+        assert_eq!(callback_reply.message_id, "callback-orphan");
+        let callback_body: serde_json::Value = serde_json::from_str(&callback_reply.body)?;
+        assert_eq!(callback_body["success"], false);
+        assert_eq!(callback_body["error"]["kind"], "ppc_callback_error");
+
+        server_stream.write_all(
+            &PpcMessage {
+                message_id: request.message_id,
+                parent_message_id: None,
+                direction: PpcDirection::Reply,
+                op: "reply".to_owned(),
+                body: r#"{"success":true}"#.to_owned(),
+            }
+            .encode()?,
+        )?;
+        Ok(())
+    });
+
+    let sink = PpcTraceEventSink::default();
+    let client = PpcClient::new_with_trace_events(client_stream, sink.clone())?;
+    let reply = client.round_trip(
+        &PpcMessage {
+            message_id: "msg-1".to_owned(),
+            parent_message_id: None,
+            direction: PpcDirection::Request,
+            op: "plugin.echo.ping".to_owned(),
+            body: "{}".to_owned(),
+        },
+        Duration::from_secs(1),
+    )?;
+
+    assert_eq!(reply.message_id, "msg-1");
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].name, "ppc_reply_orphaned");
+    assert_eq!(events[0].details["message_id"], "callback-orphan");
+    assert_eq!(events[0].details["parent_message_id"], "missing-parent");
+    assert_eq!(events[0].details["direction"], "request");
+    assert_eq!(events[0].details["reason"], "unknown_parent_message_id");
+    join_server(server)?;
+    Ok(())
+}
+
+#[test]
 fn ppc_client_rejects_bad_callback_reply_message_id() -> TestResult {
     let (client_stream, mut server_stream) = UnixStream::pair()?;
     let server = thread::spawn(move || -> TestResult {
         let _request = PpcMessage::decode(&read_message_bytes(&mut server_stream)?)?;
         let callback = PpcMessage {
             message_id: "callback-1".to_owned(),
+            parent_message_id: Some("msg-1".to_owned()),
             direction: PpcDirection::Request,
             op: "daemon.occ.apply_changeset".to_owned(),
             body: "{}".to_owned(),
@@ -406,6 +501,7 @@ fn ppc_client_rejects_bad_callback_reply_message_id() -> TestResult {
     let Err(err) = client.round_trip_with_callbacks(
         &PpcMessage {
             message_id: "msg-1".to_owned(),
+            parent_message_id: None,
             direction: PpcDirection::Request,
             op: "plugin.generic.apply".to_owned(),
             body: "{}".to_owned(),
@@ -414,6 +510,7 @@ fn ppc_client_rejects_bad_callback_reply_message_id() -> TestResult {
         |_callback| {
             Ok(PpcMessage {
                 message_id: "wrong".to_owned(),
+                parent_message_id: None,
                 direction: PpcDirection::Reply,
                 op: "reply".to_owned(),
                 body: "{}".to_owned(),

@@ -16,6 +16,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::HashSet;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
@@ -28,6 +29,9 @@ use eos_workspace::{
     IsolatedError, IsolatedManager, IsolatedSnapshot, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress, WorkspaceHandle,
 };
+use serde_json::Value;
+
+const PERSISTED_HANDLES_SCHEMA_VERSION: u64 = 1;
 
 fn setup_error(error: impl std::fmt::Display) -> IsolatedError {
     IsolatedError::SetupFailed {
@@ -100,6 +104,13 @@ pub struct CallerCancel {
     /// (or had no isolated workspace), or another `IsolatedError` on teardown
     /// failure.
     pub isolated: Result<ExitOutcome, IsolatedError>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct WorkspaceRecoveryReport {
+    pub exited_callers: Vec<String>,
+    pub manager_json_error: Option<String>,
+    pub orphan_cleanup_error: Option<String>,
 }
 
 /// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
@@ -300,6 +311,13 @@ impl WorkspaceRuntime {
     /// manager file (backs `sandbox.isolation.test_reset`). Returns the caller
     /// ids that were exited.
     pub fn test_reset(&self) -> Vec<String> {
+        self.test_reset_report().exited_callers
+    }
+
+    /// Exit every caller, drop the bound state, rewrite the persisted manager
+    /// file, and retain recovery facts for request-side tracing.
+    pub(crate) fn test_reset_report(&self) -> WorkspaceRecoveryReport {
+        let manager_json_error = manager_json_error(&self.config.scratch_root);
         let exited_callers = {
             let mut guard = self.lock_state_cell();
             let exited_callers = if let Some(state) = guard.as_mut() {
@@ -316,7 +334,11 @@ impl WorkspaceRuntime {
             exited_callers
         };
         self.reset_test_manager_file();
-        exited_callers
+        WorkspaceRecoveryReport {
+            exited_callers,
+            manager_json_error,
+            orphan_cleanup_error: None,
+        }
     }
 
     /// Bind (or rebind) the isolated manager to `root`, initializing caps from
@@ -419,6 +441,31 @@ fn command_binding_from(
 
 fn normalized_root(root: &Path) -> PathBuf {
     root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
+}
+
+fn manager_json_error(scratch_root: &Path) -> Option<String> {
+    let path = scratch_root.join("manager.json");
+    let raw = match std::fs::read(&path) {
+        Ok(raw) => raw,
+        Err(err) if err.kind() == ErrorKind::NotFound => return None,
+        Err(err) => return Some(format!("manager_json_read: {err}")),
+    };
+    let payload = match serde_json::from_slice::<Value>(&raw) {
+        Ok(payload) => payload,
+        Err(err) => return Some(format!("manager_json_parse: {err}")),
+    };
+    let Some(schema_version) = payload.get("schema_version").and_then(Value::as_u64) else {
+        return Some("manager_json_schema: missing schema_version".to_owned());
+    };
+    if schema_version != PERSISTED_HANDLES_SCHEMA_VERSION {
+        return Some(format!(
+            "manager_json_schema: expected schema_version {PERSISTED_HANDLES_SCHEMA_VERSION}, got {schema_version}"
+        ));
+    }
+    if !payload.get("handles").is_some_and(Value::is_array) {
+        return Some("manager_json_schema: handles must be an array".to_owned());
+    }
+    None
 }
 
 fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {

@@ -116,6 +116,7 @@ pub struct PluginOverlayOutcome {
     pub runner: RunResult,
     pub changeset: eos_layerstack::ChangesetResult,
     pub plugin_result: Option<Value>,
+    pub layer_count: usize,
     /// Changed paths in upperdir capture order (a wire contract — never
     /// re-sorted), each with its typed kind.
     pub path_kinds: Vec<(String, ChangedPathKind)>,
@@ -170,6 +171,7 @@ fn run_plugin_overlay_once(
     let captured = capture_upperdir(&dirs.upperdir)
         .map_err(|err| PluginRuntimeError::OverlayPipeline(err.to_string()))?;
     let publish_start = Instant::now();
+    let layer_count = lease.layer_paths.len();
     let layer_paths: Vec<PathBuf> = lease.layer_paths.iter().map(PathBuf::from).collect();
     let changeset = eos_layerstack::service::publish_capture(
         &spec.layer_stack_root,
@@ -191,6 +193,7 @@ fn run_plugin_overlay_once(
         runner,
         changeset,
         plugin_result,
+        layer_count,
         path_kinds,
         lease_acquire_s,
         capture_s,

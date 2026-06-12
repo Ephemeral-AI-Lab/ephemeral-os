@@ -8,7 +8,20 @@ mod support;
 use support::*;
 
 use crate::wire::Request;
+use eos_layerstack::{ChangesetResult, CommitStatus, FileResult, LayerPath};
+use eos_namespace::protocol::RunResult;
+use eos_operation::{
+    plugin::{
+        EnsureReady, PackageEnsureReport, PluginOverlayOutcome, PluginRuntimeError,
+        PluginSetupReport, PpcError, PpcTraceEvent, ServiceHealthReport, ServiceProcessStatus,
+        StatusOutcome,
+    },
+    ChangedPathKind,
+};
+use eos_plugin::PluginServiceState;
+use eos_workspace::TreeResourceStats;
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -33,6 +46,11 @@ fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
         "socket path must be a string"
     )?
     .starts_with("/eos/plugin/ppc/"));
+    assert!(value_str(
+        &response["service_processes"][0]["stderr_path"],
+        "stderr path must be a string"
+    )?
+    .ends_with(".stderr.log"));
 
     let status = daemon.op_status(&json!({}))?;
     assert_eq!(status["loaded_plugins"][0]["name"], "generic");
@@ -312,6 +330,538 @@ fn builtin_dispatch_routes_plugin_status_and_ensure() -> TestResult {
     let loaded = value_array(&status["loaded_plugins"], "loaded_plugins must be an array")?;
     assert!(loaded.iter().any(|plugin| plugin["name"] == "demo"));
     Ok(())
+}
+
+#[test]
+fn status_trace_events_include_service_health_and_exit_facts() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let outcome = StatusOutcome {
+        loaded_plugins: Vec::new(),
+        running_service_processes: Vec::new(),
+        exited_service_processes: vec![ServiceProcessStatus {
+            service_id: "worker".to_owned(),
+            service_instance_id: "generic:worker:profile-a".to_owned(),
+            pid: 1234,
+            process_group_id: Some(1234),
+            running: false,
+            exit_status: None,
+            exit_signal: Some(15),
+            status_raw: Some(15),
+            socket_path: PathBuf::from("/eos/plugin/ppc/worker.sock"),
+            stderr_path: PathBuf::from("/eos/plugin/ppc/worker.stderr.log"),
+        }],
+        connected_ppc_routes: Vec::new(),
+        connected_ppc_services: Vec::new(),
+        setup_failures: Vec::new(),
+        service_health: vec![ServiceHealthReport {
+            success: true,
+            plugin: "generic".to_owned(),
+            service_id: "worker".to_owned(),
+            service_instance_id: "generic:worker:profile-a".to_owned(),
+            manifest_key: "manifest:7".to_owned(),
+            state: PluginServiceState::Ready,
+            restart_count: 2,
+            refresh_count: 3,
+            last_error: Some("previous refresh failed".to_owned()),
+            accepted: Some(true),
+            error: None,
+            teardown_error: None,
+        }],
+    };
+
+    super::record_plugin_status_trace_events(&context, &outcome);
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "service_health_checked");
+    assert_eq!(events[0].details["plugin"], "generic");
+    assert_eq!(events[0].details["service_id"], "worker");
+    assert_eq!(
+        events[0].details["service_instance_id"],
+        "generic:worker:profile-a"
+    );
+    assert_eq!(events[0].details["manifest_key"], "manifest:7");
+    assert_eq!(events[0].details["state"], "ready");
+    assert_eq!(events[0].details["restart_count"], 2);
+    assert_eq!(events[0].details["refresh_count"], 3);
+    assert_eq!(events[0].details["last_error"], "previous refresh failed");
+    assert_eq!(events[0].details["accepted"], true);
+    assert_eq!(events[0].details["success"], true);
+
+    assert_eq!(events[1].module, "plugin");
+    assert_eq!(events[1].name, "service_exited");
+    assert_eq!(events[1].details["service_id"], "worker");
+    assert_eq!(
+        events[1].details["service_instance_id"],
+        "generic:worker:profile-a"
+    );
+    assert_eq!(events[1].details["pid"], 1234);
+    assert_eq!(events[1].details["process_group_id"], 1234);
+    assert!(events[1].details["exit_code"].is_null());
+    assert_eq!(events[1].details["signal"], 15);
+    assert_eq!(events[1].details["status_raw"], 15);
+    assert_eq!(
+        events[1].details["socket_path"],
+        "/eos/plugin/ppc/worker.sock"
+    );
+    assert_eq!(
+        events[1].details["stderr_path"],
+        "/eos/plugin/ppc/worker.stderr.log"
+    );
+}
+
+#[test]
+fn ppc_trace_events_are_recorded_in_request_sidecar_sink() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+
+    super::record_ppc_trace_events(
+        &context,
+        vec![
+            PpcTraceEvent::new(
+                "callback_request",
+                json!({
+                    "message_id": "callback-1",
+                    "parent_message_id": "plugin-op-1",
+                    "direction": "request",
+                    "op": "daemon.occ.apply_changeset",
+                }),
+            ),
+            PpcTraceEvent::new(
+                "ppc_reply_orphaned",
+                json!({
+                    "message_id": "late-reply",
+                    "direction": "reply",
+                    "op": "reply",
+                    "reason": "unknown_message_id",
+                }),
+            ),
+        ],
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "callback_request");
+    assert_eq!(events[0].details["message_id"], "callback-1");
+    assert_eq!(events[0].details["parent_message_id"], "plugin-op-1");
+    assert_eq!(events[1].name, "ppc_reply_orphaned");
+    assert_eq!(events[1].details["message_id"], "late-reply");
+    assert_eq!(events[1].details["reason"], "unknown_message_id");
+}
+
+#[test]
+fn ensure_trace_events_include_service_started_stderr_path() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let ready = EnsureReady {
+        plugin_id: "generic".to_owned(),
+        digest: "digest-a".to_owned(),
+        registered_ops: Vec::new(),
+        runtime_loaded: true,
+        started_count: 1,
+        already_loaded: false,
+        operation_routes: Vec::new(),
+        services: Vec::new(),
+        service_processes: Vec::new(),
+        started_service_processes: vec![ServiceProcessStatus {
+            service_id: "worker".to_owned(),
+            service_instance_id: "generic:worker:profile-a".to_owned(),
+            pid: 1234,
+            process_group_id: Some(1234),
+            running: true,
+            exit_status: None,
+            exit_signal: None,
+            status_raw: None,
+            socket_path: PathBuf::from("/eos/plugin/ppc/worker.sock"),
+            stderr_path: PathBuf::from("/eos/plugin/ppc/worker.stderr.log"),
+        }],
+        running_service_processes: Vec::new(),
+        connected_ppc_routes: Vec::new(),
+        connected_ppc_services: Vec::new(),
+        package: PackageEnsureReport::default(),
+    };
+
+    super::record_plugin_ensure_trace_events(&context, &ready);
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "service_started");
+    assert_eq!(events[0].details["plugin"], "generic");
+    assert_eq!(events[0].details["service_id"], "worker");
+    assert_eq!(
+        events[0].details["service_instance_id"],
+        "generic:worker:profile-a"
+    );
+    assert_eq!(events[0].details["pid"], 1234);
+    assert_eq!(events[0].details["process_group_id"], 1234);
+    assert_eq!(events[0].details["running"], true);
+    assert_eq!(
+        events[0].details["socket_path"],
+        "/eos/plugin/ppc/worker.sock"
+    );
+    assert_eq!(
+        events[0].details["stderr_path"],
+        "/eos/plugin/ppc/worker.stderr.log"
+    );
+}
+
+#[test]
+fn ensure_trace_events_include_setup_finished_success_report() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let ready = EnsureReady {
+        plugin_id: "generic".to_owned(),
+        digest: "digest-a".to_owned(),
+        registered_ops: Vec::new(),
+        runtime_loaded: true,
+        started_count: 0,
+        already_loaded: false,
+        operation_routes: Vec::new(),
+        services: Vec::new(),
+        service_processes: Vec::new(),
+        started_service_processes: Vec::new(),
+        running_service_processes: Vec::new(),
+        connected_ppc_routes: Vec::new(),
+        connected_ppc_services: Vec::new(),
+        package: PackageEnsureReport {
+            active: true,
+            needs_upload: false,
+            package_root: None,
+            dependency_root: None,
+            package_published: true,
+            setup_ran: true,
+            setup: Some(PluginSetupReport {
+                plugin: "generic".to_owned(),
+                digest: "digest-a".to_owned(),
+                ran: true,
+                success: true,
+                exit_code: Some(0),
+                output_tail: Some("setup ok\n".to_owned()),
+                spawn_error: None,
+            }),
+        },
+    };
+
+    super::record_plugin_ensure_trace_events(&context, &ready);
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "setup_finished");
+    assert_eq!(events[0].details["plugin"], "generic");
+    assert_eq!(events[0].details["digest"], "digest-a");
+    assert_eq!(events[0].details["ran"], true);
+    assert_eq!(events[0].details["success"], true);
+    assert_eq!(events[0].details["exit_code"], 0);
+    assert_eq!(events[0].details["output_tail"], "setup ok\n");
+    assert!(events[0].details["spawn_error"].is_null());
+}
+
+#[test]
+fn ensure_error_trace_events_include_setup_finished_failure_report() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let err = PluginRuntimeError::Ppc(PpcError::SetupFailed {
+        report: PluginSetupReport {
+            plugin: "generic".to_owned(),
+            digest: "digest-a".to_owned(),
+            ran: true,
+            success: false,
+            exit_code: Some(7),
+            output_tail: Some("boom\n".to_owned()),
+            spawn_error: None,
+        },
+        message: "plugin setup failed with status Some(7): boom".to_owned(),
+    });
+
+    super::record_plugin_ensure_error_trace_events(&context, &err);
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "setup_finished");
+    assert_eq!(events[0].details["plugin"], "generic");
+    assert_eq!(events[0].details["digest"], "digest-a");
+    assert_eq!(events[0].details["ran"], true);
+    assert_eq!(events[0].details["success"], false);
+    assert_eq!(events[0].details["exit_code"], 7);
+    assert_eq!(events[0].details["output_tail"], "boom\n");
+    assert!(events[0].details["spawn_error"].is_null());
+}
+
+#[test]
+fn overlay_trace_events_include_started_and_finished_facts() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let overlay = PluginOverlayOutcome {
+        layer_stack_root: PathBuf::from("/eos/layer-stack"),
+        runner: RunResult {
+            exit_code: 0,
+            payload: json!({
+                "exit_code": 0,
+                "timings": {
+                    "workspace.mount_s": 0.15,
+                    "workspace.unmount_s": 0.05,
+                    "workspace.layer_count": 3,
+                    "workspace.fsconfig_calls": 6,
+                },
+                "workspace_unmount_error": null,
+            }),
+        },
+        changeset: ChangesetResult {
+            files: vec![FileResult {
+                path: LayerPath::parse("src/main.rs").expect("valid test layer path"),
+                status: CommitStatus::Committed,
+                message: String::new(),
+                observed_version: None,
+                observed_state: None,
+            }],
+            published_manifest_version: Some(42),
+            timings: BTreeMap::new(),
+            events: Vec::new(),
+        },
+        plugin_result: Some(json!({"success": true})),
+        layer_count: 3,
+        path_kinds: vec![("src/main.rs".to_owned(), ChangedPathKind::Write)],
+        lease_acquire_s: 0.1,
+        capture_s: 0.2,
+        occ_s: 0.3,
+        upperdir_stats: TreeResourceStats {
+            files: 1,
+            dirs: 2,
+            symlinks: 3,
+            bytes: 4096,
+            truncated: true,
+            read_error_count: 2,
+            first_error_path: Some("/eos/work/blocked".to_owned()),
+        },
+    };
+    let response = json!({
+        "success": true,
+        "status": "committed",
+    });
+
+    super::record_plugin_overlay_started(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+    );
+    super::record_plugin_overlay_mount_finished(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+    );
+    super::record_plugin_overlay_unmount_finished(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+    );
+    super::record_plugin_overlay_capture_started(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+    );
+    super::record_plugin_overlay_capture_finished(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+    );
+    super::record_occ_changeset_trace_events(&context, &overlay.changeset);
+    super::record_plugin_overlay_finished(
+        &context,
+        "plugin.generic.write",
+        "plugin-overlay-test",
+        &overlay,
+        &response,
+        None,
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 8);
+    assert_eq!(events[0].module, "plugin");
+    assert_eq!(events[0].name, "overlay_started");
+    assert_eq!(events[0].details["op"], "plugin.generic.write");
+    assert_eq!(events[0].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[0].details["layer_stack_root"], "/eos/layer-stack");
+
+    assert_eq!(events[1].module, "overlay");
+    assert_eq!(events[1].name, "mount_finished");
+    assert_eq!(events[1].details["op"], "plugin.generic.write");
+    assert_eq!(events[1].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[1].details["source"], "plugin_oneshot_overlay");
+    assert_eq!(events[1].details["layer_stack_root"], "/eos/layer-stack");
+    assert_eq!(events[1].details["success"], true);
+    assert_eq!(events[1].details["duration_s"], 0.15);
+    assert_eq!(events[1].details["duration_available"], true);
+    assert_eq!(events[1].details["layer_count"], 3);
+    assert_eq!(events[1].details["fsconfig_calls"], 6.0);
+    assert_eq!(events[1].details["fsconfig_calls_available"], true);
+
+    assert_eq!(events[2].module, "resource");
+    assert_eq!(events[2].name, "resource_stats");
+    assert_eq!(events[2].details["meta"]["stats_kind"], "mount_cost");
+    assert_eq!(events[2].details["meta"]["phase"], "after");
+    assert_eq!(events[2].details["meta"]["source"], "plugin.overlay.mount");
+    assert_eq!(events[2].details["meta"]["source_available"], true);
+    assert_eq!(events[2].details["meta"]["sampler_duration_us"], 0);
+    assert!(events[2].details["meta"]["inflight_requests"].is_number());
+    assert_eq!(events[2].details["mount"]["duration_us"], 150000);
+    assert_eq!(events[2].details["mount"]["duration_available"], true);
+    assert_eq!(events[2].details["mount"]["layer_count"], 3);
+    assert_eq!(events[2].details["mount"]["fsconfig_calls"], 6.0);
+    assert_eq!(events[2].details["mount"]["fsconfig_calls_available"], true);
+
+    assert_eq!(events[3].module, "overlay");
+    assert_eq!(events[3].name, "unmount_finished");
+    assert_eq!(events[3].details["op"], "plugin.generic.write");
+    assert_eq!(events[3].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[3].details["source"], "plugin_oneshot_overlay");
+    assert_eq!(events[3].details["layer_stack_root"], "/eos/layer-stack");
+    assert_eq!(events[3].details["success"], true);
+    assert_eq!(events[3].details["duration_s"], 0.05);
+    assert_eq!(events[3].details["duration_available"], true);
+    assert_eq!(events[3].details["layer_count"], 3);
+    assert!(events[3].details["error"].is_null());
+
+    assert_eq!(events[4].module, "overlay");
+    assert_eq!(events[4].name, "capture_started");
+    assert_eq!(events[4].details["op"], "plugin.generic.write");
+    assert_eq!(events[4].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[4].details["source"], "plugin_oneshot_overlay");
+    assert_eq!(events[4].details["layer_stack_root"], "/eos/layer-stack");
+
+    assert_eq!(events[5].module, "overlay");
+    assert_eq!(events[5].name, "capture_finished");
+    assert_eq!(events[5].details["op"], "plugin.generic.write");
+    assert_eq!(events[5].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[5].details["source"], "plugin_oneshot_overlay");
+    assert_eq!(events[5].details["layer_stack_root"], "/eos/layer-stack");
+    assert_eq!(events[5].details["success"], true);
+    assert_eq!(events[5].details["duration_s"], 0.2);
+    assert_eq!(events[5].details["changed_path_count"], 1);
+    assert_eq!(events[5].details["bytes"], 4096);
+    assert_eq!(events[5].details["file_count"], 1);
+    assert_eq!(events[5].details["dir_count"], 2);
+    assert_eq!(events[5].details["symlink_count"], 3);
+    assert_eq!(events[5].details["entry_count"], 6);
+    assert_eq!(events[5].details["truncated"], true);
+    assert_eq!(events[5].details["read_error_count"], 2);
+    assert_eq!(events[5].details["failing_path"], "/eos/work/blocked");
+
+    assert_eq!(events[6].module, "occ");
+    assert_eq!(events[6].name, "commit_finished");
+    assert_eq!(events[6].details["success"], true);
+    assert_eq!(events[6].details["published_manifest_version"], 42);
+    assert_eq!(events[6].details["file_count"], 1);
+    assert_eq!(events[6].details["published_file_count"], 1);
+    assert_eq!(events[6].details["committed_file_count"], 1);
+
+    assert_eq!(events[7].module, "plugin");
+    assert_eq!(events[7].name, "overlay_finished");
+    assert_eq!(events[7].details["op"], "plugin.generic.write");
+    assert_eq!(events[7].details["invocation_id"], "plugin-overlay-test");
+    assert_eq!(events[7].details["success"], true);
+    assert_eq!(events[7].details["status"], "committed");
+    assert!(events[7].details["error_kind"].is_null());
+    assert!(events[7].details["adapter_error"].is_null());
+    assert_eq!(events[7].details["worker_exit_code"], 0);
+    assert_eq!(events[7].details["changed_path_count"], 1);
+    assert_eq!(events[7].details["published_manifest_version"], 42);
+    assert_eq!(events[7].details["lease_acquire_s"], 0.1);
+    assert_eq!(events[7].details["capture_s"], 0.2);
+    assert_eq!(events[7].details["occ_s"], 0.3);
+    assert_eq!(events[7].details["upperdir_files"], 1);
+    assert_eq!(events[7].details["upperdir_dirs"], 2);
+    assert_eq!(events[7].details["upperdir_symlinks"], 3);
+    assert_eq!(events[7].details["upperdir_bytes"], 4096);
+}
+
+#[test]
+fn overlay_resource_stats_events_include_before_and_after_gauges() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = crate::DispatchContext::empty().with_trace_events(sink.clone());
+    let mut before = serde_json::Map::new();
+    before.insert("resource.cgroup.cpu_usage_usec".to_owned(), json!(10.0));
+    before.insert(
+        "resource.cgroup.memory_current_bytes".to_owned(),
+        json!(2048.0),
+    );
+    before.insert("resource.cgroup.io_rbytes".to_owned(), json!(32.0));
+    before.insert("resource.cgroup.psi_cpu_some_avg10".to_owned(), json!(0.25));
+    before.insert("resource.process.rss_bytes".to_owned(), json!(4096.0));
+    before.insert(
+        "resource.sampler.cgroup_process_duration_us".to_owned(),
+        json!(17),
+    );
+    let mut after = before.clone();
+    after.insert("resource.process.max_rss_bytes".to_owned(), json!(8192.0));
+    after.insert(
+        "resource.sampler.cgroup_process_duration_us".to_owned(),
+        json!(19),
+    );
+
+    super::record_plugin_overlay_resource_stats(&context, "before", &before);
+    super::record_plugin_overlay_host_resource_stats(&context, "before", &before);
+    super::record_plugin_overlay_resource_stats(&context, "after", &after);
+    super::record_plugin_overlay_host_resource_stats(&context, "after", &after);
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 4);
+    assert_eq!(events[0].module, "resource");
+    assert_eq!(events[0].name, "resource_stats");
+    assert_eq!(events[0].details["meta"]["stats_kind"], "cgroup_process");
+    assert_eq!(events[0].details["meta"]["phase"], "before");
+    assert_eq!(events[0].details["meta"]["source"], "plugin.overlay.run");
+    assert_eq!(events[0].details["meta"]["source_available"], true);
+    assert_eq!(events[0].details["meta"]["sampler_duration_us"], 17);
+    assert!(events[0].details["meta"]["inflight_requests"].is_number());
+    assert_eq!(events[0].details["cgroup"]["source_available"], true);
+    assert_eq!(events[0].details["cgroup"]["cpu"]["usage_usec"], 10.0);
+    assert_eq!(
+        events[0].details["cgroup"]["memory"]["current_bytes"],
+        2048.0
+    );
+    assert_eq!(events[0].details["cgroup"]["io"]["rbytes"], 32.0);
+    assert_eq!(events[0].details["cgroup"]["psi"]["cpu_some_avg10"], 0.25);
+    assert_eq!(events[0].details["process"]["source_available"], true);
+    assert_eq!(events[0].details["process"]["gauges"]["rss_bytes"], 4096.0);
+
+    assert_eq!(events[1].module, "resource");
+    assert_eq!(events[1].name, "resource_stats");
+    assert_eq!(events[1].details["meta"]["stats_kind"], "host");
+    assert_eq!(events[1].details["meta"]["phase"], "before");
+    assert_eq!(events[1].details["meta"]["source"], "daemon.process");
+    assert_eq!(events[1].details["meta"]["source_available"], true);
+    assert!(events[1].details["meta"]["inflight_requests"].is_number());
+    assert_eq!(events[1].details["host"]["process"]["rss_bytes"], 4096.0);
+
+    assert_eq!(events[2].module, "resource");
+    assert_eq!(events[2].name, "resource_stats");
+    assert_eq!(events[2].details["meta"]["stats_kind"], "cgroup_process");
+    assert_eq!(events[2].details["meta"]["phase"], "after");
+    assert_eq!(events[2].details["meta"]["sampler_duration_us"], 19);
+    assert_eq!(
+        events[2].details["process"]["gauges"]["max_rss_bytes"],
+        8192.0
+    );
+
+    assert_eq!(events[3].module, "resource");
+    assert_eq!(events[3].name, "resource_stats");
+    assert_eq!(events[3].details["meta"]["stats_kind"], "host");
+    assert_eq!(events[3].details["meta"]["phase"], "after");
+    assert_eq!(
+        events[3].details["host"]["process"]["max_rss_bytes"],
+        8192.0
+    );
 }
 
 #[test]

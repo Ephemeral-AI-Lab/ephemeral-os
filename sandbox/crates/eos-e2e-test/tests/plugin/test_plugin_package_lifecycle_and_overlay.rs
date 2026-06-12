@@ -5,9 +5,10 @@ use std::time::{Duration, Instant};
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::unique_suffix;
 use eos_operation::core::catalog;
+use eos_sandbox_host::protocol::TraceWireContext;
 use serde_json::{json, Value};
 
-use crate::support::live_pool_or_skip;
+use crate::support::{has_trace_event, live_pool_or_skip, trace_record};
 
 #[test]
 fn host_ensure_plugin_package_installs_generic_package() -> Result<()> {
@@ -525,6 +526,71 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn live_trace_plugin_callback_occ_publish_parents_under_plugin_op_trace() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+    ensure_generic_callback_service_package(&lease, &digest, &setup_digest)?;
+
+    let suffix = unique_suffix().replace('-', "_");
+    let path = format!("plugin/callback-{suffix}.txt");
+    let content = format!("callback publish {suffix}\n");
+    let trace_id = format!("phase04-plugin-callback-{suffix}");
+    let request_id = format!("{trace_id}-apply");
+    let response = lease.call_traced(
+        "plugin.generic.apply",
+        json!({
+            "path": &path,
+            "content": &content,
+        }),
+        &TraceWireContext {
+            trace_id: trace_id.clone(),
+            request_id: request_id.clone(),
+            parent_span_id: None,
+            link_hints: Vec::new(),
+            capture_budget_version: 1,
+        },
+    )?;
+    assert_eq!(response["success"], true, "{response}");
+    assert_eq!(response["callback"]["files"][0]["status"], "committed");
+    let read = lease.call_ok(catalog::SANDBOX_FILE_READ, json!({"path": path}))?;
+    assert_eq!(read["content"], content, "{read}");
+
+    let record = trace_record(&response)?;
+    assert_eq!(record.trace_id.as_str(), trace_id);
+    assert_eq!(
+        record.request_id.as_ref().map(eos_trace::RequestId::as_str),
+        Some(request_id.as_str())
+    );
+    assert!(
+        has_trace_event(&record, "plugin", "callback_request", |details| {
+            details.get("parent_message_id").and_then(Value::as_str) == Some(request_id.as_str())
+                && details.get("op").and_then(Value::as_str) == Some("daemon.occ.apply_changeset")
+        }) && has_trace_event(&record, "plugin", "callback_response", |details| {
+            details.get("message_id").and_then(Value::as_str)
+                == response.get("callback_message_id").and_then(Value::as_str)
+                && details.get("parent_message_id").and_then(Value::as_str)
+                    == Some(request_id.as_str())
+        }) && has_trace_event(&record, "occ", "commit_finished", |details| {
+            details.get("source").and_then(Value::as_str) == Some("plugin_callback")
+                && details.get("parent_message_id").and_then(Value::as_str)
+                    == Some(request_id.as_str())
+                && details.get("success").and_then(Value::as_bool) == Some(true)
+                && details
+                    .get("committed_count")
+                    .and_then(Value::as_u64)
+                    .is_some_and(|count| count > 0)
+        }),
+        "plugin callback trace must parent PPC and OCC publish facts under the plugin op: {:?}",
+        record.events
+    );
+    Ok(())
+}
+
 /// `package_reload_reaps_old_service_and_routes` and
 /// `concurrent_plugin_refresh_singleflight` cover reload and concurrent refresh
 /// SEPARATELY. This races them: N `plugin.generic.query` dispatches run while a
@@ -689,6 +755,26 @@ fn service_manifest(digest: &str, setup_digest: &str) -> Value {
     service_manifest_with_strategy(digest, setup_digest, "remount_workspace_and_notify")
 }
 
+fn callback_service_manifest(digest: &str, setup_digest: &str) -> Value {
+    let mut manifest = service_manifest(digest, setup_digest);
+    manifest["operations"] = json!([
+        {
+            "op_name": "query",
+            "intent": "read_only",
+            "service_id": "worker",
+            "timeout_ms": 5000
+        },
+        {
+            "op_name": "apply",
+            "intent": "write_allowed",
+            "auto_workspace_overlay": false,
+            "service_id": "worker",
+            "timeout_ms": 5000
+        }
+    ]);
+    manifest
+}
+
 fn service_manifest_with_strategy(
     digest: &str,
     setup_digest: &str,
@@ -821,6 +907,39 @@ fn ensure_generic_service_package(
     Ok(cold)
 }
 
+fn ensure_generic_callback_service_package(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    digest: &str,
+    setup_digest: &str,
+) -> Result<Value> {
+    let warm = lease.call_ok(
+        catalog::SANDBOX_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": callback_service_manifest(digest, setup_digest),
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(warm["needs_upload"], true);
+    let staged = stage_generic_service_package(lease, digest)?;
+    let cold = lease.call_ok(
+        catalog::SANDBOX_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": callback_service_manifest(digest, setup_digest),
+            "staged_package_root": staged,
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(cold["success"], true);
+    assert_eq!(cold["service_processes_started"], true);
+    assert_eq!(
+        cold["connected_ppc_routes"],
+        json!(["plugin.generic.query", "plugin.generic.apply"])
+    );
+    Ok(cold)
+}
+
 fn ensure_generic_oneshot_package(
     lease: &eos_e2e_test::NodeLease<'_>,
     digest: &str,
@@ -905,6 +1024,45 @@ while True:
         manifest_key = key
         refresh_events += 1
         send(request["invocation_id"], {{"manifest_key": manifest_key, "accepted": True}})
+        continue
+
+    if request["op"] == "plugin.generic.apply":
+        relative = body.get("path", "plugin/callback-apply.txt")
+        content = body.get("content", "")
+        callback_id = request["invocation_id"] + "-occ"
+        callback_body = {{
+            "layer_stack_root": body["layer_stack_root"],
+            "changes": [{{
+                "kind": "write",
+                "path": relative,
+                "content_utf8": content,
+            }}],
+        }}
+        frame = {{
+            "op": "daemon.occ.apply_changeset",
+            "invocation_id": callback_id,
+            "args": {{
+                "direction": "request",
+                "parent_message_id": request["invocation_id"],
+                "body": json.dumps(callback_body, separators=(",", ":")),
+            }},
+        }}
+        sock.sendall(json.dumps(frame, separators=(",", ":")).encode() + b"\n")
+        while b"\n" not in buffer:
+            chunk = sock.recv(65536)
+            if not chunk:
+                raise SystemExit(0)
+            buffer += chunk
+        callback_line, buffer = buffer.split(b"\n", 1)
+        callback_reply = json.loads(callback_line.decode())
+        callback_reply_body = json.loads(callback_reply["args"]["body"])
+        send(request["invocation_id"], {{
+            "success": callback_reply_body.get("success"),
+            "op": request["op"],
+            "callback_message_id": callback_id,
+            "callback": callback_reply_body,
+            "path": relative,
+        }})
         continue
 
     path = body.get("path")

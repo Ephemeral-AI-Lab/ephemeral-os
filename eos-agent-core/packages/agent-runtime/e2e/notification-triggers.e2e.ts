@@ -20,6 +20,7 @@ import {
   gateTool,
   runtimeFixture,
   submissionOf,
+  toolResultsIn,
   until,
   userMessageIndex,
 } from "./support/fixtures.js";
@@ -60,6 +61,20 @@ function reminderTexts(llm: readonly Message[]): string[] {
     .filter((text) => text.includes('"reminder"'));
 }
 
+function toolUseEvents(
+  llm: readonly Message[],
+  name: string,
+): { index: number; id: string }[] {
+  const events: { index: number; id: string }[] = [];
+  llm.forEach((message, index) => {
+    if (message.role !== "assistant") return;
+    for (const use of toolUses(message)) {
+      if (use.name === name) events.push({ index, id: use.tool_use_id });
+    }
+  });
+  return events;
+}
+
 /** A deterministic no-arg tool: each distinct name buys one reliable turn. */
 function probeStepTool(name: string): ToolDefinition {
   return scriptedTool({
@@ -69,7 +84,7 @@ function probeStepTool(name: string): ToolDefinition {
   });
 }
 
-// Budget guard: four live runs (~26 small provider calls, one spanning the
+// Budget guard: five live runs (~32 small provider calls, one spanning the
 // baseline's 60s idle window). Every runtime here loads the REAL repo
 // `.eos-agents/notification_rules.json` - the rules registered for all
 // agents - and the reference rule scripts are REAL spawned node processes;
@@ -124,6 +139,105 @@ describe.skipIf(!codex.available)("notification triggers over live codex (e2e)",
       expect(reminder, "the reminder names the profile's terminal tool").toContain(
         "submit_main_outcome",
       );
+    },
+  );
+
+  it(
+    "guides a one-step tool run from bare text through terminal reminder and advisory-gated submission",
+    { timeout: 240_000 },
+    async () => {
+      const { runtime } = runtimeFixture({
+        llmClientsPath: llmClientsPath(),
+        profiles: [
+          {
+            name: "one_step",
+            kind: "main",
+            llmClientId: CODEX_CLIENT_ID,
+            allowed: ["tool_call"],
+            maxTurns: 10,
+            body: TERSE_BODY,
+          },
+        ],
+        baseTools: [probeStepTool("tool_call")],
+      });
+      const run = runtime.startRun({
+        agentName: "one_step",
+        initialMessages: [
+          userMessage(
+            [
+              "1. Call tool_call.",
+              '2. After the result, reply with the plain text "tool call done" and make no tool calls that turn.',
+              "3. Then act on any system notifications or tool errors you receive until the run is finished.",
+            ].join("\n"),
+          ),
+        ],
+      });
+
+      const outcome = await run.handle.outcome;
+      expect(outcome.status).toBe("completed");
+      expect(asString(submissionOf(outcome).summary)).toContain("tool");
+
+      const results = new Map(
+        toolResultsIn(outcome.llm).map((result) => [result.tool_use_id, result]),
+      );
+      const toolCalls = toolUseEvents(outcome.llm, "tool_call");
+      expect(toolCalls, "the fake one-step tool ran").toHaveLength(1);
+      const toolCallResult = must(results.get(must(toolCalls.at(0)).id));
+      expect(toolCallResult.is_error, "tool_call itself succeeds").toBe(false);
+      expect(toolCallResult.content).toContain("tool_call");
+
+      const bareTextIndex = outcome.llm.findIndex(
+        (message, index) =>
+          index > must(toolCalls.at(0)).index &&
+          message.role === "assistant" &&
+          toolUses(message).length === 0 &&
+          assistantText(message).trim().length > 0,
+      );
+      expect(
+        bareTextIndex,
+        "the model first reports the one-step result as text, before terminal guidance",
+      ).toBeGreaterThan(must(toolCalls.at(0)).index);
+
+      const reminderIndex = userMessageIndex(outcome.llm, '"TurnCompleted"');
+      expect(
+        reminderIndex,
+        "the baseline reminder follows the bare text turn",
+      ).toBeGreaterThan(bareTextIndex);
+      const reminder = assistantText(must(outcome.llm.at(reminderIndex)));
+      expect(reminder).toContain('"reminder"');
+      expect(reminder, "the text-outcome reminder names the terminal tool").toContain(
+        "submit_main_outcome",
+      );
+
+      const advisorCalls = toolUseEvents(outcome.llm, "ask_advisor");
+      expect(advisorCalls.length, "the run consults an advisor before completion").toBe(
+        1,
+      );
+      const advisorResult = must(results.get(must(advisorCalls.at(0)).id));
+      expect(advisorResult.is_error, "ask_advisor returns a pass").toBe(false);
+      expect(advisorResult.content).toContain('"verdict":"pass"');
+
+      const submissions = toolUseEvents(outcome.llm, "submit_main_outcome");
+      const successfulSubmission = must(
+        submissions.find((submission) => !results.get(submission.id)?.is_error),
+      );
+      expect(
+        successfulSubmission.index,
+        "a successful terminal submit happens only after advisor review",
+      ).toBeGreaterThan(must(advisorCalls.at(0)).index);
+
+      const earlySubmission = submissions.find(
+        (submission) => submission.index < must(advisorCalls.at(0)).index,
+      );
+      if (earlySubmission !== undefined) {
+        const earlyResult = must(results.get(earlySubmission.id));
+        expect(
+          earlyResult.is_error,
+          "a submit before ask_advisor is returned to the model as a recoverable error",
+        ).toBe(true);
+        expect(earlyResult.content).toContain("advisory pass required");
+        expect(earlyResult.content).toContain("no matching ask_advisor");
+      }
     },
   );
 

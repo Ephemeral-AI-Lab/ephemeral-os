@@ -218,11 +218,16 @@ fn command_start_trace_events_are_recorded_in_request_sidecar_sink() {
                 std::path::Path::new("/tmp/metadata.json"),
                 15,
             ),
+            CommandTraceEvent::artifact_failed(
+                "runner_request",
+                std::path::Path::new("/tmp/runner-request.json"),
+                "permission denied",
+            ),
         ],
     );
 
     let events = sink.drain();
-    assert_eq!(events.len(), 2);
+    assert_eq!(events.len(), 3);
     assert_eq!(events[0].module, "command");
     assert_eq!(events[0].name, "prepared");
     assert_eq!(events[0].details["command_id"], "cmd_exec");
@@ -230,6 +235,65 @@ fn command_start_trace_events_are_recorded_in_request_sidecar_sink() {
     assert_eq!(events[1].name, "artifact_written");
     assert_eq!(events[1].details["artifact"], "metadata");
     assert_eq!(events[1].details["bytes"], 15);
+    assert_eq!(events[2].module, "command");
+    assert_eq!(events[2].name, "artifact_failed");
+    assert_eq!(events[2].details["artifact"], "runner_request");
+    assert_eq!(events[2].details["path"], "/tmp/runner-request.json");
+    assert_eq!(events[2].details["error"], "permission denied");
+}
+
+#[test]
+fn command_resource_stats_trace_events_use_resource_module() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = DispatchContext::empty().with_trace_events(sink.clone());
+    record_command_trace_events(
+        &context,
+        &[CommandTraceEvent::new(
+            "resource_stats",
+            json!({
+                "meta": {
+                    "stats_kind": "cgroup_process",
+                    "phase": "before",
+                    "source": "command.process.wait",
+                },
+            }),
+        )],
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].module, "resource");
+    assert_eq!(events[0].name, "resource_stats");
+    assert_eq!(events[0].details["meta"]["phase"], "before");
+    assert_eq!(events[0].details["meta"]["source"], "command.process.wait");
+    assert!(events[0].details["meta"]["inflight_requests"].is_number());
+}
+
+#[test]
+fn command_progress_read_event_records_source_and_output_size() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = DispatchContext::empty().with_trace_events(sink.clone());
+    record_progress_read(
+        &context,
+        &CommandProgressTraceFacts {
+            command_id: "cmd_progress_event".to_owned(),
+            last_n_lines: 3,
+            status: CommandStatus::Ok,
+            source: "completed_buffer",
+            stdout_bytes: 17,
+        },
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    let event = events.first().expect("progress trace event");
+    assert_eq!(event.module, "command");
+    assert_eq!(event.name, "progress_read");
+    assert_eq!(event.details["command_id"], "cmd_progress_event");
+    assert_eq!(event.details["last_n_lines"], 3);
+    assert_eq!(event.details["status"], "ok");
+    assert_eq!(event.details["source"], "completed_buffer");
+    assert_eq!(event.details["stdout_bytes"], 17);
 }
 
 #[test]

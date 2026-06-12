@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::DispatchContext;
-use crate::{ExitOutcome, WorkspaceEnterError};
+use crate::{ExitOutcome, WorkspaceEnterError, WorkspaceRecoveryReport};
 
 use super::to_wire_value;
 
@@ -26,15 +26,19 @@ pub(crate) fn op_enter(
 ) -> Result<OpResponse, DaemonError> {
     let caller_id = input.caller.to_string();
     let root = input.layer_stack_root;
+    record_enter_started(&context, &caller_id, &root);
     let workspace = &context.require_services()?.workspace;
     match workspace.enter(&caller_id, &root) {
-        Ok(handle) => Ok(success_response(to_wire_value(IsolationEnterOutput {
-            success: true,
-            manifest_version: handle.manifest_version,
-            manifest_root_hash: handle.manifest_root_hash,
-            workspace_handle_id: handle.workspace_id.0,
-            workspace_root: handle.workspace_root,
-        }))),
+        Ok(handle) => {
+            record_entered(&context, &handle);
+            Ok(success_response(to_wire_value(IsolationEnterOutput {
+                success: true,
+                manifest_version: handle.manifest_version,
+                manifest_root_hash: handle.manifest_root_hash,
+                workspace_handle_id: handle.workspace_id.0,
+                workspace_root: handle.workspace_root,
+            })))
+        }
         Err(WorkspaceEnterError::ActiveCommands { active_commands }) => Ok(refused_response(
             "active_background_work",
             "cannot enter isolated workspace while commands are active",
@@ -49,6 +53,7 @@ pub(crate) fn op_exit(
     context: DispatchContext<'_>,
 ) -> Result<OpResponse, DaemonError> {
     let caller_id = input.caller.to_string();
+    record_exit_started(&context, &caller_id);
     let workspace = &context.require_services()?.workspace;
     // Exit is the per-caller workspace-run teardown: discard the caller's
     // isolated commands, then tear down its namespace + lease. The
@@ -58,7 +63,10 @@ pub(crate) fn op_exit(
         .isolated
         .map_or_else(
             |error| Ok(error_payload(&error)),
-            |exit| Ok(success_response(exit_response(exit))),
+            |exit| {
+                record_exited(&context, &exit);
+                Ok(success_response(exit_response(exit)))
+            },
         )
 }
 
@@ -69,14 +77,23 @@ pub(crate) fn op_status(
     let caller_id = input.caller.to_string();
     let workspace = &context.require_services()?.workspace;
     match workspace.status(&caller_id) {
-        Ok(Some(handle)) => Ok(success_response(status_response(&handle))),
-        Ok(None) => Ok(success_response(to_wire_value(
-            IsolationStatusOutput::Closed {
-                success: true,
-                open: false,
-            },
-        ))),
-        Err(error) => Ok(error_payload(&error)),
+        Ok(Some(handle)) => {
+            record_status_read(&context, &caller_id, Some(&handle), None);
+            Ok(success_response(status_response(&handle)))
+        }
+        Ok(None) => {
+            record_status_read(&context, &caller_id, None, None);
+            Ok(success_response(to_wire_value(
+                IsolationStatusOutput::Closed {
+                    success: true,
+                    open: false,
+                },
+            )))
+        }
+        Err(error) => {
+            record_status_read(&context, &caller_id, None, Some(error.kind()));
+            Ok(error_payload(&error))
+        }
     }
 }
 
@@ -97,11 +114,13 @@ pub(crate) fn op_test_reset(context: DispatchContext<'_>) -> Result<OpResponse, 
         ));
     }
     let workspace = &context.require_services()?.workspace;
-    let exited_callers = workspace.test_reset();
+    record_recovery_started(&context);
+    let recovery = workspace.test_reset_report();
+    record_recovery_finished(&context, &recovery);
     Ok(success_response(to_wire_value(TestResetOutput {
         success: true,
         reset: true,
-        exited_callers,
+        exited_callers: recovery.exited_callers,
     })))
 }
 
@@ -137,6 +156,149 @@ pub(crate) fn exit_response(exit: ExitOutcome) -> Value {
         phases_ms: to_wire_value(outcome.phases_ms),
         inspection,
     })
+}
+
+fn record_enter_started(context: &DispatchContext<'_>, caller_id: &str, root: &std::path::Path) {
+    context.record_trace_event(
+        "isolated_workspace",
+        "enter_started",
+        json!({
+            "caller_id": caller_id,
+            "layer_stack_root": root.display().to_string(),
+        }),
+    );
+}
+
+fn record_entered(context: &DispatchContext<'_>, handle: &WorkspaceHandle) {
+    let common = json!({
+        "caller_id": handle.caller_id.as_str(),
+        "workspace_handle_id": handle.workspace_id.0.as_str(),
+        "holder_pid": handle.holder_pid,
+    });
+    context.record_trace_event("isolated_workspace", "holder_started", common);
+    context.record_trace_event(
+        "isolated_workspace",
+        "network_configured",
+        json!({
+            "caller_id": handle.caller_id.as_str(),
+            "workspace_handle_id": handle.workspace_id.0.as_str(),
+            "dns_fallback_applied": handle.dns_configuration.fallback_applied,
+            "previous_first_nameserver": handle
+                .dns_configuration
+                .previous_first_nameserver
+                .as_deref(),
+            "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+        }),
+    );
+}
+
+fn record_status_read(
+    context: &DispatchContext<'_>,
+    caller_id: &str,
+    handle: Option<&WorkspaceHandle>,
+    error_kind: Option<&str>,
+) {
+    context.record_trace_event(
+        "isolated_workspace",
+        "status_read",
+        json!({
+            "caller_id": caller_id,
+            "open": handle.is_some(),
+            "workspace_handle_id": handle.map(|handle| handle.workspace_id.0.as_str()),
+            "error_kind": error_kind,
+        }),
+    );
+}
+
+fn record_exit_started(context: &DispatchContext<'_>, caller_id: &str) {
+    context.record_trace_event(
+        "isolated_workspace",
+        "exit_started",
+        json!({
+            "caller_id": caller_id,
+        }),
+    );
+}
+
+fn record_recovery_started(context: &DispatchContext<'_>) {
+    context.record_trace_event("isolated_workspace", "recovery_started", json!({}));
+}
+
+fn record_recovery_finished(context: &DispatchContext<'_>, recovery: &WorkspaceRecoveryReport) {
+    context.record_trace_event(
+        "isolated_workspace",
+        "recovery_finished",
+        json!({
+            "exited_caller_count": recovery.exited_callers.len(),
+            "exited_callers": recovery.exited_callers.clone(),
+            "manager_json_error": recovery.manager_json_error.as_deref(),
+            "orphan_cleanup_error": recovery.orphan_cleanup_error.as_deref(),
+        }),
+    );
+}
+
+fn record_exited(context: &DispatchContext<'_>, exit: &ExitOutcome) {
+    for (phase, duration_ms) in sorted_phases(&exit.isolated.phases_ms) {
+        context.record_trace_event(
+            "isolated_workspace",
+            "teardown_phase_finished",
+            teardown_phase_details(phase, duration_ms, &exit.isolated.inspection),
+        );
+    }
+    context.record_trace_event(
+        "isolated_workspace",
+        "exited",
+        json!({
+            "caller_id": exit.isolated.caller_id.as_str(),
+            "workspace_handle_id": exit.isolated.workspace_id.0.as_str(),
+            "lifetime_s": exit.isolated.lifetime_s,
+            "total_ms": exit.isolated.total_ms,
+            "evicted_upperdir_bytes": exit.isolated.evicted_upperdir_bytes,
+            "lease_released": exit.lease_released,
+            "active_leases_after": exit.active_leases_after,
+            "mountinfo_scan_error": exit
+                .isolated
+                .inspection
+                .get("mountinfo_reference_count_after")
+                .is_none_or(Value::is_null),
+        }),
+    );
+}
+
+fn sorted_phases(phases: &std::collections::HashMap<String, f64>) -> Vec<(&str, f64)> {
+    let mut phases = phases
+        .iter()
+        .map(|(phase, duration_ms)| (phase.as_str(), *duration_ms))
+        .collect::<Vec<_>>();
+    phases.sort_by_key(|(phase, _)| *phase);
+    phases
+}
+
+fn teardown_phase_details(phase: &str, duration_ms: f64, inspection: &Value) -> Value {
+    let mut details = json!({
+        "phase": phase,
+        "duration_ms": duration_ms,
+    });
+    if phase == "kill_holder" {
+        if let Some(object) = details.as_object_mut() {
+            object.insert(
+                "holder_was_alive".to_owned(),
+                json!(inspection
+                    .get("holder_pid")
+                    .and_then(Value::as_i64)
+                    .is_some_and(|holder_pid| holder_pid > 0)),
+            );
+            object.insert(
+                "holder_kill_error".to_owned(),
+                inspection
+                    .get("holder_kill_error")
+                    .cloned()
+                    .unwrap_or(Value::Null),
+            );
+        }
+    }
+    details
 }
 
 /// Serialize tests that toggle the process-wide

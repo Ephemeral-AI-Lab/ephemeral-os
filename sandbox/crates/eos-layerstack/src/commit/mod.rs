@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use ignore::gitignore::GitignoreBuilder;
 use ignore::Match;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 use crate::model::{hex_lower, CasError, LayerChange, LayerPath};
@@ -102,6 +103,8 @@ pub struct FileResult {
     pub path: LayerPath,
     pub status: CommitStatus,
     pub message: String,
+    pub observed_version: Option<u64>,
+    pub observed_state: Option<String>,
 }
 
 impl FileResult {
@@ -116,10 +119,29 @@ impl FileResult {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct OccTraceEvent {
+    pub module: &'static str,
+    pub name: &'static str,
+    pub details: Value,
+}
+
+impl OccTraceEvent {
+    #[must_use]
+    pub fn new(module: &'static str, name: &'static str, details: Value) -> Self {
+        Self {
+            module,
+            name,
+            details,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ChangesetResult {
     pub files: Vec<FileResult>,
     pub published_manifest_version: Option<u64>,
     pub timings: BTreeMap<String, f64>,
+    pub events: Vec<OccTraceEvent>,
 }
 
 impl ChangesetResult {
@@ -147,6 +169,55 @@ impl ChangesetResult {
         self.files
             .iter()
             .filter(|file| file.status.is_published())
+            .count()
+    }
+
+    #[must_use]
+    pub fn trace_events(&self) -> Vec<OccTraceEvent> {
+        let mut events = vec![OccTraceEvent::new(
+            "occ",
+            "commit_finished",
+            json!({
+                "success": self.success(),
+                "published_manifest_version": self.published_manifest_version,
+                "file_count": self.files.len(),
+                "published_file_count": self.published_file_count(),
+                "accepted_file_count": self.status_count(CommitStatus::Accepted),
+                "committed_file_count": self.status_count(CommitStatus::Committed),
+                "dropped_file_count": self.status_count(CommitStatus::Dropped),
+                "aborted_version_file_count": self.status_count(CommitStatus::AbortedVersion),
+                "failed_file_count": self.status_count(CommitStatus::Failed),
+                "gated_path_count": self.timings.get("occ.commit.gated_path_count").copied(),
+                "direct_path_count": self.timings.get("occ.commit.direct_path_count").copied(),
+                "duration_s": self.timings.get("occ.commit.total_s").copied(),
+            }),
+        )];
+        events.extend(self.events.clone());
+        events.extend(
+            self.files
+                .iter()
+                .filter(|file| !file.status.is_success())
+                .map(|file| {
+                    OccTraceEvent::new(
+                        "occ",
+                        "conflict_detected",
+                        json!({
+                            "path": file.path.as_str(),
+                            "reason": file.status.wire_str(),
+                            "message": file.conflict_message(file.status.wire_str()),
+                            "observed_version": file.observed_version,
+                            "observed_state": file.observed_state,
+                        }),
+                    )
+                }),
+        );
+        events
+    }
+
+    fn status_count(&self, status: CommitStatus) -> usize {
+        self.files
+            .iter()
+            .filter(|file| file.status == status)
             .count()
     }
 }
@@ -196,6 +267,7 @@ impl CommitWriter {
                 publishable.push(change.clone());
             }
         }
+        let handoff_event = worker_handoff_event(&path_groups, publishable.len(), atomic);
         let receiver = self.commit_queue.submit(PreparedChangeset {
             path_groups,
             changes: publishable,
@@ -204,6 +276,7 @@ impl CommitWriter {
         let mut result = receiver
             .recv()
             .map_err(|_| CommitError::ReplyDisconnected)??;
+        result.events.insert(0, handoff_event);
         if let (Some(published), Some(snapshot)) =
             (result.published_manifest_version, snapshot_version)
         {
@@ -225,6 +298,32 @@ impl Drop for CommitWriter {
     fn drop(&mut self) {
         let _ = self.commit_queue.close();
     }
+}
+
+fn worker_handoff_event(
+    path_groups: &[PublishDecision],
+    publishable_change_count: usize,
+    atomic: bool,
+) -> OccTraceEvent {
+    OccTraceEvent::new(
+        "occ",
+        "worker_handoff",
+        json!({
+            "path_count": path_groups.len(),
+            "publishable_change_count": publishable_change_count,
+            "atomic": atomic,
+            "gated_path_count": route_count(path_groups, Route::Gated),
+            "direct_path_count": route_count(path_groups, Route::Direct),
+            "drop_path_count": route_count(path_groups, Route::Drop),
+        }),
+    )
+}
+
+fn route_count(path_groups: &[PublishDecision], route: Route) -> usize {
+    path_groups
+        .iter()
+        .filter(|group| group.route == route)
+        .count()
 }
 
 fn route_for_path(stack: &LayerStack, path: &LayerPath) -> Result<Route, LayerStackError> {

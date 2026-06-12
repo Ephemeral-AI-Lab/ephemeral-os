@@ -124,6 +124,7 @@ fn changeset_outcome(
         workspace_kind: WorkspaceKind::Ephemeral,
         published: result.success(),
         status: conflict.map_or(MutationStatus::Committed, |file| file.status.into()),
+        trace_events: result.trace_events(),
         ..MutationOutcome::default()
     }
 }
