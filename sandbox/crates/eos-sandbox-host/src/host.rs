@@ -12,7 +12,7 @@ use sha2::Digest as _;
 
 use crate::protocol::{
     encode_request_with_metadata, encode_request_with_trace_metadata, is_success, response_status,
-    take_trace_sidecar, ClientError, ProtocolClient, TraceWireContext, TraceWireLinkHint,
+    take_trace_sidecar_checked, ClientError, ProtocolClient, TraceWireContext, TraceWireLinkHint,
     DEFAULT_LAYER_STACK_ROOT, HEARTBEAT_OP, READY_OP,
 };
 use crate::runtime::{
@@ -559,9 +559,13 @@ fn forward_request(
 #[derive(Clone, Default)]
 struct TraceExportDrainer {
     in_flight: Arc<Mutex<HashSet<String>>>,
+    pending: Arc<Mutex<HashSet<String>>>,
 }
 
 impl TraceExportDrainer {
+    /// Single-flight per sandbox, never on the forwarding caller's thread.
+    /// Each pass drains oldest-first until the spool is empty; schedules
+    /// arriving mid-drain coalesce into one follow-up pass.
     fn schedule(&self, record: &SandboxRecord, config: &HostConfig, trace_store: Arc<TraceStore>) {
         let sandbox_id = record.sandbox_id.clone();
         {
@@ -570,6 +574,10 @@ impl TraceExportDrainer {
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner);
             if !in_flight.insert(sandbox_id.clone()) {
+                self.pending
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .insert(sandbox_id);
                 return;
             }
         }
@@ -581,17 +589,29 @@ impl TraceExportDrainer {
             request_timeout: config.request_timeout,
         };
         let drainer = self.clone();
-        std::thread::spawn(move || {
-            let _ = drain_trace_export_once(&target, &trace_store);
-            drainer.finish(&target.sandbox_id);
+        std::thread::spawn(move || loop {
+            let _ = drain_trace_export_to_empty(&target, &trace_store);
+            if !drainer.finish(&target.sandbox_id) {
+                break;
+            }
         });
     }
 
-    fn finish(&self, sandbox_id: &str) {
-        self.in_flight
+    /// Returns true when a coalesced schedule arrived mid-drain and this
+    /// thread should run another pass while still holding the slot.
+    fn finish(&self, sandbox_id: &str) -> bool {
+        let rerun = self
+            .pending
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .remove(sandbox_id);
+        if !rerun {
+            self.in_flight
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .remove(sandbox_id);
+        }
+        rerun
     }
 }
 
@@ -602,15 +622,28 @@ struct TraceDrainTarget {
     request_timeout: Duration,
 }
 
-fn drain_trace_export_once(
+const TRACE_DRAIN_MAX_RECORDS: u64 = 64;
+
+fn drain_trace_export_to_empty(
     target: &TraceDrainTarget,
     trace_store: &TraceStore,
 ) -> anyhow::Result<()> {
+    loop {
+        if drain_trace_export_once(target, trace_store)? < TRACE_DRAIN_MAX_RECORDS {
+            return Ok(());
+        }
+    }
+}
+
+fn drain_trace_export_once(
+    target: &TraceDrainTarget,
+    trace_store: &TraceStore,
+) -> anyhow::Result<u64> {
     let Some(endpoint) = target.endpoint else {
-        return Ok(());
+        return Ok(0);
     };
     let client = ProtocolClient::new(endpoint, None, target.request_timeout);
-    let args = json!({"max_records": 64});
+    let args = json!({"max_records": TRACE_DRAIN_MAX_RECORDS});
     let mut line = encode_request_with_metadata(
         "sandbox.trace.export",
         "trace-export-drain",
@@ -619,7 +652,7 @@ fn drain_trace_export_once(
     );
     line.push(b'\n');
     let mut response = client.request_raw_observed(&line)?;
-    if let Some(sidecar) = take_trace_sidecar(&mut response.value) {
+    if let Ok(Some(sidecar)) = take_trace_sidecar_checked(&mut response.value) {
         let _ = trace_store.ingest_trace_batch(&target.sandbox_id, &sidecar);
     }
     if let Some(encoded) = response
@@ -630,7 +663,11 @@ fn drain_trace_export_once(
         let batch = base64::engine::general_purpose::STANDARD.decode(encoded)?;
         let _ = trace_store.ingest_trace_batch(&target.sandbox_id, &batch);
     }
-    Ok(())
+    Ok(response
+        .value
+        .get("record_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -815,7 +852,7 @@ fn tcp_once(
             "write_duration_us": elapsed,
         }),
     );
-    let sidecar_ingested = ingest_and_strip_sidecar(attempt, &mut response.value);
+    let sidecar = ingest_and_strip_sidecar(attempt, &mut response.value);
     record_event(
         attempt,
         "host.transport",
@@ -824,7 +861,8 @@ fn tcp_once(
             "response_bytes": response.raw_bytes.len(),
             "read_duration_us": elapsed,
             "response_digest": sha256_hex(&response.raw_bytes),
-            "sidecar_ingested": sidecar_ingested,
+            "sidecar_present": sidecar.present,
+            "sidecar_ingested": sidecar.ingested,
         }),
     );
     record_response_persisted(
@@ -928,12 +966,16 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
         }
     };
     let mut value = serde_json::from_str(stdout.trim())?;
-    let sidecar_ingested = ingest_and_strip_sidecar(attempt, &mut value);
+    let sidecar = ingest_and_strip_sidecar(attempt, &mut value);
     record_event(
         attempt,
         "host.transport",
         "exec_client_finished",
-        json!({"duration_us": elapsed_us(started), "sidecar_ingested": sidecar_ingested}),
+        json!({
+            "duration_us": elapsed_us(started),
+            "sidecar_present": sidecar.present,
+            "sidecar_ingested": sidecar.ingested,
+        }),
     );
     record_response_persisted(
         attempt,
@@ -944,14 +986,55 @@ fn exec_thin_client(attempt: &ForwardAttempt<'_>) -> anyhow::Result<Value> {
     Ok(value)
 }
 
-fn ingest_and_strip_sidecar(attempt: &ForwardAttempt<'_>, response: &mut Value) -> bool {
-    if let Some(batch) = take_trace_sidecar(response) {
-        let _ = attempt
-            .trace_store
-            .ingest_trace_batch(&attempt.record.sandbox_id, &batch);
-        return true;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SidecarIngest {
+    present: bool,
+    ingested: bool,
+}
+
+fn ingest_and_strip_sidecar(attempt: &ForwardAttempt<'_>, response: &mut Value) -> SidecarIngest {
+    let batch = match take_trace_sidecar_checked(response) {
+        Ok(Some(batch)) => batch,
+        Ok(None) => {
+            return SidecarIngest {
+                present: false,
+                ingested: false,
+            };
+        }
+        Err(err) => {
+            record_event(
+                attempt,
+                "host.transport",
+                "sidecar_decode_failed",
+                json!({"error_kind": err.kind()}),
+            );
+            return SidecarIngest {
+                present: true,
+                ingested: false,
+            };
+        }
+    };
+    match attempt
+        .trace_store
+        .ingest_trace_batch(&attempt.record.sandbox_id, &batch)
+    {
+        Ok(()) => SidecarIngest {
+            present: true,
+            ingested: true,
+        },
+        Err(err) => {
+            record_event(
+                attempt,
+                "host.transport",
+                "sidecar_ingest_failed",
+                json!({"error_kind": "trace_batch_decode_failed", "message": err.to_string()}),
+            );
+            SidecarIngest {
+                present: true,
+                ingested: false,
+            }
+        }
     }
-    false
 }
 
 fn respawn_and_gate_traced(attempt: &ForwardAttempt<'_>) -> anyhow::Result<()> {

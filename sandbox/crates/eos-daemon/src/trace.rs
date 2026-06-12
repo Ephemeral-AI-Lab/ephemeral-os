@@ -255,7 +255,7 @@ pub(crate) fn attach_request_sidecar_with_events(
             SpanUid::new(4),
             "route_selected",
             "workspace.route",
-            json!({"kind": "none", "reason": "phase04_no_workspace_route"}),
+            json!({"kind": "none", "reason": "no_route_recorded"}),
         ));
     }
     events.extend(request_events.iter().map(|event| {
@@ -300,6 +300,7 @@ pub(crate) fn attach_request_sidecar_with_events(
         .filter_map(resource_stats_from_event)
         .collect();
     record.events = events;
+    enforce_sidecar_record_budget(&mut record);
 
     let mut batch = TraceBatch::single(record);
     batch.daemon_boot_id = Some(daemon_boot_id().to_string());
@@ -309,6 +310,28 @@ pub(crate) fn attach_request_sidecar_with_events(
         Value::String(base64::engine::general_purpose::STANDARD.encode(encoded)),
     );
     response
+}
+
+/// Request records cannot spool, so an oversize record drops subsystem
+/// children (oldest first, then resource samples) with an explicit
+/// `dropped_children` count — never the root or the transport frame events.
+fn enforce_sidecar_record_budget(record: &mut TraceRecord) {
+    let budget = DetailBudget::SidecarRecord.bytes();
+    while eos_trace::codec::encoded_trace_record_len(record) > budget {
+        if let Some(index) = record
+            .events
+            .iter()
+            .position(|event| !event.module.starts_with("daemon."))
+        {
+            record.events.remove(index);
+        } else if !record.resources.is_empty() {
+            record.resources.remove(0);
+        } else {
+            break;
+        }
+        record.dropped_children = record.dropped_children.saturating_add(1);
+        record.truncated = true;
+    }
 }
 
 pub(crate) fn push_transport_failure_from_sidecar(
@@ -523,6 +546,73 @@ mod tests {
                 .first()
                 .map(|event| (event.module.as_str(), event.name.as_str())),
             Some(("daemon.transport", "response_write_failed"))
+        );
+    }
+
+    #[test]
+    fn request_sidecar_drops_children_when_over_budget() {
+        let trace = RequestTraceContext {
+            trace_id: "trace-budget".to_owned(),
+            request_id: "request-budget".to_owned(),
+            parent_span_id: None,
+            link_hints: Vec::new(),
+            capture_budget_version: 1,
+        };
+        let facts = RequestTraceFacts {
+            connection_id: "daemon-conn-budget".to_owned(),
+            accepted_at_unix_ms: now_ms(),
+            listener_kind: "unix",
+            peer_addr: None,
+            local_addr: None,
+            is_tcp: false,
+            request_bytes: 64,
+            read_duration_us: 5,
+            auth_required: false,
+            auth_ok: true,
+            protocol_version: Some(1),
+        };
+        let oversize: Vec<RequestTraceEvent> = (0..200)
+            .map(|index| {
+                RequestTraceEvent::operation(
+                    "command",
+                    "stdin_written",
+                    json!({"index": index, "padding": "x".repeat(500)}),
+                )
+            })
+            .collect();
+        let response = attach_request_sidecar_with_events(
+            json!({"success": true}),
+            Some(&trace),
+            "sandbox.command.exec",
+            &facts,
+            &oversize,
+        );
+        let encoded = response[TRACE_SIDECAR_FIELD]
+            .as_str()
+            .expect("trace sidecar");
+        let batch = decode_trace_batch(
+            &base64::engine::general_purpose::STANDARD
+                .decode(encoded)
+                .expect("base64"),
+        )
+        .expect("trace batch decodes");
+        let record = batch.records.first().expect("request trace record");
+        assert!(record.truncated, "oversize record is marked truncated");
+        assert!(
+            record.dropped_children > 0,
+            "dropped children are counted, not silent"
+        );
+        assert!(
+            eos_trace::codec::encoded_trace_record_len(record)
+                <= DetailBudget::SidecarRecord.bytes(),
+            "record fits the 64 KiB sidecar budget after enforcement"
+        );
+        assert!(
+            record
+                .events
+                .iter()
+                .any(|event| event.module == "daemon.transport"),
+            "transport frame events are never dropped"
         );
     }
 

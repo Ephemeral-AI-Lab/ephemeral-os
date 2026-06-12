@@ -277,6 +277,11 @@ fn seal_prune_and_verify_retained_chain() -> Result<(), TraceStoreError> {
 
     let pruned = store.prune_sealed_through(seal.last_audit_seq)?;
     assert_eq!(pruned.len(), 1);
+    let repeated_prune = store.prune_sealed_through(seal.last_audit_seq)?;
+    assert!(
+        repeated_prune.is_empty(),
+        "sealed segment should not append duplicate prune tombstones"
+    );
     let report = store.verify_chain()?;
     assert!(report.is_valid(), "{:?}", report.errors);
     assert_eq!(report.pruned_ranges.len(), 1);

@@ -53,6 +53,9 @@ pub struct OperationFault {
     pub message: String,
     #[serde(default)]
     pub details: FaultDetails,
+    /// Internal errors only; explicit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_id: Option<String>,
 }
 
 impl OperationFault {
@@ -62,6 +65,7 @@ impl OperationFault {
             kind: kind.into(),
             message: message.into(),
             details: FaultDetails::default(),
+            error_id: None,
         }
     }
 
@@ -73,9 +77,8 @@ impl OperationFault {
 
     #[must_use]
     pub fn internal(message: impl Into<String>, details: FaultDetails) -> Self {
-        Self::new("internal_error", message).with_details(details.with_field(
-            "error_id",
-            Value::String(uuid::Uuid::new_v4().simple().to_string()),
-        ))
+        let mut fault = Self::new("internal_error", message).with_details(details);
+        fault.error_id = Some(uuid::Uuid::new_v4().simple().to_string());
+        fault
     }
 }

@@ -284,6 +284,75 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
 }
 
 #[test]
+fn malformed_sidecar_is_stripped_and_recorded_as_host_event() -> Result<()> {
+    let dir = temp_host_dir("malformed-sidecar");
+    let store = TraceStore::open(&dir)?;
+    let endpoint = "127.0.0.1:9".parse().expect("discard port");
+    let config = HostConfig {
+        image: "test-image".to_owned(),
+        platform: None,
+        eosd_path: dir.join("eosd"),
+        config_yaml_path: dir.join("config.yml"),
+        remote_daemon_dir: PathBuf::from("/eos/runtime"),
+        remote_eosd_path: PathBuf::from("/eos/eosd"),
+        remote_config_path: PathBuf::from("/eos/config.yml"),
+        tcp_port: 9,
+        ready_timeout: Duration::from_millis(100),
+        request_timeout: Duration::from_millis(100),
+        created_by: "test".to_owned(),
+        state_dir: dir.clone(),
+    };
+    let record = SandboxRecord::new(
+        "sb-malformed-sidecar".to_owned(),
+        "sb-malformed-sidecar".to_owned(),
+        "token".to_owned(),
+        9,
+        "test".to_owned(),
+        Some(endpoint),
+    );
+    let trace_id = TraceId::parse("trace-malformed-sidecar")?;
+    let request_id = RequestId::parse("request-malformed-sidecar")?;
+    let args = json!({});
+    let mut tcp_line =
+        encode_request_with_metadata("sandbox.runtime.ready", request_id.as_str(), &args, None);
+    tcp_line.push(b'\n');
+    let attempt = ForwardAttempt {
+        record: &record,
+        config: &config,
+        trace_store: &store,
+        trace_id: trace_id.clone(),
+        request_id,
+        mutates_state: false,
+        tcp_line,
+        op: "sandbox.runtime.ready",
+        invocation_id: "malformed-sidecar",
+        args: &args,
+    };
+    let mut response = json!({"success": true, "_trace_events": "not base64"});
+
+    let sidecar = ingest_and_strip_sidecar(&attempt, &mut response);
+
+    assert!(sidecar.present);
+    assert!(!sidecar.ingested);
+    assert!(response.get("_trace_events").is_none());
+    let events = store.events_for_trace(trace_id.as_str())?;
+    assert_event(&events, "host.transport", "sidecar_decode_failed");
+    assert!(
+        events.iter().any(|event| {
+            event.event == "sidecar_decode_failed"
+                && serde_json::from_str::<serde_json::Value>(&event.details_json)
+                    .ok()
+                    .and_then(|details| details.get("error_kind").cloned())
+                    == Some(json!("invalid_base64"))
+        }),
+        "sidecar_decode_failed details missing: {events:?}"
+    );
+
+    let _ = fs::remove_dir_all(dir);
+    Ok(())
+}
+
+#[test]
 fn tcp_once_records_transport_failure_events() -> Result<()> {
     let cases = [
         (

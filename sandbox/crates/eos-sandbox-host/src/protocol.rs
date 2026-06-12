@@ -201,18 +201,47 @@ pub fn encode_request_with_trace_metadata(
 }
 
 pub fn take_trace_sidecar(response: &mut Value) -> Option<Vec<u8>> {
-    let encoded = response
-        .as_object_mut()?
-        .remove(DAEMON_TRACE_SIDECAR_FIELD)?
+    take_trace_sidecar_checked(response).ok().flatten()
+}
+
+pub fn take_trace_sidecar_checked(
+    response: &mut Value,
+) -> Result<Option<Vec<u8>>, TraceSidecarError> {
+    let Some(object) = response.as_object_mut() else {
+        return Ok(None);
+    };
+    let Some(sidecar) = object.remove(DAEMON_TRACE_SIDECAR_FIELD) else {
+        return Ok(None);
+    };
+    let encoded = sidecar
         .as_str()
-        .map(str::to_owned)?;
+        .ok_or(TraceSidecarError::NonString)?
+        .to_owned();
     decode_trace_sidecar_base64(&encoded)
+        .ok_or(TraceSidecarError::InvalidBase64)
+        .map(Some)
 }
 
 pub fn decode_trace_sidecar_base64(encoded: &str) -> Option<Vec<u8>> {
     base64::engine::general_purpose::STANDARD
         .decode(encoded)
         .ok()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceSidecarError {
+    NonString,
+    InvalidBase64,
+}
+
+impl TraceSidecarError {
+    #[must_use]
+    pub const fn kind(self) -> &'static str {
+        match self {
+            Self::NonString => "non_string_sidecar",
+            Self::InvalidBase64 => "invalid_base64",
+        }
+    }
 }
 
 pub fn strip_trace_sidecar(response: &mut Value) {
@@ -359,7 +388,8 @@ pub fn response_status(response: &Value) -> &str {
 #[cfg(test)]
 mod tests {
     use super::{
-        decode_trace_sidecar_base64, error_kind, is_success, response_classification, ResponseShape,
+        decode_trace_sidecar_base64, error_kind, is_success, response_classification,
+        take_trace_sidecar_checked, ResponseShape, TraceSidecarError,
     };
     use serde_json::json;
 
@@ -442,5 +472,25 @@ mod tests {
             Some(&[1, 2, 3][..])
         );
         assert!(decode_trace_sidecar_base64("not base64").is_none());
+    }
+
+    #[test]
+    fn checked_sidecar_decoder_strips_and_reports_malformed_values() {
+        let mut invalid_base64 = json!({"_trace_events": "not base64"});
+        assert_eq!(
+            take_trace_sidecar_checked(&mut invalid_base64),
+            Err(TraceSidecarError::InvalidBase64)
+        );
+        assert!(invalid_base64.get("_trace_events").is_none());
+
+        let mut non_string = json!({"_trace_events": {"batch": "AQID"}});
+        assert_eq!(
+            take_trace_sidecar_checked(&mut non_string),
+            Err(TraceSidecarError::NonString)
+        );
+        assert!(non_string.get("_trace_events").is_none());
+
+        let mut absent = json!({"success": true});
+        assert_eq!(take_trace_sidecar_checked(&mut absent), Ok(None));
     }
 }

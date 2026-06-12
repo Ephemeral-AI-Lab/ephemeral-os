@@ -605,7 +605,14 @@ impl TraceStore {
         let seals = {
             let mut stmt = tx.prepare(
                 "SELECT segment_id, first_audit_seq, last_audit_seq, root_sha256
-                 FROM audit_segment_seals WHERE last_audit_seq <= ?1 ORDER BY first_audit_seq",
+                 FROM audit_segment_seals
+                 WHERE last_audit_seq <= ?1
+                   AND NOT EXISTS (
+                     SELECT 1 FROM audit_entries p
+                     WHERE p.entry_kind='prune'
+                       AND p.segment_id=audit_segment_seals.segment_id
+                   )
+                 ORDER BY first_audit_seq",
             )?;
             let rows = stmt
                 .query_map(params![max_audit_seq], |row| {
