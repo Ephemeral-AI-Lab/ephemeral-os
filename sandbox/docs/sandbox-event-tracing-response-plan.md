@@ -70,6 +70,38 @@ Use three identity levels:
 | `op_id` | Existing top-level `invocation_id` | One daemon request-response operation. |
 | `span_id` | Minted by host/daemon per span | One timed unit inside the operation, parented into a tree. |
 
+### Sequential Event Chain
+
+Every trace is an append-only event chain. Each event row gets a monotonic
+`seq` within its `trace_id`; reading the trace as a timeline is always:
+`WHERE trace_id = ? ORDER BY seq`.
+
+`seq` records durable observation order, not a claim that all work was strictly
+serial. Nested and concurrent work is represented by `span_id`,
+`parent_span_id`, and link rows. That gives two views over the same trace:
+
+| View | Query/structure | Use |
+| --- | --- | --- |
+| Timeline chain | `trace_id` ordered by `seq` | Audit replay, total elapsed narrative, "what happened next?" |
+| Causal tree | `span_id` / `parent_span_id` | Nested work, parallel branches, subsystem ownership. |
+| Cross-op chain | `sandbox_trace_links` | Long-lived command sessions, isolated workspace handles, plugin PPC messages, manifest versions. |
+
+Example:
+
+```text
+trace_id=tr_1
+  seq=1  host.protocol.request_received
+  seq=2  host.protocol.forward_started
+  seq=3  daemon.transport.decoded
+  seq=4  daemon.dispatch.op_resolved
+  seq=5  workspace.route.route_selected(ephemeral_workspace)
+  seq=6  layerstack.snapshot_acquired
+  seq=7  overlay.capture_finished
+  seq=8  occ.commit_finished
+  seq=9  daemon.transport.response_written
+  seq=10 host.protocol.response_persisted
+```
+
 Long-lived resources get their own link ids:
 
 | Link id | Why |
@@ -113,6 +145,17 @@ Subsystem events use a stable phase vocabulary:
 | `message` | daemon_request, daemon_response, plugin_ppc_request, plugin_ppc_response, callback_request, callback_response |
 | `resource` | resource_sampled with cgroup/process/tree/layer counters |
 
+Ordering rules:
+
+1. The host allocates the first `seq` when it records `request_received`.
+2. The daemon event batch keeps local order while the op runs.
+3. The host assigns final durable `seq` values when ingesting daemon events, so
+   the SQLite chain stays gap-free and authoritative even if the daemon retries
+   event-batch delivery later.
+4. If the daemon cannot return an event batch, the host still appends
+   `response_missing`, `uncertain_outcome`, or `trace_degraded` as the next
+   event in the chain.
+
 Event payloads must stay bounded. Do not store raw command stdout/stderr, full
 file contents, plugin result blobs, or provider-like deltas in trace events by
 default. Store sizes, hashes, path counts, status, and references to the owning
@@ -127,14 +170,15 @@ large payloads in many places:
 | --- | --- |
 | `sandbox_trace_ops` | One row per daemon op: `trace_id`, `op_id`, `op`, `family`, `sandbox_id`, `caller_id`, `workspace_route_kind`, `status`, start/end timestamps, total duration, response status, response digest. |
 | `sandbox_trace_spans` | Timed span tree: `span_id`, `trace_id`, `op_id`, `parent_span_id`, `module`, `phase`, status, start/end timestamps, duration. |
-| `sandbox_trace_events` | Instant events or span annotations: `event_id`, `seq`, `trace_id`, `op_id`, `span_id`, `module`, `event`, `level`, timestamp, bounded JSON details. |
+| `sandbox_trace_events` | The ordered event chain: `event_id`, trace-local monotonic `seq`, `trace_id`, `op_id`, `span_id`, `module`, `event`, `level`, timestamp, bounded JSON details. Unique index: `(trace_id, seq)`. |
 | `sandbox_trace_resources` | Resource samples and deltas: CPU, memory, disk I/O, tree stats, layer depth, path count, keyed by `trace_id`, `op_id`, and optional `span_id`. |
 | `sandbox_trace_modules` | Aggregated modules touched per op for fast filtering. |
 | `sandbox_trace_links` | Cross-op links such as command session, isolated workspace handle, plugin service instance, manifest version, and parent message id. |
 
 The full response is not duplicated in the trace DB. Store a digest plus a
 small response summary. The cleaned user response carries a `meta.trace`
-pointer that can retrieve the event chain from the local store.
+pointer that can retrieve the event chain from the local store by reading
+`sandbox_trace_events` for that `trace_id` ordered by `seq`.
 
 ## 7. Daemon Protocol Shape
 
