@@ -36,8 +36,6 @@ prost = "0.13"
 prost-build = "0.13"
 protoc-bin-vendored = "3"
 rusqlite = { version = "0.32", features = ["bundled"] }
-tracing = "0.1"
-tracing-subscriber = "0.3"
 regex = "1"
 ignore = "0.4"
 thiserror = "2"

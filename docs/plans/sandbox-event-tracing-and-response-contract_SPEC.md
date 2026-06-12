@@ -327,26 +327,24 @@ Security rules:
 - `spool.rs` — bounded background-trace buffer (default 4 MiB, drop-oldest,
   `dropped_traces` counter); per-span field budgets with an explicit
   `truncated` flag so one pathological request cannot evict its siblings.
-- `layer.rs` — `TraceSpoolLayer: Layer<Registry>`: span state in Registry span
-  extensions (`on_new_span` captures fields via `Visit`, `on_record` lands late
-  fields like `workspace_route`, `on_event` appends, `on_close` pushes children
-  into parents; a closing root assembles the `TraceRecord`). The transport
-  closes the root **immediately before envelope render** and calls
-  `take_finished(trace_id) -> TraceRecord` exactly once: that record is both
-  the source for envelope `meta` and the sidecar payload. The response write
-  itself is deliberately outside the record — a record cannot describe its own
-  delivery; the host observes it (`received_at_ms`, `host_rtt_ms`,
-  `response_persisted` / `response_missing`). Request-scoped records never
-  enter the spool; the spool is background-only. Roots with
-  `trace_exempt = true` (the export op itself) are skipped.
+- Record assembly (implemented shape, superseding the earlier
+  tracing-subscriber `layer.rs` design — the unused Layer/subscriber modules
+  were deleted with Phase 04): mechanism crates emit typed event DTOs
+  (`OccTraceEvent`, `CommandTraceEvent`, `PpcTraceEvent`, sink events) through
+  their results; the daemon assembles the bounded `TraceRecord` and sidecar in
+  `eos-daemon/src/trace.rs` **immediately before envelope render**. The
+  response write itself is deliberately outside the record — a record cannot
+  describe its own delivery; the host observes it (`received_at_ms`,
+  `host_rtt_ms`, `response_persisted` / `response_missing`). Request-scoped
+  records never enter the spool; the spool is background-only.
 
 Crate ownership boundaries (merged from the parallel draft):
 
 | Owner | Responsibility |
 | --- | --- |
-| `eos-trace` | Storage-neutral DTOs, spool, subscriber layer, route/kind enums, bounded-detail helpers |
+| `eos-trace` | Storage-neutral DTOs, spool, route/kind enums, bounded-detail helpers |
 | `eos-operation` | Envelope + per-family result DTOs — contract shape, not persistence |
-| `eos-daemon` | Root/dispatch/op spans, sidecar assembly, subscriber install, export op |
+| `eos-daemon` | Root/dispatch/op record assembly, sidecar assembly, export op |
 | mechanism crates (layerstack, workspace, command, plugin, overlay) | Emit spans/events at their own phase boundaries; no persistence or policy deps |
 | `eos-sandbox-host` | SQLite store, request-start fail-closed rule, sidecar ingest + seq assignment, degraded/uncertain records, export drains |
 | `eos-sandbox-gateway` | Declassification: strip `_trace_events` from client-facing responses; operator/debug trace lookup only |
@@ -362,7 +360,7 @@ ownership files; they do not grow store, SQL, or generic helper directories.
 sandbox/
 |-- Cargo.toml
 |   |-- adds workspace member crates/eos-trace
-|   `-- pins tracing, tracing-subscriber, prost, prost-build, rusqlite,
+|   `-- pins prost, prost-build, rusqlite,
 |       ed25519-dalek/signer provider, and eos-trace workspace dependency
 |-- crates/
 |   |-- eos-trace/                         # new storage-neutral trace contract crate
@@ -378,12 +376,9 @@ sandbox/
 |   |   |   |-- codec.rs                    # DTO <-> protobuf encode/decode
 |   |   |   |-- budget.rs                   # bounded-detail/truncation helpers
 |   |   |   |-- resource_stats.rs           # cgroup/proc/tree/mount-cost DTOs + samplers
-|   |   |   |-- spool.rs                    # bounded background trace spool
-|   |   |   |-- layer.rs                    # tracing-subscriber Layer
-|   |   |   `-- subscriber.rs               # subscriber/fmt-layer construction
+|   |   |   `-- spool.rs                    # bounded background trace spool
 |   |   `-- tests/
 |   |       |-- codec_golden.rs
-|   |       |-- layer_tree.rs
 |   |       `-- resource_stats.rs
 |   |-- eos-operation/
 |   |   |-- src/core/
@@ -1707,14 +1702,16 @@ trade their requirements against each other.
 
 | Crate | Version | Where | Role |
 | --- | --- | --- | --- |
-| `tracing` | 0.1 (MIT) | daemon, operation, layerstack, workspace, command, plugin, eos-trace | span/event facade |
-| `tracing-subscriber` | 0.3, `registry`,`std`,`fmt`,`json` (MIT) | eos-trace, eos-daemon | Registry + custom Layer; JSON fmt layer for the crash log |
 | `rusqlite` | 0.40 `bundled` (MIT) | eos-sandbox-host only | host store; daemon binary unaffected |
 | `prost` / `prost-build` | workspace-pinned | eos-trace | protobuf DTO generation and canonical audit payload encoding |
 | `base64` | workspace-pinned | eos-daemon/eos-sandbox-host | temporary JSON-line transport wrapper for protobuf sidecars |
 | `sha2` (already in workspace) | — | host | response digests, payload digests, hash-chain entries |
 | signer (`ed25519-dalek` or host signer provider) | workspace-pinned / configured | eos-sandbox-host | segment-seal signatures over immutable audit ranges |
 | existing serde/serde_json/uuid/thiserror/tokio | — | — | reused |
+
+`tracing`/`tracing-subscriber` were originally pinned for the subscriber-Layer
+backbone; the implemented record assembly is typed event DTO sinks plus daemon
+sidecar synthesis, so those pins were removed with the unused Layer modules.
 
 Rejected: OTel Rust SDK (pre-1.0 churn in the static daemon binary; format
 compatibility kept instead); `tracing-chrome`/`tracing-tracy` (profiling

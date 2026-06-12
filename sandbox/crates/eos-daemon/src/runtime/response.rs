@@ -170,14 +170,8 @@ pub(crate) fn resource_timings(
         "resource.layer_stack.manifest_path_count".to_owned(),
         json!(usize_to_f64_saturating(manifest.layers.len())),
     );
-    let empty_stats = TreeResourceStats::default();
-    for prefix in [
-        "resource.command_exec.run_dir",
-        "resource.command_exec.workspace",
-        "resource.command_exec.upperdir",
-    ] {
-        insert_tree_resource_timings(&mut timings, prefix, &empty_stats);
-    }
+    // Tree stats appear only when a path actually paid for a walk; absence
+    // means "not sampled", never a fabricated zero walk.
     insert_cgroup_process_resource_timings(&mut timings);
     timings
 }

@@ -28,9 +28,9 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
         &TreeResourceStats::from_ephemeral(&upperdir_stats),
     );
 
-    assert_eq!(
-        timing_f64_value(&timings, "resource.command_exec.workspace_tree_bytes"),
-        0.0
+    assert!(
+        !timings.contains_key("resource.command_exec.workspace_tree_bytes"),
+        "unwalked trees must not fabricate zero stats"
     );
     assert_eq!(
         timing_f64_value(&timings, "resource.command_exec.upperdir_tree_exists"),
@@ -102,6 +102,45 @@ fn builtin_parse_gate_preserves_error_response_channel() {
         json!("invalid request: edits must be a list")
     );
     assert_eq!(response["warnings"], json!([]));
+}
+
+#[test]
+fn file_write_dispatch_returns_status_envelope() -> TestResult {
+    let fixture = Fixture::new("file-write-envelope")?;
+    let workspace = fixture.base.join("workspace");
+    std::fs::create_dir_all(&workspace)?;
+    std::fs::write(
+        fixture.root.join("workspace.json"),
+        serde_json::to_vec_pretty(&json!({
+            "workspace_root": workspace,
+            "layer_stack_root": fixture.root,
+            "active_manifest_version": 1,
+            "active_root_hash": "root",
+            "base_manifest_version": 1,
+            "base_root_hash": "base",
+        }))?,
+    )?;
+    let response = dispatch(&Request {
+        op: "sandbox.file.write".to_owned(),
+        invocation_id: "file-write-envelope".to_owned(),
+        args: json!({
+            "layer_stack_root": fixture.root.to_string_lossy(),
+            "caller_id": "caller-file-write-envelope",
+            "path": "envelope.txt",
+            "content": "enveloped\n",
+            "overwrite": true,
+        }),
+    });
+
+    assert_eq!(response["status"], json!("ok"), "{response}");
+    assert_eq!(
+        response["result"]["status"],
+        json!("committed"),
+        "{response}"
+    );
+    assert_eq!(response["result"]["success"], json!(true), "{response}");
+    assert!(response.get("meta").is_some(), "{response}");
+    Ok(())
 }
 
 #[test]
