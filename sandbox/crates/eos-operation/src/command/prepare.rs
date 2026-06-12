@@ -23,7 +23,7 @@ pub(crate) struct PrepareInputs<'a> {
     pub(crate) invocation_id: &'a str,
     pub(crate) cmd: &'a str,
     pub(crate) timeout_seconds: Option<f64>,
-    pub(crate) session_dir: PathBuf,
+    pub(crate) command_dir: PathBuf,
     pub(crate) workspace_label: &'a str,
 }
 
@@ -75,8 +75,8 @@ pub(crate) fn prepare_isolated(
         cgroup_path: binding.cgroup_path.clone(),
         timeout_seconds: inputs.timeout_seconds,
     };
-    let request_path = inputs.session_dir.join("runner-request.json");
-    let output_path = inputs.session_dir.join("runner-result.json");
+    let request_path = inputs.command_dir.join("runner-request.json");
+    let output_path = inputs.command_dir.join("runner-result.json");
     finish_prepare(inputs, run_request, request_path, output_path)
 }
 
@@ -97,9 +97,9 @@ fn finish_prepare(
     request_path: PathBuf,
     output_path: PathBuf,
 ) -> Result<PreparedCommand, WorkspaceApiError> {
-    std::fs::create_dir_all(&inputs.session_dir).map_err(prepare_error)?;
+    std::fs::create_dir_all(&inputs.command_dir).map_err(prepare_error)?;
     std::fs::write(
-        inputs.session_dir.join("metadata.json"),
+        inputs.command_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
             "command_id": inputs.command_id,
             "caller_id": inputs.caller_id,
@@ -115,8 +115,8 @@ fn finish_prepare(
         run_request: serde_json::to_value(&run_request).map_err(prepare_error)?,
         request_path,
         output_path,
-        final_path: inputs.session_dir.join("final.json"),
-        transcript_path: inputs.session_dir.join("transcript.log"),
+        final_path: inputs.command_dir.join("final.json"),
+        transcript_path: inputs.command_dir.join("transcript.log"),
     })
 }
 

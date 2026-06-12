@@ -43,8 +43,8 @@ export {
   TERMINAL_TOOL_NAMES,
   plannerStructureError,
   terminalToolDefinitions,
-  type PlannerSubmissionBinding,
-  type WorkerSubmissionBinding,
+  type PlannerPursuitAgentSubmissionBinding,
+  type WorkerPursuitAgentSubmissionBinding,
 } from "./tools/submission/index.js";
 export {
   PURSUIT_TOOL_NAMES,

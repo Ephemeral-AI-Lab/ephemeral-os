@@ -13,18 +13,18 @@ type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
 fn cancel_runs_for_caller_tears_down_entered_handle() -> TestResult {
-    // The per-caller workspace-run teardown discards the caller's command
-    // sessions (owned by the command-session registry, not a side-map here)
+    // The per-caller workspace-run teardown discards the caller's commands
+    // (owned by the command registry, not a side-map here)
     // and removes the handle, releasing its lease.
     let root = test_root("cancel-runs-teardown");
     let scratch = root.join("scratch");
     let runtime = isolated_runtime(&scratch, Path::new("/testbed"));
     seed_empty_stack(&root.join("stack"))?;
 
-    let entered = runtime.enter("caller-command-session", &root.join("stack"))?;
-    assert_eq!(entered.caller_id, "caller-command-session");
+    let entered = runtime.enter("caller-command", &root.join("stack"))?;
+    assert_eq!(entered.caller_id, "caller-command");
 
-    let cancel = runtime.cancel_runs_for_caller("caller-command-session", None);
+    let cancel = runtime.cancel_runs_for_caller("caller-command", None);
     let exit = cancel.isolated?;
     assert_eq!(
         exit.isolated.inspection["handle_registered_after"],

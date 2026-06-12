@@ -4,40 +4,40 @@ use std::time::Instant;
 use eos_command::CommandConfig;
 use serde_json::Value;
 
-use super::contract::{CommandResponse, CommandSessionCompletion, CommandStatus};
+use super::contract::{CommandCompletion, CommandResponse, CommandStatus};
 use super::service::CommandOps;
 use crate::CommandId;
 
 pub fn command_ops() -> &'static CommandOps {
     static OPS: OnceLock<CommandOps> = OnceLock::new();
-    OPS.get_or_init(|| CommandOps::new(command_session_config()))
+    OPS.get_or_init(|| CommandOps::new(command_config()))
 }
 
-pub fn configure_command_sessions(config: &CommandConfig) {
-    let mut guard = command_session_config_cell()
+pub fn configure_commands(config: &CommandConfig) {
+    let mut guard = command_config_cell()
         .write()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     *guard = config.clone();
 }
 
-pub fn command_session_config() -> CommandConfig {
-    command_session_config_cell()
+pub fn command_config() -> CommandConfig {
+    command_config_cell()
         .read()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .clone()
 }
 
-pub fn command_session_scratch_root() -> std::path::PathBuf {
-    command_session_config().scratch_root
+pub fn command_scratch_root() -> std::path::PathBuf {
+    command_config().scratch_root
 }
 
-fn command_session_config_cell() -> &'static RwLock<CommandConfig> {
+fn command_config_cell() -> &'static RwLock<CommandConfig> {
     static CONFIG: OnceLock<RwLock<CommandConfig>> = OnceLock::new();
     CONFIG.get_or_init(|| RwLock::new(CommandConfig::default()))
 }
 
 #[must_use]
-pub fn active_command_sessions_for_caller(caller_id: &str) -> usize {
+pub fn active_commands_for_caller(caller_id: &str) -> usize {
     let caller_id = caller_id.trim();
     if caller_id.is_empty() {
         return 0;
@@ -45,20 +45,20 @@ pub fn active_command_sessions_for_caller(caller_id: &str) -> usize {
     command_ops().count_by_caller(Some(caller_id))
 }
 
-pub fn cleanup_command_sessions_for_caller(caller_id: &str, grace_s: Option<f64>) -> usize {
+pub fn cleanup_commands_for_caller(caller_id: &str, grace_s: Option<f64>) -> usize {
     command_ops().cleanup_caller(caller_id, grace_s)
 }
 
-pub fn cancel_all_command_sessions(grace_s: Option<f64>) -> usize {
+pub fn cancel_all_commands(grace_s: Option<f64>) -> usize {
     command_ops().cancel_all(grace_s)
 }
 
-pub fn command_session_reaper_sweep() {
+pub fn command_reaper_sweep() {
     command_ops().sweep_expired(Instant::now());
 }
 
-pub fn recover_orphaned_command_sessions() {
-    let dir = command_session_scratch_root();
+pub fn recover_orphaned_commands() {
+    let dir = command_scratch_root();
     let Ok(entries) = std::fs::read_dir(&dir) else {
         return;
     };
@@ -90,7 +90,7 @@ pub fn recover_orphaned_command_sessions() {
                         command_id: Some(CommandId::new(id.to_owned())),
                         settled: None,
                     };
-                    command_ops().push_completed(CommandSessionCompletion {
+                    command_ops().push_completed(CommandCompletion {
                         command_id: id.to_owned(),
                         caller_id: caller_id.to_owned(),
                         command: command.to_owned(),

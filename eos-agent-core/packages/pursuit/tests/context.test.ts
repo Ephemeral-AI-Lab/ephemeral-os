@@ -56,11 +56,39 @@ describe("pursuit context projection", () => {
     expect(
       context.files.get(`leg_${leg.id}/attempt_${attempt.id}/failure_reasons.md`)
         ?.content,
-    ).toBe("- work_item a failed: boom");
+    ).toBe("- work_item_a [Failed]: boom");
 
     const snapshot = snapshotPursuitContext(tree);
     expect(snapshot.pursuit.outcome).not.toBeNull();
     expect(snapshot.pursuit.legs[0].attempts[0].outcome).not.toBeNull();
+  });
+
+  it("renders blocked work-item outcomes with the direct failed dependency", async () => {
+    const h = harness();
+    const pursuit = await h.create("ship it", { maxAttempts: 1 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({ work_items: [workItem("a"), workItem("b", ["a"])] }),
+    );
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "boom", outcome: "root failed" }),
+    );
+
+    const tree = await h.tree(pursuit.pursuit_id);
+    const leg = tree.legs[0];
+    const attempt = leg.attempts[0];
+    const context = buildPursuitContext(tree);
+    const blockedDir = `leg_${leg.id}/attempt_${attempt.id}/work_item_b`;
+
+    expect(context.files.get(`${blockedDir}/summary.md`)?.content).toBe(
+      "blocked by work_item_a",
+    );
+    expect(context.files.get(`${blockedDir}/outcome.md`)?.content).toBe(
+      "blocked by work_item_a",
+    );
+    expect(
+      context.files.get(`leg_${leg.id}/attempt_${attempt.id}/failure_reasons.md`)
+        ?.content,
+    ).toContain("- work_item_b [Blocked]: blocked by work_item_a");
   });
 
   it("moves superseded attempts under superseded after dynamic refocus", async () => {

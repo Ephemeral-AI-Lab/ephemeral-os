@@ -77,18 +77,18 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
             settle_foreground_command(&lease, exec, Instant::now() + Duration::from_secs(25))?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
 
-        // A long-running command session that must start, cancel, and fully drain.
-        let session = lease.call_ok(
+        // A long-running command that must start, cancel, and fully drain.
+        let command = lease.call_ok(
             catalog::SANDBOX_COMMAND_EXEC,
             json!({
                 "cmd": format!("sh -c 'echo soak-{round}; sleep 60'"),
                 "yield_time_ms": 100,
                 "timeout_seconds": 120,}),
         )?;
-        assert_eq!(as_str(&session, "status")?, "running", "{session}");
+        assert_eq!(as_str(&command, "status")?, "running", "{command}");
         lease.call(
             catalog::SANDBOX_COMMAND_CANCEL,
-            json!({"command_id": as_str(&session, "command_id")?}),
+            json!({"command_id": as_str(&command, "command_id")?}),
         )?;
         wait_for_session_count(&lease, 0)?;
 
@@ -117,7 +117,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
         assert_eq!(
             as_i64(&count, "count")?,
             0,
-            "soak must not leak command sessions at round {round}: {count}"
+            "soak must not leak commands at round {round}: {count}"
         );
         storage_samples.push((
             as_i64(&metrics, "manifest_depth")?,

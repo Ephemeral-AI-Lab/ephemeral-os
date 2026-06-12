@@ -36,13 +36,13 @@ impl RunCancelAllInput {
 pub struct RunEndOutput {
     pub success: bool,
     pub caller_id: String,
-    pub cancelled_command_sessions: usize,
+    pub cancelled_commands: usize,
     pub isolated_exited: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunCancelAllOutput {
     pub success: bool,
-    pub cancelled_command_sessions: usize,
+    pub cancelled_commands: usize,
     pub isolated_callers_exited: usize,
 }

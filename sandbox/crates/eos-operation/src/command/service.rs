@@ -2,12 +2,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use eos_command::process::{spawn_current_exe_ns_runner, KillReason};
-use eos_command::session::{ReapedCommand, RunningSessionParts, Session, SessionSpec};
+use eos_command::process::{
+    CommandProcess, CommandProcessSpawn, CommandProcessSpec, KillReason, ReapedCommand,
+};
 use eos_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use eos_command::{
-    CancelCommandSession, CollectCompleted, CommandConfig, CommandSessionError,
-    ReadCommandProgress, StartCommandSession, WriteStdin,
+    CancelCommand, CollectCompleted, CommandConfig, CommandError, ReadCommandProgress,
+    StartCommand, WriteStdin,
 };
 use eos_layerstack::service;
 use eos_workspace::EphemeralWorkspace;
@@ -15,9 +16,7 @@ use eos_workspace::IsolatedWorkspaceBinding;
 
 use crate::WorkspaceKind;
 
-use super::contract::{
-    CollectCompletedOutput, CommandResponse, CommandSessionCompletion, CommandStatus,
-};
+use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse, CommandStatus};
 use super::outcome::FinalizeCommandRequest;
 use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
 use super::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
@@ -50,17 +49,17 @@ impl CommandOps {
 
     pub fn exec_command(
         &self,
-        request: StartCommandSession,
+        request: StartCommand,
         target: ExecTarget,
-    ) -> Result<CommandResponse, CommandSessionError> {
+    ) -> Result<CommandResponse, CommandError> {
         if request.cmd.trim().is_empty() {
-            return Err(CommandSessionError::InvalidRequest(
+            return Err(CommandError::InvalidRequest(
                 "cmd must be non-empty".to_owned(),
             ));
         }
         let id = self.registry.next_id();
         let yield_time_ms = request.yield_time_ms;
-        let spec = SessionSpec {
+        let spec = CommandProcessSpec {
             id: id.clone(),
             caller_id: request.caller_id.clone(),
             command: request.cmd.clone(),
@@ -92,29 +91,26 @@ impl CommandOps {
     )]
     fn start_ephemeral(
         &self,
-        spec: SessionSpec,
-        request: &StartCommandSession,
+        spec: CommandProcessSpec,
+        request: &StartCommand,
         command_id: &str,
         root: PathBuf,
         workspace_root: PathBuf,
         scratch_root: PathBuf,
         yield_time_ms: u64,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        let request_id = format!(
-            "command_session:{}:{}",
-            request.caller_id, request.invocation_id
-        );
+    ) -> Result<CommandResponse, CommandError> {
+        let request_id = format!("command:{}:{}", request.caller_id, request.invocation_id);
         let snapshot = service::acquire_snapshot(&root, &request_id)
-            .map_err(|error| CommandSessionError::Workspace(error.to_string()))?;
+            .map_err(|error| CommandError::Workspace(error.to_string()))?;
         let writable_root = eos_overlay::overlay_writable_root()
-            .map_err(|error| CommandSessionError::Workspace(error.to_string()));
+            .map_err(|error| CommandError::Workspace(error.to_string()));
         let result = writable_root.and_then(|writable_root| {
             let workspace = EphemeralWorkspace::create(
                 &writable_root.join("runtime"),
                 "sandbox-overlay",
                 &request.invocation_id,
             )
-            .map_err(|error| CommandSessionError::Workspace(error.to_string()))?;
+            .map_err(|error| CommandError::Workspace(error.to_string()))?;
             let prepared = prepare_ephemeral(
                 PrepareInputs {
                     caller_id: &request.caller_id,
@@ -122,7 +118,7 @@ impl CommandOps {
                     invocation_id: &request.invocation_id,
                     cmd: &request.cmd,
                     timeout_seconds: request.timeout_seconds,
-                    session_dir: scratch_root.join(command_id),
+                    command_dir: scratch_root.join(command_id),
                     workspace_label: "ephemeral",
                 },
                 &workspace_root,
@@ -130,10 +126,10 @@ impl CommandOps {
                 workspace.dirs(),
                 &workspace.dirs().run_dir,
             )?;
-            let session = self.spawn_session(spec, prepared)?;
-            Ok((workspace, session))
+            let process = self.spawn_process(spec, prepared)?;
+            Ok((workspace, process))
         });
-        let (workspace, session) = match result {
+        let (workspace, process) = match result {
             Ok(parts) => parts,
             Err(error) => {
                 let _ = service::release_lease(&root, &snapshot.lease_id);
@@ -141,9 +137,9 @@ impl CommandOps {
             }
         };
         Ok(
-            self.register_and_wait(session, yield_time_ms, move |session| {
+            self.register_and_wait(process, yield_time_ms, move |process| {
                 ActiveCommand::Ephemeral(EphemeralRun {
-                    session,
+                    process,
                     root,
                     snapshot,
                     workspace,
@@ -154,12 +150,12 @@ impl CommandOps {
 
     fn start_isolated(
         &self,
-        spec: SessionSpec,
-        request: &StartCommandSession,
+        spec: CommandProcessSpec,
+        request: &StartCommand,
         command_id: &str,
         binding: Box<IsolatedWorkspaceBinding>,
         yield_time_ms: u64,
-    ) -> Result<CommandResponse, CommandSessionError> {
+    ) -> Result<CommandResponse, CommandError> {
         let prepared = prepare_isolated(
             PrepareInputs {
                 caller_id: &request.caller_id,
@@ -167,52 +163,47 @@ impl CommandOps {
                 invocation_id: &request.invocation_id,
                 cmd: &request.cmd,
                 timeout_seconds: request.timeout_seconds,
-                session_dir: binding.scratch_dir.join("sessions").join(command_id),
+                command_dir: binding.scratch_dir.join("commands").join(command_id),
                 workspace_label: "isolated",
             },
             &binding,
         )?;
-        let session = self.spawn_session(spec, prepared)?;
+        let process = self.spawn_process(spec, prepared)?;
         let binding = *binding;
         Ok(
-            self.register_and_wait(session, yield_time_ms, move |session| {
-                ActiveCommand::Isolated(IsolatedRun { session, binding })
+            self.register_and_wait(process, yield_time_ms, move |process| {
+                ActiveCommand::Isolated(IsolatedRun { process, binding })
             }),
         )
     }
 
-    fn spawn_session(
+    fn spawn_process(
         &self,
-        spec: SessionSpec,
+        spec: CommandProcessSpec,
         prepared: PreparedCommand,
-    ) -> Result<Session, CommandSessionError> {
-        let process = spawn_current_exe_ns_runner(
-            &prepared.request_path,
-            &prepared.run_request,
-            &prepared.output_path,
-            prepared.transcript_path.clone(),
-            &self.config.transcript_timestamp_timezone,
-        )?;
-        Ok(Session::new_running(
+    ) -> Result<CommandProcess, CommandError> {
+        CommandProcess::spawn(
             spec,
-            RunningSessionParts {
-                process,
+            CommandProcessSpawn {
+                run_request: prepared.run_request,
+                request_path: prepared.request_path,
                 output_path: prepared.output_path,
                 final_path: prepared.final_path,
                 transcript_path: prepared.transcript_path,
+                transcript_timestamp_timezone: &self.config.transcript_timestamp_timezone,
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
-        ))
+        )
     }
 
     fn register_and_wait(
         &self,
-        session: Session,
+        process: CommandProcess,
         yield_time_ms: u64,
-        make_run: impl FnOnce(Session) -> ActiveCommand,
+        make_run: impl FnOnce(CommandProcess) -> ActiveCommand,
     ) -> CommandResponse {
-        let id = session.id().to_owned();
-        let run = Arc::new(make_run(session));
+        let id = process.id().to_owned();
+        let run = Arc::new(make_run(process));
         self.registry.insert(Arc::clone(&run));
         self.wait_on_run(run, yield_time_ms, 0, |stdout| {
             CommandResponse::running(id, stdout)
@@ -226,34 +217,34 @@ impl CommandOps {
         start_offset: u64,
         on_running: impl FnOnce(String) -> CommandResponse,
     ) -> CommandResponse {
-        match wait_for_yield(run.session(), &self.config, wait_ms, start_offset) {
+        match wait_for_yield(run.process(), &self.config, wait_ms, start_offset) {
             WaitOutcome::Completed(reaped) => self.finish_reaped(run, reaped, false),
             WaitOutcome::Running(stdout) => on_running(stdout),
         }
     }
 
-    pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandSessionError> {
+    pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandError> {
         if is_teardown_control(&request.chars) {
-            return self.cancel(CancelCommandSession {
+            return self.cancel(CancelCommand {
                 command_id: request.command_id,
             });
         }
         if contains_teardown_control(&request.chars) {
-            return Err(CommandSessionError::InvalidRequest(
-                "Ctrl-C/Ctrl-D must be sent alone to cancel command session".to_owned(),
+            return Err(CommandError::InvalidRequest(
+                "Ctrl-C/Ctrl-D must be sent alone to cancel command process".to_owned(),
             ));
         }
         let Some(run) = self.registry.get(&request.command_id) else {
-            return Err(CommandSessionError::NotFound(request.command_id));
+            return Err(CommandError::NotFound(request.command_id));
         };
         if request.chars.is_empty() {
-            return Err(CommandSessionError::InvalidRequest(
+            return Err(CommandError::InvalidRequest(
                 "chars must be non-empty".to_owned(),
             ));
         }
         let command_id = request.command_id.clone();
-        let start_offset = run.session().transcript_len();
-        run.session().write_process_stdin(&request.chars)?;
+        let start_offset = run.process().transcript_len();
+        run.process().write_process_stdin(&request.chars)?;
         Ok(
             self.wait_on_run(run, request.yield_time_ms, start_offset, |stdout| {
                 CommandResponse::running(command_id, stdout)
@@ -264,9 +255,9 @@ impl CommandOps {
     pub fn read_command_progress(
         &self,
         request: ReadCommandProgress,
-    ) -> Result<CommandResponse, CommandSessionError> {
+    ) -> Result<CommandResponse, CommandError> {
         if request.last_n_lines == 0 {
-            return Err(CommandSessionError::InvalidRequest(
+            return Err(CommandError::InvalidRequest(
                 "last_n_lines must be >= 1".to_owned(),
             ));
         }
@@ -275,31 +266,28 @@ impl CommandOps {
                 .registry
                 .completed_result(&request.command_id)
                 .map(|result| result.with_last_lines(request.last_n_lines))
-                .ok_or(CommandSessionError::NotFound(request.command_id));
+                .ok_or(CommandError::NotFound(request.command_id));
         };
-        if let Some(reaped) = run.session().reap() {
+        if let Some(reaped) = run.process().reap() {
             return Ok(self
                 .finish_reaped(run, reaped, false)
                 .with_last_lines(request.last_n_lines));
         }
         Ok(CommandResponse::running(
             request.command_id,
-            run.session().read_recent_output(request.last_n_lines),
+            run.process().read_recent_output(request.last_n_lines),
         ))
     }
 
-    pub fn cancel(
-        &self,
-        request: CancelCommandSession,
-    ) -> Result<CommandResponse, CommandSessionError> {
+    pub fn cancel(&self, request: CancelCommand) -> Result<CommandResponse, CommandError> {
         let Some(run) = self.registry.get(&request.command_id) else {
             return self
                 .registry
                 .take_completed_result(&request.command_id)
-                .ok_or(CommandSessionError::NotFound(request.command_id));
+                .ok_or(CommandError::NotFound(request.command_id));
         };
-        let start_offset = run.session().transcript_len();
-        run.session().cancel_process();
+        let start_offset = run.process().transcript_len();
+        run.process().cancel_process();
         Ok(
             self.wait_on_run(run, self.config.cancel_wait_ms, start_offset, |stdout| {
                 CommandResponse::cancelled(stdout)
@@ -317,7 +305,7 @@ impl CommandOps {
         self.registry.collect_completed(request)
     }
 
-    pub fn push_completed(&self, completion: CommandSessionCompletion) {
+    pub fn push_completed(&self, completion: CommandCompletion) {
         self.registry.push_completed(completion);
     }
 
@@ -327,7 +315,7 @@ impl CommandOps {
         if caller_id.is_empty() {
             return 0;
         }
-        self.cancel_and_drain(self.registry.caller_sessions(caller_id), grace_s)
+        self.cancel_and_drain(self.registry.caller_commands(caller_id), grace_s)
     }
 
     #[must_use]
@@ -340,14 +328,14 @@ impl CommandOps {
             return 0;
         }
         for run in &runs {
-            run.session().cancel_process();
+            run.process().cancel_process();
         }
         let cancel_wait_s = self.config.cancel_wait_ms as f64 / 1000.0;
         let wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
         let deadline = Instant::now() + Duration::from_secs_f64(wait_s);
         let mut pending = runs.clone();
         loop {
-            pending.retain(|run| match run.session().reap() {
+            pending.retain(|run| match run.process().reap() {
                 Some(reaped) => {
                     let _ = self.finish_reaped(Arc::clone(run), reaped, false);
                     false
@@ -360,7 +348,7 @@ impl CommandOps {
             std::thread::sleep(Duration::from_millis(10));
         }
         for run in pending {
-            if let Some(reaped) = run.session().reap() {
+            if let Some(reaped) = run.process().reap() {
                 let _ = self.finish_reaped(run, reaped, false);
             } else {
                 self.force_discard(&run);
@@ -370,7 +358,7 @@ impl CommandOps {
     }
 
     fn force_discard(&self, run: &Arc<ActiveCommand>) {
-        if self.registry.remove(run.session().id()).is_none() {
+        if self.registry.remove(run.process().id()).is_none() {
             return;
         }
         if let ActiveCommand::Ephemeral(ephemeral) = &**run {
@@ -381,12 +369,12 @@ impl CommandOps {
     pub fn sweep_expired(&self, now: Instant) {
         for run in self.registry.live() {
             if run
-                .session()
-                .is_past_deadline(now, self.config.max_session_s)
+                .process()
+                .is_past_deadline(now, self.config.max_command_s)
             {
-                run.session().time_out_process();
+                run.process().time_out_process();
             }
-            if let Some(reaped) = run.session().reap() {
+            if let Some(reaped) = run.process().reap() {
                 let publish_completion = reaped.kill != Some(KillReason::Cancelled);
                 let _ = self.finish_reaped(run, reaped, publish_completion);
             }
@@ -406,7 +394,7 @@ impl CommandOps {
             exit_code: Some(reaped.exit_code),
             stdout: reaped.stdout,
             stderr: String::new(),
-            command_id: Some(run.session().id().to_owned()),
+            command_id: Some(run.process().id().to_owned()),
         };
         let cancelled = reaped.kill.is_some();
         let outcome = match &*run {
@@ -436,13 +424,13 @@ impl CommandOps {
             Ok(response) => response,
             Err(error) => CommandResponse::error(error.to_string()),
         };
-        run.session().persist_final(&response.to_wire_value());
-        let command_id = run.session().id().to_owned();
-        let caller_id = run.session().caller_id().to_owned();
-        let command = run.session().command().to_owned();
+        run.process().persist_final(&response.to_wire_value());
+        let command_id = run.process().id().to_owned();
+        let caller_id = run.process().caller_id().to_owned();
+        let command = run.process().command().to_owned();
         self.registry.remove(&command_id);
         if publish_completion {
-            self.registry.push_completed(CommandSessionCompletion {
+            self.registry.push_completed(CommandCompletion {
                 command_id,
                 caller_id,
                 command,

@@ -11,6 +11,7 @@ import {
 import type { PursuitTransaction } from "@eos/db";
 
 import {
+  plannerFailureReason,
   propagateDependencyBlocks,
   reconcileAttemptStatus,
 } from "../attempt/transition.js";
@@ -83,7 +84,7 @@ export async function applyPlannerSettlement(
       .where("id", "=", planId)
       .execute();
     await reconcileAttemptStatus(trx, tree, scope, {
-      failureReasons: [settlement.reason],
+      failureReasons: [plannerFailureReason(settlement.reason)],
     });
     return;
   }

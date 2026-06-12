@@ -8,7 +8,7 @@ struct FakeWaitTarget {
     offsets: Mutex<Vec<u64>>,
 }
 
-impl CommandSessionWaitTarget<&'static str> for FakeWaitTarget {
+impl CommandWaitTarget<&'static str> for FakeWaitTarget {
     fn try_finalize(&self) -> Option<&'static str> {
         None
     }

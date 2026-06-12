@@ -10,13 +10,11 @@ mod service;
 mod settle;
 
 pub use contract::{
-    CollectCompletedOutput, CommandMetadata, CommandResponse, CommandSessionCompletion,
-    CommandStatus,
+    CollectCompletedOutput, CommandCompletion, CommandMetadata, CommandResponse, CommandStatus,
 };
 pub use outcome::{ChangedPathKinds, WorkspaceConflict, WorkspaceTimings};
 pub use runtime::{
-    active_command_sessions_for_caller, cancel_all_command_sessions,
-    cleanup_command_sessions_for_caller, command_ops, command_session_config,
-    command_session_scratch_root, configure_command_sessions,
+    active_commands_for_caller, cancel_all_commands, cleanup_commands_for_caller, command_config,
+    command_ops, command_scratch_root, configure_commands,
 };
 pub use service::{CommandOps, ExecTarget};

@@ -116,7 +116,7 @@ fn resource_report_smoke() -> Result<()> {
     }
 
     let final_metrics = wait_for_active_leases(&lease, 0)?;
-    let final_session_count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
+    let final_command_count = lease.call_ok(catalog::SANDBOX_COMMAND_COUNT, json!({}))?;
     let ready = lease.call_ok(catalog::SANDBOX_RUNTIME_READY, json!({}))?;
     assert!(as_bool(&ready, "ready")?, "{ready}");
     let plugin_status = lease.call_ok(catalog::SANDBOX_PLUGIN_STATUS, json!({}))?;
@@ -135,7 +135,7 @@ fn resource_report_smoke() -> Result<()> {
         "samples": samples,
         "leak_counters": {
             "active_leases": as_i64(&final_metrics, "active_leases")?,
-            "command_session_count": as_i64(&final_session_count, "count")?,
+            "command_count": as_i64(&final_command_count, "count")?,
             "open_isolated_callers": isolated_open
                 .get("open_caller_ids")
                 .and_then(Value::as_array)
@@ -154,7 +154,7 @@ fn resource_report_smoke() -> Result<()> {
         "resource report should include samples: {report}"
     );
     ensure_eq_zero(&report, "active_leases")?;
-    ensure_eq_zero(&report, "command_session_count")?;
+    ensure_eq_zero(&report, "command_count")?;
 
     let artifact_dir = workload.perf_artifact_dir;
     fs::create_dir_all(&artifact_dir)

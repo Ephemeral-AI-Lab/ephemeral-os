@@ -2,7 +2,7 @@ import {
   PlannerOutcomePayloadSchema,
   type JsonObject,
   type PlannerOutcomePayload,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
 } from "@eos/contracts";
 
 import type { ToolDefinition } from "../../contract.js";
@@ -10,7 +10,10 @@ import { defineTool } from "../../define.js";
 import { ADVISOR_PROMPT } from "../advisory_prompts/submit_planner_outcome_prompt.js";
 import { DESCRIPTION } from "../description_prompts/submit_planner_outcome_prompt.js";
 
-export type PlannerSubmissionBinding = Extract<SubmissionBinding, { kind: "planner" }>;
+export type PlannerPursuitAgentSubmissionBinding = Extract<
+  PursuitAgentSubmissionBinding,
+  { kind: "planner" }
+>;
 
 /**
  * The planner's terminal tool with its per-kind payload schema. Validation
@@ -22,7 +25,7 @@ export type PlannerSubmissionBinding = Extract<SubmissionBinding, { kind: "plann
  * rides the run outcome as `submission`.
  */
 export function submitPlannerOutcomeTool(
-  binding?: PlannerSubmissionBinding,
+  binding?: PlannerPursuitAgentSubmissionBinding,
 ): ToolDefinition {
   return defineTool({
     name: "submit_planner_outcome",

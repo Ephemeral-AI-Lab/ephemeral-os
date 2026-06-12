@@ -7,23 +7,23 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use std::path::PathBuf;
 
-use eos_command::session::Session;
+use eos_command::process::CommandProcess;
 use eos_command::CollectCompleted;
 use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
 use eos_workspace::IsolatedWorkspaceBinding;
 
-use super::contract::{CollectCompletedOutput, CommandResponse, CommandSessionCompletion};
+use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse};
 
 pub(crate) struct EphemeralRun {
-    pub(crate) session: Session,
+    pub(crate) process: CommandProcess,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
     pub(crate) workspace: EphemeralWorkspace,
 }
 
 pub(crate) struct IsolatedRun {
-    pub(crate) session: Session,
+    pub(crate) process: CommandProcess,
     pub(crate) binding: IsolatedWorkspaceBinding,
 }
 
@@ -33,10 +33,10 @@ pub(crate) enum ActiveCommand {
 }
 
 impl ActiveCommand {
-    pub(crate) fn session(&self) -> &Session {
+    pub(crate) fn process(&self) -> &CommandProcess {
         match self {
-            Self::Ephemeral(run) => &run.session,
-            Self::Isolated(run) => &run.session,
+            Self::Ephemeral(run) => &run.process,
+            Self::Isolated(run) => &run.process,
         }
     }
 }
@@ -45,7 +45,7 @@ const MAX_COMPLETED_ENTRIES: usize = 1024;
 
 struct CompletedEntry {
     seq: u64,
-    completion: CommandSessionCompletion,
+    completion: CommandCompletion,
 }
 
 #[derive(Default)]
@@ -73,12 +73,12 @@ impl CommandRegistry {
     }
 
     pub(crate) fn insert(&self, run: Arc<ActiveCommand>) {
-        let caller_id = run.session().caller_id().to_owned();
-        let session_id = run.session().id().to_owned();
+        let caller_id = run.process().caller_id().to_owned();
+        let command_id = run.process().id().to_owned();
         lock(&self.runs)
             .entry(caller_id)
             .or_default()
-            .insert(session_id, run);
+            .insert(command_id, run);
     }
 
     #[must_use]
@@ -119,14 +119,14 @@ impl CommandRegistry {
     }
 
     #[must_use]
-    pub(crate) fn caller_sessions(&self, caller_id: &str) -> Vec<Arc<ActiveCommand>> {
+    pub(crate) fn caller_commands(&self, caller_id: &str) -> Vec<Arc<ActiveCommand>> {
         lock(&self.runs)
             .get(caller_id)
             .map(|runs| runs.values().cloned().collect())
             .unwrap_or_default()
     }
 
-    pub(crate) fn push_completed(&self, completion: CommandSessionCompletion) {
+    pub(crate) fn push_completed(&self, completion: CommandCompletion) {
         let seq = self.completed_seq.fetch_add(1, Ordering::Relaxed);
         let mut completed = lock(&self.completed);
         completed.insert(

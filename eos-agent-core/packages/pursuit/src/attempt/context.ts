@@ -1,3 +1,5 @@
+import type { AttemptFailureReason } from "@eos/contracts";
+
 import type { EntityFieldFile } from "../work-item/context.js";
 import type { AttemptState } from "./state.js";
 
@@ -14,7 +16,9 @@ export function attemptFieldFiles(attempt: AttemptState): EntityFieldFile[] {
   if (attempt.status === "Failed" && attempt.failureReasons.length > 0) {
     files.push({
       name: "failure_reasons.md",
-      content: attempt.failureReasons.map((reason) => `- ${reason}`).join("\n"),
+      content: attempt.failureReasons
+        .map((reason) => `- ${formatAttemptFailureReason(reason)}`)
+        .join("\n"),
     });
   }
   if (attempt.status === "Success" || attempt.status === "Failed") {
@@ -37,6 +41,29 @@ export function composeAttemptOutcome(attempt: AttemptState): string {
       `- work_item_${item.id} [${item.status}]: ${item.summary ?? "(no summary)"}`,
   );
   return ["# Attempt outcome", ...rows].join("\n");
+}
+
+export function formatAttemptFailureReason(reason: AttemptFailureReason): string {
+  if (reason.kind === "failed" && reason.work_item_id !== null) {
+    return `work_item_${reason.work_item_id} [Failed]: ${reason.summary ?? reason.outcome ?? reason.message ?? "(no summary)"}`;
+  }
+  if (
+    reason.kind === "blocked_by_failed_dependency" &&
+    reason.work_item_id !== null
+  ) {
+    return `work_item_${reason.work_item_id} [Blocked]: ${reason.summary ?? reason.message ?? blockedByText(reason.blocked_by)}`;
+  }
+  if (reason.kind === "context_composition_failed") {
+    return `planner [Context composition failed]: ${reason.message ?? "(no message)"}`;
+  }
+  return `planner [Failed]: ${reason.message ?? "(no message)"}`;
+}
+
+function blockedByText(blockedBy: readonly string[] | undefined): string {
+  if (blockedBy === undefined || blockedBy.length === 0) {
+    return "blocked by failed dependency";
+  }
+  return `blocked by ${blockedBy.map((id) => `work_item_${id}`).join(", ")}`;
 }
 
 /**

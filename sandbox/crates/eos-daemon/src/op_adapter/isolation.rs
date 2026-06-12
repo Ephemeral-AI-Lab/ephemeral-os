@@ -35,12 +35,10 @@ pub(crate) fn op_enter(
             workspace_handle_id: handle.workspace_id.0,
             workspace_root: handle.workspace_root,
         }))),
-        Err(WorkspaceEnterError::ActiveCommandSessions {
-            active_command_sessions,
-        }) => Ok(refused_response(
+        Err(WorkspaceEnterError::ActiveCommands { active_commands }) => Ok(refused_response(
             "active_background_work",
-            "cannot enter isolated workspace while command sessions are active",
-            json!({"active_command_sessions": active_command_sessions}),
+            "cannot enter isolated workspace while commands are active",
+            json!({"active_commands": active_commands}),
         )),
         Err(WorkspaceEnterError::Isolated(error)) => Ok(error_payload(&error)),
     }
@@ -53,7 +51,7 @@ pub(crate) fn op_exit(
     let caller_id = input.caller.to_string();
     let workspace = &context.require_services()?.workspace;
     // Exit is the per-caller workspace-run teardown: discard the caller's
-    // isolated command sessions, then tear down its namespace + lease. The
+    // isolated commands, then tear down its namespace + lease. The
     // isolated exit result carries this op's response shape.
     workspace
         .cancel_runs_for_caller(&caller_id, input.grace_s)

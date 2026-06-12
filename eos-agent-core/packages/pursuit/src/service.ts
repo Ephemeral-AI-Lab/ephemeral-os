@@ -3,12 +3,13 @@ import {
   mintPursuitId,
   type AgentRunId,
   type DelegatePursuitInput,
+  DelegatePursuitInputSchema,
   type InitialUserMessage,
   type PlannerOutcomePayload,
   type PursuitHandle,
   type PursuitId,
   type PursuitSettlement,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
   type SubmissionResult,
   type WorkerOutcomePayload,
 } from "@eos/contracts";
@@ -22,6 +23,7 @@ import {
   type ClaimedLaunch,
   type LaunchSettlement,
 } from "./agent-launcher.js";
+import { formatAttemptFailureReason } from "./attempt/context.js";
 import type { ComposeLaunchContext } from "./context-engine/composer.js";
 import {
   buildPlannerContextInput,
@@ -78,6 +80,7 @@ export class PursuitService {
     input: DelegatePursuitInput,
     parentRunId: AgentRunId,
   ): Promise<PursuitHandle> {
+    const parsedInput = DelegatePursuitInputSchema.parse(input);
     const pursuitId = mintPursuitId();
     const active: ActivePursuit = {
       controller: new AbortController(),
@@ -88,12 +91,15 @@ export class PursuitService {
       createPursuitRows(trx, {
         pursuitId,
         parentRunId,
-        input,
+        input: parsedInput,
         maxAttempts:
-          input.max_attempts ?? this.#deps.defaultMaxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+          parsedInput.max_attempts ??
+          this.#deps.defaultMaxAttempts ??
+          DEFAULT_MAX_ATTEMPTS,
       }),
     );
-    const goalLine = input.pursuit_goal.split("\n", 1)[0] ?? input.pursuit_goal;
+    const goalLine =
+      parsedInput.pursuit_goal.split("\n", 1)[0] ?? parsedInput.pursuit_goal;
     return {
       pursuit_id: pursuitId,
       terminal: active.terminal.promise,
@@ -218,7 +224,10 @@ export class PursuitService {
       .catch(() => undefined);
   }
 
-  #buildBinding(pursuitId: PursuitId, claim: ClaimedLaunch): SubmissionBinding {
+  #buildBinding(
+    pursuitId: PursuitId,
+    claim: ClaimedLaunch,
+  ): PursuitAgentSubmissionBinding {
     if (claim.kind === "plan") {
       return {
         kind: "planner",
@@ -431,7 +440,7 @@ function terminalSummary(tree: PursuitTree, cancelReason?: string): string {
         .reverse()
         .flatMap((leg) => [...leg.attempts].reverse())
         .find((attempt) => attempt.failureReasons.length > 0)?.failureReasons;
-      return reasons?.[0] ?? "pursuit failed";
+      return reasons?.[0] ? formatAttemptFailureReason(reasons[0]) : "pursuit failed";
     }
     default:
       return cancelReason ?? "pursuit cancelled";

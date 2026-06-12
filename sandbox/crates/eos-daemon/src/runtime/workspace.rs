@@ -1,16 +1,16 @@
-//! Isolated-workspace runtime: lease custody, session lifecycle, TTL sweep
+//! Isolated-workspace runtime: lease custody, command lifecycle, TTL sweep
 //! policy, and the caller-keyed workspace-run cancel coordinator.
 //!
 //! The daemon composes this service: it parses wire args, calls one
 //! [`WorkspaceRuntime`] method, and shapes one response. This crate owns the
 //! cross-domain workspace-run policy: when leases are acquired and released,
 //! when sessions are torn down, and in what order — while namespace mechanics
-//! stay in `eos-workspace` and command-session internals stay in
+//! stay in `eos-workspace` and command internals stay in
 //! `eos_operation::command`. State lives on a [`WorkspaceRuntime`] instance, never in
 //! process globals.
 //!
 //! Lock-order discipline: the workspace state lock is acquired before any
-//! command-session registry call, and the manager's own exit path runs under
+//! command registry call, and the manager's own exit path runs under
 //! the state lock exactly as the pre-extraction daemon implementation did.
 
 #![forbid(unsafe_code)]
@@ -93,8 +93,8 @@ pub struct ExitOutcome {
 
 /// Outcome of tearing down one caller's workspace runs.
 pub struct CallerCancel {
-    /// Command sessions that were live at entry (now cancelled + discarded).
-    pub cancelled_sessions: usize,
+    /// Commands that were live at entry (now cancelled + discarded).
+    pub cancelled_commands: usize,
     /// Isolated-workspace teardown result: the typed exit outcome if the
     /// caller was isolated, `Err(IsolatedError::NotOpen)` if it was ephemeral
     /// (or had no isolated workspace), or another `IsolatedError` on teardown
@@ -105,11 +105,11 @@ pub struct CallerCancel {
 /// Failures from opening an isolated workspace through [`WorkspaceRuntime`].
 #[derive(Debug, thiserror::Error)]
 pub enum WorkspaceEnterError {
-    /// The caller has live command sessions and cannot switch workspace mode.
-    #[error("cannot enter isolated workspace while command sessions are active")]
-    ActiveCommandSessions {
-        /// Live command sessions for this caller.
-        active_command_sessions: usize,
+    /// The caller has live commands and cannot switch workspace mode.
+    #[error("cannot enter isolated workspace while commands are active")]
+    ActiveCommands {
+        /// Live commands for this caller.
+        active_commands: usize,
     },
     /// The isolated-workspace lifecycle failed.
     #[error(transparent)]
@@ -138,20 +138,17 @@ impl WorkspaceRuntime {
     ///
     /// # Errors
     ///
-    /// Returns [`WorkspaceEnterError::ActiveCommandSessions`] when the caller
-    /// has live command sessions, [`IsolatedError::FeatureDisabled`] when
+    /// Returns [`WorkspaceEnterError::ActiveCommands`] when the caller
+    /// has live commands, [`IsolatedError::FeatureDisabled`] when
     /// isolation is disabled, and the manager's enter/setup errors otherwise.
     pub fn enter(
         &self,
         caller_id: &str,
         root: &Path,
     ) -> Result<WorkspaceHandle, WorkspaceEnterError> {
-        let active_command_sessions =
-            eos_operation::command::active_command_sessions_for_caller(caller_id);
-        if active_command_sessions > 0 {
-            return Err(WorkspaceEnterError::ActiveCommandSessions {
-                active_command_sessions,
-            });
+        let active_commands = eos_operation::command::active_commands_for_caller(caller_id);
+        if active_commands > 0 {
+            return Err(WorkspaceEnterError::ActiveCommands { active_commands });
         }
         self.ensure_state(root)?;
         Ok(self.with_state(|state| {
@@ -225,7 +222,7 @@ impl WorkspaceRuntime {
             .is_some()
     }
 
-    /// The command-session binding for `caller_id`'s open workspace, or `None`
+    /// The command binding for `caller_id`'s open workspace, or `None`
     /// when the caller is not isolated (callers then route ephemerally).
     #[must_use]
     pub fn command_binding_for(&self, caller_id: &str) -> Option<IsolatedWorkspaceBinding> {
@@ -238,27 +235,27 @@ impl WorkspaceRuntime {
         Some(command_binding_from(&state.layer_stack_root, handle))
     }
 
-    /// Cancel every workspace run owned by `caller_id`: discard its command
-    /// session(s), then exit its isolated workspace if open. The order matters
-    /// — sessions are cancelled before the isolated namespace/lease teardown.
+    /// Cancel every workspace run owned by `caller_id`: discard its commands,
+    /// then exit its isolated workspace if open. The order matters: commands
+    /// are cancelled before the isolated namespace/lease teardown.
     pub fn cancel_runs_for_caller(&self, caller_id: &str, grace_s: Option<f64>) -> CallerCancel {
-        let cancelled_sessions =
-            eos_operation::command::cleanup_command_sessions_for_caller(caller_id, grace_s);
+        let cancelled_commands =
+            eos_operation::command::cleanup_commands_for_caller(caller_id, grace_s);
         let isolated = self.exit(caller_id, grace_s);
         CallerCancel {
-            cancelled_sessions,
+            cancelled_commands,
             isolated,
         }
     }
 
-    /// Cancel every workspace run in the sandbox: discard all command
-    /// sessions, exit every isolated caller, then reap orphaned namespace/
+    /// Cancel every workspace run in the sandbox: discard all commands, exit
+    /// every isolated caller, then reap orphaned namespace/
     /// cgroup/scratch resources. Returns the per-substrate counts as
-    /// `(cancelled_sessions, isolated_callers_exited)`.
+    /// `(cancelled_commands, isolated_callers_exited)`.
     pub fn cancel_all_runs(&self, grace_s: Option<f64>) -> (usize, usize) {
-        let cancelled_sessions = eos_operation::command::cancel_all_command_sessions(grace_s);
+        let cancelled_commands = eos_operation::command::cancel_all_commands(grace_s);
         let isolated_exited = self.exit_all_and_reap(grace_s);
-        (cancelled_sessions, isolated_exited)
+        (cancelled_commands, isolated_exited)
     }
 
     /// Exit every open isolated workspace and reap orphaned resources (the
@@ -277,19 +274,19 @@ impl WorkspaceRuntime {
     }
 
     /// Evict idle isolated workspaces past their TTL, releasing their leases.
-    /// Callers that still own a live command session are protected.
+    /// Callers that still own a live command are protected.
     pub fn ttl_sweep(&self) -> usize {
         let mut guard = self.lock_state_cell();
         let Some(state) = guard.as_mut() else {
             return 0;
         };
-        // The command-session registry is the authority for caller liveness
-        // (lock order: workspace state -> command-session registry).
+        // The command registry is the authority for caller liveness
+        // (lock order: workspace state -> command registry).
         let active_callers = state
             .manager
             .list_open_callers()
             .into_iter()
-            .filter(|caller| eos_operation::command::active_command_sessions_for_caller(caller) > 0)
+            .filter(|caller| eos_operation::command::active_commands_for_caller(caller) > 0)
             .collect::<HashSet<_>>();
         let evicted = state.manager.ttl_sweep(&active_callers);
         let count = evicted.len();
@@ -332,8 +329,8 @@ impl WorkspaceRuntime {
                 if state.layer_stack_root != root {
                     // Block rebinding to a new root only while an isolated workspace
                     // is open: those handles pin leases/namespaces on the old root.
-                    // (Isolated command sessions belong to an open caller, so this
-                    // already covers them; ephemeral command sessions are unrelated
+                    // (Isolated commands belong to an open caller, so this
+                    // already covers them; ephemeral commands are unrelated
                     // to the isolated manager's binding and must not block a rebind.)
                     let open_callers = state.manager.list_open_callers();
                     if !open_callers.is_empty() {

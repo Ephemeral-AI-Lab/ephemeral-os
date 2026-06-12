@@ -1,7 +1,7 @@
 import {
   WorkerOutcomePayloadSchema,
   type JsonObject,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
 } from "@eos/contracts";
 
 import type { ToolDefinition } from "../../contract.js";
@@ -9,7 +9,10 @@ import { defineTool } from "../../define.js";
 import { ADVISOR_PROMPT } from "../advisory_prompts/submit_worker_outcome_prompt.js";
 import { DESCRIPTION } from "../description_prompts/submit_worker_outcome_prompt.js";
 
-export type WorkerSubmissionBinding = Extract<SubmissionBinding, { kind: "worker" }>;
+export type WorkerPursuitAgentSubmissionBinding = Extract<
+  PursuitAgentSubmissionBinding,
+  { kind: "worker" }
+>;
 
 /**
  * The worker's terminal tool with its per-kind payload schema. A
@@ -19,7 +22,7 @@ export type WorkerSubmissionBinding = Extract<SubmissionBinding, { kind: "worker
  * run outcome as `submission`.
  */
 export function submitWorkerOutcomeTool(
-  binding?: WorkerSubmissionBinding,
+  binding?: WorkerPursuitAgentSubmissionBinding,
 ): ToolDefinition {
   return defineTool({
     name: "submit_worker_outcome",

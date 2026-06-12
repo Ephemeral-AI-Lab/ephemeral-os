@@ -2,7 +2,7 @@ use serde_json::json;
 
 use eos_command::{CollectCompleted, ReadCommandProgress};
 use eos_operation::command::contract::{
-    CancelCommandInput, CommandResponse, CommandSessionCompletion, CommandStatus, ExecCommandInput,
+    CancelCommandInput, CommandCompletion, CommandResponse, CommandStatus, ExecCommandInput,
     ReadProgressInput, WriteStdinInput,
 };
 use eos_operation::control::contract::CallerCountInput;
@@ -93,7 +93,7 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 }
 
 #[test]
-fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
+fn command_completion_result_can_be_read_by_progress_tool() -> TestResult {
     let manager = eos_operation::command::CommandOps::new(eos_command::CommandConfig::default());
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
     manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
@@ -128,8 +128,8 @@ fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResul
 }
 
 #[test]
-fn command_session_count_uses_runtime_manager() -> TestResult {
-    let response = op_command_session_count(
+fn command_count_uses_runtime_manager() -> TestResult {
+    let response = op_command_count(
         parse_count_input(json!({"caller_id": "no-live-session"})),
         DispatchContext::empty(),
     );
@@ -141,12 +141,11 @@ fn command_session_count_uses_runtime_manager() -> TestResult {
 }
 
 #[test]
-fn command_session_read_progress_returns_completed_result_when_live_session_is_gone() -> TestResult
-{
+fn command_read_progress_returns_completed_result_when_live_command_is_gone() -> TestResult {
     let id = "cmd_progress_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
-    let response = command_session_read_progress(
+    let response = command_read_progress(
         parse_read_progress_input(json!({"command_id": id, "last_n_lines": 1})),
         DispatchContext::empty(),
     )?;
@@ -162,26 +161,26 @@ fn command_session_read_progress_returns_completed_result_when_live_session_is_g
 }
 
 #[test]
-fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult {
+fn command_write_stdin_does_not_claim_parked_completion() -> TestResult {
     let id = "cmd_stdin_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "written\n"));
 
-    let response = command_session_write_stdin(
+    let response = command_write_stdin(
         parse_write_stdin_input(json!({"command_id": id, "chars": "ignored"})),
         DispatchContext::empty(),
     )?;
 
     assert_eq!(response["status"], "error");
-    assert_eq!(response["output"]["stderr"], "command_session_not_found");
+    assert_eq!(response["output"]["stderr"], "command_not_found");
     Ok(())
 }
 
 #[test]
-fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -> TestResult {
-    let id = "command_session_cancel_done_unit";
+fn command_cancel_returns_completed_result_when_live_command_is_gone() -> TestResult {
+    let id = "command_cancel_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "already-finished\n"));
 
-    let response = command_session_cancel(
+    let response = command_cancel(
         parse_cancel_input(json!({"command_id": id})),
         DispatchContext::empty(),
     )?;
@@ -206,8 +205,8 @@ fn parse_exec_input(
 }
 
 fn parse_count_input(args: serde_json::Value) -> CallerCountInput {
-    match OpRequest::parse(BuiltinOp::CommandSessionCount, &args).expect("valid count input") {
-        OpRequest::CommandSessionCount(input) => input,
+    match OpRequest::parse(BuiltinOp::CommandCount, &args).expect("valid count input") {
+        OpRequest::CommandCount(input) => input,
         _ => unreachable!("count op parses to count input"),
     }
 }
@@ -233,7 +232,7 @@ fn parse_cancel_input(args: serde_json::Value) -> CancelCommandInput {
     }
 }
 
-fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCompletion {
+fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandCompletion {
     let result = CommandResponse {
         status: CommandStatus::Ok,
         exit_code: Some(0),
@@ -242,7 +241,7 @@ fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCom
         command_id: Some(CommandId::new(id.to_owned())),
         settled: None,
     };
-    CommandSessionCompletion {
+    CommandCompletion {
         command_id: id.to_owned(),
         caller_id: caller_id.to_owned(),
         command: "test".to_owned(),

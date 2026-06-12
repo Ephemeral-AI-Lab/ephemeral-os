@@ -7,7 +7,7 @@ pub use crate::{
     WorkspaceKind, WorkspaceTimings,
 };
 
-impl From<WorkspaceApiError> for eos_command::CommandSessionError {
+impl From<WorkspaceApiError> for eos_command::CommandError {
     fn from(error: WorkspaceApiError) -> Self {
         Self::Workspace(error.to_string())
     }

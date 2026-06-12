@@ -10,7 +10,7 @@ import {
   type LegId,
   type JsonValue,
   type PlanId,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
   type WorkItemId,
   type PursuitId,
 } from "@eos/contracts";
@@ -34,7 +34,7 @@ export interface LaunchedAgent {
 
 export interface AgentLaunchOptions {
   /** The §2.19 entity-bound submission seam for the child's terminal tool. */
-  submission?: SubmissionBinding;
+  submission?: PursuitAgentSubmissionBinding;
   /** The shared pursuit cancellation signal (§2.21). */
   signal?: AbortSignal;
   /** The delegating run, stamped as the child's parent. */

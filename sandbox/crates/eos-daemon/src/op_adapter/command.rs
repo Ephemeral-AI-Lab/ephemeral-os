@@ -1,19 +1,16 @@
-//! Command-session dispatcher handlers, driving the caller-keyed
+//! Command dispatcher handlers, driving the caller-keyed
 //! command runtime in `eos_operation::command`.
 
 use std::path::PathBuf;
 
 use eos_command::{
-    CancelCommandSession, CollectCompleted, CommandSessionError, ReadCommandProgress,
-    StartCommandSession, WriteStdin,
+    CancelCommand, CollectCompleted, CommandError, ReadCommandProgress, StartCommand, WriteStdin,
 };
 use eos_operation::command::contract::{
-    CancelCommandInput, CollectCompletedInput, CommandResponse, CommandSessionCountOutput,
-    CommandStatus, ExecCommandInput, ReadProgressInput, WriteStdinInput,
+    CancelCommandInput, CollectCompletedInput, CommandCountOutput, CommandResponse, CommandStatus,
+    ExecCommandInput, ReadProgressInput, WriteStdinInput,
 };
-use eos_operation::command::{
-    command_ops, command_session_config, command_session_scratch_root, ExecTarget,
-};
+use eos_operation::command::{command_config, command_ops, command_scratch_root, ExecTarget};
 use eos_operation::control::contract::CallerCountInput;
 use serde_json::Value;
 use thiserror::Error;
@@ -42,15 +39,15 @@ enum CommandOpError {
     #[error(transparent)]
     LayerStack(#[from] eos_layerstack::LayerStackError),
     #[error(transparent)]
-    Command(#[from] CommandSessionError),
+    Command(#[from] CommandError),
 }
 
-/// `sandbox.command.exec` — command-session start contract.
+/// `sandbox.command.exec` - command start contract.
 pub(crate) fn op_exec_command(
     input: ExecCommandInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let command_config = command_session_config();
+    let command_config = command_config();
     let timeout_seconds = Some(exec_timeout_seconds(&input, &command_config));
     let yield_time_ms = input
         .yield_time_ms
@@ -97,7 +94,7 @@ fn exec_command(
     {
         return command_ops()
             .exec_command(
-                StartCommandSession {
+                StartCommand {
                     invocation_id,
                     caller_id: binding.caller_id.clone(),
                     cmd,
@@ -115,7 +112,7 @@ fn exec_command(
     let binding = eos_layerstack::require_workspace_binding(&root)?;
     command_ops()
         .exec_command(
-            StartCommandSession {
+            StartCommand {
                 invocation_id,
                 caller_id,
                 cmd,
@@ -125,7 +122,7 @@ fn exec_command(
             ExecTarget::Ephemeral {
                 root,
                 workspace_root: PathBuf::from(binding.workspace_root),
-                scratch_root: command_session_scratch_root(),
+                scratch_root: command_scratch_root(),
             },
         )
         .map_err(CommandOpError::Command)
@@ -140,20 +137,17 @@ pub(crate) fn op_command_collect_completed(
         .to_wire_value()
 }
 
-pub(crate) fn op_command_session_count(
-    input: CallerCountInput,
-    _context: DispatchContext<'_>,
-) -> Value {
+pub(crate) fn op_command_count(input: CallerCountInput, _context: DispatchContext<'_>) -> Value {
     let caller_id = input.caller.to_string();
     let count = command_ops().count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
-    to_wire_value(CommandSessionCountOutput {
+    to_wire_value(CommandCountOutput {
         success: true,
         caller_id,
         count,
     })
 }
 
-pub(crate) fn command_session_write_stdin(
+pub(crate) fn command_write_stdin(
     input: WriteStdinInput,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
@@ -162,12 +156,12 @@ pub(crate) fn command_session_write_stdin(
         chars: input.chars,
         yield_time_ms: input
             .yield_time_ms
-            .unwrap_or(command_session_config().default_yield_time_ms),
+            .unwrap_or(command_config().default_yield_time_ms),
     };
-    command_session_response_to_wire(command_ops().write_stdin(request))
+    command_response_to_wire(command_ops().write_stdin(request))
 }
 
-pub(crate) fn command_session_read_progress(
+pub(crate) fn command_read_progress(
     input: ReadProgressInput,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
@@ -175,30 +169,30 @@ pub(crate) fn command_session_read_progress(
         command_id: input.command_id.to_string(),
         last_n_lines: input.last_n_lines,
     };
-    command_session_response_to_wire(command_ops().read_command_progress(request))
+    command_response_to_wire(command_ops().read_command_progress(request))
 }
 
-pub(crate) fn command_session_cancel(
+pub(crate) fn command_cancel(
     input: CancelCommandInput,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = CancelCommandSession {
+    let request = CancelCommand {
         command_id: input.command_id.to_string(),
     };
-    command_session_response_to_wire(command_ops().cancel(request))
+    command_response_to_wire(command_ops().cancel(request))
 }
 
-fn command_session_response_to_wire(
-    response: Result<CommandResponse, CommandSessionError>,
+fn command_response_to_wire(
+    response: Result<CommandResponse, CommandError>,
 ) -> Result<Value, DaemonError> {
     match response {
         Ok(response) => Ok(response.to_wire_value()),
         // The not-found synthetic is not an error response; it stays a
         // CommandResponse-shaped output.
-        Err(CommandSessionError::NotFound(_)) => {
-            Ok(CommandResponse::error("command_session_not_found").to_wire_value())
+        Err(CommandError::NotFound(_)) => {
+            Ok(CommandResponse::error("command_not_found").to_wire_value())
         }
-        Err(error) => Err(command_session_error(error)),
+        Err(error) => Err(command_error(error)),
     }
 }
 
@@ -209,9 +203,9 @@ fn strip_command_id(mut response: Value) -> Value {
     response
 }
 
-fn command_session_error(error: CommandSessionError) -> DaemonError {
+fn command_error(error: CommandError) -> DaemonError {
     match error {
-        CommandSessionError::Io(message) => DaemonError::OverlayPipeline(message),
+        CommandError::Io(message) => DaemonError::OverlayPipeline(message),
         other => DaemonError::InvalidRequest(other.to_string()),
     }
 }
@@ -222,7 +216,7 @@ fn command_op_error(error: CommandOpError) -> DaemonError {
             DaemonError::InvalidRequest("layer_stack_root is required".to_owned())
         }
         CommandOpError::LayerStack(error) => DaemonError::LayerStack(error),
-        CommandOpError::Command(error) => command_session_error(error),
+        CommandOpError::Command(error) => command_error(error),
     }
 }
 

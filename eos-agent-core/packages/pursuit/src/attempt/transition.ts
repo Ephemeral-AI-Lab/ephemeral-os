@@ -1,4 +1,5 @@
 import {
+  type AttemptFailureReason,
   isPursuitEntityTerminal,
   mintAttemptId,
   type AttemptId,
@@ -10,7 +11,7 @@ import type { PursuitTransaction } from "@eos/db";
 
 import { reconcileLeg } from "../leg/transition.js";
 import { cancelPlan, createPlan } from "../plan/transition.js";
-import { encodeStringList, type PursuitTree } from "../pursuit-tree.js";
+import { encodeFailureReasons, type PursuitTree } from "../pursuit-tree.js";
 import { cancelWorkItem } from "../work-item/transition.js";
 
 export interface AttemptScope {
@@ -39,7 +40,7 @@ export async function createAttempt(
       sequence,
       leg_goal_version: leg.leg_goal_version,
       status: "NotStarted",
-      failure_reasons: encodeStringList([]),
+      failure_reasons: encodeFailureReasons([]),
       created_at: now,
       updated_at: now,
     })
@@ -55,7 +56,19 @@ export interface AttemptRef {
 }
 
 export interface AttemptSettlementContext {
-  failureReasons?: readonly string[];
+  failureReasons?: readonly AttemptFailureReason[];
+}
+
+export function plannerFailureReason(message: string): AttemptFailureReason {
+  return {
+    work_item_id: null,
+    kind: message.startsWith("context_script_error:")
+      ? "context_composition_failed"
+      : "planner_failed",
+    message,
+    summary: null,
+    outcome: null,
+  };
 }
 
 export async function propagateDependencyBlocks(
@@ -78,20 +91,23 @@ export async function propagateDependencyBlocks(
       .where("leg_id", "=", attempt.leg_id)
       .where("leg_goal_version", "=", attempt.leg_goal_version)
       .execute();
-    const statusOf = new Map(
-      allVersionItems.map((item) => [String(item.id), item.status]),
-    );
-    for (const item of allVersionItems) {
-      if (item.attempt_id !== attemptId || item.status !== "NotStarted") continue;
-      const dependsOn = decodeDependsOn(item.depends_on);
-      if (!dependsOn.some((id) => dependencyBlocks(statusOf.get(id)))) continue;
-      await trx
-        .updateTable("work_items")
-        .set({
-          status: "Blocked",
-          worker_summary: "blocked by failed dependency",
-          updated_at: new Date().toISOString(),
-        })
+      const statusOf = new Map(
+        allVersionItems.map((item) => [String(item.id), item.status]),
+      );
+      for (const item of allVersionItems) {
+        if (item.attempt_id !== attemptId || item.status !== "NotStarted") continue;
+        const dependsOn = decodeDependsOn(item.depends_on);
+        const blockedBy = dependsOn.filter((id) => dependencyBlocks(statusOf.get(id)));
+        if (blockedBy.length === 0) continue;
+        const summary = blockedSummary(blockedBy);
+        await trx
+          .updateTable("work_items")
+          .set({
+            status: "Blocked",
+            worker_summary: summary,
+            worker_outcome: summary,
+            updated_at: new Date().toISOString(),
+          })
         .where("id", "=", item.id)
         .execute();
       changed = true;
@@ -119,15 +135,23 @@ export async function reconcileAttemptStatus(
     .executeTakeFirst();
   const items = await trx
     .selectFrom("work_items")
-    .select(["id", "status", "worker_summary"])
+    .select(["id", "status", "worker_summary", "worker_outcome", "depends_on"])
     .where("attempt_id", "=", ref.attemptId)
     .execute();
+  const versionItems = await trx
+    .selectFrom("work_items")
+    .select(["id", "status"])
+    .where("leg_id", "=", attempt.leg_id)
+    .where("leg_goal_version", "=", attempt.leg_goal_version)
+    .execute();
+  const statusOf = new Map(versionItems.map((item) => [String(item.id), item.status]));
 
   let next: "Success" | "Failed" | undefined;
-  let failureReasons: readonly string[] = [];
+  let failureReasons: readonly AttemptFailureReason[] = [];
   if (plan?.status === "Failed") {
     next = "Failed";
-    failureReasons = context.failureReasons ?? ["planner failed without a submission"];
+    failureReasons =
+      context.failureReasons ?? [plannerFailureReason("planner failed without a submission")];
   } else if (
     plan?.status === "Success" &&
     items.length > 0 &&
@@ -140,7 +164,8 @@ export async function reconcileAttemptStatus(
     items.every((item) => item.status !== "Running" && item.status !== "NotStarted")
   ) {
     next = "Failed";
-    failureReasons = context.failureReasons ?? itemFailureReasons(items);
+    failureReasons = itemFailureReasons(items, statusOf);
+    if (failureReasons.length === 0) failureReasons = context.failureReasons ?? [];
   }
 
   if (next === undefined) return;
@@ -150,7 +175,7 @@ export async function reconcileAttemptStatus(
     .updateTable("attempts")
     .set({
       status: next,
-      failure_reasons: encodeStringList(failureReasons),
+      failure_reasons: encodeFailureReasons(failureReasons),
       updated_at: now,
     })
     .where("id", "=", ref.attemptId)
@@ -219,16 +244,44 @@ function dependencyBlocks(status: WorkItemRunStatus | undefined): boolean {
   return status === "Failed" || status === "Blocked";
 }
 
+function blockedSummary(blockedBy: readonly string[]): string {
+  return `blocked by ${blockedBy.map((id) => `work_item_${id}`).join(", ")}`;
+}
+
 function itemFailureReasons(
-  items: readonly { id: string; status: WorkItemRunStatus; worker_summary: string | null }[],
-): string[] {
+  items: readonly {
+    id: string;
+    status: WorkItemRunStatus;
+    worker_summary: string | null;
+    worker_outcome: string | null;
+    depends_on: string;
+  }[],
+  statusOf: ReadonlyMap<string, WorkItemRunStatus>,
+): AttemptFailureReason[] {
   return items
     .filter((item) => item.status === "Failed" || item.status === "Blocked")
-    .map((item) =>
-      item.status === "Blocked"
-        ? `work_item ${item.id} blocked by failed dependency`
-        : `work_item ${item.id} failed: ${item.worker_summary ?? "no summary"}`,
-    );
+    .map((item) => {
+      if (item.status === "Blocked") {
+        const blockedBy = decodeDependsOn(item.depends_on).filter((id) =>
+          dependencyBlocks(statusOf.get(id)),
+        );
+        return {
+          work_item_id: item.id,
+          kind: "blocked_by_failed_dependency" as const,
+          message: blockedBy.length > 0 ? blockedSummary(blockedBy) : null,
+          summary: item.worker_summary,
+          outcome: item.worker_outcome,
+          ...(blockedBy.length > 0 && { blocked_by: blockedBy }),
+        };
+      }
+      return {
+        work_item_id: item.id,
+        kind: "failed" as const,
+        message: null,
+        summary: item.worker_summary,
+        outcome: item.worker_outcome,
+      };
+    });
 }
 
 function decodeDependsOn(raw: string): string[] {

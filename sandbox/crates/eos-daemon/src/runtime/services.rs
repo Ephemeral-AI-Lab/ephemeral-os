@@ -19,12 +19,12 @@ pub(crate) mod sweepers {
         workspace.ttl_sweep()
     }
 
-    pub(crate) fn sweep_command_sessions() {
-        eos_operation::command::runtime::command_session_reaper_sweep();
+    pub(crate) fn sweep_commands() {
+        eos_operation::command::runtime::command_reaper_sweep();
     }
 
-    pub(crate) fn recover_orphaned_command_sessions() {
-        eos_operation::command::runtime::recover_orphaned_command_sessions();
+    pub(crate) fn recover_orphaned_commands() {
+        eos_operation::command::runtime::recover_orphaned_commands();
     }
 }
 

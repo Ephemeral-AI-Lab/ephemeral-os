@@ -1,420 +1,337 @@
-use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Write};
-use std::os::unix::process::{CommandExt, ExitStatusExt};
+//! One command process: the child process, PTY transcript, kill/reap state,
+//! and final-response persistence.
+
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitStatus, Stdio};
-use std::sync::{mpsc, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use nix::sys::signal::{killpg, Signal};
-use nix::unistd::Pid;
-use rustix::event::{poll, PollFd, PollFlags};
-use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
-#[cfg(target_os = "linux")]
-use rustix::pty::ioctl_tiocgptpeer;
-#[cfg(not(target_os = "linux"))]
-use rustix::pty::ptsname;
-use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 use serde_json::Value;
 
-use crate::transcript::TranscriptTimestampPrefixer;
+pub use crate::pty::KillReason;
 
-/// Cap on how long a single `write_stdin` pushes bytes into the PTY before
-/// returning a structured backpressure error. The master is non-blocking, so a
-/// consumer that never drains its stdin cannot wedge the writer past this bound.
-const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
+use crate::pty::{
+    spawn_current_exe_ns_runner, CommandCompletionStatus, CommandRunnerResult, ProcessReap,
+    PtyProcess,
+};
+use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
+use crate::yield_wait_loop::CommandWaitTarget;
+use crate::CommandError;
 
-pub struct CommandSessionProcess {
-    pgid: Option<i32>,
-    writer: Mutex<File>,
-    reader_done: Mutex<Option<mpsc::Receiver<()>>>,
-    child: Mutex<Option<Child>>,
+#[cfg(test)]
+#[path = "../tests/unit/process.rs"]
+mod tests;
+
+/// PTY/process substrate for one command. It owns the child process, transcript,
+/// and cancel flag, but no workspace policy: the run that owns this process
+/// decides publish-vs-discard.
+pub struct CommandProcess {
+    id: String,
+    caller_id: String,
+    command: String,
+    started_at: Instant,
+    timeout: Option<Duration>,
+    runtime: CommandProcessRuntime,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CommandProcessExit {
-    exit_code: Option<i64>,
+pub struct CommandProcessSpec {
+    pub id: String,
+    pub caller_id: String,
+    pub command: String,
+    pub timeout_seconds: Option<f64>,
 }
 
-impl CommandProcessExit {
-    #[must_use]
-    pub fn unwaitable() -> Self {
-        Self { exit_code: None }
-    }
-
-    #[must_use]
-    pub fn from_status(status: ExitStatus) -> Self {
-        let exit_code = status
-            .code()
-            .map(i64::from)
-            .or_else(|| status.signal().map(|signal| -i64::from(signal)));
-        Self { exit_code }
-    }
-
-    #[must_use]
-    pub const fn exit_code(self) -> Option<i64> {
-        self.exit_code
-    }
+pub struct CommandProcessSpawn<'a> {
+    pub run_request: Value,
+    pub request_path: PathBuf,
+    pub output_path: PathBuf,
+    pub final_path: PathBuf,
+    pub transcript_path: PathBuf,
+    pub transcript_timestamp_timezone: &'a str,
+    pub output_drain_grace_ms: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ProcessReap {
-    Running,
-    Exited(CommandProcessExit),
+/// The raw, policy-free result of reaping a finished command process. The
+/// substrate produces this; the owning workspace run turns it into a
+/// rendered operation response by publishing (complete) or discarding (cancel).
+/// Keeping the publish/discard decision out of the process is the structural
+/// guarantee that a cancelled command never reaches the OCC merge.
+#[derive(Debug, Clone)]
+pub struct ReapedCommand {
+    pub status: String,
+    pub exit_code: i64,
+    pub runner_result: Option<Value>,
+    pub stdout: String,
+    pub elapsed_s: f64,
+    /// Why the substrate killed this process, if it did. `None` is a natural
+    /// exit; `Some(_)` means a kill (cancel or timeout) and the owning run
+    /// DISCARDS rather than publishes.
+    pub kill: Option<KillReason>,
 }
 
-/// Why the substrate killed a command session's process group. The owning run
-/// maps this to the final status — `Cancelled` → "cancelled"/130, `TimedOut` →
-/// "timed_out"/124 — and either reason DISCARDS the overlay (a killed command
-/// never OCC-merges).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KillReason {
-    /// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).
-    Cancelled,
-    /// The session exceeded its deadline and the reaper killed it as a backstop.
-    TimedOut,
+struct RunningCommandProcessParts {
+    process: PtyProcess,
+    output_path: PathBuf,
+    final_path: PathBuf,
+    transcript_path: PathBuf,
+    output_drain_grace_ms: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct CommandCompletionStatus {
-    status: String,
-    exit_code: i64,
+/// Per-command process state: the child, its paths, and the kill/reap flags.
+struct CommandProcessRuntime {
+    process: PtyProcess,
+    output_path: PathBuf,
+    final_path: PathBuf,
+    transcript_path: PathBuf,
+    /// Why this process was killed, if it has been. Set once by `cancel_process`
+    /// (user cancel) or `time_out_process` (deadline backstop); a user cancel
+    /// wins, so a cancelled command is never relabeled as timed-out.
+    kill: Mutex<Option<KillReason>>,
+    output_drain_grace_ms: u64,
+    /// Reaped-once guard so two pollers can't both finalize the same child.
+    reaped: Mutex<bool>,
 }
 
-impl CommandCompletionStatus {
-    #[must_use]
-    pub fn from_process_and_runner(
-        process_exit: CommandProcessExit,
-        runner: Option<&CommandRunnerResult>,
-        kill: Option<KillReason>,
-    ) -> Self {
-        let mut exit_code = runner
-            .map(CommandRunnerResult::exit_code)
-            .or_else(|| process_exit.exit_code())
-            .unwrap_or(1);
-        let mut status = runner
-            .and_then(CommandRunnerResult::status)
-            .unwrap_or("error")
-            .to_owned();
-        match kill {
-            Some(KillReason::Cancelled) => {
-                status = "cancelled".to_owned();
-                exit_code = 130;
-            }
-            Some(KillReason::TimedOut) => {
-                status = "timed_out".to_owned();
-                exit_code = 124;
-            }
-            None => {}
+impl CommandProcessRuntime {
+    fn new(parts: RunningCommandProcessParts) -> Self {
+        Self {
+            process: parts.process,
+            output_path: parts.output_path,
+            final_path: parts.final_path,
+            transcript_path: parts.transcript_path,
+            kill: Mutex::new(None),
+            output_drain_grace_ms: parts.output_drain_grace_ms,
+            reaped: Mutex::new(false),
         }
-        Self { status, exit_code }
     }
 
-    #[must_use]
-    pub fn status(&self) -> &str {
-        &self.status
-    }
-
-    #[must_use]
-    pub const fn exit_code(&self) -> i64 {
-        self.exit_code
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct CommandRunnerResult {
-    exit_code: i64,
-    status: Option<String>,
-    value: Value,
-}
-
-impl CommandRunnerResult {
-    #[must_use]
-    pub fn read_from_path(path: &Path) -> Option<Self> {
-        let bytes = std::fs::read(path).ok()?;
-        let value = serde_json::from_slice::<Value>(&bytes).ok()?;
-        Self::from_value(value)
-    }
-
-    #[must_use]
-    pub fn from_value(value: Value) -> Option<Self> {
-        let exit_code = value.get("exit_code").and_then(|value| {
-            value
-                .as_i64()
-                .or_else(|| value.as_u64().and_then(|value| i64::try_from(value).ok()))
-        })?;
-        let status = value
-            .get("payload")
-            .and_then(Value::as_object)
-            .and_then(|payload| payload.get("status"))
-            .and_then(Value::as_str)
-            .map(str::to_owned);
-        Some(Self {
-            exit_code,
-            status,
-            value,
+    /// `/dev/null`-backed runtime so scaffold processes can exist in tests
+    /// without a live child.
+    fn inactive() -> Self {
+        let writer = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/null")
+            .expect("open /dev/null for inactive command process");
+        Self::new(RunningCommandProcessParts {
+            process: PtyProcess::inactive(writer),
+            output_path: PathBuf::new(),
+            final_path: PathBuf::new(),
+            transcript_path: PathBuf::new(),
+            output_drain_grace_ms: 0,
         })
     }
-
-    #[must_use]
-    pub const fn exit_code(&self) -> i64 {
-        self.exit_code
-    }
-
-    #[must_use]
-    pub fn status(&self) -> Option<&str> {
-        self.status.as_deref()
-    }
-
-    #[must_use]
-    pub const fn value(&self) -> &Value {
-        &self.value
-    }
 }
 
-impl CommandSessionProcess {
-    /// Process-free scaffold backing [`crate::session::Session::new`].
+impl CommandProcess {
+    /// Process-free scaffold for registry and identity tests.
     #[must_use]
-    pub(crate) fn inactive(writer: File) -> Self {
+    pub fn new(spec: CommandProcessSpec) -> Self {
+        Self::with_runtime(spec, CommandProcessRuntime::inactive())
+    }
+
+    #[must_use]
+    fn new_running(spec: CommandProcessSpec, parts: RunningCommandProcessParts) -> Self {
+        Self::with_runtime(spec, CommandProcessRuntime::new(parts))
+    }
+
+    pub fn spawn(
+        spec: CommandProcessSpec,
+        parts: CommandProcessSpawn<'_>,
+    ) -> Result<Self, CommandError> {
+        let process = spawn_current_exe_ns_runner(
+            &parts.request_path,
+            &parts.run_request,
+            &parts.output_path,
+            parts.transcript_path.clone(),
+            parts.transcript_timestamp_timezone,
+        )?;
+        Ok(Self::new_running(
+            spec,
+            RunningCommandProcessParts {
+                process,
+                output_path: parts.output_path,
+                final_path: parts.final_path,
+                transcript_path: parts.transcript_path,
+                output_drain_grace_ms: parts.output_drain_grace_ms,
+            },
+        ))
+    }
+
+    fn with_runtime(spec: CommandProcessSpec, runtime: CommandProcessRuntime) -> Self {
         Self {
-            pgid: None,
-            writer: Mutex::new(writer),
-            reader_done: Mutex::new(None),
-            child: Mutex::new(None),
+            id: spec.id,
+            caller_id: spec.caller_id,
+            command: spec.command,
+            started_at: Instant::now(),
+            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
+            runtime,
         }
     }
 
-    /// Push `bytes` to the command's stdin without blocking unbounded. The master
-    /// is non-blocking; when the consumer stops draining, `write` returns
-    /// `WouldBlock` and we wait for writability only up to `STDIN_WRITE_DEADLINE`
-    /// before returning a structured backpressure error. Cancel/terminate is a
-    /// separate (`killpg`) path, so the session stays controllable throughout.
-    pub(crate) fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
-        let mut writer = lock(&self.writer);
-        let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
-        let mut offset = 0;
-        while offset < bytes.len() {
-            match writer.write(&bytes[offset..]) {
-                Ok(0) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::WriteZero,
-                        "command session stdin closed",
-                    ));
-                }
-                Ok(written) => offset += written,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
-                    let timeout_ms = poll_timeout_ms(deadline);
-                    if timeout_ms == 0 {
-                        return Err(stdin_backpressure());
-                    }
-                    let mut fds = [PollFd::new(&*writer, PollFlags::OUT)];
-                    match poll(&mut fds, timeout_ms) {
-                        Ok(0) => return Err(stdin_backpressure()),
-                        Ok(_) => {}
-                        Err(rustix::io::Errno::INTR) => {}
-                        Err(err) => return Err(io::Error::from(err)),
-                    }
-                }
-                Err(err) => return Err(err),
-            }
-        }
+    #[must_use]
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    #[must_use]
+    pub fn caller_id(&self) -> &str {
+        &self.caller_id
+    }
+
+    #[must_use]
+    pub fn command(&self) -> &str {
+        &self.command
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    pub const fn started_at(&self) -> Instant {
+        self.started_at
+    }
+
+    pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandError> {
+        self.runtime.process.write_stdin(chars.as_bytes())?;
         Ok(())
     }
 
-    pub(crate) fn terminate(&self) {
-        if let Some(pgid) = self.pgid {
-            terminate_process_group(pgid);
+    /// Cancel at a caller's request (Ctrl-C/Ctrl-D, the cancel op, or run
+    /// teardown): record the reason and kill the process group. A cancel always
+    /// wins over a later timeout mark.
+    pub fn cancel_process(&self) {
+        *lock(&self.runtime.kill) = Some(KillReason::Cancelled);
+        self.runtime.process.terminate();
+    }
+
+    /// Kill a command that exceeded its deadline (the reaper backstop). Records
+    /// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps
+    /// its `Cancelled` label; either way the process group is killed.
+    pub fn time_out_process(&self) {
+        {
+            let mut kill = lock(&self.runtime.kill);
+            if kill.is_none() {
+                *kill = Some(KillReason::TimedOut);
+            }
         }
+        self.runtime.process.terminate();
     }
 
     #[must_use]
-    pub(crate) fn try_reap(&self) -> ProcessReap {
-        let mut child = lock(&self.child);
-        match child.as_mut() {
-            Some(handle) => match handle.try_wait() {
-                Ok(Some(status)) => {
-                    let _ = child.take();
-                    ProcessReap::Exited(CommandProcessExit::from_status(status))
-                }
-                Ok(None) => ProcessReap::Running,
-                Err(_) => {
-                    let _ = child.take();
-                    ProcessReap::Exited(CommandProcessExit::unwaitable())
-                }
-            },
-            None => ProcessReap::Exited(CommandProcessExit::unwaitable()),
-        }
+    pub fn read_recent_output(&self, last_n_lines: usize) -> String {
+        read_transcript_tail(&self.runtime.transcript_path, last_n_lines)
     }
 
-    pub(crate) fn wait_for_reader_done(&self, timeout: Duration) {
-        let reader_done = lock(&self.reader_done).take();
-        if let Some(reader_done) = reader_done {
-            let _ = reader_done.recv_timeout(timeout);
+    #[must_use]
+    pub fn read_output_since(&self, start_offset: u64) -> String {
+        read_transcript_since(&self.runtime.transcript_path, start_offset)
+    }
+
+    #[must_use]
+    pub fn transcript_len(&self) -> u64 {
+        transcript_len(&self.runtime.transcript_path)
+    }
+
+    #[must_use]
+    pub fn is_past_deadline(&self, now: Instant, max_command_s: u64) -> bool {
+        let timeout = self
+            .timeout
+            .unwrap_or_else(|| Duration::from_secs(max_command_s));
+        now.duration_since(self.started_at) >= timeout
+    }
+
+    /// Reap the child if it has exited, returning the raw command result. Returns
+    /// `None` while the process is still running or has already been reaped. This
+    /// only reaps the substrate — it does not publish or discard; the owning run
+    /// decides that from `ReapedCommand::kill`.
+    pub fn reap(&self) -> Option<ReapedCommand> {
+        let mut reaped = lock(&self.runtime.reaped);
+        if *reaped {
+            return None;
         }
+        let process_exit = match self.runtime.process.try_reap() {
+            ProcessReap::Running => return None,
+            ProcessReap::Exited(exit) => exit,
+        };
+        *reaped = true;
+        drop(reaped);
+        self.runtime.process.terminate();
+        self.runtime
+            .process
+            .wait_for_reader_done(Duration::from_millis(self.runtime.output_drain_grace_ms));
+        let runner = CommandRunnerResult::read_from_path(&self.runtime.output_path);
+        let kill = *lock(&self.runtime.kill);
+        let completion =
+            CommandCompletionStatus::from_process_and_runner(process_exit, runner.as_ref(), kill);
+        Some(ReapedCommand {
+            status: completion.status().to_owned(),
+            exit_code: completion.exit_code(),
+            runner_result: runner.map(|runner| runner.value().clone()),
+            stdout: self.final_stdout(),
+            elapsed_s: self.started_at.elapsed().as_secs_f64(),
+            kill,
+        })
+    }
+
+    /// Persist the run's final response to `final_path` for crash recovery and
+    /// remove the transcript. Best-effort: `final_path` is only a crash-recovery
+    /// convenience, so a write failure does not undo the already-decided
+    /// publish/discard or fail the operation.
+    pub fn persist_final(&self, response: &serde_json::Value) {
+        let _ = write_final_response(&self.runtime.final_path, response);
+        self.remove_transcript_file();
+    }
+
+    fn remove_transcript_file(&self) {
+        if self.runtime.transcript_path.as_os_str().is_empty() {
+            return;
+        }
+        let _ = std::fs::remove_file(&self.runtime.transcript_path);
+    }
+
+    fn final_stdout(&self) -> String {
+        read_transcript_stdout(&self.runtime.transcript_path)
     }
 }
 
-pub fn spawn_current_exe_ns_runner(
-    request_path: &Path,
-    run_request: &Value,
-    output_path: &Path,
-    transcript_path: PathBuf,
-    transcript_timestamp_timezone: &str,
-) -> io::Result<CommandSessionProcess> {
-    write_run_request(request_path, run_request)?;
-    let (master, slave) = open_pty_pair()?;
-    // Non-blocking master OFD (shared by the writer dup and the reader): writes
-    // can't wedge on a non-draining consumer, and the reader polls instead.
-    set_nonblocking(&master)?;
-    let mut child_command = Command::new(std::env::current_exe()?);
-    child_command
-        .arg("ns-runner")
-        .arg("--request")
-        .arg(request_path)
-        .arg("--output")
-        .arg(output_path)
-        .stdin(Stdio::from(slave.try_clone()?))
-        .stdout(Stdio::from(slave.try_clone()?))
-        .stderr(Stdio::from(slave))
-        .process_group(0);
-    let child = child_command.spawn()?;
-    let pgid = i32::try_from(child.id()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("child pid does not fit i32: {}", child.id()),
-        )
-    })?;
-    let writer = master.try_clone()?;
-    let transcript_prefixer = TranscriptTimestampPrefixer::new(transcript_timestamp_timezone)
-        .map_err(|error| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("invalid transcript timestamp timezone: {error}"),
-            )
-        })?;
-    let reader_done = spawn_command_output_reader(master, transcript_path, transcript_prefixer);
+impl CommandWaitTarget<ReapedCommand> for CommandProcess {
+    fn try_finalize(&self) -> Option<ReapedCommand> {
+        self.reap()
+    }
 
-    Ok(CommandSessionProcess {
-        pgid: Some(pgid),
-        writer: Mutex::new(writer),
-        reader_done: Mutex::new(Some(reader_done)),
-        child: Mutex::new(Some(child)),
-    })
+    fn transcript_len(&self) -> u64 {
+        Self::transcript_len(self)
+    }
+
+    fn read_output_since(&self, start_offset: u64) -> String {
+        Self::read_output_since(self, start_offset)
+    }
 }
 
-fn spawn_command_output_reader(
-    mut master: File,
-    transcript_path: PathBuf,
-    mut transcript_prefixer: TranscriptTimestampPrefixer,
-) -> mpsc::Receiver<()> {
-    let (done_tx, done_rx) = mpsc::channel();
-    thread::spawn(move || {
-        let mut transcript = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(transcript_path)
-            .ok();
-        let mut buf = [0_u8; 8192];
-        loop {
-            // The master is non-blocking; block here until readable or hangup with
-            // no busy-loop and no added latency (infinite poll wakes on the first
-            // byte or on slave close), then drain what is available.
-            {
-                let mut fds = [PollFd::new(&master, PollFlags::IN)];
-                match poll(&mut fds, -1) {
-                    Ok(_) => {}
-                    Err(rustix::io::Errno::INTR) => continue,
-                    Err(_) => break,
-                }
-            }
-            match master.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    let transcript_bytes = transcript_prefixer.prefix(&buf[..n]);
-                    if let Some(file) = transcript.as_mut() {
-                        if file.write_all(&transcript_bytes).is_err() {
-                            transcript = None;
-                        }
-                    }
-                }
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
-        }
-        let _ = done_tx.send(());
-    });
-    done_rx
+fn duration_from_secs_f64(seconds: f64) -> Option<Duration> {
+    if seconds.is_finite() && seconds > 0.0 {
+        Some(Duration::from_secs_f64(seconds))
+    } else {
+        None
+    }
 }
 
-fn write_run_request(path: &Path, request: &Value) -> io::Result<()> {
-    let bytes = serde_json::to_vec(request).map_err(|error| {
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("serialize command runner request: {error}"),
-        )
+fn transcript_len(path: &Path) -> u64 {
+    if path.as_os_str().is_empty() {
+        return 0;
+    }
+    std::fs::metadata(path).map_or(0, |metadata| metadata.len())
+}
+
+fn write_final_response(path: &Path, response: &serde_json::Value) -> Result<(), CommandError> {
+    if path.as_os_str().is_empty() {
+        return Ok(());
+    }
+    let bytes = serde_json::to_vec_pretty(response).map_err(|error| {
+        CommandError::InvalidRequest(format!("serialize final command response: {error}"))
     })?;
-    std::fs::write(path, bytes)
+    std::fs::write(path, bytes)?;
+    Ok(())
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
-
-fn open_pty_pair() -> io::Result<(File, File)> {
-    let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY;
-    #[cfg(target_os = "linux")]
-    let flags = flags | OpenptFlags::CLOEXEC;
-    let master = openpt(flags).map_err(io::Error::from)?;
-    grantpt(&master).map_err(io::Error::from)?;
-    unlockpt(&master).map_err(io::Error::from)?;
-
-    #[cfg(target_os = "linux")]
-    let slave = File::from(ioctl_tiocgptpeer(&master, flags).map_err(io::Error::from)?);
-    #[cfg(not(target_os = "linux"))]
-    let slave = {
-        let slave_name = ptsname(&master, Vec::new()).map_err(io::Error::from)?;
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(slave_name.to_string_lossy().as_ref())?
-    };
-
-    Ok((File::from(master), slave))
-}
-
-fn terminate_process_group(pgid: i32) {
-    if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
-        thread::sleep(Duration::from_millis(50));
-        let _ = killpg(Pid::from_raw(pgid), Signal::SIGKILL);
-    }
-}
-
-/// Mark `file`'s open file description non-blocking so `read`/`write` return
-/// `WouldBlock` instead of stalling. Applied to the PTY master before it is
-/// shared between the writer dup and the reader thread.
-fn set_nonblocking(file: &File) -> io::Result<()> {
-    let flags = fcntl_getfl(file)?;
-    fcntl_setfl(file, flags | OFlags::NONBLOCK)?;
-    Ok(())
-}
-
-/// Milliseconds left until `deadline`, clamped to a non-negative `i32` for
-/// `poll`. Returns 0 once the deadline has passed.
-fn poll_timeout_ms(deadline: Instant) -> i32 {
-    let remaining = deadline.saturating_duration_since(Instant::now());
-    i32::try_from(remaining.as_millis()).unwrap_or(i32::MAX)
-}
-
-fn stdin_backpressure() -> io::Error {
-    io::Error::new(
-        io::ErrorKind::WouldBlock,
-        "stdin_backpressure: command is not draining its stdin",
-    )
-}
-
-#[cfg(test)]
-#[path = "../tests/unit/process.rs"]
-mod tests;

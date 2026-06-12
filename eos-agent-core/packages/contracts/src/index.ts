@@ -43,6 +43,7 @@ export type {
 export { ToolCallResultSchema, type ToolCallResult } from "./tool-calls.js";
 export {
   AttemptIdSchema,
+  AttemptFailureReasonSchema,
   ContextScriptOutputSchema,
   CreatePursuitInputSchema,
   DelegatePursuitInputSchema,
@@ -76,6 +77,7 @@ export {
   workItemIdFrom,
   pursuitIdFrom,
   type AttemptId,
+  type AttemptFailureReason,
   type ContextPage,
   type ContextScriptOutput,
   type ContextSearch,
@@ -91,7 +93,7 @@ export {
   type PursuitContextEntityStatus,
   type PursuitHandle,
   type PursuitSettlement,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
   type SubmissionResult,
   type WorkItemId,
   type WorkItemRunStatus,

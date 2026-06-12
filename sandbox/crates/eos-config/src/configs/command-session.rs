@@ -11,7 +11,7 @@ pub struct CommandConfig {
     pub quiet_ms: u64,
     pub cancel_wait_ms: u64,
     pub output_drain_grace_ms: u64,
-    pub max_session_s: u64,
+    pub max_command_s: u64,
     pub transcript_timestamp_timezone: String,
 }
 
@@ -24,7 +24,7 @@ impl Default for CommandConfig {
             quiet_ms: 50,
             cancel_wait_ms: 500,
             output_drain_grace_ms: 500,
-            max_session_s: 6 * 60 * 60,
+            max_command_s: 6 * 60 * 60,
             transcript_timestamp_timezone: "UTC".to_owned(),
         }
     }

@@ -191,6 +191,21 @@ export const PursuitContextWorkItemSchema = z.strictObject({
 });
 export type PursuitContextWorkItem = z.infer<typeof PursuitContextWorkItemSchema>;
 
+export const AttemptFailureReasonSchema = z.strictObject({
+  work_item_id: z.string().nullable(),
+  kind: z.enum([
+    "planner_failed",
+    "context_composition_failed",
+    "failed",
+    "blocked_by_failed_dependency",
+  ]),
+  message: z.string().nullable(),
+  summary: z.string().nullable(),
+  outcome: z.string().nullable(),
+  blocked_by: z.array(z.string()).optional(),
+});
+export type AttemptFailureReason = z.infer<typeof AttemptFailureReasonSchema>;
+
 export const PursuitContextPlanSchema = z.strictObject({
   id: z.string(),
   status: PursuitEntityRunStatusSchema,
@@ -206,7 +221,7 @@ export const PursuitContextAttemptSchema = z.strictObject({
   id: z.string(),
   sequence: z.number().int(),
   status: PursuitEntityRunStatusSchema,
-  failure_reasons: z.array(z.string()),
+  failure_reasons: z.array(AttemptFailureReasonSchema),
   is_consistent_with_leg_goal: z.boolean(),
   context_path: z.string(),
   outcome: z.string().nullable(),
@@ -238,6 +253,7 @@ export const PursuitContextSnapshotSchema = z.strictObject({
     id: z.string(),
     pursuit_goal: z.string(),
     leg_goal_mode: LegGoalModeSchema,
+    predefined_leg_count: z.number().int().nonnegative().nullable(),
     status: PursuitEntityRunStatusSchema,
     context_path: z.string(),
     outcome: z.string().nullable(),
@@ -297,7 +313,7 @@ export interface PursuitHandle {
 
 export type SubmissionResult = { ok: true } | { ok: false; error: string };
 
-export type SubmissionBinding =
+export type PursuitAgentSubmissionBinding =
   | {
       kind: "planner";
       submit(payload: PlannerOutcomePayload): Promise<SubmissionResult>;

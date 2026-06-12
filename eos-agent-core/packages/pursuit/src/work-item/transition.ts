@@ -114,18 +114,11 @@ export async function applyWorkItemSettlement(
     .execute();
 
   await propagateDependencyBlocks(trx, ref.attemptId);
-  await reconcileAttemptStatus(
-    trx,
-    tree,
-    { pursuitId: ref.pursuitId, legId: ref.legId, attemptId: ref.attemptId },
-    record.isPass
-      ? {}
-      : {
-          failureReasons: [
-            `work_item ${ref.workItemId} failed: ${record.summary}`,
-          ],
-        },
-  );
+  await reconcileAttemptStatus(trx, tree, {
+    pursuitId: ref.pursuitId,
+    legId: ref.legId,
+    attemptId: ref.attemptId,
+  });
 }
 
 export async function cancelWorkItem(

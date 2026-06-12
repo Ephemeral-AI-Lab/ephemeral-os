@@ -86,7 +86,7 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        eos_operation::command::configure_command_sessions(&daemon_config.command_sessions);
+        eos_operation::command::configure_commands(&daemon_config.command_sessions);
         eos_layerstack::configure_auto_squash_max_depth(
             daemon_config.layer_stack.auto_squash_max_depth,
         );
@@ -158,8 +158,8 @@ impl DaemonServer {
                 }
             })
         };
-        // Command-session reaping can touch process state and the filesystem.
-        let _command_session_reaper = {
+        // Command reaping can touch process state and the filesystem.
+        let _command_reaper = {
             let shutdown = server.shutdown.clone();
             tokio::spawn(async move {
                 loop {
@@ -167,7 +167,7 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let _ = tokio::task::spawn_blocking(
-                                sweepers::sweep_command_sessions,
+                                sweepers::sweep_commands,
                             )
                             .await;
                         }
@@ -175,8 +175,8 @@ impl DaemonServer {
                 }
             })
         };
-        // Reap stale command sessions left by a prior daemon, before accepting.
-        sweepers::recover_orphaned_command_sessions();
+        // Reap stale commands left by a prior daemon, before accepting.
+        sweepers::recover_orphaned_commands();
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;

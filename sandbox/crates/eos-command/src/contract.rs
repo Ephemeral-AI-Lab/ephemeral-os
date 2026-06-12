@@ -1,29 +1,29 @@
-//! Command-session substrate request DTOs and error type.
+//! Command substrate request DTOs and error type.
 
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum CommandSessionError {
-    /// A workspace-tier failure surfaced through the session lifecycle; the
+pub enum CommandError {
+    /// A workspace-tier failure surfaced through the command lifecycle; the
     /// substrate carries only the rendered message.
     #[error("{0}")]
     Workspace(String),
-    #[error("command session not found: {0}")]
+    #[error("command not found: {0}")]
     NotFound(String),
-    #[error("invalid command session request: {0}")]
+    #[error("invalid command request: {0}")]
     InvalidRequest(String),
-    #[error("command session io error: {0}")]
+    #[error("command io error: {0}")]
     Io(String),
 }
 
-impl From<std::io::Error> for CommandSessionError {
+impl From<std::io::Error> for CommandError {
     fn from(error: std::io::Error) -> Self {
         Self::Io(error.to_string())
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct StartCommandSession {
+pub struct StartCommand {
     pub invocation_id: String,
     pub caller_id: String,
     pub cmd: String,
@@ -45,7 +45,7 @@ pub struct ReadCommandProgress {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CancelCommandSession {
+pub struct CancelCommand {
     pub command_id: String,
 }
 

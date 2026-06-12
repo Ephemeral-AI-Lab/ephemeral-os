@@ -339,16 +339,16 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
 
-    let command_session_count = eos_daemon::dispatch_with_context(
+    let command_count = eos_daemon::dispatch_with_context(
         &Request {
             op: "sandbox.command.count".to_owned(),
-            invocation_id: "command-session-count".to_owned(),
+            invocation_id: "command-count".to_owned(),
             args: json!({"caller_id": "caller-a"}),
         },
         context,
     );
-    assert_eq!(command_session_count["success"], Value::Bool(true));
-    assert_eq!(command_session_count["count"], json!(0));
+    assert_eq!(command_count["success"], Value::Bool(true));
+    assert_eq!(command_count["count"], json!(0));
 
     let heartbeat = eos_daemon::dispatch_with_context(
         &Request {

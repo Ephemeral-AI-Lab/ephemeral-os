@@ -261,14 +261,14 @@ pub(crate) fn u64_to_f64_saturating(value: u64) -> f64 {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CommandSessionCompletion {
+pub struct CommandCompletion {
     pub command_id: String,
     pub caller_id: String,
     pub command: String,
     pub result: CommandResponse,
 }
 
-impl CommandSessionCompletion {
+impl CommandCompletion {
     #[must_use]
     pub fn to_wire_value(&self) -> Value {
         json!({
@@ -283,7 +283,7 @@ impl CommandSessionCompletion {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectCompletedOutput {
     pub success: bool,
-    pub completions: Vec<CommandSessionCompletion>,
+    pub completions: Vec<CommandCompletion>,
 }
 
 impl CollectCompletedOutput {
@@ -293,14 +293,14 @@ impl CollectCompletedOutput {
             "success": self.success,
             "completions": self.completions
                 .iter()
-                .map(CommandSessionCompletion::to_wire_value)
+                .map(CommandCompletion::to_wire_value)
                 .collect::<Vec<_>>(),
         })
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CommandSessionCountOutput {
+pub struct CommandCountOutput {
     pub success: bool,
     pub caller_id: String,
     pub count: usize,

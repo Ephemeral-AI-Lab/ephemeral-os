@@ -145,9 +145,9 @@ impl DaemonConfig {
             "daemon.command_sessions.output_drain_grace_ms",
         )?;
         require_u64_at_least(
-            self.command_sessions.max_session_s,
+            self.command_sessions.max_command_s,
             1,
-            "daemon.command_sessions.max_session_s",
+            "daemon.command_sessions.max_command_s",
         )?;
         require_timestamp_timezone(
             &self.command_sessions.transcript_timestamp_timezone,

@@ -6,6 +6,8 @@ import type {
   WorkerContextInput,
 } from "@eos/contracts";
 
+import { formatAttemptFailureReason } from "../attempt/context.js";
+
 export type ComposeLaunchContext = (
   agentName: string,
   input: PlannerContextInput | WorkerContextInput,
@@ -60,7 +62,9 @@ function plannerMessages(input: PlannerContextInput): InitialUserMessage[] {
 
 function failedAttemptReport(attempt: PursuitContextAttempt): string {
   const lines = [`# Failed attempt ${String(attempt.sequence)}`];
-  for (const reason of attempt.failure_reasons) lines.push(`- ${reason}`);
+  for (const reason of attempt.failure_reasons) {
+    lines.push(`- ${formatAttemptFailureReason(reason)}`);
+  }
   if (attempt.plan.summary !== null) lines.push(`plan summary: ${attempt.plan.summary}`);
   for (const item of attempt.work_items) {
     lines.push(

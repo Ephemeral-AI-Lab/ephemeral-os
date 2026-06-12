@@ -4,7 +4,7 @@ import {
   type AgentRunId,
   type BackgroundSessionSnapshot,
   type Message,
-  type SubmissionBinding,
+  type PursuitAgentSubmissionBinding,
 } from "@eos/contracts";
 import { createPursuitDatabase, type PursuitDb } from "@eos/db";
 import {
@@ -239,7 +239,7 @@ interface StartRunContext {
   /** Internal only, never public input. */
   parent?: AgentRunId;
   /** The §2.19 entity-bound seam for a pursuit-launched child's terminal tool. */
-  submission?: SubmissionBinding;
+  submission?: PursuitAgentSubmissionBinding;
 }
 
 function createRuntime(ctx: RuntimeContext): AgentRuntime {

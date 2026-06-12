@@ -25,8 +25,8 @@ pub enum OpFamily {
     Plugins,
     /// Isolated workspace lifecycle and status operations.
     IsolatedWorkspace,
-    /// Command-session lifecycle, IO, and completion operations.
-    CommandSession,
+    /// Command lifecycle, IO, and completion operations.
+    Command,
     /// Caller-keyed or whole-sandbox workspace-run cleanup operations.
     WorkspaceRun,
 }
@@ -42,7 +42,7 @@ impl OpFamily {
             Self::Files => "Files",
             Self::Plugins => "Plugins",
             Self::IsolatedWorkspace => "IsolatedWorkspace",
-            Self::CommandSession => "CommandSession",
+            Self::Command => "Command",
             Self::WorkspaceRun => "WorkspaceRun",
         }
     }
@@ -223,19 +223,19 @@ declare_builtin_ops! {
     IsolatedWorkspaceTestReset, SANDBOX_ISOLATION_TEST_RESET, "sandbox.isolation.test_reset",
         Daemon, IsolatedWorkspace, Test, true, "Test-only isolated workspace reset hook.";
     ExecCommand, SANDBOX_COMMAND_EXEC, "sandbox.command.exec",
-        Daemon, CommandSession, Public, true, "Run a foreground command or start a command session.";
+        Daemon, Command, Public, true, "Run a foreground command or start a background command.";
     WriteStdin, SANDBOX_COMMAND_WRITE_STDIN, "sandbox.command.write_stdin",
-        Daemon, CommandSession, Public, true, "Write stdin to a command session.";
+        Daemon, Command, Public, true, "Write stdin to a command.";
     CommandReadProgress, SANDBOX_COMMAND_POLL, "sandbox.command.poll",
-        Daemon, CommandSession, Public, false, "Poll command-session progress without writing stdin.";
+        Daemon, Command, Public, false, "Poll command progress without writing stdin.";
     CommandCancel, SANDBOX_COMMAND_CANCEL, "sandbox.command.cancel",
-        Daemon, CommandSession, Public, true, "Cancel a command session.";
+        Daemon, Command, Public, true, "Cancel a command.";
     CommandCollectCompleted, SANDBOX_COMMAND_COLLECT_COMPLETED, "sandbox.command.collect_completed",
-        Daemon, CommandSession, Public, true, "Collect completed command-session notifications.";
-    CommandSessionCount, SANDBOX_COMMAND_COUNT, "sandbox.command.count",
-        Daemon, CommandSession, Public, false, "Count live command sessions.";
+        Daemon, Command, Public, true, "Collect completed command notifications.";
+    CommandCount, SANDBOX_COMMAND_COUNT, "sandbox.command.count",
+        Daemon, Command, Public, false, "Count live commands.";
     CancelWorkspaceRunsByCaller, SANDBOX_RUN_END, "sandbox.run.end",
-        Daemon, WorkspaceRun, Public, true, "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace.";
+        Daemon, WorkspaceRun, Public, true, "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated workspace.";
     CancelWorkspaceRuns, SANDBOX_RUN_CANCEL_ALL, "sandbox.run.cancel_all",
         Daemon, WorkspaceRun, Operator, true, "Cancel every workspace run in the sandbox: the whole-sandbox sweep backstop.";
 }

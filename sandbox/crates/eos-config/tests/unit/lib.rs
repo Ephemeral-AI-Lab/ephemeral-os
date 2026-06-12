@@ -23,7 +23,7 @@ fn merge_recurses_objects_replaces_scalars_and_replaces_arrays() {
 daemon:
   command_sessions:
     default_yield_time_ms: 1000
-    max_session_s: 21600
+    max_command_s: 21600
   plugin:
     max_response_bytes: 8388608
 eos_e2e_test:
@@ -36,7 +36,7 @@ eos_e2e_test:
         r#"
 daemon:
   command_sessions:
-    max_session_s: 2
+    max_command_s: 2
 eos_e2e_test:
   docker:
     cap_add: [SYS_PTRACE]
@@ -52,7 +52,7 @@ eos_e2e_test:
         serde_yaml::Value::Number(1000.into())
     );
     assert_eq!(
-        merged["daemon"]["command_sessions"]["max_session_s"],
+        merged["daemon"]["command_sessions"]["max_command_s"],
         serde_yaml::Value::Number(2.into())
     );
     assert_eq!(

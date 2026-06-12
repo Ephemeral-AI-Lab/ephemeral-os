@@ -197,49 +197,49 @@
       "name": "sandbox.command.exec",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": true,
-      "summary": "Run a foreground command or start a command session."
+      "summary": "Run a foreground command or start a background command."
     },
     {
       "name": "sandbox.command.write_stdin",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": true,
-      "summary": "Write stdin to a command session."
+      "summary": "Write stdin to a command."
     },
     {
       "name": "sandbox.command.poll",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": false,
-      "summary": "Poll command-session progress without writing stdin."
+      "summary": "Poll command progress without writing stdin."
     },
     {
       "name": "sandbox.command.cancel",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": true,
-      "summary": "Cancel a command session."
+      "summary": "Cancel a command."
     },
     {
       "name": "sandbox.command.collect_completed",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": true,
-      "summary": "Collect completed command-session notifications."
+      "summary": "Collect completed command notifications."
     },
     {
       "name": "sandbox.command.count",
       "served_by": "daemon",
       "visibility": "public",
-      "family": "CommandSession",
+      "family": "Command",
       "mutates_state": false,
-      "summary": "Count live command sessions."
+      "summary": "Count live commands."
     },
     {
       "name": "sandbox.run.end",
@@ -247,7 +247,7 @@
       "visibility": "public",
       "family": "WorkspaceRun",
       "mutates_state": true,
-      "summary": "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its command sessions and exiting its isolated workspace."
+      "summary": "End a run: cancel every workspace run owned by one caller (caller_id == agent_run_id), discarding its commands and exiting its isolated workspace."
     },
     {
       "name": "sandbox.run.cancel_all",

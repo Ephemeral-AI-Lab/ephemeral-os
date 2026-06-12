@@ -1,4 +1,4 @@
-import type { SubmissionBinding } from "@eos/contracts";
+import type { PursuitAgentSubmissionBinding } from "@eos/contracts";
 
 import type { ToolDefinition } from "../../contract.js";
 import { submitAdvisorOutcomeTool } from "./submit_advisor_outcome.js";
@@ -12,12 +12,12 @@ export { submitMainOutcomeTool } from "./submit_main_outcome.js";
 export {
   plannerStructureError,
   submitPlannerOutcomeTool,
-  type PlannerSubmissionBinding,
+  type PlannerPursuitAgentSubmissionBinding,
 } from "./submit_planner_outcome.js";
 export { submitSubagentOutcomeTool } from "./submit_subagent_outcome.js";
 export {
   submitWorkerOutcomeTool,
-  type WorkerSubmissionBinding,
+  type WorkerPursuitAgentSubmissionBinding,
 } from "./submit_worker_outcome.js";
 
 /** The terminal name universe: static, so profile validation needs no supervisor. */
@@ -32,12 +32,12 @@ export const TERMINAL_TOOL_NAMES = [
 /**
  * The full terminal inventory, one definition per name. Not keyed by
  * `AgentKind`: the profile selects exactly one entry by `terminal_tool`.
- * A pursuit-launched run passes its §2.19 `SubmissionBinding`, which
+ * A pursuit-launched run passes its §2.19 `PursuitAgentSubmissionBinding`, which
  * binds exactly the matching kind's terminal tool; everything else stays
  * service-free.
  */
 export function terminalToolDefinitions(options?: {
-  submission?: SubmissionBinding;
+  submission?: PursuitAgentSubmissionBinding;
 }): ToolDefinition[] {
   const binding = options?.submission;
   return [

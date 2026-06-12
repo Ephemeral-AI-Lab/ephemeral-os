@@ -47,7 +47,7 @@ export interface AttemptsTable {
   sequence: number;
   leg_goal_version: number;
   status: PursuitEntityRunStatus;
-  /** JSON-encoded string array. */
+  /** JSON-encoded AttemptFailureReason array. */
   failure_reasons: string;
   created_at: string;
   updated_at: string;

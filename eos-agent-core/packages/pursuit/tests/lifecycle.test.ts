@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { agentRunIdFrom } from "@eos/contracts";
+
 import {
   allMessageText,
   harness,
@@ -10,6 +12,21 @@ import {
 } from "./support.js";
 
 describe("pursuit creation and planner declarations", () => {
+  it("rejects creation payloads whose explicit leg_goal_mode conflicts with their shape", async () => {
+    const h = harness();
+
+    await expect(
+      h.service.createPursuit(
+        {
+          pursuit_goal: "ship it",
+          leg_goal_mode: "dynamic",
+          leg_goals: ["parser"],
+        },
+        agentRunIdFrom("parent-run"),
+      ),
+    ).rejects.toThrow("leg_goal_mode dynamic does not match predefined payload shape");
+  });
+
   it("creates a dynamic first leg with pursuit_goal as leg_goal and accepts keep payloads", async () => {
     const h = harness();
     const pursuit = await h.create("ship the parser");
@@ -112,11 +129,63 @@ describe("scheduler dependency and failure behavior", () => {
     const closed = await h.tree(pursuit.pursuit_id);
     expect(closed.legs[0].attempts[0].status).toBe("Failed");
     expect(closed.legs[0].attempts[0].failureReasons).toEqual([
-      "work_item root failed: root failed",
-      "work_item dependent blocked by failed dependency",
+      {
+        work_item_id: "root",
+        kind: "failed",
+        message: null,
+        summary: "root failed",
+        outcome: "the leg is implemented",
+      },
+      {
+        work_item_id: "dependent",
+        kind: "blocked_by_failed_dependency",
+        message: "blocked by work_item_root",
+        summary: "blocked by work_item_root",
+        outcome: "blocked by work_item_root",
+        blocked_by: ["root"],
+      },
     ]);
     expect(closed.legs[0].attempts, "retry created after failed close").toHaveLength(2);
     expect(h.launches.at(-1)?.agentName).toBe("planner");
+  });
+
+  it("records failed and blocked reasons when dependency propagation closes immediately", async () => {
+    const h = harness();
+    const pursuit = await h.create("ship graph", { maxAttempts: 1 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({
+        work_items: [workItem("root"), workItem("dependent", ["root"])],
+      }),
+    );
+
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "root failed", outcome: "root broke" }),
+    );
+
+    const attempt = (await h.tree(pursuit.pursuit_id)).legs[0].attempts[0];
+    expect(attempt.status).toBe("Failed");
+    expect(attempt.failureReasons).toEqual([
+      {
+        work_item_id: "root",
+        kind: "failed",
+        message: null,
+        summary: "root failed",
+        outcome: "root broke",
+      },
+      {
+        work_item_id: "dependent",
+        kind: "blocked_by_failed_dependency",
+        message: "blocked by work_item_root",
+        summary: "blocked by work_item_root",
+        outcome: "blocked by work_item_root",
+        blocked_by: ["root"],
+      },
+    ]);
+    expect(attempt.workItems.find((item) => item.id === "dependent")).toMatchObject({
+      status: "Blocked",
+      summary: "blocked by work_item_root",
+      outcome: "blocked by work_item_root",
+    });
   });
 
   it("allows retry plans to depend on successful prior-attempt work in the same leg-goal version", async () => {
@@ -153,7 +222,13 @@ describe("scheduler dependency and failure behavior", () => {
     const tree = await h.tree(pursuit.pursuit_id);
     expect(tree.legs[0].attempts).toHaveLength(2);
     expect(tree.legs[0].attempts[0].failureReasons).toEqual([
-      "context_script_error: script exploded",
+      {
+        work_item_id: null,
+        kind: "context_composition_failed",
+        message: "context_script_error: script exploded",
+        summary: null,
+        outcome: null,
+      },
     ]);
     await expect(pursuit.settle()).resolves.toMatchObject({ status: "Failed" });
   });

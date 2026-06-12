@@ -1,4 +1,4 @@
-//! Workspace-run cancel adapters. The runtime owns command-session and isolated
+//! Workspace-run cancel adapters. The runtime owns command and isolated
 //! workspace teardown; this module only parses args and shapes counts.
 
 use eos_operation::workspace_run::contract::{
@@ -22,7 +22,7 @@ pub(crate) fn op_cancel_workspace_runs_by_caller_id(
     Ok(to_wire_value(RunEndOutput {
         success: true,
         caller_id,
-        cancelled_command_sessions: outcome.cancelled_sessions,
+        cancelled_commands: outcome.cancelled_commands,
         isolated_exited: outcome.isolated.is_ok(),
     }))
 }
@@ -33,10 +33,10 @@ pub(crate) fn op_cancel_workspace_runs(
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let workspace = &context.require_services()?.workspace;
-    let (cancelled_sessions, isolated_exited) = workspace.cancel_all_runs(input.grace_s);
+    let (cancelled_commands, isolated_exited) = workspace.cancel_all_runs(input.grace_s);
     Ok(to_wire_value(RunCancelAllOutput {
         success: true,
-        cancelled_command_sessions: cancelled_sessions,
+        cancelled_commands: cancelled_commands,
         isolated_callers_exited: isolated_exited,
     }))
 }

@@ -69,6 +69,8 @@ export function snapshotPursuitContext(tree: PursuitTree): PursuitContextSnapsho
       id: tree.pursuit.id,
       pursuit_goal: tree.pursuit.pursuitGoal,
       leg_goal_mode: tree.pursuit.legGoalMode,
+      predefined_leg_count:
+        tree.pursuit.legGoalMode === "predefined" ? tree.pursuit.legGoals.length : null,
       status: tree.pursuit.status,
       context_path: root,
       outcome: tree.pursuit.status === "Running" || tree.pursuit.status === "NotStarted"

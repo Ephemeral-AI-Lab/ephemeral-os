@@ -24,11 +24,12 @@ const WORK_ITEM = {
 
 function snapshot() {
   return {
-    pursuit: {
-      id: "p-1",
-      pursuit_goal: "ship it",
-      leg_goal_mode: "dynamic",
-      status: "Running",
+      pursuit: {
+        id: "p-1",
+        pursuit_goal: "ship it",
+        leg_goal_mode: "dynamic",
+        predefined_leg_count: null,
+        status: "Running",
       context_path: "pursuit_p-1",
       outcome: null,
       legs: [
@@ -203,6 +204,48 @@ describe("context script inputs", () => {
         pursuit_context: { pursuit: { ...snapshot().pursuit, goal: "old" } },
       }).success,
     ).toBe(false);
+  });
+
+  it("carries structured attempt failure reasons in snapshots", () => {
+    const input = {
+      ...snapshot(),
+      pursuit: {
+        ...snapshot().pursuit,
+        legs: [
+          {
+            ...snapshot().pursuit.legs[0],
+            attempts: [
+              {
+                ...snapshot().pursuit.legs[0].attempts[0],
+                failure_reasons: [
+                  {
+                    work_item_id: "wi-2",
+                    kind: "blocked_by_failed_dependency",
+                    message: "blocked by work_item_wi-1",
+                    summary: "blocked by work_item_wi-1",
+                    outcome: "blocked by work_item_wi-1",
+                    blocked_by: ["wi-1"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    expect(PlannerContextInputSchema.parse({
+      kind: "planner",
+      pursuit_context: input,
+      current: {
+        pursuit_id: "p-1",
+        leg_id: "leg-1",
+        attempt_id: "at-1",
+        plan_id: "pl-1",
+      },
+    }).pursuit_context.pursuit.legs[0].attempts[0].failure_reasons[0]).toMatchObject({
+      kind: "blocked_by_failed_dependency",
+      blocked_by: ["wi-1"],
+    });
   });
 
   it("carries pursuit_context plus current for workers", () => {

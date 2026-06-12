@@ -60,20 +60,16 @@ pub(crate) fn dispatch(request: OpRequest, context: DispatchContext<'_>) -> OpRe
             daemon_response_result(isolation::op_test_reset(context))
         }
         OpRequest::ExecCommand(input) => daemon_result(command::op_exec_command(input, context)),
-        OpRequest::WriteStdin(input) => {
-            daemon_result(command::command_session_write_stdin(input, context))
-        }
+        OpRequest::WriteStdin(input) => daemon_result(command::command_write_stdin(input, context)),
         OpRequest::CommandReadProgress(input) => {
-            daemon_result(command::command_session_read_progress(input, context))
+            daemon_result(command::command_read_progress(input, context))
         }
-        OpRequest::CommandCancel(input) => {
-            daemon_result(command::command_session_cancel(input, context))
-        }
+        OpRequest::CommandCancel(input) => daemon_result(command::command_cancel(input, context)),
         OpRequest::CommandCollectCompleted(input) => {
             OpResponse::Success(command::op_command_collect_completed(input, context))
         }
-        OpRequest::CommandSessionCount(input) => {
-            OpResponse::Success(command::op_command_session_count(input, context))
+        OpRequest::CommandCount(input) => {
+            OpResponse::Success(command::op_command_count(input, context))
         }
         OpRequest::CancelWorkspaceRunsByCaller(input) => daemon_result(
             workspace_run::op_cancel_workspace_runs_by_caller_id(input, context),

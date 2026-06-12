@@ -1,7 +1,7 @@
 use super::*;
 
-fn sample_completion(id: &str) -> CommandSessionCompletion {
-    CommandSessionCompletion {
+fn sample_completion(id: &str) -> CommandCompletion {
+    CommandCompletion {
         command_id: id.to_owned(),
         caller_id: "caller".to_owned(),
         command: "cmd".to_owned(),
@@ -13,10 +13,10 @@ fn sample_completion(id: &str) -> CommandSessionCompletion {
 fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use std::path::PathBuf;
 
-    use eos_command::session::SessionSpec;
+    use eos_command::process::CommandProcessSpec;
     use eos_layerstack::service::Snapshot;
 
-    let session = Session::new(SessionSpec {
+    let process = CommandProcess::new(CommandProcessSpec {
         id: id.to_owned(),
         caller_id: caller.to_owned(),
         command: "sleep 1".to_owned(),
@@ -28,7 +28,7 @@ fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     ));
     let workspace = EphemeralWorkspace::create(&scratch, "test", id).expect("scaffold workspace");
     Arc::new(ActiveCommand::Ephemeral(EphemeralRun {
-        session,
+        process,
         root: PathBuf::from("/layers"),
         snapshot: Snapshot {
             lease_id: "lease".to_owned(),
@@ -52,7 +52,7 @@ fn insert_get_count_remove_track_caller_runs() {
     assert_eq!(registry.count_by_caller(Some("other")), 1);
     assert_eq!(registry.count_by_caller(None), 3);
     assert!(registry.get("cmd_2").is_some());
-    assert_eq!(registry.caller_sessions("caller").len(), 2);
+    assert_eq!(registry.caller_commands("caller").len(), 2);
 
     assert!(registry.remove("cmd_2").is_some());
     assert_eq!(registry.count_by_caller(Some("caller")), 1);

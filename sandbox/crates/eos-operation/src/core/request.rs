@@ -80,7 +80,7 @@ pub enum OpRequest {
     CommandReadProgress(ReadProgressInput),
     CommandCancel(CancelCommandInput),
     CommandCollectCompleted(CollectCompletedInput),
-    CommandSessionCount(CallerCountInput),
+    CommandCount(CallerCountInput),
     CancelWorkspaceRunsByCaller(RunEndInput),
     CancelWorkspaceRuns(RunCancelAllInput),
 }
@@ -137,9 +137,7 @@ impl OpRequest {
             BuiltinOp::CommandCollectCompleted => {
                 Self::CommandCollectCompleted(CollectCompletedInput::parse(args))
             }
-            BuiltinOp::CommandSessionCount => {
-                Self::CommandSessionCount(CallerCountInput::parse(args))
-            }
+            BuiltinOp::CommandCount => Self::CommandCount(CallerCountInput::parse(args)),
             BuiltinOp::CancelWorkspaceRunsByCaller => {
                 Self::CancelWorkspaceRunsByCaller(RunEndInput::parse(args)?)
             }
@@ -265,12 +263,12 @@ mod tests {
     }
 
     #[test]
-    fn command_poll_checks_session_id_before_last_n_lines_conversion() {
+    fn command_poll_checks_command_id_before_last_n_lines_conversion() {
         let error = OpRequest::parse(
             BuiltinOp::CommandReadProgress,
             &json!({"last_n_lines": u64::MAX}),
         )
-        .expect_err("command poll parse should require session id before line conversion");
+        .expect_err("command poll parse should require command id before line conversion");
         let RequestError::Args(error) = error else {
             panic!("expected args error");
         };

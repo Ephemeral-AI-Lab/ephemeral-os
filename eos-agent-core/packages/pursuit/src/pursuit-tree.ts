@@ -1,4 +1,9 @@
-import { workItemIdFrom, type PursuitId } from "@eos/contracts";
+import {
+  AttemptFailureReasonSchema,
+  workItemIdFrom,
+  type AttemptFailureReason,
+  type PursuitId,
+} from "@eos/contracts";
 import {
   loadPursuitRows,
   type AttemptRow,
@@ -65,7 +70,7 @@ function buildLeg(
       id: attempt.id,
       sequence: attempt.sequence,
       status: attempt.status,
-      failureReasons: Object.freeze(decodeStringList(attempt.failure_reasons)),
+      failureReasons: Object.freeze(decodeFailureReasons(attempt.failure_reasons)),
       legGoalVersion: attempt.leg_goal_version,
       isConsistentWithLegGoal: attempt.leg_goal_version === leg.leg_goal_version,
       plan,
@@ -129,6 +134,10 @@ export function encodeStringList(values: readonly string[]): string {
   return JSON.stringify([...values]);
 }
 
+export function encodeFailureReasons(values: readonly AttemptFailureReason[]): string {
+  return JSON.stringify([...values]);
+}
+
 export function encodeDependsOn(dependsOn: readonly string[]): string {
   return encodeStringList(dependsOn);
 }
@@ -139,6 +148,25 @@ export function decodeStringList(raw: string): string[] {
     throw new Error(`expected JSON string array: ${raw}`);
   }
   return parsed.map((value) => String(value));
+}
+
+export function decodeFailureReasons(raw: string): AttemptFailureReason[] {
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    throw new Error(`expected JSON failure reason array: ${raw}`);
+  }
+  return parsed.map((value) => {
+    if (typeof value === "string") {
+      return {
+        work_item_id: null,
+        kind: "planner_failed" as const,
+        message: value,
+        summary: null,
+        outcome: null,
+      };
+    }
+    return AttemptFailureReasonSchema.parse(value);
+  });
 }
 
 function decodeDependsOn(raw: string): WorkItemState["dependsOn"][number][] {
