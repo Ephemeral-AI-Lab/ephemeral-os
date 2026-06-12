@@ -1,9 +1,18 @@
 use serde_json::json;
+use std::os::unix::process::ExitStatusExt as _;
 
 use super::*;
 
 fn runner_ok() -> Option<CommandRunnerResult> {
     CommandRunnerResult::from_value(json!({"exit_code": 0, "payload": {"status": "ok"}}))
+}
+
+#[test]
+fn process_exit_status_preserves_signal_separately_from_code() {
+    let exit = PtyProcessExitStatus::from_status(std::process::ExitStatus::from_raw(9));
+
+    assert_eq!(exit.exit_code(), Some(-9));
+    assert_eq!(exit.signal(), Some(9));
 }
 
 #[test]

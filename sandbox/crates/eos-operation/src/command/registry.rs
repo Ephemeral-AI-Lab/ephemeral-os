@@ -67,6 +67,13 @@ impl ActiveCommand {
 
 const MAX_COMPLETED_ENTRIES: usize = 1024;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CompletionBufferEviction {
+    pub(crate) command_id: String,
+    pub(crate) seq: u64,
+    pub(crate) max_entries: usize,
+}
+
 struct CompletedEntry {
     seq: u64,
     completion: CommandCompletion,
@@ -150,23 +157,33 @@ impl CommandRegistry {
             .unwrap_or_default()
     }
 
-    pub(crate) fn push_completed(&self, completion: CommandCompletion) {
+    pub(crate) fn push_completed(
+        &self,
+        completion: CommandCompletion,
+    ) -> Vec<CompletionBufferEviction> {
         let seq = self.completed_seq.fetch_add(1, Ordering::Relaxed);
         let mut completed = lock(&self.completed);
         completed.insert(
             completion.command_id.clone(),
             CompletedEntry { seq, completion },
         );
+        let mut evictions = Vec::new();
         while completed.len() > MAX_COMPLETED_ENTRIES {
-            let Some(oldest) = completed
+            let Some((oldest, oldest_seq)) = completed
                 .iter()
                 .min_by_key(|(_, entry)| entry.seq)
-                .map(|(id, _)| id.clone())
+                .map(|(id, entry)| (id.clone(), entry.seq))
             else {
                 break;
             };
             completed.remove(&oldest);
+            evictions.push(CompletionBufferEviction {
+                command_id: oldest,
+                seq: oldest_seq,
+                max_entries: MAX_COMPLETED_ENTRIES,
+            });
         }
+        evictions
     }
 
     pub(crate) fn take_completed_result(&self, id: &str) -> Option<CommandResponse> {

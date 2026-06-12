@@ -10,9 +10,12 @@ use eos_operation::command::contract::{
     CancelCommandInput, CollectCompletedInput, CommandCountOutput, CommandResponse, CommandStatus,
     ExecCommandInput, ReadProgressInput, WriteStdinInput,
 };
-use eos_operation::command::{command_config, command_ops, command_scratch_root, ExecTarget};
+use eos_operation::command::{
+    command_config, command_ops, command_scratch_root, CommandExecOutcome, CommandStdinTraceFacts,
+    CommandTraceEvent, ExecTarget,
+};
 use eos_operation::control::contract::CallerCountInput;
-use serde_json::Value;
+use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::error::DaemonError;
@@ -54,7 +57,7 @@ pub(crate) fn op_exec_command(
     let yield_time_ms = input
         .yield_time_ms
         .unwrap_or(command_config.default_yield_time_ms);
-    let response = exec_command(
+    let outcome = exec_command(
         context.services().map(|services| &services.workspace),
         ExecCommandRequest {
             invocation_id: input.invocation_id.to_string(),
@@ -68,6 +71,8 @@ pub(crate) fn op_exec_command(
         },
     )
     .map_err(command_op_error)?;
+    record_command_trace_events(&context, &outcome.trace_events);
+    let response = outcome.response;
     let running = response.status == CommandStatus::Running;
     let wire = response.to_wire_value();
     if running {
@@ -84,7 +89,7 @@ fn exec_timeout_seconds(input: &ExecCommandInput, config: &crate::config::Comman
 fn exec_command(
     workspace: Option<&WorkspaceRuntime>,
     request: ExecCommandRequest,
-) -> Result<CommandResponse, CommandOpError> {
+) -> Result<CommandExecOutcome, CommandOpError> {
     let ExecCommandRequest {
         invocation_id,
         caller_id,
@@ -99,7 +104,7 @@ fn exec_command(
     if let Some(binding) = workspace.and_then(|workspace| workspace.command_binding_for(&caller_id))
     {
         return command_ops()
-            .exec_command(
+            .exec_command_with_trace(
                 StartCommand {
                     invocation_id,
                     caller_id: binding.caller_id.clone(),
@@ -119,7 +124,7 @@ fn exec_command(
     let root = layer_stack_root.ok_or(CommandOpError::MissingLayerStackRoot)?;
     let binding = eos_layerstack::require_workspace_binding(&root)?;
     command_ops()
-        .exec_command(
+        .exec_command_with_trace(
             StartCommand {
                 invocation_id,
                 caller_id,
@@ -159,7 +164,7 @@ pub(crate) fn op_command_count(input: CallerCountInput, _context: DispatchContex
 
 pub(crate) fn command_write_stdin(
     input: WriteStdinInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let request = WriteStdin {
         command_id: input.command_id.to_string(),
@@ -168,7 +173,15 @@ pub(crate) fn command_write_stdin(
             .yield_time_ms
             .unwrap_or(command_config().default_yield_time_ms),
     };
-    command_response_to_wire(command_ops().write_stdin(request))
+    match command_ops().write_stdin_with_trace(request) {
+        Ok(outcome) => {
+            if let Some(trace) = &outcome.trace {
+                record_stdin_written(&context, trace);
+            }
+            command_response_to_wire(Ok(outcome.response))
+        }
+        Err(error) => command_response_to_wire(Err(error)),
+    }
 }
 
 pub(crate) fn command_read_progress(
@@ -239,6 +252,26 @@ fn collect_completed_request(input: CollectCompletedInput) -> CollectCompleted {
         }),
         caller_id: input.caller.map(|caller| caller.to_string()),
     }
+}
+
+fn record_command_trace_events(context: &DispatchContext<'_>, events: &[CommandTraceEvent]) {
+    for event in events {
+        context.record_trace_event("command", event.name, event.details.clone());
+    }
+}
+
+fn record_stdin_written(context: &DispatchContext<'_>, trace: &CommandStdinTraceFacts) {
+    context.record_trace_event(
+        "command",
+        "stdin_written",
+        json!({
+            "command_id": trace.command_id,
+            "bytes": trace.bytes,
+            "wait_ms": trace.wait_ms,
+            "waited_for_output": trace.waited_for_output,
+            "status": trace.status.as_str(),
+        }),
+    );
 }
 
 #[cfg(test)]

@@ -35,26 +35,36 @@ pub(crate) struct PtyProcess {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PtyProcessExitStatus {
     exit_code: Option<i64>,
+    signal: Option<i32>,
 }
 
 impl PtyProcessExitStatus {
     #[must_use]
     pub fn unwaitable() -> Self {
-        Self { exit_code: None }
+        Self {
+            exit_code: None,
+            signal: None,
+        }
     }
 
     #[must_use]
     pub fn from_status(status: ExitStatus) -> Self {
+        let signal = status.signal();
         let exit_code = status
             .code()
             .map(i64::from)
-            .or_else(|| status.signal().map(|signal| -i64::from(signal)));
-        Self { exit_code }
+            .or_else(|| signal.map(|signal| -i64::from(signal)));
+        Self { exit_code, signal }
     }
 
     #[must_use]
     pub const fn exit_code(self) -> Option<i64> {
         self.exit_code
+    }
+
+    #[must_use]
+    pub const fn signal(self) -> Option<i32> {
+        self.signal
     }
 }
 

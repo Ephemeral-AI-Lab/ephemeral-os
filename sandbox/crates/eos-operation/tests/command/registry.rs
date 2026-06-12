@@ -84,12 +84,28 @@ fn command_trace_origin_copies_start_request_identity() {
 fn push_completed_evicts_oldest_beyond_cap() {
     let registry = CommandRegistry::new();
     let overflow = 5;
+    let mut evictions = Vec::new();
     for index in 0..(MAX_COMPLETED_ENTRIES + overflow) {
-        registry.push_completed(sample_completion(&format!("cmd_{index}")));
+        evictions.extend(registry.push_completed(sample_completion(&format!("cmd_{index}"))));
     }
 
     assert_eq!(lock(&registry.completed).len(), MAX_COMPLETED_ENTRIES);
+    assert_eq!(evictions.len(), overflow);
     for index in 0..overflow {
+        assert_eq!(
+            evictions[index].command_id,
+            format!("cmd_{index}"),
+            "eviction marker names the lost command"
+        );
+        assert_eq!(
+            evictions[index].seq,
+            u64::try_from(index + 1).expect("eviction seq fits u64"),
+            "eviction marker preserves completion seq"
+        );
+        assert_eq!(
+            evictions[index].max_entries, MAX_COMPLETED_ENTRIES,
+            "eviction marker records the cap"
+        );
         assert!(registry
             .take_completed_result(&format!("cmd_{index}"))
             .is_none());

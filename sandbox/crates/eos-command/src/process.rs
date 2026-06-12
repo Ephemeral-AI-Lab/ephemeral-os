@@ -59,6 +59,7 @@ pub struct CommandProcessSpawn<'a> {
 pub struct CommandProcessExit {
     pub status: String,
     pub exit_code: i64,
+    pub signal: Option<i32>,
     pub runner_result: Option<Value>,
     pub stdout: String,
     pub elapsed_s: f64,
@@ -66,6 +67,24 @@ pub struct CommandProcessExit {
     /// exit; `Some(_)` means a kill (cancel or timeout) and the owning run
     /// DISCARDS rather than publishes.
     pub kill: Option<KillReason>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandPersistenceOutcome {
+    pub final_response: Option<CommandFinalResponsePersistence>,
+    pub transcript_error: Option<CommandTranscriptPersistenceError>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommandFinalResponsePersistence {
+    Persisted { path: PathBuf, bytes: usize },
+    Failed { path: PathBuf, error: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandTranscriptPersistenceError {
+    pub path: PathBuf,
+    pub error: String,
 }
 
 /// Per-command process state: the child, its paths, and the kill/exit flags.
@@ -257,6 +276,7 @@ impl CommandProcess {
         Some(CommandProcessExit {
             status: completion.status().to_owned(),
             exit_code: completion.exit_code(),
+            signal: process_exit.signal(),
             runner_result: runner.map(|runner| runner.value().clone()),
             stdout: self.final_stdout(),
             elapsed_s: self.started_at.elapsed().as_secs_f64(),
@@ -268,16 +288,11 @@ impl CommandProcess {
     /// remove the transcript. Best-effort: `final_path` is only a crash-recovery
     /// convenience, so a write failure does not undo the already-decided
     /// publish/discard or fail the operation.
-    pub fn persist_final(&self, response: &serde_json::Value) {
-        let _ = write_final_response(&self.runtime.final_path, response);
-        self.remove_transcript_file();
-    }
-
-    fn remove_transcript_file(&self) {
-        if self.runtime.transcript_path.as_os_str().is_empty() {
-            return;
+    pub fn persist_final(&self, response: &serde_json::Value) -> CommandPersistenceOutcome {
+        CommandPersistenceOutcome {
+            final_response: persist_final_response(&self.runtime.final_path, response),
+            transcript_error: remove_transcript_file(&self.runtime.transcript_path),
         }
-        let _ = std::fs::remove_file(&self.runtime.transcript_path);
     }
 
     fn final_stdout(&self) -> String {
@@ -314,15 +329,46 @@ fn transcript_len(path: &Path) -> u64 {
     std::fs::metadata(path).map_or(0, |metadata| metadata.len())
 }
 
-fn write_final_response(path: &Path, response: &serde_json::Value) -> Result<(), CommandError> {
+fn persist_final_response(
+    path: &Path,
+    response: &serde_json::Value,
+) -> Option<CommandFinalResponsePersistence> {
     if path.as_os_str().is_empty() {
-        return Ok(());
+        return None;
     }
+    match write_final_response(path, response) {
+        Ok(bytes) => Some(CommandFinalResponsePersistence::Persisted {
+            path: path.to_path_buf(),
+            bytes,
+        }),
+        Err(error) => Some(CommandFinalResponsePersistence::Failed {
+            path: path.to_path_buf(),
+            error: error.to_string(),
+        }),
+    }
+}
+
+fn remove_transcript_file(path: &Path) -> Option<CommandTranscriptPersistenceError> {
+    if path.as_os_str().is_empty() {
+        return None;
+    }
+    match std::fs::remove_file(path) {
+        Ok(()) => None,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => Some(CommandTranscriptPersistenceError {
+            path: path.to_path_buf(),
+            error: error.to_string(),
+        }),
+    }
+}
+
+fn write_final_response(path: &Path, response: &serde_json::Value) -> Result<usize, CommandError> {
     let bytes = serde_json::to_vec_pretty(response).map_err(|error| {
         CommandError::InvalidRequest(format!("serialize final command response: {error}"))
     })?;
+    let byte_len = bytes.len();
     std::fs::write(path, bytes)?;
-    Ok(())
+    Ok(byte_len)
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {

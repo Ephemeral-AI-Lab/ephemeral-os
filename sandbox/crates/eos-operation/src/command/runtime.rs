@@ -53,8 +53,8 @@ pub fn cancel_all_commands(grace_s: Option<f64>) -> usize {
     command_ops().cancel_all(grace_s)
 }
 
-pub fn advance_active_commands_once() {
-    command_ops().advance_active_commands_once(Instant::now());
+pub fn advance_active_commands_once() -> Vec<eos_trace::TraceRecord> {
+    command_ops().advance_active_commands_once(Instant::now())
 }
 
 pub fn recover_orphaned_commands() {

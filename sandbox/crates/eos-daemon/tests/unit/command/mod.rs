@@ -176,6 +176,63 @@ fn command_write_stdin_does_not_claim_parked_completion() -> TestResult {
 }
 
 #[test]
+fn command_stdin_written_event_records_bounded_wait_facts() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = DispatchContext::empty().with_trace_events(sink.clone());
+    record_stdin_written(
+        &context,
+        &CommandStdinTraceFacts {
+            command_id: "cmd_stdin_event".to_owned(),
+            bytes: 12,
+            wait_ms: 34,
+            waited_for_output: true,
+            status: CommandStatus::Running,
+        },
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 1);
+    let event = events.first().expect("stdin trace event");
+    assert_eq!(event.module, "command");
+    assert_eq!(event.name, "stdin_written");
+    assert_eq!(event.details["command_id"], "cmd_stdin_event");
+    assert_eq!(event.details["bytes"], 12);
+    assert_eq!(event.details["wait_ms"], 34);
+    assert_eq!(event.details["waited_for_output"], true);
+    assert_eq!(event.details["status"], "running");
+}
+
+#[test]
+fn command_start_trace_events_are_recorded_in_request_sidecar_sink() {
+    let sink = crate::trace::RequestTraceEventSink::default();
+    let context = DispatchContext::empty().with_trace_events(sink.clone());
+    record_command_trace_events(
+        &context,
+        &[
+            CommandTraceEvent::new(
+                "prepared",
+                json!({"command_id": "cmd_exec", "workspace": "ephemeral"}),
+            ),
+            CommandTraceEvent::artifact_written(
+                "metadata",
+                std::path::Path::new("/tmp/metadata.json"),
+                15,
+            ),
+        ],
+    );
+
+    let events = sink.drain();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].module, "command");
+    assert_eq!(events[0].name, "prepared");
+    assert_eq!(events[0].details["command_id"], "cmd_exec");
+    assert_eq!(events[1].module, "command");
+    assert_eq!(events[1].name, "artifact_written");
+    assert_eq!(events[1].details["artifact"], "metadata");
+    assert_eq!(events[1].details["bytes"], 15);
+}
+
+#[test]
 fn command_cancel_returns_completed_result_when_live_command_is_gone() -> TestResult {
     let id = "command_cancel_done_unit";
     command_ops().push_completed(test_completion(id, "caller", "already-finished\n"));

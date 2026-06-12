@@ -20,7 +20,9 @@ pub(crate) mod background_tasks {
     }
 
     pub(crate) fn advance_active_commands_once() {
-        eos_operation::command::runtime::advance_active_commands_once();
+        for record in eos_operation::command::runtime::advance_active_commands_once() {
+            crate::trace::push_background_record(record);
+        }
     }
 
     pub(crate) fn recover_orphaned_commands() {

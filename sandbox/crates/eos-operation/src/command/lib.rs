@@ -8,6 +8,7 @@ mod prepare;
 mod registry;
 pub mod runtime;
 mod service;
+mod trace;
 
 pub use contract::{
     CollectCompletedOutput, CommandCompletion, CommandMetadata, CommandResponse, CommandStatus,
@@ -17,4 +18,7 @@ pub use runtime::{
     active_commands_for_caller, cancel_all_commands, cleanup_commands_for_caller, command_config,
     command_ops, command_scratch_root, configure_commands,
 };
-pub use service::{CommandOps, ExecTarget};
+pub use service::{
+    CommandExecOutcome, CommandOps, CommandStdinTraceFacts, CommandWriteStdinOutcome, ExecTarget,
+};
+pub use trace::CommandTraceEvent;

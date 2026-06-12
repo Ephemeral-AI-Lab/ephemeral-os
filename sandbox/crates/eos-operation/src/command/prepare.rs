@@ -8,6 +8,7 @@ use eos_workspace::OverlayDirs;
 use serde_json::{json, Value};
 
 use super::outcome::WorkspaceApiError;
+use super::trace::CommandTraceEvent;
 
 pub(crate) struct PreparedCommand {
     pub(crate) run_request: Value,
@@ -15,6 +16,7 @@ pub(crate) struct PreparedCommand {
     pub(crate) output_path: PathBuf,
     pub(crate) final_path: PathBuf,
     pub(crate) transcript_path: PathBuf,
+    pub(crate) trace_events: Vec<CommandTraceEvent>,
 }
 
 pub(crate) struct PrepareInputs<'a> {
@@ -98,25 +100,34 @@ fn finish_prepare(
     output_path: PathBuf,
 ) -> Result<PreparedCommand, WorkspaceApiError> {
     std::fs::create_dir_all(&inputs.command_dir).map_err(prepare_error)?;
-    std::fs::write(
-        inputs.command_dir.join("metadata.json"),
-        serde_json::to_vec_pretty(&json!({
-            "command_id": inputs.command_id,
-            "caller_id": inputs.caller_id,
-            "invocation_id": inputs.invocation_id,
-            "workspace": inputs.workspace_label,
-            "command": inputs.cmd,
-            "status": "running",
-        }))
-        .map_err(prepare_error)?,
-    )
+    let metadata_path = inputs.command_dir.join("metadata.json");
+    let metadata_bytes = serde_json::to_vec_pretty(&json!({
+        "command_id": inputs.command_id,
+        "caller_id": inputs.caller_id,
+        "invocation_id": inputs.invocation_id,
+        "workspace": inputs.workspace_label,
+        "command": inputs.cmd,
+        "status": "running",
+    }))
     .map_err(prepare_error)?;
+    std::fs::write(&metadata_path, &metadata_bytes).map_err(prepare_error)?;
     Ok(PreparedCommand {
         run_request: serde_json::to_value(&run_request).map_err(prepare_error)?,
         request_path,
         output_path,
         final_path: inputs.command_dir.join("final.json"),
         transcript_path: inputs.command_dir.join("transcript.log"),
+        trace_events: vec![
+            CommandTraceEvent::new(
+                "prepared",
+                json!({
+                    "command_id": inputs.command_id,
+                    "workspace": inputs.workspace_label,
+                    "artifact_dir": inputs.command_dir.display().to_string(),
+                }),
+            ),
+            CommandTraceEvent::artifact_written("metadata", &metadata_path, metadata_bytes.len()),
+        ],
     })
 }
 
@@ -136,3 +147,7 @@ fn ns_fds_from_map(map: &std::collections::HashMap<String, i32>) -> Option<NsFds
 fn prepare_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("command_prepare_failed", error.to_string())
 }
+
+#[cfg(test)]
+#[path = "../../tests/command/prepare.rs"]
+mod tests;
