@@ -4,10 +4,10 @@
 //!
 #![forbid(unsafe_code)]
 
-#[path = "runtime/context.rs"]
-pub(crate) mod context;
 #[path = "dispatch/builtin.rs"]
 pub(crate) mod builtin;
+#[path = "runtime/context.rs"]
+pub(crate) mod context;
 #[path = "dispatch/dispatcher.rs"]
 pub(crate) mod dispatcher;
 #[path = "runtime/error.rs"]
@@ -35,5 +35,5 @@ pub use server::{DaemonServer, ServerConfig};
 pub use workspace_runtime::{CallerCancel, ExitOutcome, WorkspaceEnterError, WorkspaceRuntime};
 
 pub(crate) mod config {
-    pub(crate) use eos_config::configs::daemon::CommandSessionConfig;
+    pub(crate) use eos_config::configs::daemon::CommandConfig;
 }

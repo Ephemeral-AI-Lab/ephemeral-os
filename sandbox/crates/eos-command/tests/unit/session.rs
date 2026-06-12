@@ -4,7 +4,7 @@ use serde_json::json;
 
 #[test]
 fn session_exposes_identity_and_expiry() {
-    let session = CommandSession::new(CommandSessionSpec {
+    let session = Session::new(SessionSpec {
         id: "cmd_1".to_owned(),
         caller_id: "caller".to_owned(),
         command: "echo ok".to_owned(),
@@ -35,14 +35,14 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
         .read(true)
         .write(true)
         .open("/dev/null")?;
-    let session = CommandSession::new_running(
-        CommandSessionSpec {
+    let session = Session::new_running(
+        SessionSpec {
             id: "cmd_1".to_owned(),
             caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
             timeout_seconds: None,
         },
-        RunningCommandSessionParts {
+        RunningSessionParts {
             process: crate::process::CommandSessionProcess::inactive(writer),
             output_path: root.join("runner-result.json"),
             final_path: final_path.clone(),

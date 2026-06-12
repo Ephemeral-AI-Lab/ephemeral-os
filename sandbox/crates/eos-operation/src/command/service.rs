@@ -3,12 +3,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use eos_command::process::{spawn_current_exe_ns_runner, KillReason};
-use eos_command::session::{
-    CommandSession, CommandSessionSpec, ReapedCommand, RunningCommandSessionParts,
-};
+use eos_command::session::{ReapedCommand, RunningSessionParts, Session, SessionSpec};
 use eos_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use eos_command::{
-    CancelCommandSession, CollectCompleted, CommandSessionConfig, CommandSessionError,
+    CancelCommandSession, CollectCompleted, CommandConfig, CommandSessionError,
     ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 use eos_layerstack::service;
@@ -37,13 +35,13 @@ pub enum ExecTarget {
 }
 
 pub struct CommandOps {
-    config: CommandSessionConfig,
+    config: CommandConfig,
     registry: Arc<CommandRegistry>,
 }
 
 impl CommandOps {
     #[must_use]
-    pub fn new(config: CommandSessionConfig) -> Self {
+    pub fn new(config: CommandConfig) -> Self {
         Self {
             config,
             registry: Arc::new(CommandRegistry::new()),
@@ -62,7 +60,7 @@ impl CommandOps {
         }
         let id = self.registry.next_id();
         let yield_time_ms = request.yield_time_ms;
-        let spec = CommandSessionSpec {
+        let spec = SessionSpec {
             id: id.clone(),
             caller_id: request.caller_id.clone(),
             command: request.cmd.clone(),
@@ -94,7 +92,7 @@ impl CommandOps {
     )]
     fn start_ephemeral(
         &self,
-        spec: CommandSessionSpec,
+        spec: SessionSpec,
         request: &StartCommandSession,
         command_id: &str,
         root: PathBuf,
@@ -156,7 +154,7 @@ impl CommandOps {
 
     fn start_isolated(
         &self,
-        spec: CommandSessionSpec,
+        spec: SessionSpec,
         request: &StartCommandSession,
         command_id: &str,
         binding: Box<IsolatedWorkspaceBinding>,
@@ -185,9 +183,9 @@ impl CommandOps {
 
     fn spawn_session(
         &self,
-        spec: CommandSessionSpec,
+        spec: SessionSpec,
         prepared: PreparedCommand,
-    ) -> Result<CommandSession, CommandSessionError> {
+    ) -> Result<Session, CommandSessionError> {
         let process = spawn_current_exe_ns_runner(
             &prepared.request_path,
             &prepared.run_request,
@@ -195,9 +193,9 @@ impl CommandOps {
             prepared.transcript_path.clone(),
             &self.config.transcript_timestamp_timezone,
         )?;
-        Ok(CommandSession::new_running(
+        Ok(Session::new_running(
             spec,
-            RunningCommandSessionParts {
+            RunningSessionParts {
                 process,
                 output_path: prepared.output_path,
                 final_path: prepared.final_path,
@@ -209,9 +207,9 @@ impl CommandOps {
 
     fn register_and_wait(
         &self,
-        session: CommandSession,
+        session: Session,
         yield_time_ms: u64,
-        make_run: impl FnOnce(CommandSession) -> ActiveCommand,
+        make_run: impl FnOnce(Session) -> ActiveCommand,
     ) -> CommandResponse {
         let id = session.id().to_owned();
         let run = Arc::new(make_run(session));

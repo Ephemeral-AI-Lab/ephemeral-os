@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
+use eos_layerstack::WorkspaceBinding;
 use eos_layerstack::{
     build_workspace_base as build_layer_stack_workspace_base,
     ensure_workspace_base as ensure_layer_stack_workspace_base, read_workspace_binding,
@@ -14,7 +15,6 @@ use eos_operation::checkpoint::contract::{
     CommitToWorkspaceOutput, EnsureBaseInput, LayerMetricsInput, LayerMetricsOutput,
     WorkspaceBaseOutput,
 };
-use eos_layerstack::WorkspaceBinding;
 use eos_operation::checkpoint::{CommitOutcome, CommitRequest};
 use serde_json::Value;
 

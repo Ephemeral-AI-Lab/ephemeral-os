@@ -14,9 +14,9 @@ use crate::wire::{ErrorKind, Request};
 #[cfg(test)]
 use eos_layerstack::LayerStack;
 
+use crate::builtin;
 #[cfg(test)]
 use crate::invocation_registry::InFlightRegistry;
-use crate::builtin;
 use crate::op_adapter::plugin;
 #[cfg(test)]
 use crate::response::{insert_tree_resource_timings, resource_timings, TreeResourceStats};

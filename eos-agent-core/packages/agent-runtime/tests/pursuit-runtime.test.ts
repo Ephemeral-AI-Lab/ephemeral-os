@@ -103,13 +103,13 @@ function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
   const messages = [user("# Pursuit goal\\n" + vars.pursuit_goal)];
   if (vars.current_leg_goal === null) {
-    messages.push(user("Declare this leg's focus and work items."));
+    messages.push(user("Plan work items for the current leg goal."));
   } else {
     messages.push(user("# Current leg goal\\n" + vars.current_leg_goal));
     if (vars.previous_attempt_outcome !== null) {
       messages.push(user("# Previous attempt\\n" + JSON.stringify(vars.previous_attempt_outcome)));
     }
-    messages.push(user("Submit planner outcome with work items for this focus."));
+    messages.push(user("Submit planner outcome with work items for this leg goal."));
   }
   return messages;
 }
@@ -308,7 +308,7 @@ describe("pursuit runtime end-to-end (§16 case 12)", () => {
     expect(plannerRequest.messages).toEqual([
       userMessage("# Pursuit goal\nbuild the thing"),
       userMessage("# Current leg goal\nbuild the thing"),
-      userMessage("Submit planner outcome with work items for this focus."),
+      userMessage("Submit planner outcome with work items for this leg goal."),
     ]);
 
     // Worker A: title + spec from the snapshot, no dependencies.

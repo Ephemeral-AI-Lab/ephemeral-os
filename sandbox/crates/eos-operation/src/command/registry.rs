@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use std::path::PathBuf;
 
-use eos_command::session::CommandSession;
+use eos_command::session::Session;
 use eos_command::CollectCompleted;
 use eos_layerstack::service::Snapshot;
 use eos_workspace::EphemeralWorkspace;
@@ -16,14 +16,14 @@ use eos_workspace::IsolatedWorkspaceBinding;
 use super::contract::{CollectCompletedOutput, CommandResponse, CommandSessionCompletion};
 
 pub(crate) struct EphemeralRun {
-    pub(crate) session: CommandSession,
+    pub(crate) session: Session,
     pub(crate) root: PathBuf,
     pub(crate) snapshot: Snapshot,
     pub(crate) workspace: EphemeralWorkspace,
 }
 
 pub(crate) struct IsolatedRun {
-    pub(crate) session: CommandSession,
+    pub(crate) session: Session,
     pub(crate) binding: IsolatedWorkspaceBinding,
 }
 
@@ -33,7 +33,7 @@ pub(crate) enum ActiveCommand {
 }
 
 impl ActiveCommand {
-    pub(crate) fn session(&self) -> &CommandSession {
+    pub(crate) fn session(&self) -> &Session {
         match self {
             Self::Ephemeral(run) => &run.session,
             Self::Isolated(run) => &run.session,

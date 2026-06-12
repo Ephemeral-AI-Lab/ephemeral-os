@@ -37,7 +37,9 @@ pub(crate) fn op_ensure(
         EnsureOutcome::NeedsUpload { manifest, report } => {
             PluginEnsureOutput::NeedsUpload(needs_upload_output(&manifest, &report))
         }
-        EnsureOutcome::Ready(ready) => PluginEnsureOutput::Ready(Box::new(ensure_ready_output(&ready))),
+        EnsureOutcome::Ready(ready) => {
+            PluginEnsureOutput::Ready(Box::new(ensure_ready_output(&ready)))
+        }
     };
     Ok(to_wire_value(output))
 }

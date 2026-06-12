@@ -13,10 +13,10 @@ fn sample_completion(id: &str) -> CommandSessionCompletion {
 fn ephemeral_run(id: &str, caller: &str) -> Arc<ActiveCommand> {
     use std::path::PathBuf;
 
-    use eos_command::session::CommandSessionSpec;
+    use eos_command::session::SessionSpec;
     use eos_layerstack::service::Snapshot;
 
-    let session = CommandSession::new(CommandSessionSpec {
+    let session = Session::new(SessionSpec {
         id: id.to_owned(),
         caller_id: caller.to_owned(),
         command: "sleep 1".to_owned(),

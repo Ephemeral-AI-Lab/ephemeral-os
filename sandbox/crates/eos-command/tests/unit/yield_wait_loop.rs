@@ -35,9 +35,9 @@ fn wait_returns_running_after_quiet_output() {
         output: Mutex::new("ready\n".to_owned()),
         offsets: Mutex::new(vec![1, 1, 0]),
     };
-    let config = CommandSessionConfig {
+    let config = CommandConfig {
         quiet_ms: 1,
-        ..CommandSessionConfig::default()
+        ..CommandConfig::default()
     };
 
     let result = wait_for_yield(&target, &config, 100, 0);

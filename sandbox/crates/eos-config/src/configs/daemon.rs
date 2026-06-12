@@ -12,14 +12,14 @@ use crate::configs::validate::{
     require_usize_at_least, ConfigFieldError,
 };
 
-pub use super::command_session::CommandSessionConfig;
+pub use super::command_session::CommandConfig;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DaemonConfig {
     pub server: DaemonServerConfig,
     pub inflight: InflightConfig,
-    pub command_sessions: CommandSessionConfig,
+    pub command_sessions: CommandConfig,
     pub isolated_sweeper: IsolatedSweeperConfig,
     pub plugin: PluginRuntimeConfig,
     pub layer_stack: LayerStackConfig,

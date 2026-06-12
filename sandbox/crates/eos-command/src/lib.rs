@@ -23,5 +23,5 @@ pub use contract::{
     tail_lines, CancelCommandSession, CollectCompleted, CommandSessionError, ReadCommandProgress,
     StartCommandSession, WriteStdin,
 };
-pub use eos_config::configs::command_session::CommandSessionConfig;
-pub use session::{CommandSession, CommandSessionSpec};
+pub use eos_config::configs::command_session::CommandConfig;
+pub use session::{Session, SessionSpec};

@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct CommandSessionConfig {
+pub struct CommandConfig {
     pub scratch_root: PathBuf,
     pub default_yield_time_ms: u64,
     pub default_timeout_s: u64,
@@ -15,7 +15,7 @@ pub struct CommandSessionConfig {
     pub transcript_timestamp_timezone: String,
 }
 
-impl Default for CommandSessionConfig {
+impl Default for CommandConfig {
     fn default() -> Self {
         Self {
             scratch_root: PathBuf::from("/eos/scratch/command-sessions"),

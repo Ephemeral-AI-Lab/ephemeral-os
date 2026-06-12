@@ -54,9 +54,9 @@ fn optional_u64_accepts_unsigned_and_nonnegative_signed_numbers() {
 
 #[test]
 fn exec_timeout_uses_config_default_only_when_omitted() {
-    let config = crate::config::CommandSessionConfig {
+    let config = crate::config::CommandConfig {
         default_timeout_s: 600,
-        ..crate::config::CommandSessionConfig::default()
+        ..crate::config::CommandConfig::default()
     };
 
     assert_eq!(
@@ -94,8 +94,7 @@ fn exec_timeout_uses_config_default_only_when_omitted() {
 
 #[test]
 fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
-    let manager =
-        eos_operation::command::CommandOps::new(eos_command::CommandSessionConfig::default());
+    let manager = eos_operation::command::CommandOps::new(eos_command::CommandConfig::default());
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
     manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
 

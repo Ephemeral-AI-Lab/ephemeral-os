@@ -76,10 +76,7 @@ pub(crate) fn op_exec_command(
     }
 }
 
-fn exec_timeout_seconds(
-    input: &ExecCommandInput,
-    config: &crate::config::CommandSessionConfig,
-) -> f64 {
+fn exec_timeout_seconds(input: &ExecCommandInput, config: &crate::config::CommandConfig) -> f64 {
     u64_to_f64_saturating(input.timeout.unwrap_or(config.default_timeout_s))
 }
 

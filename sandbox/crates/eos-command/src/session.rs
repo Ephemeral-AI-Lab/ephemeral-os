@@ -21,7 +21,7 @@ mod tests;
 /// PTY/process substrate for one command session. It owns the child process,
 /// the transcript, and the cancel flag — but **no** workspace policy: the run
 /// that owns this session decides publish-vs-discard.
-pub struct CommandSession {
+pub struct Session {
     id: String,
     caller_id: String,
     command: String,
@@ -30,7 +30,7 @@ pub struct CommandSession {
     runtime: ProcessRuntime,
 }
 
-pub struct CommandSessionSpec {
+pub struct SessionSpec {
     pub id: String,
     pub caller_id: String,
     pub command: String,
@@ -55,7 +55,7 @@ pub struct ReapedCommand {
     pub kill: Option<KillReason>,
 }
 
-pub struct RunningCommandSessionParts {
+pub struct RunningSessionParts {
     pub process: CommandSessionProcess,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -79,7 +79,7 @@ struct ProcessRuntime {
 }
 
 impl ProcessRuntime {
-    fn new(parts: RunningCommandSessionParts) -> Self {
+    fn new(parts: RunningSessionParts) -> Self {
         Self {
             process: parts.process,
             output_path: parts.output_path,
@@ -99,7 +99,7 @@ impl ProcessRuntime {
             .write(true)
             .open("/dev/null")
             .expect("open /dev/null for inactive command session process");
-        Self::new(RunningCommandSessionParts {
+        Self::new(RunningSessionParts {
             process: CommandSessionProcess::inactive(writer),
             output_path: PathBuf::new(),
             final_path: PathBuf::new(),
@@ -109,19 +109,19 @@ impl ProcessRuntime {
     }
 }
 
-impl CommandSession {
+impl Session {
     /// Process-free scaffold for registry and identity tests.
     #[must_use]
-    pub fn new(spec: CommandSessionSpec) -> Self {
+    pub fn new(spec: SessionSpec) -> Self {
         Self::with_runtime(spec, ProcessRuntime::inactive())
     }
 
     #[must_use]
-    pub fn new_running(spec: CommandSessionSpec, parts: RunningCommandSessionParts) -> Self {
+    pub fn new_running(spec: SessionSpec, parts: RunningSessionParts) -> Self {
         Self::with_runtime(spec, ProcessRuntime::new(parts))
     }
 
-    fn with_runtime(spec: CommandSessionSpec, runtime: ProcessRuntime) -> Self {
+    fn with_runtime(spec: SessionSpec, runtime: ProcessRuntime) -> Self {
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
@@ -256,7 +256,7 @@ impl CommandSession {
     }
 }
 
-impl CommandSessionWaitTarget<ReapedCommand> for CommandSession {
+impl CommandSessionWaitTarget<ReapedCommand> for Session {
     fn try_finalize(&self) -> Option<ReapedCommand> {
         self.reap()
     }

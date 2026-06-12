@@ -174,7 +174,7 @@ impl CommandRunnerResult {
 }
 
 impl CommandSessionProcess {
-    /// Process-free scaffold backing [`crate::session::CommandSession::new`].
+    /// Process-free scaffold backing [`crate::session::Session::new`].
     #[must_use]
     pub(crate) fn inactive(writer: File) -> Self {
         Self {

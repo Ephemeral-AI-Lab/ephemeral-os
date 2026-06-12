@@ -1,6 +1,6 @@
 # EOS Agent Core Rust to TypeScript Migration - Phase 05.3 Pursuit / Leg / Attempt Vocabulary
 
-Status: Proposed
+Status: Complete
 Date: 2026-06-12
 Owner: eos-agent-core
 Migration direction: Rust -> TypeScript
@@ -38,14 +38,34 @@ Current phase status:
 
 | Phase | Status | Completion evidence |
 | --- | --- | --- |
-| Phase 01 - Foundation rename and package layout | Pending | |
-| Phase 02 - Contracts, DB schema, and goal model | Blocked | |
-| Phase 03 - Pursuit service creation and declaration semantics | Blocked | |
-| Phase 04 - Planner payload and dependency validation | Blocked | |
-| Phase 05 - Attempt scheduler and failure propagation | Blocked | |
-| Phase 06 - Context projection, mirror, and snapshots | Blocked | |
-| Phase 07 - Runtime, tool, and script wiring | Blocked | |
-| Phase 08 - Verification, hygiene, and legacy removal | Blocked | |
+| Phase 01 - Foundation rename and package layout | Complete | E1, E5, E6 |
+| Phase 02 - Contracts, DB schema, and goal model | Complete | E1, E2, E5 |
+| Phase 03 - Pursuit service creation and declaration semantics | Complete | E1, E2 |
+| Phase 04 - Planner payload and dependency validation | Complete | E1, E2, E5 |
+| Phase 05 - Attempt scheduler and failure propagation | Complete | E1, E2 |
+| Phase 06 - Context projection, mirror, and snapshots | Complete | E1, E2, E6 |
+| Phase 07 - Runtime, tool, and script wiring | Complete | E1, E2, E5 |
+| Phase 08 - Verification, hygiene, and legacy removal | Complete | E1-E6 |
+
+Verification evidence:
+
+- E1 focused suites:
+  `pnpm exec vitest run packages/contracts/tests/pursuit.test.ts packages/pursuit/tests/lifecycle.test.ts packages/pursuit/tests/context.test.ts packages/pursuit/tests/package-boundary.test.ts packages/tool/tests/pursuit-family.test.ts packages/agent-runtime/tests/agent-profile.test.ts packages/agent-runtime/tests/runtime.test.ts packages/agent-runtime/tests/pursuit-runtime.test.ts`
+  passed with 8 test files and 86 tests.
+- E2 full workspace gate: `pnpm run check` passed, including
+  `pnpm run typecheck`, `pnpm run lint`, and `pnpm run test`; Vitest reported
+  36 test files and 406 tests passed.
+- E3 docs hygiene:
+  `git diff --check -- docs/plans/agent-core-rust-to-typescript-migration eos-agent-core .eos-agents/pursuit/scripts`
+  produced no output.
+- E4 old workflow vocabulary scan:
+  `rg -n "@eos/workflow|packages/workflow|delegate_workflow|workflow_context|workflowContextScript|workflowDb|workflowContextRoot|workflowScriptsDir|workflow_<id>|iteration_<id>|deferred_goal|archived/" eos-agent-core/packages .eos-agents/pursuit .eos-agents/profile -g '!node_modules/**' -g '!docs/code-inventory/**'`
+  produced no matches.
+- E5 active work-item/path legacy scan:
+  `rg -n "\.needs\b|\bneeds\s*:|\"needs\"\s*:|work_item_spec|description\.md|focus\.md" eos-agent-core/packages/contracts/src/pursuit.ts eos-agent-core/packages/pursuit/src eos-agent-core/packages/tool/src/tools/submission eos-agent-core/packages/tool/src/tools/pursuit eos-agent-core/packages/agent-runtime/src .eos-agents/pursuit/scripts .eos-agents/profile -g '!node_modules/**'`
+  produced no matches.
+- E6 projection relocation: `test ! -d eos-agent-core/packages/pursuit/src/projection`
+  succeeded; projection code lives under `context-engine/projection/`.
 
 ### Phase 01 - Foundation Rename and Package Layout
 

@@ -1,7 +1,7 @@
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::CommandSessionConfig;
+use crate::CommandConfig;
 
 pub trait CommandSessionWaitTarget<T> {
     fn try_finalize(&self) -> Option<T>;
@@ -17,7 +17,7 @@ pub enum WaitOutcome<T> {
 
 pub fn wait_for_yield<T, S>(
     session: &S,
-    config: &CommandSessionConfig,
+    config: &CommandConfig,
     yield_time_ms: u64,
     start_offset: u64,
 ) -> WaitOutcome<T>

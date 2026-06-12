@@ -1,7 +1,7 @@
 use std::sync::{OnceLock, RwLock};
 use std::time::Instant;
 
-use eos_command::CommandSessionConfig;
+use eos_command::CommandConfig;
 use serde_json::Value;
 
 use super::contract::{CommandResponse, CommandSessionCompletion, CommandStatus};
@@ -13,14 +13,14 @@ pub fn command_ops() -> &'static CommandOps {
     OPS.get_or_init(|| CommandOps::new(command_session_config()))
 }
 
-pub fn configure_command_sessions(config: &CommandSessionConfig) {
+pub fn configure_command_sessions(config: &CommandConfig) {
     let mut guard = command_session_config_cell()
         .write()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     *guard = config.clone();
 }
 
-pub fn command_session_config() -> CommandSessionConfig {
+pub fn command_session_config() -> CommandConfig {
     command_session_config_cell()
         .read()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -31,9 +31,9 @@ pub fn command_session_scratch_root() -> std::path::PathBuf {
     command_session_config().scratch_root
 }
 
-fn command_session_config_cell() -> &'static RwLock<CommandSessionConfig> {
-    static CONFIG: OnceLock<RwLock<CommandSessionConfig>> = OnceLock::new();
-    CONFIG.get_or_init(|| RwLock::new(CommandSessionConfig::default()))
+fn command_session_config_cell() -> &'static RwLock<CommandConfig> {
+    static CONFIG: OnceLock<RwLock<CommandConfig>> = OnceLock::new();
+    CONFIG.get_or_init(|| RwLock::new(CommandConfig::default()))
 }
 
 #[must_use]
