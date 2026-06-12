@@ -42,10 +42,10 @@ pursuit_<id>/
 
     attempt_<id>/
       plan_summary.md
-      fail_reason.md
+      failure_reasons.md
       outcome.md
       work_item_<id>/
-        description.md
+        title.md
         spec.md
         summary.md
         outcome.md
@@ -55,10 +55,10 @@ pursuit_<id>/
         leg_goal.md
         next_leg_goal.md
         plan_summary.md
-        fail_reason.md
+        failure_reasons.md
         outcome.md
         work_item_<id>/
-          description.md
+          title.md
           spec.md
           summary.md
           outcome.md
@@ -73,11 +73,13 @@ Construction rules:
 - `next_leg_goal.md` is future scope. It is not work delivered by the current
   leg.
 - `Success` means the current effective `leg_goal` was achieved in full.
-- A new leg exists only because the previous leg closed successfully and
-  declared `next_leg_goal`; legs are never planned upfront.
+- In dynamic mode, a new leg exists only because the previous leg closed
+  successfully and declared `next_leg_goal`.
+- In predefined mode, legs come from the caller-provided `leg_goals` list and
+  planners must not redefine them.
 - `superseded/` attempts are displaced history. Do not include their full
   content by default; list their paths only unless a refocus-specific recovery
-  prompt needs their details.
+  prompt requires their details.
 
 ## Planner Initial Messages
 
@@ -119,8 +121,10 @@ Context source:
 ```text
 # Current leg evidence
 
-A new leg exists only because the previous leg closed successfully and declared
-`next_leg_goal`; legs are never planned upfront.
+Dynamic mode: a new leg exists only because the previous leg closed
+successfully and declared `next_leg_goal`.
+
+Predefined mode: this leg comes from the caller-provided `leg_goals` list.
 
 ## Closed predecessor legs
 - leg_<id> [Success]: <first line of outcome.md>
@@ -129,10 +133,11 @@ A new leg exists only because the previous leg closed successfully and declared
 ## Failed attempts under the current leg_goal
 ### leg_<leg_id>/attempt_<attempt_id>/
 plan_summary: <plan_summary.md>
-fail_reason: <fail_reason.md>
+failure_reasons: <failure_reasons.md>
 work_items:
 - work_item_<id> [Failed]: <summary.md>
   outcome: <outcome.md>
+- work_item_<id> [Blocked]: blocked by work_item_<dependency_id>
 
 ## Superseded attempts
 - leg_<leg_id>/superseded/attempt_<id>/
@@ -144,7 +149,7 @@ Context source:
 | --- | --- |
 | Closed predecessor legs | status and first line of each predecessor `outcome.md` |
 | Failed attempts under current `leg_goal` | attempts in this leg with `is_consistent_with_leg_goal = true` and `status = Failed` |
-| Work item details in failed attempts | `description.md`, `summary.md`, and `outcome.md`; include `spec.md` only when useful for retry diagnosis |
+| Work item details in failed attempts | `title.md`, `summary.md`, and `outcome.md`; include `spec.md` only when useful for retry diagnosis |
 | Superseded attempts | paths only by default |
 
 Initial-leg planners often have no failed attempts and no predecessor legs. In
@@ -168,19 +173,31 @@ that case render:
 
 Plan work items that complete the full current `leg_goal`.
 
-Success means the full effective `leg_goal` is achieved. If you cannot achieve
-the full `leg_goal` in this leg, submit a narrowed `leg_goal` and put the
-remainder in `next_leg_goal`.
+Success means the full effective `leg_goal` is achieved.
 
 Payload rules:
+Dynamic mode:
 - Omit `leg_goal` when you accept the current `leg_goal`.
 - Include `leg_goal` only to refocus this leg; refocus supersedes prior live
   attempts and resets the standing `next_leg_goal`.
 - Include `next_leg_goal` only for work that should become a future leg after
   this leg succeeds.
 - `next_leg_goal` is a goal to be planned later; it is never a plan and never a
-  description of work delivered by this leg.
+  summary of work delivered by this leg.
+
+Predefined mode:
+- Omit `leg_goal` and `next_leg_goal`.
+- Do not refocus this leg.
+- Do not declare future legs; the predefined list owns leg progression.
+
+If dynamic mode and you cannot achieve the full `leg_goal` in this leg, submit a
+narrowed `leg_goal` and put the remainder in `next_leg_goal`.
+
 - Define worker-executable `work_items` for this attempt.
+- Use `depends_on` for hard execution/context dependencies only. It may point to
+  this attempt's work items or previous non-superseded attempts with the same
+  leg goal. Use work-item ids that are unique in this non-superseded leg-goal
+  version. If you submit a new `leg_goal`, do not depend on previous attempts.
 - Submit with `submit_planner_outcome` as the final action.
 ```
 
@@ -222,16 +239,16 @@ Context source:
 | `plan_summary.md` | owning attempt planner summary |
 
 Workers do not need closed predecessor leg details by default. They should see
-only context needed to complete their assigned work item and direct dependency
-outcomes.
+only context needed to complete their assigned work item and direct `depends_on`
+outcomes from the same non-superseded leg-goal version.
 
 ### Message 2: Assigned Work and Dependencies
 
 ```text
 # Assigned work item
 
-## leg_<leg_id>/attempt_<attempt_id>/work_item_<work_item_id>/description.md
-<description>
+## leg_<leg_id>/attempt_<attempt_id>/work_item_<work_item_id>/title.md
+<title>
 
 ## leg_<leg_id>/attempt_<attempt_id>/work_item_<work_item_id>/spec.md
 <spec>
@@ -239,15 +256,17 @@ outcomes.
 ## Dependency outcomes
 - leg_<leg_id>/attempt_<attempt_id>/work_item_<dependency_id> [Success]: <summary.md>
   outcome: <outcome.md>
+- leg_<leg_id>/attempt_<previous_attempt_id>/work_item_<dependency_id> [Success]: <summary.md>
+  outcome: <outcome.md>
 ```
 
 Context source:
 
 | Section | Include |
 | --- | --- |
-| Assigned description | this work item's `description.md` |
+| Assigned title | this work item's `title.md` |
 | Assigned spec | this work item's `spec.md` |
-| Dependency outcomes | direct `needs` only; include `summary.md` and `outcome.md` |
+| Dependency outcomes | direct `depends_on` only; include `summary.md` and `outcome.md`; dependency may come from this attempt or a previous non-superseded attempt with the same leg goal |
 
 If there are no dependencies, render:
 

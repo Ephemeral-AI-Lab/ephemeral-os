@@ -14,6 +14,310 @@ Input notes:
 - `note/leg-goal-without-focus-debate.md`
 - `note/planner-worker-initial-messages.md`
 
+## 0. Progress Tracker
+
+Tracker status values:
+
+| Status | Meaning |
+| --- | --- |
+| `Blocked` | Previous phase is not complete; do not start implementation. |
+| `Pending` | Previous phase is complete, but this phase has not started. |
+| `In progress` | This is the only active implementation phase. |
+| `Complete` | Every checklist item is checked and phase verification passed. |
+
+Gate rule:
+
+```text
+Only one phase may be In progress at a time.
+Do not begin Phase N+1 until Phase N is Complete.
+When a phase completes, update this tracker in the same change that records the
+phase verification evidence.
+```
+
+Current phase status:
+
+| Phase | Status | Completion evidence |
+| --- | --- | --- |
+| Phase 01 - Foundation rename and package layout | Pending | |
+| Phase 02 - Contracts, DB schema, and goal model | Blocked | |
+| Phase 03 - Pursuit service creation and declaration semantics | Blocked | |
+| Phase 04 - Planner payload and dependency validation | Blocked | |
+| Phase 05 - Attempt scheduler and failure propagation | Blocked | |
+| Phase 06 - Context projection, mirror, and snapshots | Blocked | |
+| Phase 07 - Runtime, tool, and script wiring | Blocked | |
+| Phase 08 - Verification, hygiene, and legacy removal | Blocked | |
+
+### Phase 01 - Foundation Rename and Package Layout
+
+Acceptance checklist:
+
+- [ ] Rename `eos-agent-core/packages/workflow/` to
+  `eos-agent-core/packages/pursuit/`.
+- [ ] Rename package metadata from `@eos/workflow` to `@eos/pursuit`.
+- [ ] Update workspace package references from `@eos/workflow` to
+  `@eos/pursuit`.
+- [ ] Rename product source files according to the active file-level map:
+  `launcher.ts` to `agent-launcher.ts`, every entity `transitions.ts` to
+  singular `transition.ts`, `workflow-tree.ts` to `pursuit-tree.ts`, and
+  `workflow-context.ts` to `pursuit-context.ts`.
+- [ ] Move projection code under `context-engine/projection/`:
+  `context-projection.ts` to `context-engine/projection/mirror.ts`,
+  `archive/listing.ts` to `context-engine/projection/listing.ts`,
+  `archive/paths.ts` to `context-engine/projection/paths.ts`, and
+  `archive/resolve.ts` to `context-engine/projection/resolve.ts`.
+- [ ] Keep package exports narrow: pursuit service, composer seam, launch port
+  types, and public DTO/contract types only.
+- [ ] Ensure `@eos/pursuit` imports only allowed package dependencies:
+  `@eos/contracts`, `@eos/db`, and standard/library modules.
+- [ ] Ensure `@eos/pursuit` does not import `@eos/agent-runtime`,
+  `@eos/tool`, supervisor/background packages, profile loading, runtime
+  composition, or engine internals.
+- [ ] Run a layout/import boundary scan and record evidence in the tracker.
+
+Phase gate:
+
+```text
+Phase 01 is Complete only when package layout, package names, public exports,
+and dependency direction match this spec. Phase 02 remains Blocked until then.
+```
+
+### Phase 02 - Contracts, DB Schema, and Goal Model
+
+Acceptance checklist:
+
+- [ ] Rename public contract IDs, schemas, and DTOs from workflow/iteration to
+  pursuit/leg vocabulary.
+- [ ] Add `CreatePursuitInput` with dynamic and predefined shapes.
+- [ ] Validate `leg_goal_mode` from payload shape and reject mismatches.
+- [ ] Treat every `leg_goals` entry as an opaque prose string, equivalent in kind
+  to `pursuit_goal`.
+- [ ] Add `leg_goal`, `leg_goal_version`, `leg_goal_provenance`,
+  `is_leg_goal_mutatable`, and `next_leg_goal` to leg contracts.
+- [ ] Add nullable `outcome` fields to pursuit, leg, attempt, and work-item
+  snapshots.
+- [ ] Add work-item `Blocked` status without adding `Blocked` to pursuit, leg, or
+  attempt status unions.
+- [ ] Replace scalar attempt `fail_reason` with list-shaped
+  `failure_reasons`.
+- [ ] Rename DB row types and migration schema to `pursuits` / `legs`.
+- [ ] Persist predefined leg goals, plan declarations
+  `declared_leg_goal` / `declared_next_leg_goal`, `leg_goal_version` audit
+  stamps, work-item `title`, `spec`, leg-scoped dependency edges, `Blocked`
+  status, and attempt failure-reason lists.
+- [ ] Add or update contract and schema tests covering dynamic input,
+  predefined input, old field rejection, `Blocked`, and `leg_goal_version`.
+
+Phase gate:
+
+```text
+Phase 02 is Complete only when contracts and DB schema can represent the full
+Phase 05.3 model without compatibility-only workflow/iteration fields in active
+product surfaces. Phase 03 remains Blocked until then.
+```
+
+### Phase 03 - Pursuit Service Creation and Declaration Semantics
+
+Acceptance checklist:
+
+- [ ] Expose caller-agnostic `createPursuit(...)` / handle behavior with
+  `pursuit_id`, `cancel(...)`, and `settle()`.
+- [ ] Keep human-mode router/frontend implementation out of this phase while
+  avoiding agent-tool-only assumptions in the service.
+- [ ] Create the first leg and first attempt at pursuit creation time.
+- [ ] Dynamic mode sets first `leg_goal` from `pursuit_goal`.
+- [ ] Predefined mode sets each leg goal from `leg_goals[sequence - 1]`.
+- [ ] Dynamic successor legs inherit `leg_goal` from the previous successful
+  leg's `next_leg_goal`.
+- [ ] Reject planner `leg_goal` / `next_leg_goal` declarations in predefined
+  mode without consuming attempt budget.
+- [ ] Support dynamic refocus by `leg_goal`, incrementing `leg_goal_version`,
+  relocating prior live attempts under `superseded/`, and clearing standing
+  `next_leg_goal` when the same payload omits it.
+- [ ] Reject any attempt to clear standing `next_leg_goal` without a refocusing
+  `leg_goal`.
+- [ ] Keep effective goal truth derived from append-only declarations, with
+  `leg_goal_version` used only as audit metadata.
+- [ ] Add creation, refocus, predefined-mode, and declaration-derivation tests.
+
+Phase gate:
+
+```text
+Phase 03 is Complete only when pursuit creation, dynamic/predefined leg goal
+derivation, refocus, successor handling, superseded relocation, and handle
+semantics all pass focused tests. Phase 04 remains Blocked until then.
+```
+
+### Phase 04 - Planner Payload and Dependency Validation
+
+Acceptance checklist:
+
+- [ ] Replace planner work-item payload fields with `title`, `spec`, and
+  `depends_on`.
+- [ ] Reject old planner work-item fields `description`, `work_item_spec`, and
+  `needs` according to the active schema strictness policy.
+- [ ] Accept dynamic planner payloads that omit both `leg_goal` and
+  `next_leg_goal`.
+- [ ] Accept successor-only dynamic payloads containing `next_leg_goal` without
+  `leg_goal`.
+- [ ] Reject cross-attempt `depends_on` when the same planner payload submits a
+  replacement `leg_goal`.
+- [ ] Validate `depends_on` targets against the current non-superseded
+  `leg_goal_version`.
+- [ ] Permit `depends_on` on previous attempts only when the target is in the
+  same leg, not superseded, and shares the same effective leg-goal version.
+- [ ] Reject `depends_on` targets from future attempts, another leg, superseded
+  attempts, or earlier leg-goal versions.
+- [ ] Enforce work-item id uniqueness across the current attempt plus all
+  non-superseded prior attempts in the same leg-goal version.
+- [ ] Stamp accepted work items and dependency edges with current
+  `leg_goal_version` audit metadata.
+- [ ] Keep correctable validation failures in-run and avoid consuming attempt
+  budget for correctable planner payload errors.
+- [ ] Add dependency-validation tests for same-attempt, prior-attempt,
+  superseded, refocused, dangling, duplicate, and cyclic cases.
+
+Phase gate:
+
+```text
+Phase 04 is Complete only when planner payload validation and materialization
+can build a leg-scoped dependency graph that is unambiguous across attempts and
+leg-goal versions. Phase 05 remains Blocked until then.
+```
+
+### Phase 05 - Attempt Scheduler and Failure Propagation
+
+Acceptance checklist:
+
+- [ ] Implement scheduler operations as domain steps:
+  `applyPlannerSettlement`, `applyWorkItemSettlement`,
+  `propagateDependencyBlocks`, `claimReadyWorkItems`, and
+  `reconcileAttemptStatus`.
+- [ ] Enforce the hard launch gate: a work item is claimable only when every
+  direct `depends_on` target is terminal `Success`.
+- [ ] Recheck the launch gate in the claim query, post-commit launch guard, and
+  stale-claim recheck.
+- [ ] Ensure a `Running` work item is never converted to `Blocked`.
+- [ ] Mark only `NotStarted` descendants as `Blocked` when dependency block
+  propagation finds direct dependencies in `Failed` or `Blocked`.
+- [ ] Repeat dependency block propagation until stable so transitive dependents
+  become `Blocked`.
+- [ ] Leave unrelated `Running` work items running after a sibling fails.
+- [ ] Allow unrelated `NotStarted` work items to launch later when their own
+  dependencies become `Success`.
+- [ ] Derive attempt `Success` only when every work item is `Success`.
+- [ ] Derive attempt `Failed` only after at least one work item is
+  `Failed` / `Blocked` and no work item remains `Running` or `NotStarted`.
+- [ ] Preserve planner-death behavior for attempts with no accepted work graph.
+- [ ] Create retry attempts only after `reconcileAttemptStatus` closes the
+  current attempt `Failed` and retry budget remains.
+- [ ] Render and persist list-shaped failure reasons for planner failures,
+  context-composition failures, failed work items, and blocked work items.
+- [ ] Add scheduler tests for launch gating, transitive blocking, unrelated work
+  continuation, delayed failure close, retry creation, and no running-to-blocked
+  transition.
+
+Phase gate:
+
+```text
+Phase 05 is Complete only when attempt lifecycle is scheduler-derived and every
+work-item dependency/failure scenario in the test matrix behaves deterministically.
+Phase 06 remains Blocked until then.
+```
+
+### Phase 06 - Context Projection, Mirror, and Snapshots
+
+Acceptance checklist:
+
+- [ ] Render context paths under `pursuit_<id>/leg_<id>/...`.
+- [ ] Render `leg_goal.md` at leg creation with provenance and current effective
+  goal.
+- [ ] Render `next_leg_goal.md` only when an effective successor exists.
+- [ ] Render `superseded/attempt_<id>/` for attempts displaced by dynamic
+  refocus.
+- [ ] Remove active rendered paths containing `/plan_`, `workflow_`,
+  `iteration_`, `focus.md`, `deferred_goal.md`, or `archived/`.
+- [ ] Render work item static files as `title.md` and `spec.md`.
+- [ ] Render `failure_reasons.md` as a list only for failed attempts.
+- [ ] Render attempt, leg, and pursuit `outcome.md` according to Phase 05.2
+  aggregation renamed to pursuit/leg vocabulary.
+- [ ] Expose snapshot `outcome` fields as `null` while their entities are not
+  terminal.
+- [ ] Expose snapshot `leg_goal_version` audit stamps for legs, attempts, and
+  work items.
+- [ ] Write disk mirror output under `.eos-agents/pursuit/context`.
+- [ ] Make context search exclude `superseded/` by default unless scoped.
+- [ ] Add projection, mirror, snapshot, search/listing, and creation-schedule
+  tests.
+
+Phase gate:
+
+```text
+Phase 06 is Complete only when DB-derived context projection, disk mirror,
+snapshot DTOs, and search/listing semantics match the pursuit path universe.
+Phase 07 remains Blocked until then.
+```
+
+### Phase 07 - Runtime, Tool, and Script Wiring
+
+Acceptance checklist:
+
+- [ ] Rename `delegate_workflow` to `delegate_pursuit`.
+- [ ] Expose background session type `"pursuit"`.
+- [ ] Keep cancellation routed through `cancel_background_session`.
+- [ ] Make `delegate_pursuit` an adapter over `createPursuit(...)`.
+- [ ] Rename runtime config fields such as `workflowDb`,
+  `workflowContextRoot`, and `workflowScriptsDir` to pursuit equivalents.
+- [ ] Implement the `@eos/pursuit` launch port in `@eos/agent-runtime` using
+  `startRun(...)`, parent run stamping, cancellation signals, transcript wiring,
+  and submission binding.
+- [ ] Rename profile field `workflow_context_script` to
+  `pursuit_context_script`.
+- [ ] Move active scripts to `.eos-agents/pursuit/scripts/`.
+- [ ] Rewrite `planner.cjs`, `worker.cjs`, and `variable_reference_map.cjs` for
+  pursuit/leg DTOs and path-addressed initial messages.
+- [ ] Ensure planner prompts include dynamic/predefined payload rules,
+  successor-scope guidance, and the no-standalone-clear rule.
+- [ ] Ensure worker prompts include only assigned work, current leg goal, direct
+  successful dependency outcomes, and the prohibition on planning/changing legs.
+- [ ] Update tool descriptions, terminal submission guidance, advisory prompts,
+  runtime tests, and tool-family tests.
+
+Phase gate:
+
+```text
+Phase 07 is Complete only when agent-launched pursuit runs use the new tool,
+runtime config, launch port, scripts, and background-session vocabulary end to
+end. Phase 08 remains Blocked until then.
+```
+
+### Phase 08 - Verification, Hygiene, and Legacy Removal
+
+Acceptance checklist:
+
+- [ ] Run focused Vitest suites listed in this spec and record command output.
+- [ ] Run `pnpm run typecheck`.
+- [ ] Run `pnpm run lint`.
+- [ ] Run `pnpm run test`.
+- [ ] Run docs hygiene with `git diff --check -- docs/plans/agent-core-rust-to-typescript-migration eos-agent-core .eos-agents/pursuit/scripts`.
+- [ ] Run identifier-boundary scans for old active vocabulary.
+- [ ] Confirm no active `@eos/workflow`, `packages/workflow`,
+  `delegate_workflow`, `workflow_context`, `workflow_<id>`, `iteration_<id>`,
+  `focus.md`, `deferred_goal.md`, `archived/`, work-item `description.md`, or
+  work-item `needs` remains in product code/scripts/tests.
+- [ ] Confirm historical specs/notes are the only remaining old-vocabulary
+  references outside one-time migration aliases.
+- [ ] Confirm `packages/pursuit/src/projection` does not exist and projection
+  lives under `context-engine/projection/`.
+- [ ] Update this tracker with final evidence and mark Phase 08 `Complete`.
+
+Phase gate:
+
+```text
+Phase 08 is Complete only when focused checks, workspace checks, docs hygiene,
+and identifier scans all pass or any remaining noise is documented as
+pre-existing and unrelated.
+```
+
 ## 1. Intent
 
 Phase 05.1/05.2 implemented the durable planner/worker orchestration spine, but
@@ -84,9 +388,11 @@ Everything else in the TypeScript product surface should use pursuit terms.
 
 ## 4. Public API and Caller Model
 
-`pursuit` is a caller-agnostic orchestration package. The caller may be an
-agent, user action, machine scheduler, test harness, or any other non-agent
-object that can call the public API.
+`pursuit` is a caller-agnostic orchestration package. Phase 05.3 must expose a
+service surface that an agent tool, machine scheduler, test harness, or future
+server router can call without a new orchestration model. This phase does not
+implement a human frontend or human-mode router; it only keeps that later wiring
+cheap by avoiding agent-tool-only assumptions in the core service.
 
 The public creation surface should be narrow:
 
@@ -121,12 +427,14 @@ The handle semantics are independent of who called it:
 Package dependency rule:
 
 ```text
-@eos/pursuit owns orchestration behind injected ports. It may depend on
-@eos/contracts and may import the agent-runtime launch port used to start
-planner and worker agents. It must not import @eos/db, @eos/tool, runtime
-composition, profile loading, supervisor state, or tool registration. If the
-launch-port import would create a cycle, extract that port into a narrow public
-subpath before wiring.
+@eos/pursuit owns orchestration, DB-backed state transitions, and the launch
+port type used to start planner and worker agents. It may depend on
+@eos/contracts and @eos/db. It must not import @eos/agent-runtime, @eos/tool,
+runtime composition, profile loading, supervisor state, or tool registration.
+
+@eos/agent-runtime imports @eos/pursuit and implements the pursuit launch port
+with startRun(...), profile resolution, transcript wiring, cancellation, and
+submission binding.
 ```
 
 `leg_goal_mode` is derived from the payload shape: omitting `leg_goals` selects
@@ -144,6 +452,11 @@ subpath before wiring.
 Predefined mode is for callers that already know the ordered leg list. In that
 mode, `pursuit_goal` remains the umbrella objective, while `leg_goals` are the
 fixed execution checkpoints.
+
+Each `leg_goals` entry is the same kind of pure prose objective string as
+`pursuit_goal`. The pursuit layer treats these strings as opaque instructions:
+it trims only according to normal schema validation, does not parse structure
+from them, and does not infer hierarchy from repeated or similar prose.
 
 Dynamic mode is the default. It preserves the current Phase 05 behavior where
 each successful leg may discover exactly one successor goal.
@@ -200,6 +513,11 @@ leg_goal present and next_leg_goal omitted:
   refocus the leg and reset the standing next_leg_goal to absent
 ```
 
+There is no dynamic payload shape for clearing a standing `next_leg_goal`
+without also submitting `leg_goal`. Clearing successor scope is a refocus act:
+the planner must declare the replacement `leg_goal`, and omission of
+`next_leg_goal` in that same payload clears the standing successor.
+
 Success invariant:
 
 ```text
@@ -249,7 +567,21 @@ The declaration view is append-only and ordered by attempt sequence. An attempt
 is consistent with the current leg goal iff no later declaration in the same leg
 submitted `leg_goal`.
 
-Adaptive effective values:
+Each leg also exposes a monotonic audit stamp called `leg_goal_version`:
+
+```text
+leg_goal_version starts at 1 when the leg is created.
+dynamic refocus by declared_leg_goal increments it by 1.
+predefined legs keep one version for the whole leg.
+```
+
+`leg_goal_version` is audit metadata, not the source of goal truth. Effective
+goal and successor values still derive from the append-only declarations below.
+The service stamps the current version onto attempts, plans, work items, and
+dependency edges so tests, logs, and context snapshots can prove which leg-goal
+version a decision belonged to.
+
+Dynamic effective values:
 
 ```text
 base_leg_goal(leg_1) = pursuit.goal
@@ -304,20 +636,20 @@ pursuit_<id>/
 
     attempt_<id>/                          is_consistent_with_leg_goal only
       plan_summary.md                      accepted planner summary; absent on planner death
-      fail_reason.md                       failed attempts only
+      failure_reasons.md                   failed attempts only; one entry per failed/blocked work item
       outcome.md                           successful or failed attempts only
       work_item_<id>/
         title.md                           accepted planner work-item title
         spec.md                            accepted planner work-item spec
         summary.md                         worker submitted summary
-        outcome.md                         worker submitted outcome
+        outcome.md                         worker submitted or system terminal outcome
 
     superseded/
       attempt_<id>/                        displaced attempt, relocated whole
         leg_goal.md                        only if this attempt declared superseded leg_goal
         next_leg_goal.md                   only if that declaration carried one
         plan_summary.md                    same attempt-owned file as live shape
-        fail_reason.md
+        failure_reasons.md
         outcome.md
         work_item_<id>/
           title.md
@@ -358,6 +690,7 @@ Attempt outcome:
 # Attempt outcome
 - work_item_<id> [Success]: <worker_summary>
 - work_item_<id> [Failed]: <worker_summary>
+- work_item_<id> [Blocked]: blocked by work_item_<dependency_id>
 - work_item_<id> [Cancelled]: (no summary)
 ```
 
@@ -386,6 +719,127 @@ Cancelled pursuit marker:
 pursuit cancelled
 ```
 
+Work-item scheduler state machine:
+
+```text
+A failed work item does not immediately cancel unrelated siblings.
+```
+
+Work items use the normal entity run statuses plus `Blocked`:
+
+| Status | Meaning | Terminal for work item? |
+| --- | --- | --- |
+| `NotStarted` | Accepted by the planner but not launched. | No |
+| `Running` | Claimed and launched. | No |
+| `Success` | Worker submitted a passing result. | Yes |
+| `Failed` | Worker submitted a failing result or died/failed before submission. | Yes |
+| `Blocked` | Never launched because at least one hard dependency cannot succeed. | Yes |
+| `Cancelled` | Cancel cascade reached the work item. | Yes |
+
+Dependency policy:
+
+```text
+A work item may be claimed for launch only when every direct depends_on target
+has terminal status Success.
+```
+
+This is a hard scheduler invariant, not prompt guidance. The launch claim query,
+post-commit launch guard, and stale-claim recheck must all enforce it. A work
+item whose dependency is not fully successful stays `NotStarted`; it never starts
+optimistically.
+
+Consequence:
+
+```text
+A running work item can never become Blocked because one of its dependencies
+failed. If a dependency later fails, the dependent item was not running yet.
+```
+
+If implementation finds a `Running` work item whose dependency is not `Success`,
+that is a state-corruption bug. The scheduler must not "repair" it by marking the
+running item `Blocked`; it should let the running item finish or be cancelled by
+an explicit cancel path and surface the invariant violation through tests/logs.
+
+The attempt scheduler runs these domain operations after any planner or worker
+settlement mutation:
+
+```text
+1. applyPlannerSettlement or applyWorkItemSettlement
+   - planner success creates the accepted NotStarted work graph
+   - planner failure records the planner failure source
+   - worker success/failure/death records the work-item settlement
+2. propagateDependencyBlocks
+   - derive Blocked NotStarted descendants from Failed/Blocked dependencies
+3. claimReadyWorkItems
+   - claim NotStarted work whose direct dependencies are all Success
+4. reconcileAttemptStatus
+   - derive Success, Failed, or keep Running
+```
+
+After `applyWorkItemSettlement` records a work item as `Failed`, the scheduler
+runs `propagateDependencyBlocks` over the same attempt:
+
+1. Find every `NotStarted` work item with at least one direct dependency in
+   `Failed` or `Blocked`.
+2. Mark those work items `Blocked` and write an outcome explaining the failed or
+   blocked dependency.
+3. Repeat until no additional `NotStarted` work item can be blocked.
+4. Leave `Running`, `Success`, `Failed`, and `Cancelled` work items unchanged.
+
+`propagateDependencyBlocks` repeats until stable so transitive dependency chains
+are handled without giving `depends_on` non-blocking historical semantics. If A
+fails, B depends on A, and C depends on B, the pass marks B `Blocked`, then C
+`Blocked`.
+
+The scheduler then runs `claimReadyWorkItems`:
+
+```text
+claimable(work_item) =
+  work_item.status == NotStarted
+  and attempt.status == Running
+  and every direct depends_on target is Success
+```
+
+Unrelated running work-item agents continue. Unrelated pending work items launch
+when their own dependencies become `Success`.
+
+`reconcileAttemptStatus` runs after dependency block propagation and ready-work
+claiming:
+
+```text
+if plan failed before accepted work items:
+  attempt = Failed
+
+else if every work item is Success:
+  attempt = Success
+
+else if any work item is Failed or Blocked
+  and no work item is Running
+  and no work item is NotStarted:
+    attempt = Failed
+
+else:
+  attempt remains Running
+```
+
+The "no `NotStarted`" condition is evaluated after
+`propagateDependencyBlocks`. A `NotStarted` item with failed dependencies should
+already have become `Blocked`; a `NotStarted` item with incomplete but
+still-possible dependencies keeps the attempt open. This keeps retry creation
+aligned with actual exhaustion: retries start only after there is no ready,
+running, or still-possible work left in the attempt.
+
+`failure_reasons.md` is a list, not a scalar. It includes every attempt-level
+failure source. For work execution, it includes every failed work item and every
+work item blocked by a failed dependency:
+
+```text
+# Failure reasons
+
+- work_item_<id> [Failed]: <summary or outcome first line>
+- work_item_<id> [Blocked]: blocked by work_item_<dependency_id>
+```
+
 ## 10. Planner Payload Contract
 
 `submit_planner_outcome` remains the terminal planner submission tool unless a
@@ -408,6 +862,40 @@ const PlannerOutcomePayloadSchema = z.object({
 });
 ```
 
+`depends_on` is leg-scoped, not attempt-scoped. It is both an execution edge and
+a context-injection edge.
+
+`depends_on` entries resolve by work-item id within the current non-superseded
+leg-goal version. To keep that reference unambiguous, accepted planner work-item
+ids must be unique across the current attempt plus all non-superseded prior
+attempts that share the same effective leg-goal version.
+
+Every accepted work item and persisted dependency edge is stamped with the
+current `leg_goal_version` for audit. Dependency validation still derives the
+current non-superseded leg-goal version from leg declarations; the stamp proves
+what the service accepted and makes logs/tests readable.
+
+Allowed `depends_on` targets:
+
+- a work item from the same attempt,
+- a work item from an earlier attempt in the same leg, only when that earlier
+  attempt is not under `superseded/` and shares the same effective leg-goal
+  version.
+
+Rejected `depends_on` targets:
+
+- work items from another leg,
+- work items from a future attempt,
+- work items from a superseded attempt,
+- work items from an earlier leg-goal version after a dynamic refocus,
+- work items from any previous attempt when the planner submits a new `leg_goal`
+  in the same payload.
+
+If the planner needs non-blocking historical context from a failed or superseded
+work item, that must be modeled later as a separate `context_refs` field.
+`depends_on` remains a hard dependency: the dependent work item can run only
+after all dependencies have terminal `Success`.
+
 Dynamic-mode validation changes:
 
 | Case | Result |
@@ -416,8 +904,10 @@ Dynamic-mode validation changes:
 | `next_leg_goal` without `leg_goal` | accepted |
 | `leg_goal` without `next_leg_goal` | accepted; refocuses and clears standing successor |
 | neither `leg_goal` nor `next_leg_goal` | accepted; keeps both current values |
+| request to clear `next_leg_goal` without `leg_goal` | rejected; successor clearing requires refocus |
 | unknown worker `agent_name` | rejected in-run |
-| duplicate/dangling/cyclic work-item ids or `depends_on` ids | rejected in-run |
+| duplicate/dangling/cyclic work-item ids or invalid `depends_on` ids in the current leg-goal version | rejected in-run |
+| cross-attempt `depends_on` plus new `leg_goal` in same payload | rejected in-run |
 | old work-item `description` or `needs` fields | rejected in-run |
 
 Predefined-mode validation changes:
@@ -465,6 +955,21 @@ interface WorkerPursuitContextInput {
 Snapshot shape:
 
 ```ts
+type PursuitWorkItemRunStatus = PursuitEntityRunStatus | "Blocked";
+
+interface AttemptFailureReason {
+  work_item_id: string | null;
+  kind:
+    | "planner_failed"
+    | "context_composition_failed"
+    | "failed"
+    | "blocked_by_failed_dependency";
+  message: string | null;
+  summary: string | null;
+  outcome: string | null;
+  blocked_by?: string[];
+}
+
 interface PursuitContextSnapshot {
   pursuit: {
     id: string;
@@ -484,6 +989,7 @@ interface PursuitContextLeg {
   origin: "initial" | "next_leg_goal" | "predefined";
   status: PursuitEntityRunStatus;
   leg_goal: string;
+  leg_goal_version: number;
   leg_goal_provenance: string;
   is_leg_goal_mutatable: boolean;
   next_leg_goal: string | null;
@@ -497,7 +1003,8 @@ interface PursuitContextAttempt {
   id: string;
   sequence: number;
   status: PursuitEntityRunStatus;
-  fail_reason: string | null;
+  leg_goal_version: number;
+  failure_reasons: AttemptFailureReason[];
   is_consistent_with_leg_goal: boolean;
   outcome: string | null;
   context_path: string;
@@ -517,8 +1024,9 @@ interface PursuitContextPlan {
 interface PursuitContextWorkItem {
   id: string;
   agent_name: string;
-  status: PursuitEntityRunStatus;
+  status: PursuitWorkItemRunStatus;
   agent_run_id: string | null;
+  leg_goal_version: number;
   title: string;
   spec: string;
   depends_on: string[];
@@ -529,10 +1037,16 @@ interface PursuitContextWorkItem {
 ```
 
 `PursuitContextPlan` keeps plan metadata but no plan `context_path`, matching
-Phase 05.2. `PursuitContextWorkItem.depends_on` contains work-item ids local to
-the same attempt. Snapshot `outcome` fields are `null` until their owning
-attempt, leg, pursuit, or work item reaches a terminal condition and the
-corresponding `outcome.md` content exists.
+Phase 05.2. `leg_goal_version` fields are audit stamps for the version active
+when the row was created or accepted. `PursuitContextWorkItem.depends_on`
+contains work-item ids scoped to the current non-superseded leg-goal version, so
+it may reference prior attempts inside the same leg when the leg goal has not
+been refocused. Snapshot
+`outcome` fields are `null` until their owning attempt, leg, pursuit, or work
+item reaches a terminal condition and the corresponding `outcome.md` content
+exists. Snapshot `failure_reasons` may accumulate while the attempt is still
+running after a work item failure; rendered `failure_reasons.md` appears only
+when the attempt closes `Failed`.
 
 ## 12. Initial Message Scripting
 
@@ -621,7 +1135,7 @@ Dynamic mode:
 - Include next_leg_goal only for work that should become a future leg after
   this leg succeeds.
 - next_leg_goal is a goal to be planned later; it is never a plan and never a
-  description of work delivered by this leg.
+  summary of work delivered by this leg.
 
 Predefined mode:
 - The caller predefined this leg_goal.
@@ -643,11 +1157,11 @@ Expected package changes:
 
 | Package | Required work |
 | --- | --- |
-| `@eos/contracts` | Rename workflow/iteration DTOs and ids to pursuit/leg; remove focus fields; add `leg_goal`, `leg_goal_provenance`, `is_leg_goal_mutatable`, `next_leg_goal`, and nullable snapshot `outcome`; update planner payload schema to use work-item `title` and `depends_on`. |
-| `@eos/db` | Rename row types and migration schema to `pursuits` / `legs`; replace `origin: "deferred_goal"` with `"next_leg_goal"` and add `"predefined"` where mode needs it; replace plan declaration columns with `declared_leg_goal` / `declared_next_leg_goal`; provide the persistence adapter for the pursuit store port. |
-| `@eos/pursuit` | Rename `packages/workflow` and package name from `@eos/workflow`; expose caller-agnostic create/cancel/settle handles; own the store and launch ports; derive effective leg goal and successor goal for dynamic and predefined modes; render `pursuit_<id>` / `leg_<id>` / `superseded`; preserve plan flattening and outcome behavior. |
+| `@eos/contracts` | Rename workflow/iteration DTOs and ids to pursuit/leg; remove focus fields; add `leg_goal`, `leg_goal_version`, `leg_goal_provenance`, `is_leg_goal_mutatable`, `next_leg_goal`, nullable snapshot `outcome`, work-item `Blocked`, and attempt `failure_reasons`; update planner payload schema to use work-item `title` and leg-scoped `depends_on`. |
+| `@eos/db` | Rename row types and migration schema to `pursuits` / `legs`; replace `origin: "deferred_goal"` with `"next_leg_goal"` and add `"predefined"` where the leg-goal mode requires it; replace plan declaration columns with `declared_leg_goal` / `declared_next_leg_goal`; persist work-item `title`, leg-scoped dependency edges, `leg_goal_version` audit stamps, blocked status, and attempt failure-reason lists. |
+| `@eos/pursuit` | Rename `packages/workflow` and package name from `@eos/workflow`; expose caller-agnostic create/cancel/settle handles; define the planner/worker launch port; use `@eos/db` for the authoritative store; derive effective leg goal and successor goal for dynamic and predefined modes; validate leg-scoped dependency edges by non-superseded leg-goal version; render `pursuit_<id>` / `leg_<id>` / `superseded`; preserve plan flattening and delayed attempt-failure behavior. |
 | `@eos/tool` | Rename `delegate_workflow` to `delegate_pursuit`; accept `pursuit_goal` and optional `leg_goals`; expose background session type `"pursuit"`; update planner tool prompt and payload content. |
-| `@eos/agent-runtime` | Wire pursuit service and context input DTOs; rename runtime config such as `workflowDb` / `workflowContextRoot` to pursuit equivalents; load `.eos-agents/pursuit/scripts`; profile-selected scripts emit pursuit initial messages. |
+| `@eos/agent-runtime` | Wire pursuit service and context input DTOs; implement the `@eos/pursuit` launch port with `startRun(...)`; rename runtime config such as `workflowDb` / `workflowContextRoot` to pursuit equivalents; load `.eos-agents/pursuit/scripts`; profile-selected scripts emit pursuit initial messages. |
 | `.eos-agents/pursuit/scripts` | Move/rewrite `planner.cjs`, `worker.cjs`, and `variable_reference_map.cjs` to use pursuit/leg names and the Phase 05.3 initial-message contract. |
 
 Target package tree:
@@ -683,11 +1197,11 @@ packages/pursuit/
     context-engine/
       composer.ts
       input.ts
-    projection/
-      listing.ts
-      paths.ts
-      resolve.ts
-      mirror.ts
+      projection/
+        listing.ts
+        paths.ts
+        resolve.ts
+        mirror.ts
   tests/
     context.test.ts
     creation-schedule.test.ts
@@ -714,10 +1228,10 @@ Expected file-level rename map:
 | `work-item/transitions.ts` | `work-item/transition.ts` |
 | `workflow-tree.ts` | `pursuit-tree.ts` |
 | `workflow-context.ts` | `pursuit-context.ts` |
-| `context-projection.ts` | `projection/mirror.ts` |
-| `archive/listing.ts` | `projection/listing.ts` |
-| `archive/paths.ts` | `projection/paths.ts` |
-| `archive/resolve.ts` | `projection/resolve.ts` |
+| `context-projection.ts` | `context-engine/projection/mirror.ts` |
+| `archive/listing.ts` | `context-engine/projection/listing.ts` |
+| `archive/paths.ts` | `context-engine/projection/paths.ts` |
+| `archive/resolve.ts` | `context-engine/projection/resolve.ts` |
 | `tools/workflow/delegate-workflow.ts` | `tools/pursuit/delegate-pursuit.ts` |
 
 Avoid compatibility shims unless needed for a single migration boundary. If a
@@ -732,10 +1246,12 @@ shim is unavoidable, delete it in the same phase after callers are moved.
 | T1P | Planner submits valid predefined payload | `plan_summary.md` appears; work-item directories and static files appear; `leg_goal.md` remains predefined; `next_leg_goal.md` is derived only from the next predefined entry when one exists. |
 | T1R | Dynamic planner submits replacement `leg_goal` | Prior live attempts relocate under `superseded/`; `leg_goal.md` updates; standing `next_leg_goal.md` resets unless the same payload declares a new one. |
 | T1PR | Predefined planner submits `leg_goal` or `next_leg_goal` | Submission is rejected as a correctable payload error; no work items appear and no attempt budget is consumed. |
-| T1F | Planner dies or context composition fails before valid payload | Attempt fails with `fail_reason.md`; `plan_summary.md` is absent; attempt `outcome.md` appears with `(no work items)`; retry attempt appears if budget remains. |
+| T1F | Planner dies or context composition fails before valid payload | Attempt fails with `failure_reasons.md`; `plan_summary.md` is absent; attempt `outcome.md` appears with `(no work items)`; retry attempt appears if budget remains. |
 | T2 | Worker submits one work item result | That work item gains `summary.md` and `outcome.md`; attempt stays running unless all completion rules are satisfied. |
 | T3 | All work items in an attempt succeed | Attempt becomes `Success`; attempt `outcome.md` appears; leg closes or promotes according to dynamic `next_leg_goal` or the predefined list. |
-| T4 | A work item fails | That work item gains `summary.md` and `outcome.md`; non-terminal siblings are cancelled; attempt becomes `Failed`; `fail_reason.md` and attempt `outcome.md` appear. |
+| T4 | A work item fails | That work item gains `summary.md` and `outcome.md`; pending dependents become `Blocked`; unrelated running or launchable work items continue. Attempt remains running while any unrelated work item can still run. |
+| T4B | Failed dependencies block remaining work | Blocked work items gain `outcome.md` explaining the failed dependency; they do not launch workers. |
+| T4C | Dependency block propagation leaves no `Running` or `NotStarted` work | Attempt becomes `Failed`; `failure_reasons.md` lists all failed and blocked work items; attempt `outcome.md` appears. |
 | T5 | Failed attempt has retry budget left | New retry attempt directory appears; leg remains running; no leg outcome yet. |
 | T6 | Failed attempt exhausts retry budget | Leg becomes `Failed`; leg `outcome.md` appears; pursuit becomes `Failed`; pursuit `outcome.md` appears. |
 | T7 | Successful dynamic leg has `next_leg_goal` | Current leg `outcome.md` appears; next leg and its first attempt directory appear with `leg_goal.md` inherited from previous successful leg's `next_leg_goal`. |
@@ -752,53 +1268,62 @@ real runtime wiring.
 
 | ID | Test target | Scenario | Assertions |
 | --- | --- | --- | --- |
-| C01 | `@eos/contracts` planner payload | Adaptive payload omits `leg_goal` and `next_leg_goal`. | Schema accepts; parsed payload has no focus/deferred fields. |
-| C02 | `@eos/contracts` planner payload | Adaptive payload has `next_leg_goal` without `leg_goal`. | Schema accepts successor-only declaration. |
+| C01 | `@eos/contracts` planner payload | Dynamic payload omits `leg_goal` and `next_leg_goal`. | Schema accepts; parsed payload has no focus/deferred fields. |
+| C02 | `@eos/contracts` planner payload | Dynamic payload has `next_leg_goal` without `leg_goal`. | Schema accepts successor-only declaration. |
 | C03 | `@eos/contracts` planner payload | Payload uses old `iteration_focus`, `focus`, or `deferred_goal`. | Schema rejects or strips old fields according to existing strictness policy; no public type exports them. |
-| C04 | `@eos/contracts` creation payload | `create_pursuit` adaptive input has only `pursuit_goal`. | Schema accepts and resolves mode to `adaptive`. |
-| C05 | `@eos/contracts` creation payload | Sequential input has non-empty `leg_goals`. | Schema accepts and resolves mode to `sequential`. |
-| C06 | `@eos/contracts` creation payload | Sequential input has empty `leg_goals`. | Schema rejects; sequential mode never starts without a first predefined leg. |
-| B01 | `@eos/pursuit` package boundary | Package imports are inspected. | Package does not import `@eos/db`, `@eos/tool`, supervisor/background packages, runtime composition, profile loading, or engine internals; any `@eos/agent-runtime` import is launch-port-only. |
-| B02 | Source/file layout | Renamed files and folders are inspected. | `packages/pursuit`, `agent-launcher.ts`, singular `transition.ts`, and `projection/` exist; `packages/workflow`, `launcher.ts`, `transitions.ts`, and source `archive/` do not remain active. |
-| A01 | Pursuit creation | Adaptive pursuit starts with `pursuit_goal`. | First leg exists immediately; `leg_goal.md` equals `pursuit_goal`; provenance is inherited from pursuit goal. |
-| A02 | Planner submission | First adaptive planner omits `leg_goal`. | Submission succeeds; work items are created against existing `leg_goal`; no refocus occurs. |
-| A03 | Planner submission | Adaptive planner submits successor-only `next_leg_goal`. | Submission succeeds; `next_leg_goal.md` appears; successful leg creates next leg with that value as `leg_goal`. |
-| A04 | Planner submission | Adaptive retry omits both goal fields after a standing successor exists. | Current `leg_goal` and standing `next_leg_goal` are preserved. |
-| A05 | Planner submission | Adaptive planner submits new `leg_goal` without `next_leg_goal`. | Current leg refocuses; prior live attempts move to `superseded/`; standing `next_leg_goal` is cleared. |
-| A06 | Planner submission | Adaptive planner submits new `leg_goal` and `next_leg_goal`. | Current leg refocuses; prior live attempts move to `superseded/`; new successor is set. |
-| A07 | Declaration derivation | Multiple adaptive declarations touch goals. | Latest declaration wins; `is_consistent_with_leg_goal` is false only for displaced attempts. |
-| A08 | Planner failure | Planner dies before valid adaptive payload. | Attempt fails with `fail_reason.md`; `plan_summary.md` is absent; retry budget behavior is unchanged. |
-| S01 | Pursuit creation | Sequential pursuit starts with `pursuit_goal` and `leg_goals`. | First leg exists immediately; `leg_goal.md` equals `leg_goals[0]`; provenance is predefined. |
-| S02 | Planner submission | Sequential planner omits `leg_goal` and `next_leg_goal`. | Submission succeeds; work items are created against predefined current leg goal. |
-| S03 | Planner submission | Sequential planner submits `leg_goal`. | Submission is rejected as correctable; no work items are created; attempt budget is not consumed. |
-| S04 | Planner submission | Sequential planner submits `next_leg_goal`. | Submission is rejected as correctable; predefined list remains the only next-leg source. |
-| S05 | Retry behavior | Sequential leg retries after an attempt failure. | Retry attempt keeps the same predefined `leg_goal`; planner still cannot refocus. |
-| S06 | Leg promotion | Sequential non-final leg succeeds. | Next leg is created from the next `leg_goals` entry; provenance is predefined. |
-| S07 | Pursuit success | Sequential final leg succeeds. | Pursuit closes `Success`; no extra leg is created. |
-| S08 | Pursuit failure | Sequential leg exhausts retry budget before final leg. | Current leg and pursuit close `Failed`; later predefined legs are not created. |
+| C04 | `@eos/contracts` creation payload | `create_pursuit` dynamic input has only `pursuit_goal`. | Schema accepts and resolves `leg_goal_mode` to `dynamic`. |
+| C05 | `@eos/contracts` creation payload | Predefined input has non-empty `leg_goals`. | Schema accepts and resolves `leg_goal_mode` to `predefined`. |
+| C06 | `@eos/contracts` creation payload | Predefined input has empty `leg_goals`. | Schema rejects; predefined mode never starts without a first predefined leg. |
+| C07 | `@eos/contracts` work-item payload | Work item uses `title` and leg-scoped `depends_on`. | Schema accepts `title`/`depends_on` and rejects old `description`/`needs` fields. |
+| C08 | `@eos/contracts` work-item status | Work item is blocked by a failed dependency. | Work-item status accepts `Blocked`; attempt/leg/pursuit status unions do not gain `Blocked`. |
+| C09 | `@eos/pursuit` dependency validation | Planner references previous-attempt work items in `depends_on`. | Accepted only when the target attempt is in the same leg, not superseded, and shares the same effective leg-goal version. |
+| C10 | `@eos/pursuit` dependency validation | Planner submits new `leg_goal` and cross-attempt `depends_on` together. | Rejected because refocus breaks the previous leg-goal version. |
+| B01 | `@eos/pursuit` package boundary | Package imports are inspected. | Package may import `@eos/db` and `@eos/contracts`; package does not import `@eos/agent-runtime`, `@eos/tool`, supervisor/background packages, runtime composition, profile loading, or engine internals. |
+| B02 | Source/file layout | Renamed files and folders are inspected. | `packages/pursuit`, `agent-launcher.ts`, singular `transition.ts`, and `context-engine/projection/` exist; `packages/workflow`, `launcher.ts`, `transitions.ts`, top-level `projection/`, and source `archive/` do not remain active. |
+| A01 | Pursuit creation | Dynamic pursuit starts with `pursuit_goal`. | First leg exists immediately; `leg_goal.md` equals `pursuit_goal`; provenance is inherited from pursuit goal; `is_leg_goal_mutatable` is true. |
+| A02 | Planner submission | First dynamic planner omits `leg_goal`. | Submission succeeds; work items are created against existing `leg_goal`; no refocus occurs. |
+| A03 | Planner submission | Dynamic planner submits successor-only `next_leg_goal`. | Submission succeeds; `next_leg_goal.md` appears; successful leg creates next leg with that value as `leg_goal`. |
+| A04 | Planner submission | Dynamic retry omits both goal fields after a standing successor exists. | Current `leg_goal` and standing `next_leg_goal` are preserved. |
+| A05 | Planner submission | Dynamic planner submits new `leg_goal` without `next_leg_goal`. | Current leg refocuses; prior live attempts move to `superseded/`; standing `next_leg_goal` is cleared. |
+| A06 | Planner submission | Dynamic planner submits new `leg_goal` and `next_leg_goal`. | Current leg refocuses; prior live attempts move to `superseded/`; new successor is set. |
+| A07 | Declaration derivation | Multiple dynamic declarations touch goals. | Latest declaration wins; `leg_goal_version` increments only on refocus; `is_consistent_with_leg_goal` is false only for displaced attempts. |
+| A08 | Planner failure | Planner dies before valid dynamic payload. | Attempt fails with `failure_reasons.md` containing a planner/context failure reason; `plan_summary.md` is absent; retry budget behavior is unchanged. |
+| S01 | Pursuit creation | Predefined pursuit starts with `pursuit_goal` and `leg_goals`. | First leg exists immediately; `leg_goal.md` equals `leg_goals[0]`; provenance is predefined; `is_leg_goal_mutatable` is false. |
+| S02 | Planner submission | Predefined planner omits `leg_goal` and `next_leg_goal`. | Submission succeeds; work items are created against predefined current leg goal. |
+| S03 | Planner submission | Predefined planner submits `leg_goal`. | Submission is rejected as correctable; no work items are created; attempt budget is not consumed. |
+| S04 | Planner submission | Predefined planner submits `next_leg_goal`. | Submission is rejected as correctable; predefined list remains the only next-leg source. |
+| S05 | Retry behavior | Predefined leg retries after an attempt failure. | Retry attempt keeps the same predefined `leg_goal`; planner still cannot refocus. |
+| S06 | Leg promotion | Predefined non-final leg succeeds. | Next leg is created from the next `leg_goals` entry; provenance is predefined. |
+| S07 | Pursuit success | Predefined final leg succeeds. | Pursuit closes `Success`; no extra leg is created. |
+| S08 | Pursuit failure | Predefined leg exhausts retry budget before final leg. | Current leg and pursuit close `Failed`; later predefined legs are not created. |
 | P01 | Context path universe | Load context tree after creation and submissions. | Paths use `pursuit_<id>/leg_<id>/attempt_<id>`; no path contains `workflow_`, `iteration_`, `/plan_`, `focus.md`, `deferred_goal.md`, or `archived/`. |
 | P02 | Projection mirror | Disk mirror writes context tree. | Mirror root is `.eos-agents/pursuit/context/pursuit_<id>/`; stale `.eos-agents/workflow/context` output is not written. |
-| P03 | `leg_goal.md` rendering | Render all provenance sources. | First adaptive, adaptive successor, adaptive refocus, and sequential predefined legs render the correct provenance line. |
-| P04 | `next_leg_goal.md` rendering | Compare absent, adaptive declared, adaptive reset, and sequential preview cases. | File absence/presence/content matches effective successor semantics for each mode. |
-| P05 | Superseded relocation | Adaptive refocus displaces older live attempts. | Whole attempt subtree moves under `superseded/`; live location is pruned from DB projection and disk mirror. |
+| P03 | `leg_goal.md` rendering | Render all provenance sources. | First dynamic, dynamic successor, dynamic refocus, and predefined legs render the correct provenance line; snapshots expose the matching `leg_goal_version` audit stamp. |
+| P04 | `next_leg_goal.md` rendering | Compare absent, dynamic declared, dynamic reset, and predefined preview cases. | File absence/presence/content matches effective successor semantics for each mode. |
+| P05 | Superseded relocation | Dynamic refocus displaces older live attempts. | Whole attempt subtree moves under `superseded/`; live location is pruned from DB projection and disk mirror. |
 | P06 | Projection listing/search | Query context with and without superseded scope. | Search excludes `superseded/` by default and includes it only when explicitly scoped. |
+| P07 | Work-item field rendering | Work item static files are rendered. | Uses `title.md` and `spec.md`; no `description.md` path is rendered. |
 | O01 | Attempt outcome | Work items finish success/failure/cancelled in planner order. | `# Attempt outcome` renders ordered rows with worker summaries or `(no summary)`. |
 | O02 | Planner-death outcome | Planner dies before work items. | Attempt `outcome.md` renders `(no work items)` and no plan context folder appears. |
 | O03 | Leg outcome | Retry attempt fails before budget exhaustion. | Leg `outcome.md` is absent until success or final failure. |
-| O04 | Pursuit outcome | Multi-leg adaptive and sequential pursuits close. | Root `# Pursuit outcome` renders closed leg sections in sequence order with `leg_<id>` labels. |
+| O04 | Pursuit outcome | Multi-leg dynamic and predefined pursuits close. | Root `# Pursuit outcome` renders closed leg sections in sequence order with `leg_<id>` labels. |
 | O05 | Cancellation | Running pursuit is cancelled. | Non-terminal descendants are `Cancelled`; business outcome files are not created for cancelled attempts/legs; root cancellation marker may render. |
+| O06 | Snapshot outcomes | Running and terminal attempt/leg/pursuit snapshots are loaded. | `outcome` is null while running and equals rendered `outcome.md` content after terminal closure. |
+| O07 | Work-item launch gate | A work item has incomplete dependencies. | Scheduler does not claim it until every direct `depends_on` target is `Success`; post-commit launch guard rechecks the same policy. |
+| O08 | Work-item failure propagation | One work item fails while unrelated siblings are running or launchable. | Failed item closes immediately; `propagateDependencyBlocks` marks only `NotStarted` descendants `Blocked`; unrelated running or launchable items continue. |
+| O09 | Attempt failure close | Failed attempt still has unrelated running or still-possible work. | Attempt remains `Running` until no work item is `Running` or `NotStarted`; then closes `Failed` with `failure_reasons.md` listing every failed and blocked work item. |
 | M01 | Script variable map | Load `.eos-agents/pursuit/scripts/variable_reference_map.cjs`. | Exposes pursuit/leg names only; no workflow/iteration/focus/deferred variables remain. |
-| M02 | Planner script | Adaptive first-leg input is rendered. | Initial messages include pursuit context, current leg goal, omit-`leg_goal` guidance, and no old vocabulary. |
-| M03 | Planner script | Adaptive retry with standing `next_leg_goal` is rendered. | Message says omission preserves standing successor and refocus resets it. |
-| M04 | Planner script | Sequential input is rendered. | Message says caller predefined the leg goal and instructs omission of both `leg_goal` and `next_leg_goal`. |
-| M05 | Worker script | Worker input with dependencies is rendered. | Initial messages include assigned work and direct dependencies only; they prohibit planning legs or deciding `next_leg_goal`. |
+| M02 | Planner script | Dynamic first-leg input is rendered. | Initial messages include pursuit context, current leg goal, omit-`leg_goal` guidance, and no old vocabulary. |
+| M03 | Planner script | Dynamic retry with standing `next_leg_goal` is rendered. | Message says omission preserves standing successor and refocus resets it. |
+| M04 | Planner script | Predefined input is rendered. | Message says caller predefined the leg goal and instructs omission of both `leg_goal` and `next_leg_goal`. |
+| M05 | Worker script | Worker input with dependencies is rendered. | Initial messages include assigned work and direct `depends_on` targets from the same non-superseded leg-goal version; they prohibit planning legs or deciding `next_leg_goal`. |
 | L01 | Agent launcher | Planner launch is claimed after pursuit commit. | Launch port receives current pursuit/leg/attempt/plan locator and `pursuit_context`; no launch occurs before commit. |
 | L02 | Agent launcher | Worker launches after accepted plan. | Launch port receives current work item locator and direct dependency context. |
 | L03 | Agent launcher | Context composition fails. | Service synthesizes a failed planner/worker settlement through existing failure path. |
 | H01 | Caller handle | Non-agent caller creates pursuit and calls `settle`. | Settlement resolves to terminal pursuit result without requiring background-supervisor ownership. |
 | H02 | Caller handle | Non-agent caller calls `cancel`. | Pursuit and non-terminal descendants cancel; repeated cancel is idempotent. |
 | H03 | Tool adapter | Agent caller delegates pursuit. | Tool adapter registers the pursuit handle as background session type `"pursuit"` and exposes normal cancel behavior. |
-| V01 | Identifier scan | Product TypeScript source and active scripts are scanned. | No active `iteration_focus`, `deferred_goal`, `workflow_context`, `workflow_<id>`, `iteration_<id>`, `archived/`, `focus.md`, `delegate_workflow`, `@eos/workflow`, or `.eos-agents/workflow/scripts` remains. |
+| V01 | Identifier scan | Product TypeScript source and active scripts are scanned. | No active `iteration_focus`, `deferred_goal`, `workflow_context`, `workflow_<id>`, `iteration_<id>`, `archived/`, `focus.md`, `description.md`, work-item `needs`, `delegate_workflow`, `@eos/workflow`, or `.eos-agents/workflow/scripts` remains. |
 
 ## 17. Verification Commands
 
@@ -828,8 +1353,10 @@ git diff --check -- docs/plans/agent-core-rust-to-typescript-migration eos-agent
 Identifier-boundary scans:
 
 ```bash
-rg -n "iteration_focus|deferred_goal|workflow_context|workflow_<id>|iteration_<id>|archived/|focus\\.md" eos-agent-core .eos-agents/pursuit/scripts
+rg -n "iteration_focus|deferred_goal|workflow_context|workflow_<id>|iteration_<id>|archived/|focus\\.md|description\\.md|fail_reason\\.md" eos-agent-core .eos-agents/pursuit/scripts
 rg -n "delegate_workflow|type: \"workflow\"|workflow_id|iteration_id|@eos/workflow|packages/workflow|workflowDb|workflowContextRoot|\\.eos-agents/workflow/scripts" eos-agent-core .eos-agents/pursuit/scripts
+rg -n "\\bneeds\\b" eos-agent-core/packages/contracts eos-agent-core/packages/pursuit .eos-agents/pursuit/scripts
+test ! -d eos-agent-core/packages/pursuit/src/projection
 ```
 
 ## 18. Acceptance Criteria
@@ -838,12 +1365,30 @@ Phase 05.3 is accepted when:
 
 - product-facing contracts use pursuit/leg vocabulary,
 - planner payloads use `leg_goal` and `next_leg_goal`,
+- planner work items use `title`, `spec`, and leg-scoped `depends_on`;
+  `description` and `needs` are not active work-item fields,
+- `depends_on` may target previous non-superseded attempts in the same
+  leg-goal version and is rejected across refocus, superseded attempts, future
+  attempts, or other legs,
 - first planner submissions no longer require a focus/leg-goal declaration,
 - `next_leg_goal` is accepted without a sibling `leg_goal`,
 - refocus with `leg_goal` supersedes prior live attempts and resets standing
   successor scope,
-- `create_pursuit(pursuit_goal, [leg_goal...])` runs sequentially with
-  predefined leg goals and rejects planner refocus/successor declarations,
+- there is no payload shape for clearing a standing `next_leg_goal` without a
+  refocusing `leg_goal`,
+- `create_pursuit(pursuit_goal, [leg_goal...])` uses predefined leg goals and
+  rejects planner refocus/successor declarations,
+- `leg_goal_version` is exposed as audit metadata and increments only when a
+  dynamic `leg_goal` refocus creates a new version,
+- each leg exposes `is_leg_goal_mutatable`,
+- pursuit, leg, and attempt snapshots expose nullable `outcome` that remains
+  null until terminal closure,
+- work-item failure blocks only dependents, lets unrelated running or launchable
+  siblings continue, and closes the attempt only after dependency block
+  propagation leaves no work item `Running` or `NotStarted`,
+- work items are never claimed or launched until every direct `depends_on`
+  target is `Success`; running work items are never converted to `Blocked`,
+- failed attempts render list-shaped `failure_reasons.md`,
 - pursuit handles expose caller-agnostic `cancel` and `settle` behavior,
 - rendered context paths use `pursuit_<id>/leg_<id>/superseded/`,
 - the context mirror root is `.eos-agents/pursuit/context`,
@@ -853,7 +1398,7 @@ Phase 05.3 is accepted when:
 - `@eos/workflow` / `packages/workflow` are replaced by `@eos/pursuit` /
   `packages/pursuit`,
 - package/file names use `agent-launcher.ts`, singular `transition.ts`,
-  `projection/`, and `.eos-agents/pursuit/scripts`,
+  `context-engine/projection/`, and `.eos-agents/pursuit/scripts`,
 - `Plan` remains DB/launch/submission state and does not reappear as a rendered
   context entity,
 - `.eos-agents/workflow/scripts` is no longer an active initial-message script
