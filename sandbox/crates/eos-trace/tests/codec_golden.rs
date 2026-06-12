@@ -53,6 +53,31 @@ fn round_trips_trace_batch_through_protobuf() {
     assert_eq!(decoded.daemon_boot_id.as_deref(), Some("boot-codec"));
 }
 
+#[test]
+fn decodes_operation_span_kind_without_treating_it_as_unknown() {
+    let batch = proto::TraceBatch {
+        records: vec![proto::TraceRecord {
+            trace_id: "trace-operation-span-kind".to_owned(),
+            kind: 1,
+            root_span_id: 1,
+            spans: vec![proto::TraceSpan {
+                span_id: 1,
+                name: "op.file.write".to_owned(),
+                kind: 8,
+                subsystem: 3,
+                fields_json: "{}".to_owned(),
+                ..proto::TraceSpan::default()
+            }],
+            ..proto::TraceRecord::default()
+        }],
+        ..proto::TraceBatch::default()
+    };
+
+    let decoded = decode_trace_batch(&batch.encode_to_vec()).expect("operation span kind decodes");
+
+    assert_eq!(decoded.records[0].spans[0].kind, SpanKind::Operation);
+}
+
 /// Schema-evolution gate: the committed populated fixture must keep decoding
 /// to the same DTOs after any proto regeneration. Read at runtime so the
 /// fixture can be regenerated without a compile dependency on its presence.

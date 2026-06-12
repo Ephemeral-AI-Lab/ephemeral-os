@@ -46,7 +46,7 @@ eos-coding-agent/
     ├── config/                       ✂ moved from agent-runtime: config-root.ts ·
     │                                 config-file.ts · hook-config.ts ·
     │                                 notification-rules-config.ts · profile/workflow loading
-    ├── agents/                       singleton AgentFactory: agent name + SDK -> Agent
+    ├── agents/                       singleton AgentFactory: Agent.name + SDK -> Agent
     │   ├── agent-factory.ts
     │   └── profiles.ts
     ├── tools/                        every model-visible tool: one file per tool
@@ -124,7 +124,7 @@ const operator = sdk.createAgent({
   profiles into `AgentSpec` objects. The SDK never sees the files.
 - `.eos-agents/workflow.json` maps configured workflow instance names to `{type, args}`.
   `type` selects the workflow module; `args` is the workflow argument bag. For pursuit,
-  `planner` and `worker` are pursuit config fields whose values are agent names:
+  `planner` and `worker` are pursuit config fields whose values are `Agent.name`:
 
 ```json
 {
@@ -151,10 +151,8 @@ const operator = sdk.createAgent({
   `sdk.createAgent(...)` time:
 
 ```ts
-type AgentName = string;
-
 interface AgentFactory {
-  create<T = string>(name: AgentName, init: AgentBuildInit<T>): Agent<T>;
+  create<T = string>(name: string, init: AgentBuildInit<T>): Agent<T>;
   names(): string[];                 // launchable-by-subagent subset
 }
 
@@ -165,9 +163,8 @@ interface AgentBuildInit<T = string> {
 }
 ```
 
-- There is no `WorkflowAgentFactory`. Workflow modules receive the same `AgentFactory`
-  plus their typed `WorkflowInstance`; any agent-valued workflow config field already
-  contains an agent name:
+- Workflow modules receive the same `AgentFactory` plus their typed `WorkflowInstance`;
+  any agent-valued workflow config field already contains `Agent.name`:
 
 ```ts
 const planner = init.agents.create(init.instance.args.planner, { tools, agentOutcomeFn });
@@ -294,7 +291,7 @@ interface WorkflowInit<A extends WorkflowArgs = WorkflowArgs> {
   agents: AgentFactory;                // the same singleton from the composition root
 }
 // For pursuit1, init.instance.args.planner === "planner" and
-// init.instance.args.worker === "worker"; pursuit passes those agent names
+// init.instance.args.worker === "worker"; pursuit passes those Agent.name values
 // directly to init.agents.create(...).
 // Workflow-specific storage/scripts remain module-owned (e.g. .eos-agents/pursuit/).
 ```
@@ -441,8 +438,8 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 
 | Pursuit internal | Before (in eos-agent-core) | After (here) |
 |---|---|---|
-| `agent-launcher.ts` (`AgentLaunchPort`, `LaunchSettlement`, `LaunchedAgent`) | port implemented by agent-runtime | **deleted** — `launcher.ts` reads agent names from `init.instance.args` and calls `init.agents.create(name, ...).start(...)` directly |
-| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{compose, agents, instance}` — store and pursuit scripts stay pursuit-owned; configured planner/worker agent names are read directly from `.eos-agents/workflow.json` via `WorkflowInstance.args` |
+| `agent-launcher.ts` (`AgentLaunchPort`, `LaunchSettlement`, `LaunchedAgent`) | port implemented by agent-runtime | **deleted** — `launcher.ts` reads `Agent.name` values from `init.instance.args` and calls `init.agents.create(name, ...).start(...)` directly |
+| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{compose, agents, instance}` — store and pursuit scripts stay pursuit-owned; configured planner/worker `Agent.name` values are read directly from `.eos-agents/workflow.json` via `WorkflowInstance.args` |
 | Submission entry | runtime routes `submit_planner_outcome` payloads into service claim methods | the **same claim/transition methods**, invoked from `onSubmit` closures in `outcome-fns.ts` — transactional, keyed by `ctx.submissionId`; invalid transitions (e.g. refocus in predefined mode) return `{reject}` → in-run correction, budget intact |
 | `PursuitAgentSubmissionBinding` | threaded through contracts/engine | deleted (replaced by `onSubmit`) |
 | Planner/worker advisory prompts | `@eos/tool/advisory_prompts/` | move here; ride `createAgentOutcomeFn({description})` |

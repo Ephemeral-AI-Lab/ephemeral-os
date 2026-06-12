@@ -394,6 +394,7 @@ fn span_kind_from_code(
         5 => SpanKind::HostTransport,
         6 => SpanKind::DaemonTransport,
         7 => SpanKind::Dispatch,
+        8 => SpanKind::Operation,
         9 => SpanKind::LayerStack,
         10 => SpanKind::Occ,
         11 => SpanKind::Overlay,
