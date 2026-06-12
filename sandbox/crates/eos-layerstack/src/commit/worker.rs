@@ -608,8 +608,9 @@ fn run_auto_squash(stack: &mut LayerStack) -> AutoSquashTrace {
         Err(err) => AutoSquashTrace {
             timings,
             events: vec![auto_squash_event(
-                "auto_squash_failed",
+                "auto_squash_finished",
                 json!({
+                    "success": false,
                     "error": err.to_string(),
                     "max_depth": max_depth,
                     "depth_before": depth_before,

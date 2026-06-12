@@ -43,10 +43,20 @@ pub(crate) fn finalize_ephemeral_command(
         "resource.command_exec.upperdir",
         &captured.stats,
     );
+    timings.insert(
+        "resource.command_exec.upperdir_tree_sampler_duration_us".to_owned(),
+        json!(captured.capture_s * 1_000_000.0),
+    );
+    let run_dir_walk_start = Instant::now();
+    let run_dir_stats = TreeResourceStats::collect(&workspace.dirs().run_dir);
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.run_dir",
-        &TreeResourceStats::collect(&workspace.dirs().run_dir),
+        &run_dir_stats,
+    );
+    timings.insert(
+        "resource.command_exec.run_dir_tree_sampler_duration_us".to_owned(),
+        json!(u64::try_from(run_dir_walk_start.elapsed().as_micros()).unwrap_or(u64::MAX)),
     );
     for (key, value) in &changeset.timings {
         timings.insert(key.clone(), json!(value));
@@ -90,6 +100,15 @@ pub(crate) fn finalize_isolated_command(
         .map_err(|err| finalize_error(format!("capture isolated upperdir: {err}")))?;
     let changed_path_kinds: ChangedPathKinds = changed_path_kind_pairs(&captured.changes).collect();
     let changed_paths: Vec<String> = changed_path_kinds.keys().cloned().collect();
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &captured.stats,
+    );
+    timings.insert(
+        "resource.command_exec.upperdir_tree_sampler_duration_us".to_owned(),
+        json!(captured.capture_s * 1_000_000.0),
+    );
     merge_runner_timings(&mut timings, request.runner_result.as_ref());
     let command_success = request.command_succeeded();
     insert_command_timings(
@@ -226,25 +245,8 @@ fn base_timings(root: &Path) -> Result<WorkspaceTimings, WorkspaceApiError> {
         "resource.layer_stack.manifest_depth".to_owned(),
         json!(usize_to_f64_saturating(manifest.depth())),
     );
-    timings.insert(
-        "resource.layer_stack.manifest_path_count".to_owned(),
-        json!(usize_to_f64_saturating(manifest.depth())),
-    );
-    for tree in ["run_dir", "workspace", "upperdir"] {
-        for suffix in [
-            "exists",
-            "bytes",
-            "file_count",
-            "dir_count",
-            "entry_count",
-            "truncated",
-        ] {
-            timings.insert(
-                format!("resource.command_exec.{tree}_tree_{suffix}"),
-                json!(0.0),
-            );
-        }
-    }
+    // Tree stats are inserted only by the paths that actually walk a tree;
+    // an absent key means "not sampled", never a fabricated zero walk.
     insert_cgroup_process_resource_timings(&mut timings);
     Ok(timings)
 }

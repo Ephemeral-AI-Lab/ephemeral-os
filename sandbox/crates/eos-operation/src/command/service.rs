@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use eos_command::process::{
@@ -51,6 +52,15 @@ pub enum ExecTarget {
 pub struct CommandOps {
     config: CommandConfig,
     registry: Arc<CommandRegistry>,
+    /// One "before" cgroup/process sample per live command, taken at spawn.
+    /// Consumed exactly once: by the exec request sidecar when the command
+    /// finalizes inside its own yield window, otherwise by whichever
+    /// finalization path ends the command.
+    before_resource_samples: Mutex<HashMap<String, WorkspaceTimings>>,
+    /// Finalize trace records produced on foreground paths (progress read,
+    /// cancel, drain, in-window exec); drained into the background spool by
+    /// `advance_active_commands_once`.
+    pending_finalize_records: Mutex<Vec<TraceRecord>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,17 +162,39 @@ impl CommandOps {
         Self {
             config,
             registry: Arc::new(CommandRegistry::new()),
+            before_resource_samples: Mutex::new(HashMap::new()),
+            pending_finalize_records: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn exec_command(
-        &self,
-        request: StartCommand,
-        target: ExecTarget,
-    ) -> Result<CommandResponse, CommandError> {
-        self.exec_command_with_trace(request, target)
-            .map(|outcome| outcome.response)
-            .map_err(CommandExecError::into_error)
+    fn store_before_resource_sample(&self, command_id: &str, sample: WorkspaceTimings) {
+        self.before_resource_samples
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(command_id.to_owned(), sample);
+    }
+
+    fn take_before_resource_sample(&self, command_id: &str) -> Option<WorkspaceTimings> {
+        self.before_resource_samples
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(command_id)
+    }
+
+    fn push_pending_finalize_record(&self, record: TraceRecord) {
+        self.pending_finalize_records
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(record);
+    }
+
+    fn take_pending_finalize_records(&self) -> Vec<TraceRecord> {
+        std::mem::take(
+            &mut *self
+                .pending_finalize_records
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        )
     }
 
     pub fn exec_command_with_trace(
@@ -370,30 +402,37 @@ impl CommandOps {
         self.registry.insert(Arc::clone(&run));
         let mut before_resource_timings = WorkspaceTimings::new();
         insert_cgroup_process_resource_timings(&mut before_resource_timings);
-        let response = self.wait_on_run(run, yield_time_ms, 0, |stdout| {
-            CommandResponse::running(id, stdout)
+        self.store_before_resource_sample(&id, before_resource_timings);
+        let response = self.wait_on_run(run, yield_time_ms, 0, false, |stdout| {
+            CommandResponse::running(id.clone(), stdout)
         });
         if let Some(finalized) = &response.finalized {
-            trace_events.push(command_process_wait_resource_stats_event(
-                "before",
-                &before_resource_timings,
-            ));
-            trace_events.push(command_process_wait_host_resource_stats_event(
-                "before",
-                &before_resource_timings,
-            ));
-            trace_events.push(command_process_wait_resource_stats_event(
-                "after",
-                &finalized.core.timings,
-            ));
-            trace_events.push(command_process_wait_host_resource_stats_event(
-                "after",
-                &finalized.core.timings,
-            ));
+            if let Some(before_resource_timings) = self.take_before_resource_sample(&id) {
+                trace_events.push(command_process_wait_resource_stats_event(
+                    "before",
+                    &before_resource_timings,
+                ));
+                trace_events.push(command_process_wait_host_resource_stats_event(
+                    "before",
+                    &before_resource_timings,
+                ));
+                trace_events.push(command_process_wait_resource_stats_event(
+                    "after",
+                    &finalized.core.timings,
+                ));
+                trace_events.push(command_process_wait_host_resource_stats_event(
+                    "after",
+                    &finalized.core.timings,
+                ));
+            }
             trace_events.extend(command_process_wait_tree_resource_stats_events(
                 &finalized.core.timings,
             ));
             trace_events.extend(command_response_trace_events(&response));
+        } else if response.status != CommandStatus::Running {
+            // Finalized without facts (discarded work): the sample has no
+            // "after" counterpart on this surface; drop it so it cannot leak.
+            let _ = self.take_before_resource_sample(&id);
         }
         trace_events.push(CommandTraceEvent::new(
             "yielded",
@@ -413,17 +452,15 @@ impl CommandOps {
         run: Arc<ActiveCommand>,
         wait_ms: u64,
         start_offset: u64,
+        consume_resource_pair: bool,
         on_running: impl FnOnce(String) -> CommandResponse,
     ) -> CommandResponse {
         match wait_for_yield(run.process(), &self.config, wait_ms, start_offset) {
-            WaitOutcome::Completed(process_exit) => self.finalize_command(run, process_exit, false),
+            WaitOutcome::Completed(process_exit) => {
+                self.finalize_command(run, process_exit, false, consume_resource_pair)
+            }
             WaitOutcome::Running(stdout) => on_running(stdout),
         }
-    }
-
-    pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandError> {
-        self.write_stdin_with_trace(request)
-            .map(|outcome| outcome.response)
     }
 
     pub fn write_stdin_with_trace(
@@ -458,7 +495,7 @@ impl CommandOps {
         let start_offset = run.process().transcript_len();
         let wait_started = Instant::now();
         run.process().write_process_stdin(&request.chars)?;
-        let response = self.wait_on_run(run, request.yield_time_ms, start_offset, |stdout| {
+        let response = self.wait_on_run(run, request.yield_time_ms, start_offset, true, |stdout| {
             CommandResponse::running(command_id.clone(), stdout)
         });
         let status = response.status;
@@ -509,7 +546,7 @@ impl CommandOps {
         };
         if let Some(process_exit) = run.process().take_exit() {
             let response = self
-                .finalize_command(run, process_exit, false)
+                .finalize_command(run, process_exit, false, true)
                 .with_last_lines(request.last_n_lines);
             return Ok(CommandReadProgressOutcome {
                 trace: progress_trace(
@@ -540,11 +577,13 @@ impl CommandOps {
         };
         let start_offset = run.process().transcript_len();
         run.process().cancel_process();
-        Ok(
-            self.wait_on_run(run, self.config.cancel_wait_ms, start_offset, |stdout| {
-                CommandResponse::cancelled(stdout)
-            }),
-        )
+        Ok(self.wait_on_run(
+            run,
+            self.config.cancel_wait_ms,
+            start_offset,
+            true,
+            |stdout| CommandResponse::cancelled(stdout),
+        ))
     }
 
     #[must_use]
@@ -558,7 +597,46 @@ impl CommandOps {
     }
 
     pub fn push_completed(&self, completion: CommandCompletion) {
-        let _ = self.registry.push_completed(completion);
+        let evictions = self.registry.push_completed(completion);
+        if evictions.is_empty() {
+            return;
+        }
+        // Pushes outside a finalization (orphan recovery) still record their
+        // eviction loss markers as a standalone background root.
+        let now = unix_now_ms();
+        let mut record = TraceRecord::new(TraceId::new(), SpanUid::ROOT);
+        record.kind = TraceKind::CommandFinalize;
+        record.started_at_unix_ms = now;
+        record.finished_at_unix_ms = now;
+        let mut span = SpanRecord::new(
+            SpanUid::ROOT,
+            None,
+            "command.finalize",
+            SpanKind::CommandFinalize,
+            json!({"source": "completion_buffer_eviction"}),
+        );
+        span.started_at_unix_ms = now;
+        span.finished_at_unix_ms = now;
+        record.spans.push(span);
+        for eviction in evictions {
+            let mut event = EventRecord::new(
+                SpanUid::ROOT,
+                "completion_buffer_evicted",
+                "command",
+                json!({
+                    "command_id": eviction.command_id.clone(),
+                    "seq": eviction.seq,
+                    "max_entries": eviction.max_entries,
+                }),
+            );
+            event.at_unix_ms = now;
+            record.links.push(TraceLink {
+                kind: TraceLinkKind::Command,
+                value: eviction.command_id,
+            });
+            record.events.push(event);
+        }
+        self.push_pending_finalize_record(record);
     }
 
     #[must_use]
@@ -589,7 +667,7 @@ impl CommandOps {
         loop {
             pending.retain(|run| match run.process().take_exit() {
                 Some(process_exit) => {
-                    let _ = self.finalize_command(Arc::clone(run), process_exit, false);
+                    let _ = self.finalize_command(Arc::clone(run), process_exit, false, true);
                     false
                 }
                 None => true,
@@ -601,7 +679,7 @@ impl CommandOps {
         }
         for run in pending {
             if let Some(process_exit) = run.process().take_exit() {
-                let _ = self.finalize_command(run, process_exit, false);
+                let _ = self.finalize_command(run, process_exit, false, true);
             } else {
                 self.force_discard(&run);
             }
@@ -613,13 +691,14 @@ impl CommandOps {
         if self.registry.remove(run.process().id()).is_none() {
             return;
         }
+        let _ = self.take_before_resource_sample(run.process().id());
         if let ActiveCommand::Ephemeral(ephemeral) = &**run {
             let _ = service::release_lease(&ephemeral.root, &ephemeral.snapshot.lease_id);
         }
     }
 
     pub fn advance_active_commands_once(&self, now: Instant) -> Vec<TraceRecord> {
-        let mut records = Vec::new();
+        let mut records = self.take_pending_finalize_records();
         for run in self.registry.live() {
             if run
                 .process()
@@ -629,21 +708,48 @@ impl CommandOps {
             }
             if let Some(process_exit) = run.process().take_exit() {
                 let publish_completion = process_exit.kill != Some(KillReason::Cancelled);
-                let finalized = self.finalize_command_inner(run, process_exit, publish_completion);
-                records.push(command_finalize_trace_record(&finalized.trace));
+                records.push(self.finalize_command_record(run, process_exit, publish_completion));
             }
         }
         records
     }
 
+    /// Every foreground finalization also produces a `CommandFinalize` record
+    /// for the background spool: the request sidecar carries the facts the
+    /// caller paid for, while exit/persistence/eviction facts stay durable
+    /// even when no later request observes the command.
     fn finalize_command(
         &self,
         run: Arc<ActiveCommand>,
         process_exit: CommandProcessExit,
         publish_completion: bool,
+        consume_resource_pair: bool,
     ) -> CommandResponse {
-        self.finalize_command_inner(run, process_exit, publish_completion)
-            .response
+        let command_id = run.process().id().to_owned();
+        let finalized = self.finalize_command_inner(run, process_exit, publish_completion);
+        let mut record = command_finalize_trace_record(&finalized.trace);
+        if consume_resource_pair {
+            if let Some(before) = self.take_before_resource_sample(&command_id) {
+                append_resource_pair_to_record(&mut record, &before, &finalized.response);
+            }
+        }
+        self.push_pending_finalize_record(record);
+        finalized.response
+    }
+
+    fn finalize_command_record(
+        &self,
+        run: Arc<ActiveCommand>,
+        process_exit: CommandProcessExit,
+        publish_completion: bool,
+    ) -> TraceRecord {
+        let command_id = run.process().id().to_owned();
+        let finalized = self.finalize_command_inner(run, process_exit, publish_completion);
+        let mut record = command_finalize_trace_record(&finalized.trace);
+        if let Some(before) = self.take_before_resource_sample(&command_id) {
+            append_resource_pair_to_record(&mut record, &before, &finalized.response);
+        }
+        record
     }
 
     fn finalize_command_inner(
@@ -749,11 +855,22 @@ struct CommandFinalizeTraceFacts {
     evictions: Vec<CompletionBufferEviction>,
 }
 
+/// Trace events embed at most this many changed paths; the full list lives in
+/// the response payload, and the count is always exact.
+const CHANGED_PATHS_EVENT_HEAD: usize = 32;
+
 fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTraceEvent> {
     let Some(finalized) = response.finalized.as_ref() else {
         return Vec::new();
     };
     let changed_path_count = finalized.core.changed_paths.len();
+    let changed_paths_head: Vec<&String> = finalized
+        .core
+        .changed_paths
+        .iter()
+        .take(CHANGED_PATHS_EVENT_HEAD)
+        .collect();
+    let changed_paths_truncated = changed_path_count > CHANGED_PATHS_EVENT_HEAD;
     let command_id = response.command_id.as_ref().map(ToString::to_string);
     let workspace = finalized.workspace.as_str();
     let capture_duration_s = finalized
@@ -798,7 +915,8 @@ fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTrace
                 "workspace": workspace,
                 "duration_s": capture_duration_s,
                 "changed_path_count": changed_path_count,
-                "changed_paths": finalized.core.changed_paths,
+                "changed_paths": changed_paths_head,
+                "changed_paths_truncated": changed_paths_truncated,
             }),
         ),
         CommandTraceEvent::new(
@@ -807,7 +925,8 @@ fn command_response_trace_events(response: &CommandResponse) -> Vec<CommandTrace
                 "command_id": command_id,
                 "workspace": workspace,
                 "changed_path_count": changed_path_count,
-                "changed_paths": finalized.core.changed_paths,
+                "changed_paths": changed_paths_head,
+                "changed_paths_truncated": changed_paths_truncated,
             }),
         ),
         CommandTraceEvent::new(
@@ -897,16 +1016,18 @@ fn command_process_wait_tree_resource_stats_events(
     }
     groups
         .into_iter()
-        .map(|(source, tree)| {
+        .map(|(source, mut tree)| {
+            // The walk duration is recorded beside the walk that paid for it;
+            // tree stats are never part of a before/after gauge pair.
+            let sampler_duration_us = tree.remove("sampler_duration_us").unwrap_or(Value::Null);
             CommandTraceEvent::new(
                 "resource_stats",
                 json!({
                     "meta": {
                         "stats_kind": "tree",
-                        "phase": "after",
                         "source": format!("resource.{source}"),
                         "source_available": true,
-                        "sampler_duration_us": 0,
+                        "sampler_duration_us": sampler_duration_us,
                     },
                     "tree": tree,
                 }),
@@ -926,6 +1047,10 @@ fn command_process_wait_host_resource_stats_event(
         }
     }
     let source_available = !process.is_empty();
+    let sampler_duration_us = timings
+        .get("resource.sampler.cgroup_process_duration_us")
+        .cloned()
+        .unwrap_or(Value::Null);
     CommandTraceEvent::new(
         "resource_stats",
         json!({
@@ -935,13 +1060,45 @@ fn command_process_wait_host_resource_stats_event(
                 "source": "daemon.process",
                 "source_available": source_available,
                 "read_error": (!source_available).then_some("daemon process gauges unavailable on this platform"),
-                "sampler_duration_us": 0,
+                "sampler_duration_us": sampler_duration_us,
             },
             "host": {
                 "process": process,
             },
         }),
     )
+}
+
+/// Attach the command's before/after `command.process.wait` resource pair to
+/// its finalize record when the pair never rode a request sidecar. The
+/// "after" sample prefers the gauges captured during finalization; discarded
+/// work (empty timings) gets a fresh sample so the pair stays complete.
+fn append_resource_pair_to_record(
+    record: &mut TraceRecord,
+    before: &WorkspaceTimings,
+    response: &CommandResponse,
+) {
+    let after = response
+        .finalized
+        .as_ref()
+        .map(|finalized| finalized.core.timings.clone())
+        .filter(|timings| timings.keys().any(|key| key.starts_with("resource.")))
+        .unwrap_or_else(|| {
+            let mut timings = WorkspaceTimings::new();
+            insert_cgroup_process_resource_timings(&mut timings);
+            timings
+        });
+    for event in [
+        command_process_wait_resource_stats_event("before", before),
+        command_process_wait_host_resource_stats_event("before", before),
+        command_process_wait_resource_stats_event("after", &after),
+        command_process_wait_host_resource_stats_event("after", &after),
+    ] {
+        let mut event_record =
+            EventRecord::new(record.root_span_id, event.name, "resource", event.details);
+        event_record.at_unix_ms = record.finished_at_unix_ms;
+        record.events.push(event_record);
+    }
 }
 
 fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceRecord {

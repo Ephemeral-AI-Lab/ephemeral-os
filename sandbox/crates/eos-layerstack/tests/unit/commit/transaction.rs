@@ -190,7 +190,7 @@ fn auto_squash_finished_event_records_depth_and_manifest() -> TestResult {
 }
 
 #[test]
-fn auto_squash_failed_event_records_error_reason() -> TestResult {
+fn auto_squash_failure_finishes_with_error_reason() -> TestResult {
     let fixture = Fixture::new("auto_squash_failed")?;
     let mut stack = LayerStack::open(fixture.root.clone())?;
     for index in 0..3 {
@@ -209,7 +209,8 @@ fn auto_squash_failed_event_records_error_reason() -> TestResult {
 
     assert_eq!(trace.events.len(), 1);
     assert_eq!(trace.events[0].module, "layer_stack");
-    assert_eq!(trace.events[0].name, "auto_squash_failed");
+    assert_eq!(trace.events[0].name, "auto_squash_finished");
+    assert_eq!(trace.events[0].details["success"], false);
     assert_eq!(trace.events[0].details["max_depth"], 2);
     assert_eq!(trace.events[0].details["depth_before"], 4);
     assert!(trace.events[0].details["error"].is_string());

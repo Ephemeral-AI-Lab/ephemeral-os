@@ -42,6 +42,18 @@ fn request_start_failures_fail_closed_for_mutations_and_degrade_reads(
         |row| row.get(0),
     )?;
     assert_eq!(degraded_count, 1);
+    let degraded_row = store
+        .request_by_id("read-1")?
+        .expect("degraded read request row");
+    assert_eq!(degraded_row.sandbox_id, "sb-1");
+    assert_eq!(degraded_row.status.as_deref(), Some("trace_degraded"));
+
+    store.rebuild_projections()?;
+    let rebuilt_row = store
+        .request_by_id("read-1")?
+        .expect("rebuilt degraded read request row");
+    assert_eq!(rebuilt_row.sandbox_id, "sb-1");
+    assert_eq!(rebuilt_row.status.as_deref(), Some("trace_degraded"));
     Ok(())
 }
 
@@ -100,6 +112,34 @@ fn sidecar_ingest_rebuilds_lookup_projections_from_audit_entries() -> Result<(),
     assert_eq!(store.events_for_trace(trace_id.as_str())?.len(), 1);
     assert_eq!(
         store.trace_ids_for_link("command", "cmd-1")?,
+        vec![trace_id.to_string()]
+    );
+    Ok(())
+}
+
+#[test]
+fn background_links_without_request_id_are_deduplicated() -> Result<(), TraceStoreError> {
+    let store = temp_store("background-link-dedupe")?;
+    let trace_id = TraceId::parse("trace-background-link").expect("trace id");
+    let mut record = TraceRecord::new(trace_id.clone(), SpanUid::ROOT);
+    record.links.push(TraceLink {
+        kind: TraceLinkKind::PluginService,
+        value: "svc-1".to_owned(),
+    });
+    record.links.push(TraceLink {
+        kind: TraceLinkKind::PluginService,
+        value: "svc-1".to_owned(),
+    });
+
+    store.ingest_trace_batch("sb-1", &encode_trace_batch(&TraceBatch::single(record)))?;
+    assert_eq!(
+        store.trace_ids_for_link("plugin_service", "svc-1")?,
+        vec![trace_id.to_string()]
+    );
+
+    store.rebuild_projections()?;
+    assert_eq!(
+        store.trace_ids_for_link("plugin_service", "svc-1")?,
         vec![trace_id.to_string()]
     );
     Ok(())

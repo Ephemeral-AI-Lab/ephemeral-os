@@ -116,6 +116,16 @@ impl TraceStore {
         &self,
         input: RequestStartInput<'_>,
     ) -> Result<ForwardTraceDecision, TraceStoreError> {
+        let degraded_input = DegradedRequestInput {
+            sandbox_id: input.sandbox_id,
+            trace_id: input.trace_id.clone(),
+            request_id: input.request_id.clone(),
+            op: input.op,
+            family: input.family,
+            caller_id: input.caller_id,
+            args: input.args.clone(),
+            forwarded_bytes: input.forwarded_bytes,
+        };
         let trace_id = input.trace_id.clone();
         let request_id = input.request_id.clone();
         let mutates_state = input.mutates_state;
@@ -126,7 +136,7 @@ impl TraceStore {
                 degraded: false,
             }),
             Err(err) if !mutates_state && err.allows_read_only_degraded() => {
-                self.append_trace_degraded(HOST_SANDBOX_ID, &trace_id, Some(&request_id), &err)?;
+                self.append_trace_degraded(&degraded_input, &err)?;
                 Ok(ForwardTraceDecision {
                     trace_id,
                     request_id,
@@ -202,42 +212,47 @@ impl TraceStore {
         Ok(())
     }
 
-    pub fn append_trace_degraded(
+    fn append_trace_degraded(
         &self,
-        sandbox_id: &str,
-        trace_id: &TraceId,
-        request_id: Option<&RequestId>,
+        input: &DegradedRequestInput<'_>,
         error: &TraceStoreError,
     ) -> Result<(), TraceStoreError> {
-        let payload = proto::AuditEntry {
-            entry_id: request_id.map_or_else(|| trace_id.to_string(), ToString::to_string),
-            trace_id: trace_id.to_string(),
-            seq: 0,
-            payload: error.to_string().into_bytes(),
-            previous_hash: Vec::new(),
-            entry_hash: Vec::new(),
-            schema_version: "1".to_owned(),
-            written_at_unix_ms: now_ms(),
-        }
-        .encode_to_vec();
+        let args_summary =
+            BoundedJson::capture(input.args.clone(), DetailBudget::RequestArgsSummary);
+        let payload = TraceDegradedPayload {
+            trace_id: input.trace_id.to_string(),
+            request_id: input.request_id.to_string(),
+            sandbox_id: input.sandbox_id.to_owned(),
+            op: input.op.to_owned(),
+            family: input.family.to_owned(),
+            caller_id: input.caller_id.map(ToOwned::to_owned),
+            args_summary: args_summary.encoded_value(),
+            args_digest: sha256_hex(input.forwarded_bytes),
+            sent_at_ms: now_ms(),
+            host_boot_id: self.host_boot_id.to_string(),
+            error_kind: "trace_degraded".to_owned(),
+            message: error.to_string(),
+        };
+        let payload_bytes = encode_audit_payload(&payload);
         let mut conn = self.lock();
         let tx = conn.transaction()?;
         append_audit_entry_tx(
             &tx,
             AuditAppend {
-                sandbox_id,
-                trace_id: trace_id.as_str(),
-                request_id: request_id.map(RequestId::as_str),
+                sandbox_id: input.sandbox_id,
+                trace_id: input.trace_id.as_str(),
+                request_id: Some(input.request_id.as_str()),
                 entry_kind: "trace_degraded",
                 schema_name: AUDIT_SCHEMA,
                 schema_version: 1,
                 received_at_ms: now_ms(),
-                payload: &payload,
+                payload: &payload_bytes,
                 segment_id: None,
                 key_id: None,
                 signature: None,
             },
         )?;
+        project_trace_degraded_tx(&tx, &payload)?;
         tx.commit()?;
         Ok(())
     }
@@ -421,6 +436,10 @@ impl TraceStore {
                 "trace_event" => {
                     let payload = decode_audit_payload::<HostTraceEventPayload>(&row.payload)?;
                     project_host_trace_event_tx(&tx, &payload)?;
+                }
+                "trace_degraded" => {
+                    let payload = decode_audit_payload::<TraceDegradedPayload>(&row.payload)?;
+                    project_trace_degraded_tx(&tx, &payload)?;
                 }
                 "response_persisted" => {
                     let payload = decode_audit_payload::<ResponsePersistedPayload>(&row.payload)?;
@@ -722,6 +741,16 @@ impl TraceStore {
         Ok(rows)
     }
 
+    pub fn event_count_for_trace(&self, trace_id: &str) -> Result<usize, TraceStoreError> {
+        let conn = self.lock();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM trace_events WHERE trace_id=?1",
+            params![trace_id],
+            |row| row.get(0),
+        )?;
+        Ok(i64_to_usize(count))
+    }
+
     pub fn request_by_id(
         &self,
         request_id: &str,
@@ -744,6 +773,30 @@ impl TraceStore {
         )
         .optional()
         .map_err(TraceStoreError::from)
+    }
+
+    pub fn span_count_for_request(
+        &self,
+        trace_id: &str,
+        request_id: &str,
+    ) -> Result<usize, TraceStoreError> {
+        let conn = self.lock();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM trace_spans WHERE trace_id=?1 AND request_id=?2",
+            params![trace_id, request_id],
+            |row| row.get(0),
+        )?;
+        Ok(i64_to_usize(count))
+    }
+
+    pub fn resource_count_for_request(&self, request_id: &str) -> Result<usize, TraceStoreError> {
+        let conn = self.lock();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM trace_resources WHERE request_id=?1",
+            params![request_id],
+            |row| row.get(0),
+        )?;
+        Ok(i64_to_usize(count))
     }
 
     pub fn trace_ids_for_link(
@@ -851,6 +904,17 @@ pub struct RequestStartInput<'a> {
     pub mutates_state: bool,
     pub args: Value,
     pub forwarded_bytes: &'a [u8],
+}
+
+struct DegradedRequestInput<'a> {
+    sandbox_id: &'a str,
+    trace_id: TraceId,
+    request_id: RequestId,
+    op: &'a str,
+    family: &'a str,
+    caller_id: Option<&'a str>,
+    args: Value,
+    forwarded_bytes: &'a [u8],
 }
 
 pub struct TraceEventInput<'a> {
@@ -1007,6 +1071,22 @@ struct HostTraceEventPayload {
     event: String,
     details_json: String,
     ts_us: u64,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct TraceDegradedPayload {
+    trace_id: String,
+    request_id: String,
+    sandbox_id: String,
+    op: String,
+    family: String,
+    caller_id: Option<String>,
+    args_summary: String,
+    args_digest: String,
+    sent_at_ms: u64,
+    host_boot_id: String,
+    error_kind: String,
+    message: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -1185,6 +1265,34 @@ fn project_request_start_proto_tx(
     )
 }
 
+fn project_trace_degraded_tx(
+    tx: &Transaction<'_>,
+    payload: &TraceDegradedPayload,
+) -> Result<(), rusqlite::Error> {
+    project_request_start_tx(
+        tx,
+        ProjectRequestStart {
+            sandbox_id: &payload.sandbox_id,
+            trace_id: &payload.trace_id,
+            request_id: &payload.request_id,
+            op: &payload.op,
+            family: &payload.family,
+            caller_id: payload.caller_id.as_deref(),
+            args_summary: &payload.args_summary,
+            args_digest: &payload.args_digest,
+            sent_at_ms: payload.sent_at_ms,
+            host_boot_id: &payload.host_boot_id,
+        },
+    )?;
+    tx.execute(
+        "UPDATE trace_requests
+         SET status='trace_degraded', error_kind=?2, response_summary=?3
+         WHERE request_id=?1",
+        params![payload.request_id, payload.error_kind, payload.message],
+    )?;
+    Ok(())
+}
+
 fn project_trace_batch_tx(
     tx: &Transaction<'_>,
     batch: &eos_trace::TraceBatch,
@@ -1260,11 +1368,17 @@ fn project_trace_batch_tx(
             )?;
         }
         for link in &record.links {
+            let link_request_id = request_id.as_deref().unwrap_or_default();
             tx.execute(
                 "INSERT OR IGNORE INTO trace_links
                  (trace_id, link_kind, link_id, request_id)
                  VALUES (?1, ?2, ?3, ?4)",
-                params![trace_id, serde_label(link.kind), link.value, request_id],
+                params![
+                    trace_id,
+                    serde_label(link.kind),
+                    link.value,
+                    link_request_id
+                ],
             )?;
         }
         if let Some(request_id) = &request_id {
@@ -1389,7 +1503,7 @@ fn clear_projections_tx(tx: &Transaction<'_>) -> Result<(), rusqlite::Error> {
 fn audit_rows_for_rebuild(tx: &Transaction<'_>) -> Result<Vec<RebuildAuditRow>, rusqlite::Error> {
     let mut stmt = tx.prepare(
         "SELECT entry_kind, payload FROM audit_entries
-         WHERE entry_kind IN ('request_start', 'trace_batch', 'trace_event', 'response_persisted', 'loss')
+         WHERE entry_kind IN ('request_start', 'trace_batch', 'trace_event', 'trace_degraded', 'response_persisted', 'loss')
          ORDER BY audit_seq",
     )?;
     let rows = stmt
@@ -1582,6 +1696,10 @@ fn u64_to_i64(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
 }
 
+fn i64_to_usize(value: i64) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
+}
+
 fn usize_to_u64(value: usize) -> u64 {
     u64::try_from(value).unwrap_or(u64::MAX)
 }
@@ -1682,7 +1800,7 @@ CREATE TABLE IF NOT EXISTS trace_links (
   trace_id  TEXT NOT NULL,
   link_kind TEXT NOT NULL,
   link_id   TEXT NOT NULL,
-  request_id TEXT,
+  request_id TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (trace_id, link_kind, link_id, request_id)
 );
 CREATE TABLE IF NOT EXISTS sandbox_heartbeats (

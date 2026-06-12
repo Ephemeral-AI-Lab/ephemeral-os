@@ -19,8 +19,9 @@ pub mod pool;
 
 pub mod client {
     pub use eos_sandbox_host::e2e_support::{
-        error_kind, is_success, response_classification, response_status, ClientError,
-        ProtocolClient, ResponseClassification, ResponseShape,
+        decode_trace_sidecar_base64, error_kind, is_success, response_classification,
+        response_status, take_trace_sidecar_checked, ClientError, ProtocolClient,
+        ResponseClassification, ResponseShape, TraceSidecarError, DAEMON_TRACE_SIDECAR_FIELD,
     };
 }
 
