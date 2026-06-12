@@ -1,7 +1,7 @@
 use eos_command::process::{
     CommandFinalResponsePersistence, CommandPersistenceOutcome, KillReason,
 };
-use eos_trace::{SpanStatus, TraceKind, TraceLinkKind};
+use eos_trace::{SpanKind, SpanStatus, TraceKind, TraceLinkKind};
 use std::path::PathBuf;
 
 use super::*;
@@ -122,6 +122,14 @@ fn command_finalize_trace_record_carries_origin_and_eviction_markers() {
     let span = record.spans.first().expect("root finalize span");
     assert_eq!(span.name, "command.finalize");
     assert_eq!(span.status, Some(SpanStatus::TimedOut));
+    let wait_span = record
+        .spans
+        .iter()
+        .find(|span| span.kind == SpanKind::CommandProcessWait)
+        .expect("command process wait span");
+    assert_eq!(wait_span.name, "command.process.wait");
+    assert_eq!(wait_span.duration_us, 12_500_000);
+    assert_eq!(wait_span.status, Some(SpanStatus::TimedOut));
 
     let finalized = record
         .events
@@ -214,6 +222,25 @@ fn command_finalize_trace_record_carries_final_persist_failures() {
         .expect("final persist failure event");
     assert_eq!(failed.details.value["path"], "/tmp/final.json");
     assert_eq!(failed.details.value["error"], "disk full");
+}
+
+#[test]
+fn active_command_advance_trace_record_carries_poll_results() {
+    let record = active_command_advance_trace_record(
+        3,
+        vec!["cmd_timed_out".to_owned()],
+        vec!["cmd_finalized".to_owned()],
+    );
+
+    assert_eq!(record.kind, TraceKind::ActiveCommandAdvance);
+    let span = record.spans.first().expect("advance span");
+    assert_eq!(span.name, "command.active.advance");
+    assert_eq!(span.kind, SpanKind::CommandProcessWait);
+    assert_eq!(span.fields.value["live_count"], 3);
+    let event = record.events.first().expect("advance event");
+    assert_eq!(event.name, "advance_finished");
+    assert_eq!(event.details.value["timed_out_commands"], json!(["cmd_timed_out"]));
+    assert_eq!(event.details.value["finalized_commands"], json!(["cmd_finalized"]));
 }
 
 #[test]

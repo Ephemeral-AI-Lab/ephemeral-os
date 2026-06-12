@@ -350,7 +350,8 @@ impl CommandOps {
     ) -> Result<CommandProcess, CommandExecError> {
         let command_id = spec.id.clone();
         let request_path = prepared.request_path.clone();
-        let process = CommandProcess::spawn(
+        let spawn_started = Instant::now();
+        let process = match CommandProcess::spawn(
             spec,
             CommandProcessSpawn {
                 run_request: prepared.run_request,
@@ -361,18 +362,32 @@ impl CommandOps {
                 transcript_timestamp_timezone: &self.config.transcript_timestamp_timezone,
                 output_drain_grace_ms: self.config.output_drain_grace_ms,
             },
-        )
-        .map_err(|error| {
-            if let CommandError::ArtifactWrite {
-                artifact,
-                path,
-                error,
-            } = &error
-            {
-                trace_events.push(CommandTraceEvent::artifact_failed(artifact, path, error));
+        ) {
+            Ok(process) => process,
+            Err(error) => {
+                trace_events.push(CommandTraceEvent::new(
+                    "spawned",
+                    json!({
+                        "command_id": command_id,
+                        "success": false,
+                        "duration_ms": elapsed_ms(spawn_started),
+                        "error": error.to_string(),
+                    }),
+                ));
+                if let CommandError::ArtifactWrite {
+                    artifact,
+                    path,
+                    error,
+                } = &error
+                {
+                    trace_events.push(CommandTraceEvent::artifact_failed(artifact, path, error));
+                }
+                return Err(CommandExecError::with_trace_events(
+                    error,
+                    trace_events.clone(),
+                ));
             }
-            CommandExecError::with_trace_events(error, trace_events.clone())
-        })?;
+        };
         let request_bytes = std::fs::metadata(&request_path).map_or(0, |metadata| {
             usize::try_from(metadata.len()).unwrap_or(usize::MAX)
         });
@@ -385,6 +400,8 @@ impl CommandOps {
             "spawned",
             json!({
                 "command_id": command_id,
+                "success": true,
+                "duration_ms": elapsed_ms(spawn_started),
             }),
         ));
         Ok(process)
@@ -403,9 +420,20 @@ impl CommandOps {
         let mut before_resource_timings = WorkspaceTimings::new();
         insert_cgroup_process_resource_timings(&mut before_resource_timings);
         self.store_before_resource_sample(&id, before_resource_timings);
+        let wait_started = Instant::now();
         let response = self.wait_on_run(run, yield_time_ms, 0, false, |stdout| {
             CommandResponse::running(id.clone(), stdout)
         });
+        trace_events.push(CommandTraceEvent::new(
+            "wait_finished",
+            json!({
+                "command_id": response.command_id.as_ref().map(ToString::to_string),
+                "status": response.status.as_str(),
+                "completed": response.status != CommandStatus::Running,
+                "yield_time_ms": yield_time_ms,
+                "duration_ms": elapsed_ms(wait_started),
+            }),
+        ));
         if let Some(finalized) = &response.finalized {
             if let Some(before_resource_timings) = self.take_before_resource_sample(&id) {
                 trace_events.push(command_process_wait_resource_stats_event(
@@ -699,17 +727,34 @@ impl CommandOps {
 
     pub fn advance_active_commands_once(&self, now: Instant) -> Vec<TraceRecord> {
         let mut records = self.take_pending_finalize_records();
+        let mut live_count = 0usize;
+        let mut timed_out_commands = Vec::new();
+        let mut finalized_commands = Vec::new();
         for run in self.registry.live() {
+            live_count += 1;
+            let command_id = run.process().id().to_owned();
             if run
                 .process()
                 .is_past_deadline(now, self.config.max_command_s)
             {
                 run.process().time_out_process();
+                timed_out_commands.push(command_id.clone());
             }
             if let Some(process_exit) = run.process().take_exit() {
                 let publish_completion = process_exit.kill != Some(KillReason::Cancelled);
+                finalized_commands.push(command_id);
                 records.push(self.finalize_command_record(run, process_exit, publish_completion));
             }
+        }
+        if !timed_out_commands.is_empty() || !finalized_commands.is_empty() {
+            records.insert(
+                0,
+                active_command_advance_trace_record(
+                    live_count,
+                    timed_out_commands,
+                    finalized_commands,
+                ),
+            );
         }
         records
     }
@@ -1135,6 +1180,7 @@ fn append_resource_pair_to_record(
 
 fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceRecord {
     let now = unix_now_ms();
+    let wait_duration_us = duration_us_from_secs(facts.command_elapsed_s);
     let mut span = SpanRecord::new(
         SpanUid::ROOT,
         None,
@@ -1150,10 +1196,26 @@ fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceReco
     span.started_at_unix_ms = now;
     span.finished_at_unix_ms = now;
     span.status = Some(command_span_status(facts.status));
+    let mut wait_span = SpanRecord::new(
+        SpanUid::new(2),
+        Some(SpanUid::ROOT),
+        "command.process.wait",
+        SpanKind::CommandProcessWait,
+        json!({
+            "command_id": facts.command_id,
+            "caller_id": facts.caller_id,
+            "elapsed_s": facts.command_elapsed_s,
+            "kill_reason": facts.kill.map(kill_reason_label),
+        }),
+    );
+    wait_span.started_at_unix_ms = now.saturating_sub(wait_duration_us / 1_000);
+    wait_span.finished_at_unix_ms = now;
+    wait_span.duration_us = wait_duration_us;
+    wait_span.status = Some(command_span_status(facts.status));
 
     let mut events = vec![
         EventRecord::new(
-            SpanUid::ROOT,
+            SpanUid::new(2),
             "exit_taken",
             "command",
             json!({
@@ -1181,7 +1243,7 @@ fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceReco
     ];
     if let Some(kill) = facts.kill {
         events.push(EventRecord::new(
-            SpanUid::ROOT,
+            SpanUid::new(2),
             kill_reason_label(kill),
             "command",
             json!({
@@ -1219,11 +1281,53 @@ fn command_finalize_trace_record(facts: &CommandFinalizeTraceFacts) -> TraceReco
     record.started_at_unix_ms = now;
     record.finished_at_unix_ms = now;
     record.spans.push(span);
+    record.spans.push(wait_span);
     record.events = events;
     record.links.push(TraceLink {
         kind: TraceLinkKind::Command,
         value: facts.command_id.clone(),
     });
+    record
+}
+
+fn active_command_advance_trace_record(
+    live_count: usize,
+    timed_out_commands: Vec<String>,
+    finalized_commands: Vec<String>,
+) -> TraceRecord {
+    let now = unix_now_ms();
+    let mut span = SpanRecord::new(
+        SpanUid::ROOT,
+        None,
+        "command.active.advance",
+        SpanKind::CommandProcessWait,
+        json!({
+            "live_count": live_count,
+            "timed_out_count": timed_out_commands.len(),
+            "finalized_count": finalized_commands.len(),
+        }),
+    );
+    span.started_at_unix_ms = now;
+    span.finished_at_unix_ms = now;
+    span.status = Some(SpanStatus::Ok);
+    let mut event = EventRecord::new(
+        SpanUid::ROOT,
+        "advance_finished",
+        "command",
+        json!({
+            "live_count": live_count,
+            "timed_out_commands": timed_out_commands,
+            "finalized_commands": finalized_commands,
+        }),
+    );
+    event.at_unix_ms = now;
+
+    let mut record = TraceRecord::new(TraceId::new(), SpanUid::ROOT);
+    record.kind = TraceKind::ActiveCommandAdvance;
+    record.started_at_unix_ms = now;
+    record.finished_at_unix_ms = now;
+    record.spans.push(span);
+    record.events.push(event);
     record
 }
 
@@ -1307,6 +1411,18 @@ fn unix_now_ms() -> u64 {
         .unwrap_or_default()
         .as_millis();
     u64::try_from(millis).unwrap_or(u64::MAX)
+}
+
+fn duration_us_from_secs(seconds: f64) -> u64 {
+    if !seconds.is_finite() || seconds <= 0.0 {
+        return 0;
+    }
+    let micros = seconds * 1_000_000.0;
+    if micros >= u64::MAX as f64 {
+        u64::MAX
+    } else {
+        micros.round() as u64
+    }
 }
 
 fn elapsed_ms(started: Instant) -> u64 {

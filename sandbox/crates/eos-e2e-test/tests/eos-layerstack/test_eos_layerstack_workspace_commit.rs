@@ -9,7 +9,8 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    as_bool, as_i64, as_str, finalize_foreground_command, live_pool_or_skip, wait_for_active_leases,
+    as_bool, as_i64, as_str, envelope_result, finalize_foreground_command, has_trace_event,
+    live_pool_or_skip, trace_record, wait_for_active_leases,
 };
 
 #[test]
@@ -183,17 +184,19 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
         finalize_foreground_command(&lease, overlay, Instant::now() + Duration::from_secs(30))?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
 
-    let commit = lease.call_ok(
+    let commit_wire = lease.call(
         catalog::SANDBOX_CHECKPOINT_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
+    let commit = envelope_result(&commit_wire)?;
+    let commit_record = trace_record(&commit_wire)?;
     assert!(as_bool(&commit, "success")?, "{commit}");
     for key in [
         "layer_stack.commit_to_workspace.project_s",
         "layer_stack.commit_to_workspace.replace_workspace_s",
         "layer_stack.commit_to_workspace.rebuild_base_s",
     ] {
-        assert_timing_present(&commit, key)?;
+        assert_commit_to_workspace_phase(&commit_record, key)?;
     }
 
     let check = lease.call_ok(
@@ -233,13 +236,15 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
         json!({"workspace_root": lease.workspace_root()}),
     )?;
 
-    let first = rebuild_workspace_base(&lease)?;
+    let (first_wire, first) = rebuild_workspace_base(&lease)?;
     let first_metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
-    let second = rebuild_workspace_base(&lease)?;
+    let (second_wire, second) = rebuild_workspace_base(&lease)?;
     let second_metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
 
     assert_rebuild_response(&first)?;
     assert_rebuild_response(&second)?;
+    assert_workspace_base_trace(&trace_record(&first_wire)?)?;
+    assert_workspace_base_trace(&trace_record(&second_wire)?)?;
     assert_eq!(
         binding_str(&second, "base_root_hash")?,
         binding_str(&first, "base_root_hash")?,
@@ -257,11 +262,13 @@ fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
     Ok(())
 }
 
-fn rebuild_workspace_base(lease: &eos_e2e_test::NodeLease<'_>) -> Result<Value> {
-    lease.call_ok(
+fn rebuild_workspace_base(lease: &eos_e2e_test::NodeLease<'_>) -> Result<(Value, Value)> {
+    let response = lease.call(
         catalog::SANDBOX_CHECKPOINT_BUILD_BASE,
         json!({"workspace_root": lease.workspace_root(), "reset": true}),
-    )
+    )?;
+    let result = envelope_result(&response)?.clone();
+    Ok((response, result))
 }
 
 fn assert_rebuild_response(response: &Value) -> Result<()> {
@@ -295,16 +302,6 @@ fn assert_rebuild_response(response: &Value) -> Result<()> {
             .is_some_and(looks_like_sha256),
         "reset rebuild should report a CAS-shaped base hash: {response}"
     );
-    for key in [
-        "api.workspace_base.total_s",
-        "workspace_base.prepare_stack_s",
-        "workspace_base.collect_s",
-        "workspace_base.write_layer_s",
-        "workspace_base.write_manifest_s",
-        "workspace_base.write_binding_s",
-    ] {
-        assert_timing_present(response, key)?;
-    }
     Ok(())
 }
 
@@ -346,17 +343,64 @@ fn assert_rebuilt_base_metrics(metrics: &Value) -> Result<()> {
     Ok(())
 }
 
-fn assert_timing_present(response: &Value, key: &str) -> Result<()> {
-    let timing = response
-        .get("timings")
-        .and_then(|timings| timings.get(key))
-        .and_then(Value::as_f64)
-        .with_context(|| format!("timing {key} missing in {response}"))?;
+fn assert_commit_to_workspace_phase(record: &eos_trace::TraceRecord, key: &str) -> Result<()> {
+    let timing = trace_phase(record, "layer_stack", "commit_to_workspace_finished", key)?;
     assert!(
         timing >= 0.0,
-        "timing {key} should be nonnegative in response: {response}"
+        "commit_to_workspace trace phase {key} should be nonnegative: {record:?}"
     );
     Ok(())
+}
+
+fn assert_workspace_base_trace(record: &eos_trace::TraceRecord) -> Result<()> {
+    assert!(
+        has_trace_event(record, "checkpoint", "workspace_base_finished", |details| {
+            details["action"] == "build"
+                && details["created"] == true
+                && details["reset"] == true
+                && details
+                    .get("duration_s")
+                    .and_then(Value::as_f64)
+                    .is_some_and(|duration| duration >= 0.0)
+        }),
+        "workspace base rebuild trace should record build/reset completion: {record:?}"
+    );
+    for key in [
+        "api.workspace_base.total_s",
+        "workspace_base.prepare_stack_s",
+        "workspace_base.collect_s",
+        "workspace_base.write_layer_s",
+        "workspace_base.write_manifest_s",
+        "workspace_base.write_binding_s",
+    ] {
+        let timing = trace_phase(record, "checkpoint", "workspace_base_finished", key)?;
+        assert!(
+            timing >= 0.0,
+            "workspace_base trace phase {key} should be nonnegative: {record:?}"
+        );
+    }
+    Ok(())
+}
+
+fn trace_phase(
+    record: &eos_trace::TraceRecord,
+    module: &str,
+    name: &str,
+    key: &str,
+) -> Result<f64> {
+    record
+        .events
+        .iter()
+        .find(|event| event.module == module && event.name == name)
+        .and_then(|event| {
+            event
+                .details
+                .value
+                .get("phases")
+                .and_then(|phases| phases.get(key))
+        })
+        .and_then(Value::as_f64)
+        .with_context(|| format!("{module}.{name} phase {key} missing in trace: {record:?}"))
 }
 
 fn binding_str<'a>(response: &'a Value, key: &str) -> Result<&'a str> {

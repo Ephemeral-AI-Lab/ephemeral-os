@@ -141,6 +141,23 @@ impl WorkspaceRecoveryReport {
     }
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub(crate) struct IdleWorkspaceEvictionReport {
+    pub evicted: Vec<IdleWorkspaceEviction>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct IdleWorkspaceEviction {
+    pub caller_id: String,
+    pub workspace_handle_id: String,
+    pub lease_id: String,
+    pub evicted_upperdir_bytes: u64,
+    pub lifetime_s: f64,
+    pub total_ms: f64,
+    pub lease_release: LeaseReleaseReport,
+    pub active_leases_after: usize,
+}
+
 pub(crate) struct WorkspaceEnterOutcome {
     pub handle: WorkspaceHandle,
     pub recovery: WorkspaceRecoveryReport,
@@ -342,9 +359,13 @@ impl WorkspaceRuntime {
     /// Evict idle isolated workspaces past their TTL, releasing their leases.
     /// Callers that still own a live command are protected.
     pub fn evict_idle_workspaces(&self) -> usize {
+        self.evict_idle_workspaces_report().evicted.len()
+    }
+
+    pub(crate) fn evict_idle_workspaces_report(&self) -> IdleWorkspaceEvictionReport {
         let mut guard = self.lock_state_cell();
         let Some(state) = guard.as_mut() else {
-            return 0;
+            return IdleWorkspaceEvictionReport::default();
         };
         // The command registry is the authority for caller liveness
         // (lock order: workspace state -> command registry).
@@ -355,11 +376,24 @@ impl WorkspaceRuntime {
             .filter(|caller| eos_operation::command::active_commands_for_caller(caller) > 0)
             .collect::<HashSet<_>>();
         let evicted = state.manager.evict_idle_workspaces(&active_callers);
-        let count = evicted.len();
+        let mut report = IdleWorkspaceEvictionReport {
+            evicted: Vec::with_capacity(evicted.len()),
+        };
         for outcome in evicted {
-            let _ = state.release_lease(&outcome.lease_id);
+            let lease_release = state.release_lease(&outcome.lease_id);
+            let active_leases_after = state.stack.active_lease_count();
+            report.evicted.push(IdleWorkspaceEviction {
+                caller_id: outcome.caller_id,
+                workspace_handle_id: outcome.workspace_id.0,
+                lease_id: outcome.lease_id,
+                evicted_upperdir_bytes: outcome.evicted_upperdir_bytes,
+                lifetime_s: outcome.lifetime_s,
+                total_ms: outcome.total_ms,
+                lease_release,
+                active_leases_after,
+            });
         }
-        count
+        report
     }
 
     /// Exit every caller, drop the bound state, and rewrite the persisted

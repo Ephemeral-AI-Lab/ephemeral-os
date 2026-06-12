@@ -9,7 +9,7 @@ use eos_operation::core::{
 use eos_trace::{
     decode_trace_batch, encode_trace_batch, BootId, BoundedJson, DetailBudget, EventRecord,
     RequestId, ResourceStats, ResourceStatsKind, ResourceStatsMeta, SpanKind, SpanRecord,
-    SpanStatus, SpanSubsystem, SpanUid, TraceBatch, TraceId, TraceRecord, TraceSpool,
+    SpanStatus, SpanSubsystem, SpanUid, TraceBatch, TraceId, TraceKind, TraceRecord, TraceSpool,
     WorkspaceRoute,
 };
 use serde_json::{json, Value};
@@ -17,6 +17,8 @@ use serde_json::{json, Value};
 use crate::wire::RequestTraceContext;
 
 pub(crate) const TRACE_SIDECAR_FIELD: &str = "_trace_events";
+const COMMAND_PROCESS_SPAWN_SPAN_ID: SpanUid = SpanUid::new(5);
+const COMMAND_PROCESS_WAIT_SPAN_ID: SpanUid = SpanUid::new(6);
 
 static CONNECTION_SEQ: AtomicU64 = AtomicU64::new(1);
 static BACKGROUND_SPOOL: OnceLock<Mutex<TraceSpool>> = OnceLock::new();
@@ -109,6 +111,51 @@ pub(crate) fn drain_background_records(max_records: usize) -> (Vec<TraceRecord>,
     (records, dropped)
 }
 
+pub(crate) fn idle_workspace_evict_record(
+    report: &crate::workspace_runtime::IdleWorkspaceEvictionReport,
+) -> TraceRecord {
+    let now = now_ms();
+    let mut span = SpanRecord::new(
+        SpanUid::ROOT,
+        None,
+        "workspace.idle.evict",
+        SpanKind::IsolatedWorkspace,
+        json!({
+            "evicted_count": report.evicted.len(),
+        }),
+    );
+    span.started_at_unix_ms = now;
+    span.finished_at_unix_ms = now;
+    span.status = Some(SpanStatus::Ok);
+
+    let mut record = TraceRecord::new(TraceId::new(), SpanUid::ROOT);
+    record.kind = TraceKind::IdleWorkspaceEvict;
+    record.started_at_unix_ms = now;
+    record.finished_at_unix_ms = now;
+    record.spans.push(span);
+    for eviction in &report.evicted {
+        let mut event = EventRecord::new(
+            SpanUid::ROOT,
+            "workspace_evicted",
+            "isolated_workspace",
+            json!({
+                "caller_id": eviction.caller_id,
+                "workspace_handle_id": eviction.workspace_handle_id,
+                "lease_id": eviction.lease_id,
+                "evicted_upperdir_bytes": eviction.evicted_upperdir_bytes,
+                "lifetime_s": eviction.lifetime_s,
+                "total_ms": eviction.total_ms,
+                "lease_released": eviction.lease_release.released,
+                "lease_release_error": eviction.lease_release.error,
+                "active_leases_after": eviction.active_leases_after,
+            }),
+        );
+        event.at_unix_ms = now;
+        record.events.push(event);
+    }
+    record
+}
+
 fn background_spool() -> &'static Mutex<TraceSpool> {
     BACKGROUND_SPOOL.get_or_init(|| Mutex::new(TraceSpool::default()))
 }
@@ -195,6 +242,7 @@ pub(crate) fn attach_request_sidecar_with_events(
     );
     operation.started_at_unix_ms = now;
     operation.finished_at_unix_ms = now;
+    let child_spans = child_spans_from_request_events(request_events, now);
 
     let mut events = vec![
         EventRecord::new(
@@ -283,7 +331,7 @@ pub(crate) fn attach_request_sidecar_with_events(
     }
     events.extend(request_events.iter().map(|event| {
         EventRecord::new(
-            event.span_id,
+            request_event_span_id(event),
             event.name.clone(),
             event.module.clone(),
             event.details.clone(),
@@ -318,6 +366,7 @@ pub(crate) fn attach_request_sidecar_with_events(
     record.started_at_unix_ms = started_at;
     record.finished_at_unix_ms = now;
     record.spans = vec![root, transport, dispatch, operation];
+    record.spans.extend(child_spans);
     record.resources = request_events
         .iter()
         .filter_map(resource_stats_from_event)
@@ -334,6 +383,95 @@ pub(crate) fn attach_request_sidecar_with_events(
         Value::String(base64::engine::general_purpose::STANDARD.encode(encoded)),
     );
     response
+}
+
+fn child_spans_from_request_events(
+    events: &[RequestTraceEvent],
+    now: u64,
+) -> Vec<SpanRecord> {
+    let mut spans = Vec::new();
+    if let Some(event) = events
+        .iter()
+        .find(|event| event.module == "command" && event.name == "spawned")
+    {
+        spans.push(command_process_span(
+            COMMAND_PROCESS_SPAWN_SPAN_ID,
+            "command.process.spawn",
+            SpanKind::CommandProcessSpawn,
+            &event.details,
+            now,
+        ));
+    }
+    if let Some(event) = events
+        .iter()
+        .find(|event| event.module == "command" && event.name == "wait_finished")
+    {
+        spans.push(command_process_span(
+            COMMAND_PROCESS_WAIT_SPAN_ID,
+            "command.process.wait",
+            SpanKind::CommandProcessWait,
+            &event.details,
+            now,
+        ));
+    }
+    spans
+}
+
+fn command_process_span(
+    span_id: SpanUid,
+    name: &'static str,
+    kind: SpanKind,
+    details: &Value,
+    now: u64,
+) -> SpanRecord {
+    let duration_us = optional_u64(details.get("duration_us"))
+        .or_else(|| optional_u64(details.get("duration_ms")).map(|ms| ms.saturating_mul(1_000)))
+        .unwrap_or(0);
+    let mut span = SpanRecord::new(span_id, Some(SpanUid::new(4)), name, kind, details.clone());
+    span.started_at_unix_ms = now.saturating_sub(duration_us / 1_000);
+    span.finished_at_unix_ms = now;
+    span.duration_us = duration_us;
+    span.status = command_span_status_from_details(details);
+    span
+}
+
+fn command_span_status_from_details(details: &Value) -> Option<SpanStatus> {
+    if details.get("success").and_then(Value::as_bool) == Some(false) {
+        return Some(SpanStatus::Error);
+    }
+    let status = details.get("status").and_then(Value::as_str)?;
+    if status == "running" {
+        Some(SpanStatus::Ok)
+    } else {
+        SpanStatus::parse_label(status)
+    }
+}
+
+fn request_event_span_id(event: &RequestTraceEvent) -> SpanUid {
+    if event.module == "command" {
+        return match event.name.as_str() {
+            "spawned" => COMMAND_PROCESS_SPAWN_SPAN_ID,
+            "artifact_written"
+                if event.details.get("artifact").and_then(Value::as_str)
+                    == Some("runner_request") =>
+            {
+                COMMAND_PROCESS_SPAWN_SPAN_ID
+            }
+            "wait_finished" | "yielded" | "response_meta" => COMMAND_PROCESS_WAIT_SPAN_ID,
+            _ => event.span_id,
+        };
+    }
+    if event.module == "resource"
+        && event
+            .details
+            .get("meta")
+            .and_then(|meta| meta.get("source"))
+            .and_then(Value::as_str)
+            == Some("command.process.wait")
+    {
+        return COMMAND_PROCESS_WAIT_SPAN_ID;
+    }
+    event.span_id
 }
 
 fn stamp_pending_envelope_meta(
@@ -534,7 +672,7 @@ fn resource_stats_from_event(event: &RequestTraceEvent) -> Option<ResourceStats>
         payload_object.remove("meta");
     }
     Some(ResourceStats {
-        span_id: Some(event.span_id),
+        span_id: Some(request_event_span_id(event)),
         meta: ResourceStatsMeta {
             stats_kind,
             phase,
@@ -666,6 +804,36 @@ mod tests {
                 .map(|event| (event.module.as_str(), event.name.as_str())),
             Some(("daemon.transport", "response_write_failed"))
         );
+    }
+
+    #[test]
+    fn idle_workspace_evict_record_carries_evicted_workspace_facts() {
+        let report = crate::workspace_runtime::IdleWorkspaceEvictionReport {
+            evicted: vec![crate::workspace_runtime::IdleWorkspaceEviction {
+                caller_id: "caller".to_owned(),
+                workspace_handle_id: "workspace-handle".to_owned(),
+                lease_id: "lease-1".to_owned(),
+                evicted_upperdir_bytes: 4096,
+                lifetime_s: 12.5,
+                total_ms: 3.0,
+                lease_release: crate::workspace_runtime::LeaseReleaseReport {
+                    released: Some(true),
+                    error: None,
+                },
+                active_leases_after: 0,
+            }],
+        };
+
+        let record = idle_workspace_evict_record(&report);
+
+        assert_eq!(record.kind, TraceKind::IdleWorkspaceEvict);
+        assert_eq!(record.spans[0].kind, SpanKind::IsolatedWorkspace);
+        let event = record.events.first().expect("eviction event");
+        assert_eq!(event.module, "isolated_workspace");
+        assert_eq!(event.name, "workspace_evicted");
+        assert_eq!(event.details.value["caller_id"], "caller");
+        assert_eq!(event.details.value["workspace_handle_id"], "workspace-handle");
+        assert_eq!(event.details.value["lease_released"], true);
     }
 
     #[test]
@@ -888,6 +1056,26 @@ mod tests {
             &facts,
             &[
                 RequestTraceEvent::operation(
+                    "command",
+                    "spawned",
+                    json!({
+                        "command_id": "cmd-span",
+                        "success": true,
+                        "duration_ms": 3,
+                    }),
+                ),
+                RequestTraceEvent::operation(
+                    "command",
+                    "wait_finished",
+                    json!({
+                        "command_id": "cmd-span",
+                        "status": "ok",
+                        "completed": true,
+                        "yield_time_ms": 100,
+                        "duration_ms": 7,
+                    }),
+                ),
+                RequestTraceEvent::operation(
                     "resource",
                     "resource_stats",
                     json!({
@@ -961,13 +1149,27 @@ mod tests {
         )
         .expect("trace batch decodes");
         let record = batch.records.first().expect("request trace record");
+        let spawn_span = record
+            .spans
+            .iter()
+            .find(|span| span.kind == SpanKind::CommandProcessSpawn)
+            .expect("command process spawn span");
+        assert_eq!(spawn_span.span_id, COMMAND_PROCESS_SPAWN_SPAN_ID);
+        assert_eq!(spawn_span.duration_us, 3_000);
+        let wait_span = record
+            .spans
+            .iter()
+            .find(|span| span.kind == SpanKind::CommandProcessWait)
+            .expect("command process wait span");
+        assert_eq!(wait_span.span_id, COMMAND_PROCESS_WAIT_SPAN_ID);
+        assert_eq!(wait_span.duration_us, 7_000);
         assert_eq!(record.resources.len(), 3);
         let resource = record
             .resources
             .iter()
             .find(|resource| resource.meta.stats_kind == ResourceStatsKind::CgroupProcess)
             .expect("cgroup resource stats");
-        assert_eq!(resource.span_id, Some(SpanUid::new(4)));
+        assert_eq!(resource.span_id, Some(COMMAND_PROCESS_WAIT_SPAN_ID));
         assert_eq!(resource.meta.stats_kind, ResourceStatsKind::CgroupProcess);
         assert_eq!(resource.meta.phase.as_deref(), Some("after"));
         assert_eq!(resource.meta.source, "command.process.wait");
@@ -1001,7 +1203,9 @@ mod tests {
             record
                 .events
                 .iter()
-                .any(|event| event.module == "resource" && event.name == "resource_stats"),
+                .any(|event| event.module == "resource"
+                    && event.name == "resource_stats"
+                    && event.span_id == COMMAND_PROCESS_WAIT_SPAN_ID),
             "resource_stats event remains queryable as an event"
         );
     }

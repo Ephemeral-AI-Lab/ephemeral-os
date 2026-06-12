@@ -67,18 +67,20 @@ pub(crate) fn build_workspace_base(
     let total_start = Instant::now();
     let root = input.layer_stack_root;
     let workspace_root = input.workspace_root;
-    if input.reset {
+    let reset = input.reset;
+    if reset {
         context
             .require_services()?
             .plugin
             .stop_services_for_layer_stack_root(&root.to_string_lossy())?;
     }
-    let built = build_layer_stack_workspace_base(&root, &workspace_root, input.reset)?;
+    let built = build_layer_stack_workspace_base(&root, &workspace_root, reset)?;
     let mut timings = built.timings;
     timings.insert(
         "api.workspace_base.total_s".to_owned(),
         total_start.elapsed().as_secs_f64(),
     );
+    record_workspace_base_finished(&context, "build", true, reset, &timings);
     let binding = binding_to_value(&built.binding)?;
     Ok(to_wire_value(WorkspaceBaseOutput {
         success: true,
@@ -102,6 +104,7 @@ pub(crate) fn ensure_workspace_base(
         "api.workspace_base.total_s".to_owned(),
         total_start.elapsed().as_secs_f64(),
     )]);
+    record_workspace_base_finished(&context, "ensure", created, false, &timings);
     Ok(to_wire_value(WorkspaceBaseOutput {
         success: true,
         created,
@@ -138,6 +141,7 @@ pub(crate) fn commit_to_workspace(
         "api.commit_to_workspace.total_s".to_owned(),
         total_start.elapsed().as_secs_f64(),
     );
+    record_commit_to_workspace_finished(&context, manifest.version, &timings);
     Ok(to_wire_value(CommitToWorkspaceOutput {
         success: true,
         manifest_version: manifest.version,
@@ -159,6 +163,7 @@ pub(crate) fn commit_to_git(
         },
         |event| context.record_trace_event(event.module, event.event, event.details),
     )?;
+    record_commit_to_git_finished(&context, &outcome);
     Ok(commit_response(&outcome))
 }
 
@@ -168,6 +173,76 @@ fn record_checkpoint_route(context: &DispatchContext<'_>, reason: &'static str) 
         "route_selected",
         json!({"kind": "fast_path", "reason": reason}),
     );
+}
+
+fn record_workspace_base_finished(
+    context: &DispatchContext<'_>,
+    action: &'static str,
+    created: bool,
+    reset: bool,
+    timings: &BTreeMap<String, f64>,
+) {
+    context.record_trace_event(
+        "checkpoint",
+        "workspace_base_finished",
+        json!({
+            "action": action,
+            "created": created,
+            "reset": reset,
+            "duration_s": timing(timings, "api.workspace_base.total_s"),
+            "phase_count": timings.len(),
+            "phases": timings,
+        }),
+    );
+}
+
+fn record_commit_to_workspace_finished(
+    context: &DispatchContext<'_>,
+    manifest_version: i64,
+    timings: &BTreeMap<String, f64>,
+) {
+    context.record_trace_event(
+        "layer_stack",
+        "commit_to_workspace_finished",
+        json!({
+            "success": true,
+            "manifest_version": manifest_version,
+            "duration_s": timing(timings, "api.commit_to_workspace.total_s"),
+            "phase_count": timings.len(),
+            "phases": timings,
+        }),
+    );
+}
+
+fn record_commit_to_git_finished(context: &DispatchContext<'_>, outcome: &CommitOutcome) {
+    context.record_trace_event(
+        "layer_stack",
+        "snapshot_lease_used",
+        json!({
+            "manifest_version": outcome.manifest_version,
+            "manifest_depth": timing(&outcome.timings, "resource.layer_stack.manifest_depth"),
+            "manifest_path_count": timing(&outcome.timings, "resource.layer_stack.manifest_path_count"),
+        }),
+    );
+    context.record_trace_event(
+        "checkpoint",
+        "commit_to_git_finished",
+        json!({
+            "success": true,
+            "committed": outcome.committed,
+            "worktree_mode": outcome.worktree_mode,
+            "manifest_version": outcome.manifest_version,
+            "manifest_root_hash": outcome.manifest_root_hash,
+            "path_count": outcome.paths.len(),
+            "duration_s": timing(&outcome.timings, "api.commit_to_git.total_s"),
+            "phase_count": outcome.timings.len(),
+            "phases": outcome.timings,
+        }),
+    );
+}
+
+fn timing(timings: &BTreeMap<String, f64>, key: &str) -> Option<f64> {
+    timings.get(key).copied()
 }
 
 fn commit_response(outcome: &CommitOutcome) -> Value {

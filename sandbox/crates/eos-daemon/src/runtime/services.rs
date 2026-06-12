@@ -16,7 +16,14 @@ pub(crate) mod background_tasks {
 
     #[must_use]
     pub(crate) fn evict_idle_workspaces_once(workspace: &WorkspaceRuntime) -> usize {
-        workspace.evict_idle_workspaces()
+        let report = workspace.evict_idle_workspaces_report();
+        let count = report.evicted.len();
+        if count > 0 {
+            crate::trace::push_background_record(crate::trace::idle_workspace_evict_record(
+                &report,
+            ));
+        }
+        count
     }
 
     pub(crate) fn advance_active_commands_once() {

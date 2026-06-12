@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::support::{
+    as_bool, as_i64, as_str, envelope_result, has_trace_event, live_pool_or_skip, trace_record,
+};
 
 const POST_SQUASH_WRITES: usize = 28;
 
@@ -42,7 +44,7 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         "commit_to_git e2e should run after repeated auto-squash bounded the depth: {metrics}"
     );
 
-    let commit = lease.call_ok(
+    let commit_wire = lease.call(
         catalog::SANDBOX_CHECKPOINT_COMMIT_TO_GIT,
         json!({
             "workspace_root": lease.workspace_root(),
@@ -50,6 +52,8 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
             "message": "checkpoint live overlay snapshot",
         }),
     )?;
+    let commit = envelope_result(&commit_wire)?;
+    let record = trace_record(&commit_wire)?;
 
     assert!(as_bool(&commit, "success")?);
     assert!(as_bool(&commit, "committed")?);
@@ -58,19 +62,26 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         "overlay",
         "live e2e must exercise the overlay-mounted worktree path: {commit}"
     );
-    let total_s = timing_s(&commit, "api.commit_to_git.total_s")?;
-    let git_add_s = timing_s(&commit, "api.commit_to_git.git_add_s")?;
-    let git_commit_s = timing_s(&commit, "api.commit_to_git.git_commit_s")?;
-    let overlay_mount_s = timing_s(&commit, "api.commit_to_git.overlay_mount_s")?;
     assert!(
-        total_s >= git_add_s + git_commit_s,
-        "total commit_to_git timing should cover git phases: {commit}"
+        has_trace_event(&record, "workspace.route", "route_selected", |details| {
+            details["kind"] == "fast_path"
+                && details["reason"] == "commit_to_git_uses_layerstack_worktree"
+        }),
+        "commit_to_git trace should record the fast-path checkpoint route: {record:?}"
     );
     assert!(
-        overlay_mount_s >= 0.0,
-        "overlay mount timing should be reported: {commit}"
+        has_trace_event(&record, "checkpoint", "worktree_mode_selected", |details| {
+            details["mode"] == "overlay"
+        }),
+        "commit_to_git trace should record the selected overlay worktree: {record:?}"
     );
-    let committed_depth = timing_s(&commit, "resource.layer_stack.manifest_depth")?;
+    assert_git_command_finished(&record, "git add -A -- <paths>")?;
+    assert_git_command_finished(&record, "git commit -m <message>")?;
+    assert_checkpoint_phase(&record, "api.commit_to_git.total_s")?;
+    assert_checkpoint_phase(&record, "api.commit_to_git.git_add_s")?;
+    assert_checkpoint_phase(&record, "api.commit_to_git.git_commit_s")?;
+    assert_checkpoint_phase(&record, "api.commit_to_git.overlay_mount_s")?;
+    let committed_depth = layer_stack_snapshot_number(&record, "manifest_depth")?;
     let metrics = lease.call_ok(catalog::SANDBOX_CHECKPOINT_LAYER_METRICS, json!({}))?;
     assert_eq!(
         committed_depth as i64,
@@ -105,57 +116,79 @@ fn commit_to_git_commits_overlay_snapshot_after_repeated_squash() -> Result<()> 
         "path-filtered commit should not include noise files"
     );
     eprintln!(
-        "commit_to_git timing: {} depth={committed_depth}",
-        timing_report(&commit)?
+        "commit_to_git trace phases: {} depth={committed_depth}",
+        checkpoint_phase_report(&record)?
     );
     Ok(())
 }
 
-fn timing_s(value: &Value, key: &str) -> Result<f64> {
-    value
-        .get("timings")
-        .and_then(|timings| timings.get(key))
-        .and_then(Value::as_f64)
-        .with_context(|| format!("timing {key} missing in {value}"))
+fn assert_git_command_finished(record: &eos_trace::TraceRecord, argv_summary: &str) -> Result<()> {
+    assert!(
+        has_trace_event(record, "checkpoint", "git_command_finished", |details| {
+            details["argv_summary"] == argv_summary && details["exit_code"] == 0
+        }),
+        "commit_to_git trace should record successful {argv_summary}: {record:?}"
+    );
+    Ok(())
 }
 
-fn timing_report(value: &Value) -> Result<String> {
-    let timings = value
-        .get("timings")
+fn assert_checkpoint_phase(record: &eos_trace::TraceRecord, key: &str) -> Result<()> {
+    let duration = checkpoint_phase(record, key)?;
+    assert!(
+        duration >= 0.0,
+        "checkpoint phase {key} should be nonnegative: {record:?}"
+    );
+    Ok(())
+}
+
+fn checkpoint_phase(record: &eos_trace::TraceRecord, key: &str) -> Result<f64> {
+    record
+        .events
+        .iter()
+        .find(|event| event.module == "checkpoint" && event.name == "commit_to_git_finished")
+        .and_then(|event| {
+            event
+                .details
+                .value
+                .get("phases")
+                .and_then(|phases| phases.get(key))
+        })
+        .and_then(Value::as_f64)
+        .with_context(|| format!("checkpoint phase {key} missing in trace: {record:?}"))
+}
+
+fn layer_stack_snapshot_number(record: &eos_trace::TraceRecord, key: &str) -> Result<f64> {
+    record
+        .events
+        .iter()
+        .find(|event| event.module == "layer_stack" && event.name == "snapshot_lease_used")
+        .and_then(|event| event.details.value.get(key))
+        .and_then(Value::as_f64)
+        .with_context(|| format!("layer_stack snapshot field {key} missing in trace: {record:?}"))
+}
+
+fn checkpoint_phase_report(record: &eos_trace::TraceRecord) -> Result<String> {
+    let phases = record
+        .events
+        .iter()
+        .find(|event| event.module == "checkpoint" && event.name == "commit_to_git_finished")
+        .and_then(|event| event.details.value.get("phases"))
         .and_then(Value::as_object)
-        .with_context(|| format!("timings missing in {value}"))?;
-    let total_s = timing_s(value, "api.commit_to_git.total_s")?;
-    let mut commit_phase_entries = Vec::new();
-    let mut runtime_entries = Vec::new();
-    let mut resource_entries = Vec::new();
-    for (key, value) in timings {
+        .with_context(|| format!("commit_to_git phase event missing in trace: {record:?}"))?;
+    let total_s = checkpoint_phase(record, "api.commit_to_git.total_s")?;
+    let mut entries = Vec::new();
+    for (key, value) in phases {
         let Some(number) = value.as_f64() else {
             continue;
         };
-        if key.starts_with("api.commit_to_git.")
-            && key.ends_with("_s")
-            && key != "api.commit_to_git.total_s"
-        {
-            commit_phase_entries.push((key.as_str(), number));
-        } else if key.starts_with("runtime.") && key.ends_with("_s") {
-            runtime_entries.push((key.as_str(), number));
-        } else if key != "api.commit_to_git.total_s" {
-            resource_entries.push((key.as_str(), number));
+        if key != "api.commit_to_git.total_s" {
+            entries.push((key.as_str(), number));
         }
     }
-    commit_phase_entries.sort_by_key(|(key, _)| *key);
-    runtime_entries.sort_by_key(|(key, _)| *key);
-    resource_entries.sort_by_key(|(key, _)| *key);
-    let recorded_phase_sum_s = commit_phase_entries
-        .iter()
-        .map(|(_, value)| *value)
-        .sum::<f64>();
-    let remainder_s = (total_s - recorded_phase_sum_s).max(0.0);
+    entries.sort_by_key(|(key, _)| *key);
     Ok(format!(
-        "total_s={total_s:.6} commit_phase_sum_s={recorded_phase_sum_s:.6} remainder_s={remainder_s:.6} commit_phases=[{}] outer_runtime=[{}] resources=[{}]",
-        format_entries(&commit_phase_entries),
-        format_entries(&runtime_entries),
-        format_entries(&resource_entries)
+        "total_s={total_s:.6} phases=[{}]",
+        format_entries(&entries)
     ))
 }
 
