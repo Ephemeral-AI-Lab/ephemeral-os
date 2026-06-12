@@ -65,7 +65,7 @@ eos-coding-agent/
     │   └── index.ts                  export aggregation only
     └── workflows/
         ├── registry.ts               WorkflowHub + configured workflow instances
-        ├── workflow.ts               WorkflowDefinition contract + defineWorkflow
+        ├── contract.ts               WorkflowDefinition · WorkflowModule · defineWorkflow
         └── pursuit/
             ├── service.ts
             ├── pursuit|leg|attempt|plan|work-item/
@@ -73,7 +73,7 @@ eos-coding-agent/
             ├── context-engine/
             ├── outcome-fns.ts        planner/worker agentOutcomeFn via createAgentOutcomeFn
             ├── launcher.ts           builds planner/worker Agents from AgentFactory
-            ├── workflow.ts           WorkflowDefinition over PursuitService
+            ├── module.ts             pursuit WorkflowModule over PursuitService
             ├── index.ts              WorkflowModule export; opens pursuit-owned store
             ├── store/                embedded storage (today's @eos/db: schema · rows · migrations)
             └── contracts.ts          entity DTOs; PursuitSettlement; SubmissionBinding deleted
@@ -96,21 +96,19 @@ const sdk = createAgentSdk({
 const agents = buildAgentFactory(sdk, cfg.profiles);         // §4: one factory per app bootstrap
 const hub = new WorkflowHub({ agents, workflows: cfg.workflow }); // §6
 await hub.register(pursuit);                                 // no instance-specific wiring in this file
-const advisor = agents.create("advisor", { tools: [] });
 
 const operator = sdk.createAgent({
   name: "operator",
   llm: cfg.profiles.operator.llm,
   systemPrompt: cfg.profiles.operator.systemPrompt,
   tools: [
-    runSubagent(agents),
-    askAdvisor(advisor),
+    runSubagent,
+    askAdvisor,
     ...workflowTools(hub),                                   // list/read/delegate from tools/workflow/*
     listBackgroundTask,
     cancelBackgroundTask,
     readAgentRun(cfg.recordsDir),
   ],
-  hooks: [advisorGate({ tool: "submit_main_outcome", advisor, instruction: SUBMIT_GUIDANCE })],
   agentOutcomeFn: createAgentOutcomeFn({ name: "submit_main_outcome", schema: MainOutcome }),
   //                                       trivial validator: no onSubmit
 });
@@ -179,6 +177,16 @@ const planner = init.agents.create(init.instance.args.planner, { tools, agentOut
 All tools are `defineTool` over the SDK's `ToolCallContext` capabilities. There is no
 `behavior` metadata; what a tool *does* defines it.
 
+Host tools that need to start agents do so through run-scoped context capabilities, not by
+closing over injected agents:
+
+```ts
+interface CodingAgentToolContext extends ToolCallContext {
+  agents: AgentFactory;                              // composition-root singleton
+  advisorPromptFor(toolName: string): string | undefined;
+}
+```
+
 **Background-task tools** (`tools/background/`, one file per tool — pure projections of
 the run-scoped supervisor):
 
@@ -194,31 +202,31 @@ export const cancelBackgroundTask = defineTool({
 });
 ```
 
-**Subagent pattern** — foreground and background through one public API; the completion
-message is fully host-authored in `onCompletion`:
+**Subagent pattern** — foreground and background through one public API. The tool is a
+static definition; it does not close over an injected `AgentFactory`. The input names the
+subagent by `Agent.name`, and execution uses the run-scoped host capability to start it.
+The completion message is fully host-authored in `onCompletion`:
 
 ```ts
-export const runSubagent = (agents: AgentFactory) => defineTool({
+export const runSubagent = defineTool({
   name: "run_subagent",
-  description: `Launch a subagent. Available: ${agents.names().join(", ")}`,
-  input: z.object({ agent: z.string(), prompt: z.string(), wait: z.boolean().default(true) }),
+  input: z.object({ agent_name: z.string(), prompt: z.string(), wait: z.boolean().default(true) }),
   execute: async (input, ctx) => {
-    if (!agents.names().includes(input.agent)) return { error: `unknown agent: ${input.agent}` };
-    const agent = agents.create(input.agent, { tools: subagentTools(input.agent) });
+    const agent = ctx.agents.create(input.agent_name, { tools: subagentTools(input.agent_name) });
     const run = agent.start({ messages: [{ role: "user", content: input.prompt }] });
 
     if (input.wait) return { output: renderOutcome(await run.outcome()) };   // foreground
 
     const { taskId } = ctx.backgroundTaskSupervisor.register({              // background
       toolName: "run_subagent",
-      title: `${input.agent}: ${input.prompt.slice(0, 60)}`,
+      title: `${input.agent_name}: ${input.prompt.slice(0, 60)}`,
       cancel: () => run.interrupt(),
       done: run.outcome().then(toTaskOutcome),
       onCompletion: async (out, { notifier }) => {
         await indexTranscript(run.runId);                                   // side effects welcome
         notifier.publish(out.status === "success"
-          ? `subagent ${input.agent} done: ${out.outcome}`
-          : `subagent ${input.agent} ${out.status}: ${out.outcome} — transcript: ${recordsDir}/${run.runId}`,
+          ? `subagent ${input.agent_name} done: ${out.outcome}`
+          : `subagent ${input.agent_name} ${out.status}: ${out.outcome} — transcript: ${recordsDir}/${run.runId}`,
           { key: `subagent:${run.runId}` });
       },
     });
@@ -227,14 +235,31 @@ export const runSubagent = (agents: AgentFactory) => defineTool({
 });
 ```
 
-**Advisor pattern** — an advisor is just an agent you wait on, plus a hook that makes
-consultation mandatory at submission boundaries (§7).
+**Advisor pattern** — the advisor is always the agent whose `Agent.name` is `advisor`.
+The tool is a static definition; it does not receive a prebuilt advisor agent. Advisory is
+optional at the application level: if no configured agent exposes `ask_advisor` and no
+selected terminal tool is advisory-required, the `advisor` agent does not need to exist.
+If advisory is enabled, startup validation requires an agent named `advisor` whose terminal
+tool is `submit_advisor_outcome`.
 
 ```ts
-export const askAdvisor = (advisor: Agent) => defineTool({
-  name: "ask_advisor", input: z.object({ question: z.string(), context: z.string().optional() }),
-  execute: async (input) =>
-    ({ output: renderOutcome(await advisor.start({ messages: [asAdvisorAsk(input)] }).outcome()) }),
+const ADVISOR_AGENT_NAME = "advisor";
+
+export const askAdvisor = defineTool({
+  name: "ask_advisor",
+  input: z.object({
+    tool_name: z.string().min(1),
+    payload: z.object({}).passthrough().optional(),
+  }),
+  execute: async (input, ctx) => {
+    const prompt = ctx.advisorPromptFor(input.tool_name);
+    if (!prompt) return { error: `tool ${input.tool_name} does not have an advisor prompt` };
+    const advisor = ctx.agents.create(ADVISOR_AGENT_NAME, {
+      tools: [submitAdvisorOutcome],
+      agentOutcomeFn: createAgentOutcomeFn({ name: "submit_advisor_outcome", schema: AdvisorOutcome }),
+    });
+    return { output: renderOutcome(await advisor.start({ messages: asAdvisorAsk(prompt, input) }).outcome()) };
+  },
 });
 ```
 
@@ -254,7 +279,7 @@ runs; they never appear in shipped profiles.
 ## 6. WorkflowHub and the workflow contract (host-owned)
 
 ```ts
-// workflows/hub/src/workflow.ts — a coding-agent contract, NOT an SDK one
+// workflows/contract.ts — coding-agent workflow contracts, NOT SDK contracts
 interface WorkflowDefinition<I> {
   name: string;                        // "pursuit" — the workflow module key
   description: string;                 // one line; rides the delegate tool + list_workflows row
@@ -402,24 +427,30 @@ every profile stay untouched.
 
 ## 7. Hooks and the advisor gate
 
-The advisor-validates-submission machinery that used to be SDK behavior becomes one host
-hook. Ordering does the work: **pre-tool hook → advisor verdict → only then `onSubmit`** —
-so a rejection mutates nothing and burns no budget; the model corrects in-run.
+The advisor-validates-submission machinery that used to be SDK behavior becomes a host
+tool plus a host hook. Ordering does the work:
+
+```
+model -> ask_advisor(tool_name, payload) -> advisor agent named "advisor" returns verdict
+model -> terminal submission            -> PreToolUse hook verifies a matching pass
+                                      -> only then `onSubmit`
+```
+
+The hook never runs an advisor itself; the engine is headless. It receives the current
+tool facts plus `advisory_requirement` and checks the run transcript for the latest
+matching `ask_advisor` result. A rejection mutates nothing and burns no terminal budget;
+the model corrects in-run.
 
 ```ts
-export function advisorGate(opts: { tool: string; advisor: Agent; instruction: string }): HookEntry {
-  return {
-    event: "preToolUse",
-    matcher: { toolName: opts.tool },
-    run: async (call) => {
-      const verdict = await opts.advisor
-        .start({ messages: [asReview(opts.instruction, call.input)] })
-        .outcome();
-      return approves(verdict)
-        ? { decision: "passthrough" }
-        : { decision: "deny", reason: reasonOf(verdict) };     // fed back to the model in-run
-    },
-  };
+export function requireAdvisoryPass(payload: HookPayload): HookOutput {
+  if (payload.advisory_requirement?.required !== true) return { decision: "allow" };
+  const latest = latestMatchingAskAdvisorVerdict(
+    payload.run.transcript_path,
+    { tool_name: payload.tool_name, payload: payload.tool_input },
+  );
+  return latest.kind === "pass"
+    ? { decision: "allow" }
+    : { decision: "deny", reason: advisoryFailureReason(latest) };
 }
 ```
 
@@ -427,9 +458,10 @@ The gate sees `ToolCallFacts` only — the submission payload, never the convers
 spec §4.3). Submission schemas must therefore be self-contained enough to vet on their
 own: the advisor judges *what* the model submits, not how it got there.
 
-Failure policy is explicit host policy: if the advisor run itself dies, choose fail-open
-(`passthrough` + warning in the reason channel) or fail-closed (`deny`) **in this
-function** — never leave it implicit.
+Failure policy is explicit host policy: if `ask_advisor` is missing, fails, returns an
+invalid verdict, targets another payload, or returns `fail`, the hook denies the terminal
+submission with model-visible feedback. If the terminal tool has no advisory requirement,
+the hook allows it and no `advisor` agent setup is required.
 
 ## 8. Pursuit as a workflow
 
@@ -530,8 +562,11 @@ here. Reload/watch semantics, layering (user vs project), and defaults are host 
   definitions → none.
 - `.eos-agents/workflow.json` is the only shared workflow-instance registry; there is no
   `.eos-agents/workflows/<name>` config directory convention.
-- Advisor enforcement demonstrably runs **before** `onSubmit` (test: advisor denies → no
-  DB row, no budget spent, model receives the denial in-run).
+- Advisor enforcement demonstrably runs **before** `onSubmit`: `ask_advisor` starts the
+  agent named `advisor`, the pre-tool hook verifies a matching pass in the transcript, and
+  denial leaves no DB row, spends no terminal budget, and returns model-visible feedback.
+- Advisory setup is optional: if no configured agent exposes `ask_advisor` and no selected
+  terminal tool is advisory-required, no `advisor` agent is required at startup.
 - `read_workflow_definition` is a pure docs tool: it returns `docs` and mutates nothing;
   the operator toolset (and therefore the encoded tools param) is identical on every turn
   of a run.

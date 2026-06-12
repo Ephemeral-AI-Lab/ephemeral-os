@@ -1622,10 +1622,6 @@ fn decode_audit_payload<T: serde::de::DeserializeOwned>(
         .map_err(|err| prost::DecodeError::new(format!("decode audit payload json: {err}")))
 }
 
-fn response_status(response: &Value) -> String {
-    crate::protocol::response_status(response).to_owned()
-}
-
 struct EntryHashInput<'a> {
     sandbox_id: &'a str,
     trace_id: &'a str,
