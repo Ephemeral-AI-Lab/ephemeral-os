@@ -16,7 +16,7 @@ use eos_operation::checkpoint::contract::{
     WorkspaceBaseOutput,
 };
 use eos_operation::checkpoint::{CommitOutcome, CommitRequest};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::DispatchContext;
@@ -26,8 +26,9 @@ use super::to_wire_value;
 
 pub(crate) fn layer_metrics(
     input: LayerMetricsInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "layer_metrics_reads_layerstack_directly");
     let root = input.layer_stack_root;
     let stack = LayerStack::open(root.clone())?;
     let manifest = stack.read_active_manifest()?;
@@ -62,6 +63,7 @@ pub(crate) fn build_workspace_base(
     input: BuildBaseInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "workspace_base_builds_layerstack_directly");
     let total_start = Instant::now();
     let root = input.layer_stack_root;
     let workspace_root = input.workspace_root;
@@ -88,8 +90,9 @@ pub(crate) fn build_workspace_base(
 
 pub(crate) fn ensure_workspace_base(
     input: EnsureBaseInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "workspace_base_ensures_layerstack_directly");
     let total_start = Instant::now();
     let root = input.layer_stack_root;
     let workspace_root = input.workspace_root;
@@ -109,8 +112,9 @@ pub(crate) fn ensure_workspace_base(
 
 pub(crate) fn workspace_binding(
     input: BindingInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "workspace_binding_reads_layerstack_directly");
     let root = input.layer_stack_root;
     let binding = require_workspace_binding(&root)?;
     let binding = binding_to_value(&binding)?;
@@ -122,8 +126,9 @@ pub(crate) fn workspace_binding(
 
 pub(crate) fn commit_to_workspace(
     input: CommitToWorkspaceInput,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "commit_to_workspace_writes_layerstack_directly");
     let total_start = Instant::now();
     let root = input.layer_stack_root;
     let workspace_root = input.workspace_root;
@@ -144,6 +149,7 @@ pub(crate) fn commit_to_git(
     input: CommitInput,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
+    record_checkpoint_route(&context, "commit_to_git_uses_layerstack_worktree");
     let outcome = eos_operation::checkpoint::commit_to_git_with_trace_recorder(
         &CommitRequest {
             layer_stack_root: &input.layer_stack_root,
@@ -154,6 +160,14 @@ pub(crate) fn commit_to_git(
         |event| context.record_trace_event(event.module, event.event, event.details),
     )?;
     Ok(commit_response(&outcome))
+}
+
+fn record_checkpoint_route(context: &DispatchContext<'_>, reason: &'static str) {
+    context.record_trace_event(
+        "workspace.route",
+        "route_selected",
+        json!({"kind": "fast_path", "reason": reason}),
+    );
 }
 
 fn commit_response(outcome: &CommitOutcome) -> Value {

@@ -117,6 +117,13 @@ fn commit_to_git_records_checkpoint_trace_events() -> TestResult {
     assert_response_keys(&response);
     let events = sink.drain();
     assert!(
+        events.iter().any(|event| event.module == "workspace.route"
+            && event.name == "route_selected"
+            && event.details["kind"] == "fast_path"
+            && event.details["reason"] == "commit_to_git_uses_layerstack_worktree"),
+        "checkpoint route event recorded"
+    );
+    assert!(
         events.iter().any(|event| event.module == "checkpoint"
             && event.name == "git_command_finished"
             && event.details["argv_summary"] == "git commit -m <message>"

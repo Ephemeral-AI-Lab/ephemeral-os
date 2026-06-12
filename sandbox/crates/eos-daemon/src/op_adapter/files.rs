@@ -11,7 +11,7 @@ use eos_operation::file::{
     WriteFileRequest,
 };
 use eos_workspace::IsolatedWorkspaceBinding;
-use serde_json::Value;
+use serde_json::{json, Value};
 use thiserror::Error;
 
 use crate::error::DaemonError;
@@ -57,10 +57,11 @@ pub(crate) fn op_read_file(
     };
     let caller_id = input.caller.to_string();
     let routed = route_read_file(
-        file_context(input.layer_stack_root, context, &caller_id),
+        file_context(input.layer_stack_root, &context, &caller_id),
         request,
     )
     .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(&layer_stack_root, &mut outcome.timings, 0);
@@ -83,10 +84,11 @@ pub(crate) fn op_write_file(
     };
     let caller_id = input.caller.to_string();
     let routed = route_write_file(
-        file_context(input.layer_stack_root, context, &caller_id),
+        file_context(input.layer_stack_root, &context, &caller_id),
         request,
     )
     .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
     let mut outcome = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(
@@ -109,10 +111,11 @@ pub(crate) fn op_edit_file(
     };
     let caller_id = input.caller.to_string();
     let routed = route_edit_file(
-        file_context(input.layer_stack_root, context, &caller_id),
+        file_context(input.layer_stack_root, &context, &caller_id),
         request,
     )
     .map_err(file_op_error)?;
+    record_file_route(&context, &routed.route);
     let mut mutation = routed.outcome;
     if let FileRoute::Direct { layer_stack_root } = routed.route {
         enrich_direct_timings(
@@ -126,13 +129,35 @@ pub(crate) fn op_edit_file(
 
 fn file_context<'a, 'ctx: 'a>(
     layer_stack_root: Option<PathBuf>,
-    context: DispatchContext<'ctx>,
+    context: &'a DispatchContext<'ctx>,
     caller_id: &'a str,
 ) -> FileOpContext<'a> {
     FileOpContext {
         workspace: context.services().map(|services| &services.workspace),
         caller_id,
         layer_stack_root,
+    }
+}
+
+fn record_file_route(context: &DispatchContext<'_>, route: &FileRoute) {
+    match route {
+        FileRoute::Direct { layer_stack_root } => context.record_trace_event(
+            "workspace.route",
+            "route_selected",
+            json!({
+                "kind": "fast_path",
+                "reason": "no_isolated_workspace_for_caller",
+                "layer_stack_root": layer_stack_root,
+            }),
+        ),
+        FileRoute::Isolated => context.record_trace_event(
+            "workspace.route",
+            "route_selected",
+            json!({
+                "kind": "isolated_workspace",
+                "reason": "caller_has_open_isolated_workspace",
+            }),
+        ),
     }
 }
 

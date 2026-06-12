@@ -241,12 +241,27 @@ pub(crate) fn attach_request_sidecar_with_events(
             "daemon.dispatch",
             json!({"op": op, "family": op_family(op), "verb": op_verb(op)}),
         ),
-        EventRecord::new(
+    ];
+    if !request_events
+        .iter()
+        .any(|event| event.module == "workspace.route" && event.name == "route_selected")
+    {
+        events.push(EventRecord::new(
             SpanUid::new(4),
             "route_selected",
             "workspace.route",
-            json!({"kind": "none", "reason": "phase03_default"}),
-        ),
+            json!({"kind": "none", "reason": "phase04_no_workspace_route"}),
+        ));
+    }
+    events.extend(request_events.iter().map(|event| {
+        EventRecord::new(
+            event.span_id,
+            event.name.clone(),
+            event.module.clone(),
+            event.details.clone(),
+        )
+    }));
+    events.extend([
         EventRecord::new(
             SpanUid::new(3),
             "dispatch_finished",
@@ -265,15 +280,7 @@ pub(crate) fn attach_request_sidecar_with_events(
             "daemon.transport",
             json!({"connection_id": facts.connection_id, "response_bytes": response_bytes}),
         ),
-    ];
-    events.extend(request_events.iter().map(|event| {
-        EventRecord::new(
-            event.span_id,
-            event.name.clone(),
-            event.module.clone(),
-            event.details.clone(),
-        )
-    }));
+    ]);
     for event in &mut events {
         event.at_unix_ms = now;
     }
@@ -477,11 +484,18 @@ mod tests {
             Some(&trace),
             "sandbox.checkpoint.commit_to_git",
             &facts,
-            &[RequestTraceEvent::operation(
-                "checkpoint",
-                "git_command_finished",
-                json!({"argv_summary": "git add -A -- <paths>", "exit_code": 0, "stderr_tail": ""}),
-            )],
+            &[
+                RequestTraceEvent::operation(
+                    "checkpoint",
+                    "git_command_finished",
+                    json!({"argv_summary": "git add -A -- <paths>", "exit_code": 0, "stderr_tail": ""}),
+                ),
+                RequestTraceEvent::operation(
+                    "workspace.route",
+                    "route_selected",
+                    json!({"kind": "fast_path", "reason": "unit"}),
+                ),
+            ],
         );
         let encoded = response[TRACE_SIDECAR_FIELD]
             .as_str()
@@ -504,5 +518,12 @@ mod tests {
                     && event.span_id == SpanUid::new(4)),
             "checkpoint event merged into operation span"
         );
+        let route_events: Vec<_> = record
+            .events
+            .iter()
+            .filter(|event| event.module == "workspace.route" && event.name == "route_selected")
+            .collect();
+        assert_eq!(route_events.len(), 1, "real route suppresses fallback");
+        assert_eq!(route_events[0].details.value["kind"], "fast_path");
     }
 }
