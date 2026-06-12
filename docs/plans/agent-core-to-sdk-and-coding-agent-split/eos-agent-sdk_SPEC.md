@@ -412,12 +412,16 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
 
 ## 5. Internal architecture
 
-Current `eos-agent-core/packages/*` disposition; the workspace directory and root package
+Disposition of the former `eos-agent-core/packages/*`; the directory and root package
 are renamed **`eos-agent-sdk`** during extraction (coding-agent spec §10, step 3).
-"Internal" packages keep their boundaries for the SDK's own hygiene but are not published;
-only the root package is public.
+The SDK is a **single package**: the former internal packages are flattened into
+`src/<module>/` folders, with tests under `tests/<module>/` and live provider tests
+under `e2e/`. Internal imports are relative `.js` specifiers; there are no per-module
+manifests. The public entry points are the root export and the `eos-agent-sdk/testkit`
+subpath. Module boundaries below are ownership folders held by review convention, not
+workspace mechanics.
 
-| Package | Disposition |
+| Former package | Disposition |
 |---|---|
 | `contracts` | internal · **minus** `pursuit.ts` (moves to coding agent) and `sandboxIdFrom` in `ids.ts` (host concept; replace with opaque execution-context id or delete) |
 | `llm-client` | internal, unchanged (access/, wires/, retry, stream-client) |
@@ -426,10 +430,10 @@ only the root package is public.
 | `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — public surface `register/list/cancel`, rows `{taskId, toolName, title, startedAt}`, no status enum, explicit-silence task contract (`onCompletion` \| `silent: true`), no source-specific session typing |
 | `engine` | internal (agent-loop, conversation, turn, tool-executor port, run handle) · gains the internal terminal-submission gate aligned with the text-exit gate (incl. the `inbox drained` conjunct) · emits `task_registered`/`task_settled` events |
 | `tool` | internal: `contract / define / executor / pipeline / toolset / run-state` stay; `hooks/*` reduced to callback dispatch (the subprocess protocol moves to the host); **new** `outcome.ts` (`createAgentOutcomeFn`); **deleted:** `tools/*` (all families — agent, background, pursuit, submission), `advisory_prompts/*`, `description_prompts/*` (host-side now, or replaced by the factory) |
-| `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under a `runtime` package · config loaders (`config-root/config-file/hook-config/notification-rules-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` |
+| `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under `src/runtime` · config loaders (`config-root/config-file/hook-config/notification-rules-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` |
 | `pursuit` | moves to `eos-coding-agent/packages/workflows/pursuit` |
 | `db` | moves with pursuit (it is `createPursuitDatabase`) |
-| `testkit` | split: scripted `LlmClient`, `scripted-tools`, `transcript-fixture` stay; `.eos-agents` fixture building moves to the coding agent |
+| `testkit` | split: scripted `LlmClient`, `scripted-tools`, `transcript-fixture` stay; `.eos-agents` fixture building moves to the coding agent · published as the `eos-agent-sdk/testkit` subpath export |
 
 Deleted concepts (not moved): `PursuitAgentSubmissionBinding` (replaced by `onSubmit`),
 the profile-kind strictness table (planner/worker terminal-tool enforcement moves into
@@ -516,11 +520,12 @@ exported config schemas, `toSSE` and `events({afterSeq})` replay.
 | Pursuit launch seam | Pursuit consumes the SDK directly; `AgentLaunchPort`/`LaunchSettlement` deleted (trade acknowledged: pursuit tests use SDK testkit instead of a fake port) |
 | `backgroundSession` | Renamed `backgroundTask` throughout |
 | AgentSpec / naming | `systemPrompt` explicit; `outcome` → `agentOutcomeFn`; public surface normalized to camelCase (`start()` / `outcome()` / `llmMessages`), matching the coding-agent spec |
+| Internal layout | **Single package, flattened** (supersedes the internal-packages workspace): former `@eos/*` packages become `src/<module>/` folders with relative imports; tests live in `tests/<module>/`, live provider tests in `e2e/`; `testkit` ships as the `eos-agent-sdk/testkit` subpath; one published artifact, no per-module manifests — layering is held by review, the `exports` field blocks deep imports |
 
 ## 9. Open questions
 
 - `LlmRef` resolution shape (string id vs structured ref) — decide when wiring
-  `llm-client-registry` into the new `runtime` package.
+  `llm-client-registry` into the new `runtime` module.
 - `TurnFacts` shape for `turnBoundary` hooks — fix when folding the trigger engine's
   turn-fact extraction into hook dispatch; it must cover today's notification-rule needs
   (`notification-triggers.e2e.ts` is the behavioral reference).

@@ -35,17 +35,29 @@ fn enter_trace_events_include_holder_and_dns_configuration() {
     record_entered(&context, &handle);
 
     let events = sink.drain();
-    assert_eq!(events.len(), 3);
+    assert_eq!(events.len(), 6);
     assert_eq!(events[0].module, "isolated_workspace");
     assert_eq!(events[0].name, "enter_started");
     assert_eq!(events[0].details["caller_id"], "caller-isolated");
     assert_eq!(events[0].details["layer_stack_root"], "/tmp/layer-stack");
-    assert_eq!(events[1].name, "holder_started");
-    assert_eq!(events[1].details["workspace_handle_id"], "workspace-handle");
-    assert_eq!(events[1].details["holder_pid"], 42);
-    assert_eq!(events[2].name, "network_configured");
-    assert_eq!(events[2].details["dns_fallback_applied"], true);
-    assert_eq!(events[2].details["previous_first_nameserver"], "127.0.0.53");
+    assert_eq!(events[1].module, "layer_stack");
+    assert_eq!(events[1].name, "binding_loaded");
+    assert_eq!(events[1].details["workspace_root"], "/workspace");
+    assert_eq!(events[2].module, "layer_stack");
+    assert_eq!(events[2].name, "manifest_read");
+    assert_eq!(events[2].details["manifest_version"], 7);
+    assert_eq!(events[2].details["manifest_root_hash"], "root");
+    assert_eq!(events[3].module, "layer_stack");
+    assert_eq!(events[3].name, "snapshot_acquired");
+    assert_eq!(events[3].details["lease_id"], "lease-1");
+    assert_eq!(events[4].module, "isolated_workspace");
+    assert_eq!(events[4].name, "holder_started");
+    assert_eq!(events[4].details["workspace_handle_id"], "workspace-handle");
+    assert_eq!(events[4].details["holder_pid"], 42);
+    assert_eq!(events[5].module, "isolated_workspace");
+    assert_eq!(events[5].name, "network_configured");
+    assert_eq!(events[5].details["dns_fallback_applied"], true);
+    assert_eq!(events[5].details["previous_first_nameserver"], "127.0.0.53");
 }
 
 #[test]
@@ -103,18 +115,23 @@ fn exit_trace_events_include_teardown_phases_and_mountinfo_marker() {
     record_exited(&context, &exit);
 
     let events = sink.drain();
-    assert_eq!(events.len(), 4);
+    assert_eq!(events.len(), 5);
     assert_eq!(events[0].name, "exit_started");
-    assert_eq!(events[1].name, "teardown_phase_finished");
-    assert_eq!(events[1].details["phase"], "kill_holder");
-    assert_eq!(events[1].details["holder_was_alive"], true);
-    assert_eq!(events[1].details["exit_status"], 0);
-    assert_eq!(events[1].details["signal"], Value::Null);
-    assert_eq!(events[2].details["phase"], "rmtree_scratch");
-    assert_eq!(events[3].name, "exited");
-    assert_eq!(events[3].details["workspace_handle_id"], "workspace-handle");
-    assert_eq!(events[3].details["lease_released"], true);
-    assert_eq!(events[3].details["mountinfo_scan_error"], true);
+    assert_eq!(events[1].module, "layer_stack");
+    assert_eq!(events[1].name, "lease_released");
+    assert_eq!(events[1].details["lease_id"], "lease-1");
+    assert_eq!(events[1].details["released"], true);
+    assert_eq!(events[1].details["active_leases_after"], 0);
+    assert_eq!(events[2].name, "teardown_phase_finished");
+    assert_eq!(events[2].details["phase"], "kill_holder");
+    assert_eq!(events[2].details["holder_was_alive"], true);
+    assert_eq!(events[2].details["exit_status"], 0);
+    assert_eq!(events[2].details["signal"], Value::Null);
+    assert_eq!(events[3].details["phase"], "rmtree_scratch");
+    assert_eq!(events[4].name, "exited");
+    assert_eq!(events[4].details["workspace_handle_id"], "workspace-handle");
+    assert_eq!(events[4].details["lease_released"], true);
+    assert_eq!(events[4].details["mountinfo_scan_error"], true);
 }
 
 #[test]

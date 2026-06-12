@@ -3,11 +3,11 @@ use std::time::{Duration, Instant};
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_operation::core::catalog;
-use eos_trace::ResourceStatsKind;
+use eos_trace::{ResourceStatsKind, SpanKind};
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, finalize_foreground_command,
+    array, as_bool, as_i64, as_str, clean_stdout, conflict_reason, envelope_result,
     has_trace_event, live_pool_or_skip, seed_base_files, stdout, strip_transcript_timestamps,
     trace_record, wait_for_active_leases, wait_for_command_count,
 };
@@ -19,20 +19,67 @@ use crate::support::{
 /// whether it finished foreground or just after. Used only for foreground execs;
 /// the background/running-path tests keep their explicit `lease.call_ok`.
 fn exec_settled(lease: &NodeLease<'_>, args: Value) -> Result<Value> {
-    let response = lease.call_ok(catalog::SANDBOX_COMMAND_EXEC, args)?;
-    finalize_foreground_command(lease, response, Instant::now() + Duration::from_secs(25))
+    let (_, result) = exec_settled_wire(lease, args)?;
+    Ok(result)
 }
 
-/// Read a nested `timings.<key>` number from a response.
-fn timing_f64(value: &Value, key: &str) -> Option<f64> {
-    value
-        .get("timings")
-        .and_then(|timings| timings.get(key))
-        .and_then(Value::as_f64)
+fn exec_settled_wire(lease: &NodeLease<'_>, args: Value) -> Result<(Value, Value)> {
+    let response = lease.call(catalog::SANDBOX_COMMAND_EXEC, args)?;
+    finalize_foreground_command_wire(lease, response, Instant::now() + Duration::from_secs(25))
 }
 
-fn has_timing(value: &Value, key: &str) -> bool {
-    timing_f64(value, key).is_some_and(|timing| timing >= 0.0)
+fn finalize_foreground_command_wire(
+    lease: &NodeLease<'_>,
+    response: Value,
+    deadline: Instant,
+) -> Result<(Value, Value)> {
+    let result = envelope_result(&response)?.clone();
+    if as_str(&result, "status")? != "running" {
+        return Ok((response, result));
+    }
+    let command_id = as_str(&result, "command_id")?.to_owned();
+    loop {
+        let progress = lease.call(
+            catalog::SANDBOX_COMMAND_POLL,
+            json!({"command_id": &command_id, "last_n_lines": 50}),
+        )?;
+        let result = envelope_result(&progress)?.clone();
+        if as_str(&result, "status")? != "running" {
+            return Ok(strip_result_command_id(progress));
+        }
+        if Instant::now() >= deadline {
+            bail!("foreground command {command_id} did not finalize before deadline: {result}");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+fn strip_result_command_id(mut response: Value) -> (Value, Value) {
+    let result = response
+        .get_mut("result")
+        .and_then(Value::as_object_mut)
+        .expect("terminal command envelope carries object result");
+    result.remove("command_id");
+    let result = Value::Object(result.clone());
+    (response, result)
+}
+
+fn tree_resource_value(response: &Value, source: &str, key: &str) -> Result<f64> {
+    let record = trace_record(response)?;
+    record
+        .resources
+        .iter()
+        .filter(|resource| {
+            resource.meta.stats_kind == ResourceStatsKind::Tree && resource.meta.source == source
+        })
+        .filter_map(|resource| resource.payload.value.get("tree"))
+        .find_map(|tree| tree.get(key).and_then(Value::as_f64))
+        .with_context(|| format!("trace missing tree resource {source}.{key}: {record:?}"))
+}
+
+fn has_step(response: &Value, kind: SpanKind) -> Result<bool> {
+    let record = trace_record(response)?;
+    Ok(record.spans.iter().any(|span| span.kind == kind))
 }
 
 #[test]
@@ -45,7 +92,7 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
     let first = format!("{dir}/first.txt");
     let second = format!("{dir}/nested/second.txt");
 
-    let exec = exec_settled(
+    let (exec_wire, exec) = exec_settled_wire(
         &lease,
         json!({
             "cmd": format!("mkdir -p {dir}/nested && printf first > {first} && printf second > {second}"),
@@ -61,13 +108,18 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
         );
     }
     assert!(
-        has_timing(&exec, "command_exec.total_s")
-            || has_timing(&exec, "api.exec_command.dispatch_total_s"),
-        "exec response must expose command dispatch timing: {exec}"
+        has_step(&exec_wire, SpanKind::CommandProcessWait)?
+            || has_step(&exec_wire, SpanKind::CommandFinalize)?,
+        "exec trace must expose command dispatch/finalization timing: {exec}"
     );
     assert!(
-        has_timing(&exec, "occ.commit.total_s"),
-        "exec response must expose OCC publish timing: {exec}"
+        has_trace_event(
+            &trace_record(&exec_wire)?,
+            "occ",
+            "commit_finished",
+            |details| { details.get("duration_s").and_then(Value::as_f64).is_some() },
+        ),
+        "exec trace must expose OCC publish timing: {exec}"
     );
 
     let read_only = exec_settled(
@@ -329,7 +381,7 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
     )?;
     // A tiny overlay write must capture only its own delta — the overlay does NOT
     // copy the 200KB base into the upperdir (the O(1)-lowerdir-disk property).
-    let exec = exec_settled(
+    let (exec_wire, exec) = exec_settled_wire(
         &lease,
         json!({
             "cmd": "printf SMALL > perf/delta.txt",
@@ -337,8 +389,8 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    let upperdir_bytes = timing_f64(&exec, "resource.command_exec.upperdir_tree_bytes")
-        .context("exec response must carry resource.command_exec.upperdir_tree_bytes")?;
+    let upperdir_bytes =
+        tree_resource_value(&exec_wire, "resource.command_exec.upperdir", "bytes")?;
     assert!(
         upperdir_bytes < 100_000.0,
         "upperdir delta must not copy the 200KB base (got {upperdir_bytes} bytes): {exec}"
@@ -372,7 +424,7 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
             file_count,
             1_000_000,
         )?;
-        let exec = exec_settled(
+        let (exec_wire, exec) = exec_settled_wire(
             &lease,
             json!({
                 "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
@@ -380,8 +432,8 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
                 "timeout_seconds": 15,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-        let upperdir_bytes = timing_f64(&exec, "resource.command_exec.upperdir_tree_bytes")
-            .context("exec response must carry resource.command_exec.upperdir_tree_bytes")?;
+        let upperdir_bytes =
+            tree_resource_value(&exec_wire, "resource.command_exec.upperdir", "bytes")?;
         assert!(
             upperdir_bytes < 100_000.0,
             "upperdir must stay delta-sized over a {total}-byte base (got {upperdir_bytes}): {exec}"
@@ -409,7 +461,7 @@ fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
     // metadata, never the shared lowerdir, so its measured tree stays bounded
     // and untruncated.
     seed_base_files(&lease, "perf/scratch/base", 5, 1_000_000)?;
-    let exec = exec_settled(
+    let (exec_wire, exec) = exec_settled_wire(
         &lease,
         json!({
             "cmd": "printf TINY > perf/scratch/delta.txt",
@@ -417,14 +469,12 @@ fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
             "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
-    let run_dir_bytes = timing_f64(&exec, "resource.command_exec.run_dir_tree_bytes")
-        .context("exec response must carry resource.command_exec.run_dir_tree_bytes")?;
+    let run_dir_bytes = tree_resource_value(&exec_wire, "resource.command_exec.run_dir", "bytes")?;
     assert!(
         run_dir_bytes < 1_000_000.0,
         "overlay scratch must stay bounded and exclude the 5MB base (got {run_dir_bytes}): {exec}"
     );
-    let truncated = timing_f64(&exec, "resource.command_exec.run_dir_tree_truncated")
-        .context("exec response must carry resource.command_exec.run_dir_tree_truncated")?;
+    let truncated = tree_resource_value(&exec_wire, "resource.command_exec.run_dir", "truncated")?;
     assert_eq!(
         truncated, 0.0,
         "run dir resource sample must not be truncated: {exec}"

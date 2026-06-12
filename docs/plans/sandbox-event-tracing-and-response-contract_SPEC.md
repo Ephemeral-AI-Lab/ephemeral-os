@@ -184,6 +184,21 @@ returned no matches for this suite. Phase 05 remains in progress; remaining
 e2e suites, gateway, host, generated e2e inventory, and live feature e2e gates
 still need the same migration pass.
 
+Phase 05 ephemeral-workspace evidence, 2026-06-13: overlay exec route timing
+assertions no longer read flat `timings.*` response fields, and upperdir/run-dir
+resource checks no longer read flat `resource.command_exec.*_tree_*` response
+keys. The tests now keep raw daemon responses where trace sidecars are needed,
+unwrap `OperationEnvelope.result` at the assertion boundary, and assert command
+finalization spans, OCC `commit_finished.duration_s` events, and tree
+`trace_resources` for `resource.command_exec.upperdir` and
+`resource.command_exec.run_dir`. `cargo fmt --check`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-ephemeral-target cargo test -p eos-e2e-test --test ephemeral_workspace --no-default-features -- --nocapture`,
+`CARGO_TARGET_DIR=/tmp/eos-phase05-ephemeral-target cargo check -p eos-e2e-test --tests`,
+`rg -n 'timings\.|timing_f64|\["timings"\]|upperdir_tree_bytes|run_dir_tree_bytes|run_dir_tree_truncated|is_success\(|error_kind\(' crates/eos-e2e-test/tests/ephemeral_workspace -g '*.rs'`,
+and `git diff --check` passed for this slice. Phase 05 remains in progress; the
+generated e2e inventory, live feature e2e gate, remaining e2e suites, gateway,
+and host still need the same migration pass.
+
 Implementation constraints:
 
 - No daemon hot-path persistence, host RPC, SQLite, fsync, or unbounded JSON

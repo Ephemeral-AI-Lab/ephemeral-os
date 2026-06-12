@@ -33,7 +33,8 @@ into its own project; until then it lives here.
 
 ```
 eos-coding-agent/
-├── .eos-agents/                      profiles · pursuit policy scripts (planner.cjs etc.)
+├── .eos-agents/                      ONE config root: profiles · hooks · notification rules ·
+│                                     workflow settings (e.g. pursuit policy scripts, planner.cjs)
 └── packages/
     ├── workflows/
     │   ├── hub/                      WorkflowHub + WorkflowDefinition contract (host-owned)
@@ -44,17 +45,25 @@ eos-coding-agent/
     │       │                         pursuit-tree.ts · pursuit-context.ts   (= today)
     │       │   ├── outcome-fns.ts    ★ planner/worker agentOutcomeFn via createAgentOutcomeFn
     │       │   ├── launcher.ts       ★ builds planner/worker Agents, starts runs
-    │       │   └── workflow.ts       ★ WorkflowDefinition over PursuitService
-    │       ├── db/                   = today's @eos/db (schema · rows · migrations)
+    │       │   ├── workflow.ts       ★ WorkflowDefinition over PursuitService
+    │       │   └── index.ts          ★ WorkflowModule export — opens the embedded db;
+    │       │                           ready for hub.register, no wiring in app/
+    │       ├── db/                   embedded storage (today's @eos/db: schema · rows ·
+    │       │                         migrations) — opened by pursuit itself, never injected
     │       └── contracts/            = contracts/pursuit.ts carve-out (entity DTOs,
     │                                   PursuitSettlement; SubmissionBinding deleted)
     ├── agents/                       AgentRegistry: .eos-agents profiles → AgentSpec → Agent
     ├── tools/                        every tool the model can call
-    │   ├── coding/                   read · edit · grep · exec_command (yield pattern) …
-    │   ├── run-subagent.ts           subagent pattern (foreground + background)
-    │   ├── ask-advisor.ts            advisor consult
-    │   ├── background-tasks.ts       list_background_task · cancel_background_task
-    │   └── read-agent-run-transcript.ts   reads <recordsDir>/<runId>/*.jsonl
+    │   ├── sandbox/                  read · edit · grep · exec_command (yield pattern) —
+    │   │                             specced (§5), NOT implemented in this phase
+    │   ├── agent/
+    │   │   ├── run_subagent.ts       subagent pattern (foreground + background)
+    │   │   ├── advisor.ts            advisor consult (ask_advisor)
+    │   │   └── read-agent-run.ts     reads <recordsDir>/<runId>/*.jsonl
+    │   ├── background/
+    │   │   ├── list_background_tasks.ts    list_background_task projection
+    │   │   └── cancel_background_task.ts   cancel_background_task projection
+    │   └── test/                     playground tools — manual/e2e testing only
     └── app/
         ├── main.ts                   composition root
         ├── config/                   ✂ moved from agent-runtime: config-root.ts ·
@@ -68,7 +77,9 @@ eos-coding-agent/
 
 ```ts
 // app/main.ts
-const cfg = loadConfig(".eos-agents");                       // host-owned file discovery
+import { pursuit } from "@eos/workflow-pursuit";             // index.ts module — one import per workflow
+
+const cfg = loadEosConfig(".eos-agents");                    // ONE root: profiles · hooks · rules · workflows
 const sdk = createAgentSdk({
   llmClients: cfg.llmClients,
   hooks: [...cfg.globalHooks,                                // host-validated callbacks
@@ -77,21 +88,21 @@ const sdk = createAgentSdk({
 });
 
 const agents = buildAgentRegistry(sdk, cfg.profiles);        // §4
-const hub = new WorkflowHub();                               // §6
-hub.register(pursuitWorkflow({ db: openPursuitDb(cfg), sdk, agents, scripts: cfg.pursuitScripts }));
+const hub = new WorkflowHub({ sdk, agents, settings: cfg.workflows });   // §6 — workflow deps live HERE
+await hub.register(pursuit);                                 // no workflow-specific wiring in this file
 
 const operator = sdk.createAgent({
   name: "operator",
   llm: cfg.profiles.operator.llm,
   systemPrompt: cfg.profiles.operator.systemPrompt,
   tools: [
-    ...codingTools,
+    // ...sandboxTools,                                      // tools/sandbox — later phase (§5)
     runSubagent(agents),
     askAdvisor(agents.advisor),
-    ...hub.toolset({ allow: ["pursuit"] }),
+    ...hub.toolset(),                                        // enable/allow gating from .eos-agents/workflows
     listBackgroundTask,
     cancelBackgroundTask,
-    readAgentRunTranscript(cfg.recordsDir),
+    readAgentRun(cfg.recordsDir),
   ],
   hooks: [advisorGate({ tool: "submit_main_outcome", advisor: agents.advisor, instruction: SUBMIT_GUIDANCE })],
   agentOutcomeFn: createAgentOutcomeFn({ name: "submit_main_outcome", schema: MainOutcome }),
@@ -124,7 +135,8 @@ interface AgentRegistry {
 All tools are `defineTool` over the SDK's `ToolCallContext` capabilities. There is no
 `behavior` metadata; what a tool *does* defines it.
 
-**Background-task tools** (pure projections of the run-scoped supervisor):
+**Background-task tools** (`tools/background/`, one file per tool — pure projections of
+the run-scoped supervisor):
 
 ```ts
 export const listBackgroundTask = defineTool({
@@ -182,10 +194,14 @@ export const askAdvisor = (advisor: Agent) => defineTool({
 });
 ```
 
-**exec_command (yield pattern):** run to a yield point (timeout / quiet period / output
-cap). Finished → return final output. Still running → `register` a task (cancel = kill
-process group; `done` = exit promise; `onCompletion` publishes exit status + tail) and
-return partial output + taskId. The engine knows nothing about any of this.
+**exec_command (yield pattern — `tools/sandbox/`, specced now, implemented in a later
+phase):** run to a yield point (timeout / quiet period / output cap). Finished → return
+final output. Still running → `register` a task (cancel = kill process group; `done` =
+exit promise; `onCompletion` publishes exit status + tail) and return partial output +
+taskId. The engine knows nothing about any of this.
+
+**Playground tools** (`tools/test/`) are testing-only scaffolding for manual and e2e
+runs; they never appear in shipped profiles.
 
 **Conventions (lint-level):**
 
@@ -219,7 +235,21 @@ interface WorkflowHandle {
 
 export function defineWorkflow<I>(init: WorkflowDefinition<I>): RegisteredWorkflow;
 // mint site: erases I for the hub registry; enforces `${name}_*` naming on `tools`
+
+// registration: each workflow package exports ONE module from its index.ts
+interface WorkflowModule {
+  name: string;                        // gate key — .eos-agents/workflows/<name>
+  create(init: WorkflowInit): Promise<RegisteredWorkflow>;
+}
+interface WorkflowInit { sdk: AgentSdk; agents: AgentRegistry; settings: JsonObject }
+// `settings` is the workflow's .eos-agents slice (e.g. pursuit policy scripts).
+// Storage is embedded: pursuit opens its own db inside create() — never injected by app/.
 ```
+
+`hub.register(module)` resolves the module against `.eos-agents/workflows`: disabled →
+no-op; enabled → `create()` runs with the hub-held `sdk`/`agents` and the workflow's
+settings slice. The composition root therefore contains **no workflow-specific wiring** —
+one import plus one `register` line per workflow (§3).
 
 The shape mirrors `defineTool` (`delegatePayload`/`delegate` ↔ `input`/`execute`, same
 single-source inference); each divergence is a real property of workflows — `docs` because
@@ -335,7 +365,7 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 | Pursuit internal | Before (in eos-agent-core) | After (here) |
 |---|---|---|
 | `agent-launcher.ts` (`AgentLaunchPort`, `LaunchSettlement`, `LaunchedAgent`) | port implemented by agent-runtime | **deleted** — `launcher.ts` calls `sdk.createAgent(...).start(...)` directly |
-| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{db, compose, sdk, profiles: {planner, isWorker}}` (profile content injected by `app/`, never loaded by pursuit) |
+| `PursuitServiceDependencies` | `{db, compose, resolve, launch port}` | `{compose, sdk, profiles: {planner, isWorker}}` — db embedded, opened inside the module's `create()` (§6); profile content arrives via `WorkflowInit`, never loaded by pursuit |
 | Submission entry | runtime routes `submit_planner_outcome` payloads into service claim methods | the **same claim/transition methods**, invoked from `onSubmit` closures in `outcome-fns.ts` — transactional, keyed by `ctx.submissionId`; invalid transitions (e.g. refocus in predefined mode) return `{reject}` → in-run correction, budget intact |
 | `PursuitAgentSubmissionBinding` | threaded through contracts/engine | deleted (replaced by `onSubmit`) |
 | Planner/worker advisory prompts | `@eos/tool/advisory_prompts/` | move here; ride `createAgentOutcomeFn({description})` |
@@ -363,9 +393,13 @@ drift the original design exists to prevent.
 
 ## 9. Configuration loading
 
-All file I/O for configuration lives in `app/config/` (files moved verbatim from
-`agent-runtime`): discovery (`config-root`), parsing (`config-file`), hooks
-(`hook-config`), trigger rules (`notification-rules-config`), profiles. Parsed objects are
+`.eos-agents/` is the **single configuration root**: profiles, hooks, notification rules,
+and per-workflow settings (the `.eos-agents/workflows/<name>` slice handed to
+`WorkflowModule.create`, §6) all live under it — nothing registers from scattered
+locations. All file I/O for configuration lives in `app/config/` (files moved verbatim
+from `agent-runtime`): discovery (`config-root`), parsing (`config-file`), hooks
+(`hook-config`), trigger rules (`notification-rules-config`), profiles, workflow
+settings. Parsed objects are
 validated by host-owned schemas (the SDK exports none) and passed into `createAgentSdk` /
 `AgentSpec`. Trigger rules compile into `turnBoundary` hook entries
 (`compileNotificationRules`, §3). `recordsDir` is chosen here. Reload/watch semantics,
@@ -401,7 +435,10 @@ layering (user vs project), and defaults are host policy.
 
 - This repo imports only the SDK root package `eos-agent-sdk` (no `@eos/engine`,
   `@eos/tool`, … internals).
-- Deleting `packages/workflows/pursuit` still compiles `app/` (hub registers nothing).
+- Deleting `packages/workflows/pursuit` requires removing exactly one import and one
+  `hub.register` line in `app/main.ts` — nothing else; the hub then registers nothing and
+  the operator keeps every non-workflow tool. The composition root contains no other
+  workflow-specific code.
 - Every tool the operator sees is defined in `packages/tools/` or projected by
   `packages/workflows/hub` — `grep` the SDK for tool definitions → none.
 - Advisor enforcement demonstrably runs **before** `onSubmit` (test: advisor denies → no
@@ -418,8 +455,8 @@ layering (user vs project), and defaults are host policy.
 
 - `AgentRegistry.names()` scoping — flat allowlist vs per-profile launchable sets (decide
   with real subagent usage).
-- Whether `read_agent_run_transcript` should page/filter (records can be large) — tool
-  design, not contract.
+- Whether `read_agent_run` should page/filter (records can be large) — tool design, not
+  contract.
 - Pursuit context-exploration tools (planned in the operator manual §07) — they become
   ordinary host tools over the pursuit context store, riding pursuit's `tools` array on
   its `WorkflowDefinition`; spec separately when prioritized.
