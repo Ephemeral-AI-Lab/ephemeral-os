@@ -58,6 +58,7 @@ function create_variable_reference_map(ctx) {
     pursuit_status: pursuit.status,
     pursuit_goal: pursuit.pursuit_goal,
     pursuit_leg_goal_mode: pursuit.leg_goal_mode,
+    pursuit_predefined_leg_count: pursuit.predefined_leg_count,
     pursuit_context_path: pursuit.context_path,
     pursuit_outcome: pursuit.outcome,
 

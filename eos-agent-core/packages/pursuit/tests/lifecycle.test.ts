@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { agentRunIdFrom } from "@eos/contracts";
+import { agentRunIdFrom, pursuitIdFrom } from "@eos/contracts";
 
 import {
   allMessageText,
@@ -91,6 +91,49 @@ describe("pursuit creation and planner declarations", () => {
 });
 
 describe("scheduler dependency and failure behavior", () => {
+  it("launches same-attempt dependents only after direct dependencies succeed", async () => {
+    const h = harness();
+    await h.create("ship graph");
+    await h.launches[0].submitPlanner(
+      plannerPayload({
+        work_items: [workItem("base"), workItem("dependent", ["base"])],
+      }),
+    );
+
+    expect(h.launches.map((launch) => launch.options?.submission?.kind)).toEqual([
+      "planner",
+      "worker",
+    ]);
+    expect(allMessageText(h.launches[1].messages)).not.toContain("dependent");
+
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+
+    expect(h.launches.map((launch) => launch.options?.submission?.kind)).toEqual([
+      "planner",
+      "worker",
+      "worker",
+    ]);
+    expect(allMessageText(h.launches[2].messages)).toContain("base done");
+  });
+
+  it("closes an attempt successfully only after every work item succeeds", async () => {
+    const h = harness();
+    const pursuit = await h.create("ship all work");
+    await h.launches[0].submitPlanner(
+      plannerPayload({ work_items: [workItem("a"), workItem("b")] }),
+    );
+
+    await h.launches[1].submitWorker(workerPayload({ summary: "a done" }));
+    expect((await h.tree(pursuit.pursuit_id)).legs[0].attempts[0].status).toBe(
+      "Running",
+    );
+
+    await h.launches[2].submitWorker(workerPayload({ summary: "b done" }));
+    const tree = await h.tree(pursuit.pursuit_id);
+    expect(tree.legs[0].attempts[0].status).toBe("Success");
+    expect(tree.pursuit.status).toBe("Success");
+  });
+
   it("blocks only not-started dependents and waits for unrelated running work before failing", async () => {
     const h = harness();
     const pursuit = await h.create("ship graph", { maxAttempts: 2 });
@@ -147,6 +190,85 @@ describe("scheduler dependency and failure behavior", () => {
     ]);
     expect(closed.legs[0].attempts, "retry created after failed close").toHaveLength(2);
     expect(h.launches.at(-1)?.agentName).toBe("planner");
+  });
+
+  it("propagates dependency blocks transitively until stable", async () => {
+    const h = harness();
+    const pursuit = await h.create("ship graph", { maxAttempts: 1 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({
+        work_items: [
+          workItem("root"),
+          workItem("middle", ["root"]),
+          workItem("leaf", ["middle"]),
+        ],
+      }),
+    );
+
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "root failed" }),
+    );
+
+    const attempt = (await h.tree(pursuit.pursuit_id)).legs[0].attempts[0];
+    expect(attempt.workItems.map((item) => [String(item.id), item.status])).toEqual([
+      ["root", "Failed"],
+      ["middle", "Blocked"],
+      ["leaf", "Blocked"],
+    ]);
+    expect(attempt.failureReasons).toEqual([
+      {
+        work_item_id: "root",
+        kind: "failed",
+        message: null,
+        summary: "root failed",
+        outcome: "the leg is implemented",
+      },
+      {
+        work_item_id: "middle",
+        kind: "blocked_by_failed_dependency",
+        message: "blocked by work_item_root",
+        summary: "blocked by work_item_root",
+        outcome: "blocked by work_item_root",
+        blocked_by: ["root"],
+      },
+      {
+        work_item_id: "leaf",
+        kind: "blocked_by_failed_dependency",
+        message: "blocked by work_item_middle",
+        summary: "blocked by work_item_middle",
+        outcome: "blocked by work_item_middle",
+        blocked_by: ["middle"],
+      },
+    ]);
+  });
+
+  it("rechecks a claimed worker after context composition and skips stale launches", async () => {
+    const state: { service?: ReturnType<typeof harness>["service"] } = {};
+    const h = harness({
+      compose: async (_agentName, input) => {
+        if (input.kind === "worker" && input.current.work_item_id === "dependent") {
+          await state.service?.cancel(
+            pursuitIdFrom(input.current.pursuit_id),
+            "cancel before stale launch",
+          );
+        }
+        return [{ role: "user", content: [{ type: "text", text: "context" }] }];
+      },
+    });
+    state.service = h.service;
+    const pursuit = await h.create("ship graph");
+    await h.launches[0].submitPlanner(
+      plannerPayload({
+        work_items: [workItem("base"), workItem("dependent", ["base"])],
+      }),
+    );
+
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+
+    expect(h.launches, "dependent claim was not launched after cancellation").toHaveLength(
+      2,
+    );
+    expect((await h.tree(pursuit.pursuit_id)).pursuit.status).toBe("Cancelled");
   });
 
   it("records failed and blocked reasons when dependency propagation closes immediately", async () => {
@@ -232,6 +354,142 @@ describe("scheduler dependency and failure behavior", () => {
     ]);
     await expect(pursuit.settle()).resolves.toMatchObject({ status: "Failed" });
   });
+
+  it("treats planner launch failure without submission as planner death", async () => {
+    const h = harness();
+    const pursuit = await h.create("doomed", { maxAttempts: 1 });
+
+    h.launches[0].settle({ status: "failed" });
+
+    await until(async () => {
+      const tree = await h.tree(pursuit.pursuit_id);
+      return tree.pursuit.status === "Failed";
+    }, "pursuit failed after planner launch death");
+
+    const attempt = (await h.tree(pursuit.pursuit_id)).legs[0].attempts[0];
+    expect(attempt.plan.summary).toBeNull();
+    expect(attempt.failureReasons).toEqual([
+      {
+        work_item_id: null,
+        kind: "planner_failed",
+        message: "run settled 'failed' without a submission",
+        summary: null,
+        outcome: null,
+      },
+    ]);
+  });
+});
+
+describe("planner payload dependency validation", () => {
+  it.each([
+    [
+      "unknown worker agent",
+      () =>
+        plannerPayload({
+          work_items: [{ ...workItem("a"), agent_name: "missing" }],
+        }),
+      "unknown worker agent",
+    ],
+    [
+      "unknown dependency id",
+      () => plannerPayload({ work_items: [workItem("a", ["missing"])] }),
+      'depends_on unknown id "missing"',
+    ],
+  ])("rejects %s without consuming the attempt", async (_name, payload, expected) => {
+    const h = harness();
+    const pursuit = await h.create("validate");
+
+    const rejected = await h.launches[0].submitPlanner(payload());
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain(expected);
+    const attempt = (await h.tree(pursuit.pursuit_id)).legs[0].attempts[0];
+    expect(attempt.status).toBe("Running");
+    expect(attempt.workItems).toHaveLength(0);
+    expect((await h.tree(pursuit.pursuit_id)).legs[0].attempts).toHaveLength(1);
+  });
+
+  it("rejects duplicate work-item ids from a prior same-version attempt", async () => {
+    const h = harness();
+    const pursuit = await h.create("validate", { maxAttempts: 2 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({ work_items: [workItem("base"), workItem("breaker")] }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+    await h.launches[2].submitWorker(
+      workerPayload({ is_pass: false, summary: "breaker failed" }),
+    );
+
+    const rejected = await h.launches[3].submitPlanner(
+      plannerPayload({ work_items: [workItem("base")] }),
+    );
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain("current leg goal version");
+    expect((await h.tree(pursuit.pursuit_id)).legs[0].attempts[1].workItems).toHaveLength(
+      0,
+    );
+  });
+
+  it("rejects replacement leg_goal submissions that depend on prior work", async () => {
+    const h = harness();
+    await h.create("validate", { maxAttempts: 2 });
+    await h.launches[0].submitPlanner(
+      plannerPayload({ work_items: [workItem("base"), workItem("breaker")] }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+    await h.launches[2].submitWorker(
+      workerPayload({ is_pass: false, summary: "breaker failed" }),
+    );
+
+    const rejected = await h.launches[3].submitPlanner(
+      plannerPayload({
+        leg_goal: "new goal",
+        work_items: [workItem("followup", ["base"])],
+      }),
+    );
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain("replacement leg_goal");
+  });
+
+  it("rejects dependencies on superseded earlier leg-goal versions", async () => {
+    const h = harness();
+    await h.create("validate", { maxAttempts: 3 });
+    await h.launches[0].submitPlanner(plannerPayload({ work_items: [workItem("old")] }));
+    await h.launches[1].submitWorker(
+      workerPayload({ is_pass: false, summary: "old failed" }),
+    );
+    await h.launches[2].submitPlanner(
+      plannerPayload({ leg_goal: "new goal", work_items: [workItem("new")] }),
+    );
+    await h.launches[3].submitWorker(
+      workerPayload({ is_pass: false, summary: "new failed" }),
+    );
+
+    const rejected = await h.launches[4].submitPlanner(
+      plannerPayload({ work_items: [workItem("followup", ["old"])] }),
+    );
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain("superseded leg-goal version");
+  });
+
+  it("rejects dependencies on work items from another leg", async () => {
+    const h = harness();
+    await h.create("validate");
+    await h.launches[0].submitPlanner(
+      plannerPayload({ next_leg_goal: "next", work_items: [workItem("base")] }),
+    );
+    await h.launches[1].submitWorker(workerPayload({ summary: "base done" }));
+
+    const rejected = await h.launches[2].submitPlanner(
+      plannerPayload({ work_items: [workItem("followup", ["base"])] }),
+    );
+
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toContain("another leg");
+  });
 });
 
 describe("dynamic refocus", () => {
@@ -247,7 +505,7 @@ describe("dynamic refocus", () => {
 
     const retry = h.launches[2];
     await retry.submitPlanner(
-      plannerPayload({ leg_goal: "narrowed goal", work_items: [workItem("new")] }),
+      plannerPayload({ leg_goal: "narrowed goal", work_items: [workItem("old")] }),
     );
 
     const tree = await h.tree(pursuit.pursuit_id);
@@ -257,5 +515,6 @@ describe("dynamic refocus", () => {
     expect(leg.nextLegGoal, "omitted successor cleared during refocus").toBeNull();
     expect(leg.attempts[0].isConsistentWithLegGoal).toBe(false);
     expect(leg.attempts[1].isConsistentWithLegGoal).toBe(true);
+    expect(leg.attempts[1].workItems[0].id).toBe("old");
   });
 });

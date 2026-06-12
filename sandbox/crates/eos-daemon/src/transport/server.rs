@@ -20,7 +20,7 @@ use eos_workspace::CurrentExeNsRunnerLauncher;
 
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
-use crate::runtime_services::sweepers;
+use crate::runtime_services::background_tasks;
 use crate::DispatchContext;
 use crate::RuntimeServices;
 
@@ -86,7 +86,7 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        eos_operation::command::configure_commands(&daemon_config.command_sessions);
+        eos_operation::command::configure_commands(&daemon_config.commands);
         eos_layerstack::configure_auto_squash_max_depth(
             daemon_config.layer_stack.auto_squash_max_depth,
         );
@@ -141,16 +141,16 @@ impl DaemonServer {
         };
         let _isolated_ttl_task = {
             let shutdown = server.shutdown.clone();
-            let sweep_interval_ms = server.isolated_sweeper_interval_ms;
+            let eviction_interval_ms = server.isolated_sweeper_interval_ms;
             let services = Arc::clone(&server.services);
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
                         () = shutdown.cancelled() => break,
-                        () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
+                        () = tokio::time::sleep(Duration::from_millis(eviction_interval_ms)) => {
                             let services = Arc::clone(&services);
                             let _ = tokio::task::spawn_blocking(move || {
-                                sweepers::sweep_workspace_ttl(&services.workspace)
+                                background_tasks::evict_idle_workspaces_once(&services.workspace)
                             })
                             .await;
                         }
@@ -158,8 +158,8 @@ impl DaemonServer {
                 }
             })
         };
-        // Command reaping can touch process state and the filesystem.
-        let _command_reaper = {
+        // Command advancement can touch process state and the filesystem.
+        let _command_advancer = {
             let shutdown = server.shutdown.clone();
             tokio::spawn(async move {
                 loop {
@@ -167,7 +167,7 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let _ = tokio::task::spawn_blocking(
-                                sweepers::sweep_commands,
+                                background_tasks::advance_active_commands_once,
                             )
                             .await;
                         }
@@ -175,8 +175,8 @@ impl DaemonServer {
                 }
             })
         };
-        // Reap stale commands left by a prior daemon, before accepting.
-        sweepers::recover_orphaned_commands();
+        // Recover stale commands left by a prior daemon, before accepting.
+        background_tasks::recover_orphaned_commands();
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;

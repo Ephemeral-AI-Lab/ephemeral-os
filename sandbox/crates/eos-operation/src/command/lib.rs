@@ -2,12 +2,12 @@
 
 pub mod contract;
 
+mod finalize;
 mod outcome;
 mod prepare;
 mod registry;
 pub mod runtime;
 mod service;
-mod settle;
 
 pub use contract::{
     CollectCompletedOutput, CommandCompletion, CommandMetadata, CommandResponse, CommandStatus,

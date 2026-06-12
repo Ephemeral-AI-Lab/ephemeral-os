@@ -8,7 +8,7 @@ fn runner_ok() -> Option<CommandRunnerResult> {
 
 #[test]
 fn kill_reason_maps_to_terminal_status() {
-    let exit = CommandProcessExit::unwaitable();
+    let exit = PtyProcessExitStatus::unwaitable();
     let runner = runner_ok();
 
     let ok = CommandCompletionStatus::from_process_and_runner(exit, runner.as_ref(), None);

@@ -10,7 +10,7 @@ export function pursuitFieldFiles(
   legs: readonly LegState[],
 ): EntityFieldFile[] {
   const files: EntityFieldFile[] = [
-    { name: "pursuit_goal.md", content: pursuit.pursuitGoal },
+    { name: "goal.md", content: pursuit.pursuitGoal },
   ];
   if (isPursuitEntityTerminal(pursuit.status)) {
     files.push({

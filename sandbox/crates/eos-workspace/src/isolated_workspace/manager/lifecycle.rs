@@ -258,7 +258,7 @@ impl IsolatedManager {
         })
     }
 
-    pub fn ttl_sweep(&mut self, active_callers: &HashSet<String>) -> Vec<ExitOutcome> {
+    pub fn evict_idle_workspaces(&mut self, active_callers: &HashSet<String>) -> Vec<ExitOutcome> {
         if self.caps.ttl_s <= 0.0 {
             return Vec::new();
         }

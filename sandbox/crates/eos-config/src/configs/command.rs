@@ -18,7 +18,7 @@ pub struct CommandConfig {
 impl Default for CommandConfig {
     fn default() -> Self {
         Self {
-            scratch_root: PathBuf::from("/eos/scratch/command-sessions"),
+            scratch_root: PathBuf::from("/eos/scratch/commands"),
             default_yield_time_ms: 1000,
             default_timeout_s: 600,
             quiet_ms: 50,

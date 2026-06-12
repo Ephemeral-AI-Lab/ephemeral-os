@@ -36,7 +36,7 @@ pub(crate) fn op_cancel_workspace_runs(
     let (cancelled_commands, isolated_exited) = workspace.cancel_all_runs(input.grace_s);
     Ok(to_wire_value(RunCancelAllOutput {
         success: true,
-        cancelled_commands: cancelled_commands,
+        cancelled_commands,
         isolated_callers_exited: isolated_exited,
     }))
 }

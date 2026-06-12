@@ -87,28 +87,28 @@ export async function propagateDependencyBlocks(
     changed = false;
     const allVersionItems = await trx
       .selectFrom("work_items")
-      .select(["id", "attempt_id", "status", "depends_on"])
+      .select(["key", "id", "attempt_id", "status", "depends_on"])
       .where("leg_id", "=", attempt.leg_id)
       .where("leg_goal_version", "=", attempt.leg_goal_version)
       .execute();
-      const statusOf = new Map(
-        allVersionItems.map((item) => [String(item.id), item.status]),
-      );
-      for (const item of allVersionItems) {
-        if (item.attempt_id !== attemptId || item.status !== "NotStarted") continue;
-        const dependsOn = decodeDependsOn(item.depends_on);
-        const blockedBy = dependsOn.filter((id) => dependencyBlocks(statusOf.get(id)));
-        if (blockedBy.length === 0) continue;
-        const summary = blockedSummary(blockedBy);
-        await trx
-          .updateTable("work_items")
-          .set({
-            status: "Blocked",
-            worker_summary: summary,
-            worker_outcome: summary,
-            updated_at: new Date().toISOString(),
-          })
-        .where("id", "=", item.id)
+    const statusOf = new Map(
+      allVersionItems.map((item) => [String(item.id), item.status]),
+    );
+    for (const item of allVersionItems) {
+      if (item.attempt_id !== attemptId || item.status !== "NotStarted") continue;
+      const dependsOn = decodeDependsOn(item.depends_on);
+      const blockedBy = dependsOn.filter((id) => dependencyBlocks(statusOf.get(id)));
+      if (blockedBy.length === 0) continue;
+      const summary = blockedSummary(blockedBy);
+      await trx
+        .updateTable("work_items")
+        .set({
+          status: "Blocked",
+          worker_summary: summary,
+          worker_outcome: summary,
+          updated_at: new Date().toISOString(),
+        })
+        .where("key", "=", item.key)
         .execute();
       changed = true;
     }
@@ -234,10 +234,10 @@ export async function cancelAttempt(
   for (const plan of plans) await cancelPlan(trx, plan.id);
   const items = await trx
     .selectFrom("work_items")
-    .select("id")
+    .select("key")
     .where("attempt_id", "=", attemptId)
     .execute();
-  for (const item of items) await cancelWorkItem(trx, item.id);
+  for (const item of items) await cancelWorkItem(trx, item.key);
 }
 
 function dependencyBlocks(status: WorkItemRunStatus | undefined): boolean {

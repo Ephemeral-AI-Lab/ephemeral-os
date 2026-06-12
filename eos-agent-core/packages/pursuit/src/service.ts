@@ -361,40 +361,53 @@ function plannerSubmissionError(
       })),
     ),
   );
-  const existingInVersion = allExisting.filter(
-    (entry) =>
-      entry.leg.id === leg.id &&
-      entry.attempt.isConsistentWithLegGoal &&
-      entry.item.legGoalVersion === leg.legGoalVersion,
-  );
-  for (const item of payload.work_items) {
-    if (existingInVersion.some((entry) => String(entry.item.id) === item.id)) {
-      return `duplicate work item id "${item.id}" in current leg goal version`;
-    }
-  }
+	  const existingInVersion = allExisting.filter(
+	    (entry) =>
+	      entry.leg.id === leg.id &&
+	      entry.attempt.isConsistentWithLegGoal &&
+	      entry.item.legGoalVersion === leg.legGoalVersion,
+	  );
+	  if (payload.leg_goal === undefined) {
+	    for (const item of payload.work_items) {
+	      if (existingInVersion.some((entry) => String(entry.item.id) === item.id)) {
+	        return `duplicate work item id "${item.id}" in current leg goal version`;
+	      }
+	    }
+	  }
 
-  for (const item of payload.work_items) {
-    for (const dependency of item.depends_on) {
-      if (currentIds.has(dependency)) continue;
-      if (payload.leg_goal !== undefined) {
-        return "replacement leg_goal submissions cannot depend_on prior work items";
-      }
-      const existing = allExisting.find(
-        (entry) => String(entry.item.id) === dependency,
-      );
-      if (!existing) return `work item "${item.id}" depends_on unknown id "${dependency}"`;
-      if (existing.leg.id !== leg.id) {
-        return `work item "${item.id}" depends_on item from another leg`;
-      }
-      if (existing.attempt.sequence >= attempt.sequence) {
-        return `work item "${item.id}" depends_on future attempt item "${dependency}"`;
-      }
-      if (
-        !existing.attempt.isConsistentWithLegGoal ||
-        existing.item.legGoalVersion !== leg.legGoalVersion
-      ) {
-        return `work item "${item.id}" depends_on superseded leg-goal version item "${dependency}"`;
-      }
+	  for (const item of payload.work_items) {
+	    for (const dependency of item.depends_on) {
+	      if (currentIds.has(dependency)) continue;
+	      if (payload.leg_goal !== undefined) {
+	        return "replacement leg_goal submissions cannot depend_on prior work items";
+	      }
+	      const matching = allExisting.filter(
+	        (entry) => String(entry.item.id) === dependency,
+	      );
+	      if (matching.length === 0) {
+	        return `work item "${item.id}" depends_on unknown id "${dependency}"`;
+	      }
+	      const existing = matching.find(
+	        (entry) =>
+	          entry.leg.id === leg.id &&
+	          entry.attempt.sequence < attempt.sequence &&
+	          entry.attempt.isConsistentWithLegGoal &&
+	          entry.item.legGoalVersion === leg.legGoalVersion,
+	      );
+	      if (existing) continue;
+	      const first = matching[0];
+	      if (first.leg.id !== leg.id) {
+	        return `work item "${item.id}" depends_on item from another leg`;
+	      }
+	      if (first.attempt.sequence >= attempt.sequence) {
+	        return `work item "${item.id}" depends_on future attempt item "${dependency}"`;
+	      }
+	      if (
+	        !first.attempt.isConsistentWithLegGoal ||
+	        first.item.legGoalVersion !== leg.legGoalVersion
+	      ) {
+	        return `work item "${item.id}" depends_on superseded leg-goal version item "${dependency}"`;
+	      }
     }
   }
 

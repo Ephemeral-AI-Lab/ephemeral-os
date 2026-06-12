@@ -1,18 +1,23 @@
 # Sandbox Event Tracing and Response Contract
 
-Status: Proposed (rev 4 — destructive posture; verified against the four
+Status: Proposed (rev 5 — destructive posture; verified against the four
 audit-system rules: ingestion decoupling, storage immutability,
 serialization/schema evolution, visibility/lineage — confirmed gaps closed.
 Rev 4 adds the six-scope explorer sweep of every printed/response-visible/
 dropped datum, dispositioned as drop / populate / add with spot-checked code
 anchors — see "Inventory-verified deltas" — and the Extension Model: normative
-rules for introducing new trace surfaces without eroding the audit contract)
+rules for introducing new trace surfaces without eroding the audit contract.
+Rev 5 folds in `sandbox/docs/command-naming-update-note.md`: command traces now
+use `command_id`, `eos-command`, `CommandProcess`, and
+finalize/advance/evict lifecycle vocabulary instead of the stale
+command-session/reaper/sweep/settle vocabulary)
 Date: 2026-06-12
 Scope: `sandbox/crates` (Rust) + host-side trace persistence; additive TS contract notes only.
 Inputs:
 - `sandbox/docs/sandbox-response-observability-findings.md` (response-surface inventory; path corrected in rev 4)
 - `sandbox/docs/sandbox-event-tracing-response-plan.md` (parallel draft; identity model, seq chain, phase vocabulary, declassification, and fail-closed rule merged here)
-- Verified live scan of dispatch, transport, host forwarding, command session, plugin, workspace, LayerStack/OCC, and e2e helpers (anchors inline)
+- `sandbox/docs/command-naming-update-note.md` (rev 5 naming contract for `eos-command`, `command_id`, command process lifecycle, and background task vocabulary)
+- Verified live scan of dispatch, transport, host forwarding, command, plugin, workspace, LayerStack/OCC, and e2e helpers (anchors inline)
 
 ## 0. Progress Tracker
 
@@ -95,9 +100,9 @@ What gets deleted (not wrapped, not shimmed long-term):
 | `OpResponse::Success(serde_json::Value)` untyped bodies | `eos-operation/src/core/response.rs:6-11` | `OperationEnvelope<T>` tagged union with per-family typed results |
 | `error: ()` serialized as `null`; `mutation_source: None` as `""` | `core/workspace_outcome.rs:153-189` | honest structs; quirk serializers deleted outright |
 | Ad-hoc `json!` envelopes + `success: bool` branching | `core/response.rs:61-85`, `dispatch/dispatcher.rs:99-113`, `protocol.rs:146-151` | one envelope renderer; `status` discriminant |
-| Flat dotted-key `timings` maps threaded as `&mut Map<String, Value>` through every layer | `dispatcher.rs:142-162`, `runtime/response.rs:75-93`, settle/OCC/plugin sites | spans as the **single source of truth** for durations; response meta derived from the trace record |
+| Flat dotted-key `timings` maps threaded as `&mut Map<String, Value>` through every layer | `dispatcher.rs:142-162`, `runtime/response.rs:75-93`, command finalization/OCC/plugin sites | spans as the **single source of truth** for durations; response meta derived from the trace record |
 | `merge_runner_timings` key aliasing (`workspace.mount_s` → `command_exec.mount_workspace_s`) | `runtime/response.rs:84-93` | one canonical step vocabulary, no aliases |
-| Pretty-JSON final-response crash files as the only command audit | `eos-command-session/src/session.rs` | trace store entries + bounded final-state events (transcript files stay for raw output) |
+| Pretty-JSON final-response crash files as the only command audit | `eos-command/src/session.rs` | trace store entries + bounded final-state events (transcript files stay for raw output) |
 
 In-repo consumers that migrate in lockstep (verified — there are no others):
 `eos-sandbox-gateway`, `eos-sandbox-host` (including the `e2e_support`
@@ -106,14 +111,38 @@ In-repo consumers that migrate in lockstep (verified — there are no others):
 workspace has no daemon-facing code yet, so the new contract is its day-one
 contract.
 
+## Command Naming Contract
+
+`sandbox/docs/command-naming-update-note.md` is normative for this plan. New
+trace, response, DTO, and storage names use command/process vocabulary:
+
+| Surface | Contract |
+| --- | --- |
+| Crate | `eos-command` owns the command process substrate. Do not introduce new `eos-command-session` names. |
+| Public command id | `command_id` / `command_ids`. No new `command_session_id` field, link, table column, or response shape is allowed. |
+| Trace link kind | `command`, keyed by `command_id`. It is the chain link for exec -> stdin -> progress/collect/cancel -> finalization. |
+| Trace module/subsystem | `command`, not `command_session`. Span kinds are `command.process.spawn`, `command.process.wait`, and `command.finalize`. |
+| Public Rust aggregate | `CommandProcess`, with `CommandProcessSpec` and `RunningCommandProcessParts`. The PTY implementation is private `PtyProcess` under `pty.rs`. |
+| Request/result DTOs | `CommandError`, `StartCommand`, `CancelCommand`, `CommandCompletion`, and `CommandCountOutput`. |
+| Lifecycle verbs | `CommandProcess::take_exit()`, `CommandOps::finalize_command()`, `advance_active_commands_once()`, `recover_orphaned_commands()`, and `evict_idle_workspaces_once()`. |
+| Artifact paths | Host archives use `sandboxes/<sandbox_id>/commands/<command_id>/...`. Current in-sandbox implementation paths can migrate through code phases, but the audit contract does not expose `sessions/`. |
+
+Avoid `session`, `reaper`, `sweep`, and `settle` in new active-contract names.
+Use them only when citing a current historical source path that has not yet
+been renamed. The `sandbox.command.*` op family and `command_id` wire fields are
+the desired external API. Existing `command_sessions` config keys or
+`command_session_count` compatibility labels stay only if a phase explicitly
+chooses config/wire compatibility; internal trace and DTO names still use
+command/process vocabulary.
+
 ## Decision Summary
 
 | Decision | Choice | Why |
 | --- | --- | --- |
 | Instrumentation backbone | `tracing` 0.1 facade + `tracing-subscriber` 0.3 custom Layer; new crate `eos-trace` | Third-party-preferred; macros are no-ops without a subscriber (ns-runner process, library tests); spans land at the existing phase boundaries and **replace** the timing-map plumbing |
 | Timing source of truth | The span tree. Response `meta` (duration, step summary, modules touched, resource summary) is rendered **from the trace record**, never hand-inserted | One measurement, one vocabulary; drift between response and trace becomes impossible by construction |
-| Identity | `trace_id` (host-minted, propagated in the request envelope) != `request_id` (one request/response) != `span_id`; plus a per-trace monotonic `seq` event chain and cross-request link rows | A long-lived chain (exec -> stdin -> poll -> settle) is one `trace_id` across many `request_id`s; replay is `WHERE trace_id=? ORDER BY seq`; concurrency lives in the span tree, not the chain |
-| Event delivery | Hybrid: request-scoped events ride the response as an internal `_trace_events` sidecar (host-ingested, gateway-stripped); background traces (reaper settles, sweeps) buffer in a bounded spool drained via `sandbox.trace.export` | Sidecar = zero loss window and zero extra round trips for request traces; drain op covers work that has no response to ride. The one-request-one-response protocol (`server.rs:262-287`) permits exactly this combination |
+| Identity | `trace_id` (host-minted, propagated in the request envelope) != `request_id` (one request/response) != `span_id`; plus a per-trace monotonic `seq` event chain and cross-request link rows | A long-lived chain (exec -> stdin -> poll -> finalize) is one `trace_id` across many `request_id`s; replay is `WHERE trace_id=? ORDER BY seq`; concurrency lives in the span tree, not the chain |
+| Event delivery | Hybrid: request-scoped events ride the response as an internal `_trace_events` sidecar (host-ingested, gateway-stripped); background traces (command finalization, active-command advancement, idle-workspace eviction) buffer in a bounded spool drained via `sandbox.trace.export` | Sidecar = zero loss window and zero extra round trips for request traces; drain op covers work that has no response to ride. The one-request-one-response protocol (`server.rs:262-287`) permits exactly this combination |
 | Hot-path ingestion | Daemon spans/events are bounded in-memory facts only: no SQLite, fsync, host RPC, blocking serialization, unbounded JSON allocation, or cross-sandbox lock waits in rule/dispatch/subsystem decision paths | Core sandbox decisions stay decoupled from audit persistence; overflow is explicit (`dropped_traces`, `dropped_children`, `truncated`) instead of silently slowing the decision engine |
 | Canonical serialization | Protobuf `TraceBatch` / `SandboxStatusSnapshot` schemas generated by `prost`; JSON is allowed only for human exports and bounded projection fields | Schema-evolvable, low-overhead payloads for sidecars, export drains, and immutable storage; avoids `serde_json::Value` becoming the audit contract |
 | Persistence | SQLite (`rusqlite`, bundled, WAL) on the **host** at `state_dir/sandbox-traces.sqlite` (0600/0700), with append-only hash-chained `audit_entries` as the canonical record and relational tables as query projections | Audit = immutable payload history + chain reconstruction + joins + aggregation. SQL serves lookup; cryptographic chain/seals serve tamper evidence. JSONL only as a derived export, never the system of record |
@@ -139,7 +168,7 @@ These are implementation gates, not aspirations:
 
 | Identity | Source | Meaning |
 | --- | --- | --- |
-| `trace_id` | Host-minted (uuid4) when starting a user-visible call; propagated to the daemon in the request envelope; reused across every op of a long-lived chain | One user-visible sandbox interaction or one long-lived session chain |
+| `trace_id` | Host-minted (uuid4) when starting a user-visible call; propagated to the daemon in the request envelope; reused across every op of a long-lived chain | One user-visible sandbox interaction or one long-lived resource chain |
 | `request_id` | Top-level request identity (`protocol.rs:118-135`) | One daemon request/response |
 | `span_id` | Daemon `AtomicU64` (never reuse `tracing::span::Id` — the Registry recycles them) | One timed unit, parented into a per-request tree |
 | `seq` | Host-assigned at ingest, monotonic per `trace_id` | Durable observation order; gap-free even when daemon batches arrive late |
@@ -154,7 +183,7 @@ Two views over the same data, both first-class:
 | Causal tree | `span_id`/`parent_span_id` | Nested/parallel work, subsystem ownership, per-step durations |
 
 Cross-op links (`trace_links` rows) tie long-lived resources into chains:
-`command_session_id`, `workspace_handle_id`, `plugin_service_instance_id`,
+`command_id`, `workspace_handle_id`, `plugin_service_instance_id`,
 `layer_manifest_version`.
 
 For a single forwarded sandbox op, the trace timeline starts at gateway UDS
@@ -168,12 +197,12 @@ host/gateway transport events and an explicit failure outcome.
 Chain continuity is **host bookkeeping, specified here**, keyed by what later
 requests actually carry (verified against the op adapters — isolated ops are
 keyed by `caller_id`; `workspace_handle_id` is currently visible in the enter
-response, isolated command-settle response, and persisted `manager.json`, but
+response, isolated command-finalize response, and persisted `manager.json`, but
 follow-on op routing is still by `caller_id`):
 
-- `command_session_id → trace_id`: populated from exec responses, consulted
+- `command_id → trace_id`: populated from exec responses, consulted
   when later args carry the id (`write_stdin`, `read_progress`/`poll`,
-  `collect`, `cancel`), pruned at settle/collect.
+  `collect`, `cancel`), pruned at finalize/collect.
 - `(sandbox_id, caller_id) → {workspace_handle_id, trace_id}`: populated when
   the isolation-enter response returns `workspace_handle_id`, consulted
   pre-forward for any subsequent op whose args carry that `caller_id` while
@@ -183,14 +212,14 @@ follow-on op routing is still by `caller_id`):
   `op_adapter/files.rs:181`); the exit op records into the chain, then prunes
   the entry. Caller-map attribution is predictive — the daemon's recorded
   `route_selected {kind, reason}` is the truth; the host also prunes on
-  ingested exit responses and on exported `IsolatedSweep` background traces,
+  ingested exit responses and on exported `IdleWorkspaceEvict` background traces,
   and a chain-attributed op that returns a non-isolated route is visible in
   `trace_requests` (chain `trace_id` beside actual route). Divergence is
   observable, never silent.
 
 Both maps are rebuildable from `trace_links` after a host restart. Phase 04 adds
 the missing daemon-side origin fields to `ActiveCommand` (today it stores
-session/workspace state, not `request_id`/`trace_id`), so background settle traces
+process/workspace state, not `request_id`/`trace_id`), so background finalization traces
 carry the chain id even when the host never polls.
 
 Per-kind link semantics — chain links continue a `trace_id` across ops; tag
@@ -198,9 +227,9 @@ links only correlate across otherwise-unrelated traces:
 
 | link_kind | Written when / from | Trace reuse |
 | --- | --- | --- |
-| `command_session` | Host, at exec-response ingest; id enters the chain map above | Chain |
+| `command` | Host, at exec-response ingest; id enters the chain map above | Chain |
 | `workspace_handle` | Host, at isolation-enter ingest; chained via the `(sandbox_id, caller_id)` map above | Chain |
-| `plugin_service` | Host, at sidecar/export ingest: plugin ensure/status spans and `service_started`/`service_health_checked` events carry `service_instance_id` (`eos-plugin/src/service.rs:130`) as a required typed field; `PluginService` background roots carry it the way `CommandSettle` roots carry `command_session_id` | Tag only — never enters a chain map |
+| `plugin_service` | Host, at sidecar/export ingest: plugin ensure/status spans and `service_started`/`service_health_checked` events carry `service_instance_id` (`eos-plugin/src/service.rs:130`) as a required typed field; `PluginService` background roots carry it the way `CommandFinalize` roots carry `command_id` | Tag only — never enters a chain map |
 | `manifest_version` | Host, at sidecar/export ingest: `snapshot_acquired` (version read against) and `publish_layer_finished`/`auto_squash_finished` (version produced) carry the manifest version as a required typed field | Tag only |
 
 ### Flow
@@ -237,7 +266,8 @@ caller ──UDS JSON line──> gateway
                       │                              update projections (outcome, received_at, rtt)
                       │                              strip sidecar before gateway/caller response
                       ▼
-   background work (reaper settle, sweeps) ──> bounded spool ──> `sandbox.trace.export`
+   background work (command finalization, active-command advancement, idle-workspace eviction)
+                              ──> bounded spool ──> `sandbox.trace.export`
                               drain SCHEDULED by sidecar `spool_pending`/heartbeats, RUN by the
                               host's background drainer; exhaustive (synchronous) only at release()
 ```
@@ -282,9 +312,9 @@ Security rules:
 
 - `record.rs` — typed DTOs: `TraceId`, `RequestId`, `SpanUid`, `TraceRecord`,
   `SpanRecord`, `EventRecord`, `WorkspaceRoute`, `TraceKind`
-  (`OpRequest | CommandSettle | SessionSweep | IsolatedSweep | PluginService`),
+  (`OpRequest | CommandFinalize | ActiveCommandAdvance | IdleWorkspaceEvict | PluginService`),
   closed `SpanKind` enum with exhaustive `subsystem()` mapping
-  (`Wire | Dispatch | Op | LayerStack | Overlay | CommandSession | Workspace |
+  (`Wire | Dispatch | Op | LayerStack | Overlay | Command | Workspace |
   Plugin | Control`), bounded-detail helpers (sizes/hashes/refs, never raw
   blobs).
 - `proto/eos/trace/v1/*.proto` + `codec.rs` — canonical protobuf payloads:
@@ -317,7 +347,7 @@ Crate ownership boundaries (merged from the parallel draft):
 | `eos-trace` | Storage-neutral DTOs, spool, subscriber layer, route/kind enums, bounded-detail helpers |
 | `eos-operation` | Envelope + per-family result DTOs — contract shape, not persistence |
 | `eos-daemon` | Root/dispatch/op spans, sidecar assembly, subscriber install, export op |
-| mechanism crates (layerstack, workspace, command-session, plugin, overlay) | Emit spans/events at their own phase boundaries; no persistence or policy deps |
+| mechanism crates (layerstack, workspace, command, plugin, overlay) | Emit spans/events at their own phase boundaries; no persistence or policy deps |
 | `eos-sandbox-host` | SQLite store, request-start fail-closed rule, sidecar ingest + seq assignment, degraded/uncertain records, export drains |
 | `eos-sandbox-gateway` | Declassification: strip `_trace_events` from client-facing responses; operator/debug trace lookup only |
 | `@eos/db` / `@eos/contracts` | TS mirror of schema + Zod envelope schemas when the TS host lands |
@@ -395,8 +425,8 @@ sandbox/
 |   |   |   |-- op_adapter/*.rs             # route/op-family spans
 |   |   |   `-- runtime/response.rs        # deleted/reduced as flat timing/resource map dies
 |   |   `-- tests/                         # wire/tree/sidecar tests
-|   |-- eos-command-session/
-|   |   `-- src/                           # existing files emit command_session events
+|   |-- eos-command/
+|   |   `-- src/                           # existing files emit command events
 |   |-- eos-layerstack/
 |   |   `-- src/                           # existing commit/worker/service files emit events
 |   |-- eos-workspace/
@@ -421,7 +451,7 @@ Host runtime state after implementation:
     |-- daemon.log.jsonl                   # daemon crash/early-boot structured logs
     |-- plugins/<service_instance_id>.stderr.log
     |-- exports/trace-<trace_id>.jsonl     # derived, rebuildable export
-    `-- sessions/<command_session_id>/
+    `-- commands/<command_id>/
         |-- transcript.log
         `-- stdin.log
 ```
@@ -449,7 +479,7 @@ decision sites. It must never become runtime control flow again.
 | `ephemeral_workspace` | One-op ephemeral/overlay route with capture → OCC publish semantics (includes plugin oneshot overlay) | `op_adapter/command.rs` `ExecTarget::Ephemeral` branch; `op_adapter/plugin.rs` overlay path |
 | `isolated_workspace` | Caller-keyed isolated workspace; private upperdir; no publish | `command_binding_for` hits in `op_adapter/command.rs` and `op_adapter/files.rs` `route_file_op`; isolation enter/exit lifecycle ops |
 | `fast_path` | Data-plane work directly against LayerStack with **no workspace**: direct file merge/read (`FileRoute::Direct`), checkpoint base/commit/binding ops, layer-metrics manifest reads | `route_file_op` direct arm; `op_adapter/checkpoint.rs` |
-| `none` | Pure control plane — no workspace and no LayerStack data-plane work: ready, heartbeat, cancel, in-flight/session counts, plugin ensure/status, isolation status/list, workspace-run cancels, trace export | adapter classification table (each op family declares its default; `route_file_op`-style late recording overrides where the route is dynamic) |
+| `none` | Pure control plane — no workspace and no LayerStack data-plane work: ready, heartbeat, cancel, in-flight/command counts, plugin ensure/status, isolation status/list, workspace-run cancels, trace export | adapter classification table (each op family declares its default; `route_file_op`-style late recording overrides where the route is dynamic) |
 
 Edge calls, decided here: `sandbox.checkpoint.layer_metrics` is `fast_path`
 (reads the live manifest); `commit_to_git` stays `fast_path` even though it
@@ -486,7 +516,7 @@ Capture budgets (named configurable defaults; overflow records
 Resource stats placement is part of the budget contract:
 
 - **Always-on before/after pairs are only for O(microseconds) kernel gauges.**
-  `command.session.wait` and `plugin.overlay.run` emit two
+  `command.process.wait` and `plugin.overlay.run` emit two
   `resource_stats {phase: "before"|"after"}` events for cgroup CPU/memory/io,
   cgroup pressure/event counters where available, and daemon RSS. The raw
   counters are stored; deltas are query-time math.
@@ -541,7 +571,7 @@ adding a row here first, per the Extension Model's vocabulary governance):
 | `layerstack` | binding_loaded, snapshot_acquired, lease_released, lease_release_failed, manifest_read, auto_squash_started/finished {error on failure}, auto_squash_skipped {reason} |
 | `occ` | commit_started, validate_groups_finished, publish_layer_finished, conflict_detected {path, reason, observed_version?, observed_state?} per conflicting file, commit_finished |
 | `overlay` | workspace_prepared, mount_started/finished {layer_count, fsconfig_calls, duration_us, upperdir_empty_bytes}, capture_started/finished {failing_path on error, bytes, file_count, dir_count, entry_count, truncated}, unmount_finished |
-| `command_session` | prepared, spawned, yielded, stdin_written {bytes, wait_ms, waited_for_output}, progress_read, cancelled, timed_out, reaped {kill_reason, signal}, settled, session_artifact_written/failed, final_persisted, final_persist_failed, transcript_failed |
+| `command` | prepared, spawned, yielded, stdin_written {bytes, wait_ms, waited_for_output}, progress_read, cancelled, timed_out, exit_taken {kill_reason, signal}, finalized, artifact_written/failed, final_persisted, final_persist_failed, transcript_failed, completion_buffer_evicted {command_id, seq, max_entries} |
 | `isolated_workspace` | enter_started, holder_started, network_configured {dns_fallback_applied, previous_first_nameserver?}, status_read, exit_started, teardown_phase_finished (×4; kill_holder carries {holder_was_alive, exit_status, signal?}), exited {mountinfo_scan_error?}, recovery_started/finished {manager_json_error?, orphan_cleanup_error?} |
 | `plugin` | ensure_started, package_checked, setup_finished {exit_code?, output_tail?, spawn_error?}, service_started {stderr_path}, service_exited {exit_code?, signal?, status_raw?}, service_health_checked {state, restart_count, refresh_count, last_error}, ppc_message_sent/received, ppc_reply_orphaned {message_id, direction, reason}, overlay_started/finished, callback_request/response |
 | `file` | read_started/finished, mutation_started, edit_applied, write_applied |
@@ -550,8 +580,8 @@ adding a row here first, per the Extension Model's vocabulary governance):
 
 ### Inventory-verified deltas (rev 4)
 
-Six read-only explorer sweeps (dispatch/transport/core envelope; command
-session; layerstack/overlay/workspace/ns-runner; plugin/PPC; cross-crate
+Six read-only explorer sweeps (dispatch/transport/core envelope; command;
+layerstack/overlay/workspace/ns-runner; plugin/PPC; cross-crate
 print/log/file surfaces; host/gateway/e2e consumers) inventoried every datum
 that is printed, logged, written to a file, or sent in a response today, plus
 everything computed and then dropped. Load-bearing anchors were spot-checked
@@ -566,8 +596,8 @@ Drop / dedupe (beyond the posture table's deletions):
 
 | Redundant today | Evidence | Disposition |
 | --- | --- | --- |
-| `timings.command_exec.total_s` ≡ `timings.api.exec_command.dispatch_total_s` (≡ `api.exec_command.total_s` on isolated settle) — one elapsed value, triple-keyed | `eos-operation/src/command/settle.rs` | Gone with flat timings; the one duration lives on the `command.session.wait` span |
-| Runner `workspace.{mount,tool}_s` re-keyed to `command_exec.{mount_workspace,run_command}_s`; command settle has a second merge helper | `runtime/response.rs:75-94`, `command/settle.rs:334-344` | Delete both helpers with flat timings; the sweep confirmed this aliasing is still live |
+| `timings.command_exec.total_s` ≡ `timings.api.exec_command.dispatch_total_s` (≡ `api.exec_command.total_s` on isolated finalization) — one elapsed value, triple-keyed | current `eos-operation/src/command/settle.rs` | Gone with flat timings; the one duration lives on the `command.process.wait` span |
+| Runner `workspace.{mount,tool}_s` re-keyed to `command_exec.{mount_workspace,run_command}_s`; command finalization has a second merge helper | `runtime/response.rs:75-94`, current `command/settle.rs:334-344` | Delete both helpers with flat timings; the sweep confirmed this aliasing is still live |
 | Tree-walk `truncated` flags are fake: current resource stats hardcode `truncated = 0` and there is no entry budget behind the walk | `runtime/response.rs:38-47`, `command/settle.rs:355-371` | Delete fake flags; replacement walk stats use the named entry budget above and a real `truncated` fact |
 | Direct file routes receive fake all-zero run/workspace/upperdir tree stats even when no tree exists | `runtime/response.rs:169-176` | Do not emit tree-stat keys unless the span actually paid for a walk; absence means not sampled, not empty |
 | Plugin `ensure` re-embeds status-view facts: `operation_routes`, `services`, `service_processes`, `running_service_processes`, `connected_ppc_routes`, `connected_ppc_services` overlap with `status.loaded_plugins[]` / top-level status | `op_adapter/plugin.rs:95-126,137-143` | One typed `PluginServicesView` DTO shared by both family results — the duplication becomes one type |
@@ -592,33 +622,33 @@ the capture lands):
 | Auto-squash read/can-plan/squash failures swallowed: read errors become "no plan", `can_squash` errors become false, and `stack.squash(max_depth).ok().flatten()` hides failures | `eos-layerstack/src/commit/worker.rs:478-522` | `auto_squash_finished {error}` and `auto_squash_skipped {reason, error?}` (Phase 04) |
 | Squash-skip reason (too shallow, min-reduction unmet, lease-blocked, planner returned none, live-prefix race, post-commit release failure) unobservable | squash planner / stack apply path | `auto_squash_skipped {reason}` and `lease_release_failed` (Phase 04) |
 | OCC conflict reports aggregate outcome only; per-file reason is flattened and observed version is present only on some CAS/manifest conflicts | `commit/worker.rs` validate path | `conflict_detected {path, reason, observed_version?, observed_state?}` + the same detail in `OperationFault.details` (Phase 04/05) |
-| Command settle emits a response-visible wrong stat: `resource.layer_stack.manifest_path_count` is sourced from manifest depth | `eos-operation/src/command/settle.rs:230-233` | Typed resource summary derives path/layer counts from one shared sampler with a golden test (Phase 04/05/08) |
+| Command finalization emits a response-visible wrong stat: `resource.layer_stack.manifest_path_count` is sourced from manifest depth | current `eos-operation/src/command/settle.rs:230-233` | Typed resource summary derives path/layer counts from one shared sampler with a golden test (Phase 04/05/08) |
 | DNS fallback decision discarded: `let _dns_fallback_applied`; helper also knows the previous nameserver when fallback is applied | `isolated_workspace/manager/lifecycle.rs:51`, `eos-namespace/src/runner/setns.rs` | `network_configured {dns_fallback_applied, previous_first_nameserver?}` (Phase 04) |
 | Holder liveness at teardown unknown (crashed earlier vs killed now) | lifecycle teardown | `isolated.exit.kill_holder` fields `{holder_was_alive, exit_status}` (Phase 04) |
 | Capture-walk abort loses the failing path; only an error string survives | `eos-workspace/src/shared/capture.rs` | `capture_finished` error detail `{failing_path}` (Phase 04) |
-| Capture-settle does a second tree walk after `capture_upperdir` already enumerated changes | `eos-operation/src/command/settle.rs:41-49` | Capture bytes/file/dir/entry counts during the existing capture walk; no duplicate pass (Phase 04) |
+| Capture finalization does a second tree walk after `capture_upperdir` already enumerated changes | current `eos-operation/src/command/settle.rs:41-49` | Capture bytes/file/dir/entry counts during the existing capture walk; no duplicate pass (Phase 04) |
 | `mountinfo_reference_count_after` silently `None` on scan failure - indistinguishable from a clean zero | teardown inspection assembly | explicit `{mountinfo_scan_error}` marker on `exited` (Phase 04) |
 | Service-cache gauges (hits/misses/creates/evictions, `lock_wait_s_total/max`) visible only when an operator happens to call `layer_metrics` | `eos-layerstack/src/service.rs:22-36,214-240` | Heartbeat layerstack section samples `cache_snapshot()` continuously (Phase 08) |
 | Plugin service state machine (`starting\|ready\|refreshing\|stale\|restarting\|stopped\|failed`), `restart_count`, `refresh_count`, `last_error` are serialized in `services[]` but missing from `service_health`, heartbeat, and lifecycle trace events | `eos-plugin/src/service_registry.rs:15-40`, `op_adapter/plugin.rs:149-170` | Preserve the typed `services[]` result, add `service_health_checked` fields + heartbeat `details_json` (Phase 04/08) |
 | Plugin service worker stdout/stderr -> `Stdio::null` - a crashing service is forensically silent | `eos-operation/src/plugin/process.rs:64-66` | Per-service stderr file in-sandbox, path recorded on `service_started`, archived at release beside `daemon.log.jsonl` (Phase 04/09) |
 | Plugin service exit status keeps only `status.code()`, losing raw status and signal | `eos-operation/src/plugin/process.rs:154-163` | `service_exited {exit_code?, signal?, status_raw?}` and the same fields in service health/heartbeat projections (Phase 04/08) |
-| Kill signal number lost or normalized into exit codes | session/worker wait sites, plugin service status | `{signal}` on `reaped`, settle facts, and worker/service exits (Phase 04) |
+| Kill signal number lost or normalized into exit codes | command process/worker wait sites, plugin service status | `{signal}` on `exit_taken`, finalization facts, and worker/service exits (Phase 04) |
 | Plugin setup success output is dropped; nonzero exit output is flattened into one error string; spawn failures have command/cwd/error but no exit/output fields | `eos-operation/src/plugin/package.rs` | `setup_finished {exit_code?, output_tail?, spawn_error?}` (budgeted) (Phase 04) |
 | `commit_to_git` git-step semantics stringified into error messages; exit codes unmapped | `op_adapter/checkpoint.rs` | `checkpoint` events `git_command_finished {argv_summary, exit_code, stderr_tail}` (Phase 04) |
 | Transport facts dropped: gateway UDS read/parse/write, catalog route decision, host TCP connect latency/retry/fallback, docker-exec thin-client fallback, endpoint refresh, request write/read duration, daemon accept id, TCP peer address, request/response byte counts, response write/shutdown failures | `eos-sandbox-gateway/src/gateway.rs`, `eos-sandbox-host/src/protocol.rs`, `eos-sandbox-host/src/host.rs`, `transport/server.rs` | Gateway `gateway.*` events + host `host.transport.*` events + daemon `daemon.transport.*` events; daemon root span gains `{connection_id, listener_kind, peer_addr?, request_bytes}`; host `response_persisted` payload gains `response_len` beside `response_digest` (Phase 03) |
 | Pre-listen daemon init failures have no channel (`--log-file` receives raw stdout/stderr only) | `eosd/src/daemon.rs` | Crash-log fmt layer installs before the listener binds; boot events `config_loaded`, `listen_bound` (Phase 03) |
-| stdin path knows byte length and performs bounded progress waits, but no wait/backpressure duration is computed or surfaced | session stdin path | `stdin_written {bytes, wait_ms, waited_for_output}` (Phase 04) |
-| `metadata.json`, runner request/result files, `final.json`, transcript open/write/remove, reader-drain timeout, and lease-release failures are best-effort or silent | command prepare/session/process/runtime | `session_artifact_written/failed`, `final_persist_failed`, `transcript_failed`, `lease_release_failed` events (Phase 04/09) |
+| stdin path knows byte length and performs bounded progress waits, but no wait/backpressure duration is computed or surfaced | command stdin path | `stdin_written {bytes, wait_ms, waited_for_output}` (Phase 04) |
+| `metadata.json`, runner request/result files, `final.json`, transcript open/write/remove, reader-drain timeout, and lease-release failures are best-effort or silent | command prepare/process/pty/runtime | `artifact_written/failed`, `final_persist_failed`, `transcript_failed`, `lease_release_failed` events (Phase 04/09) |
 | Orphan recovery synthesizes a generic error; isolated `manager.json` read/parse/schema failures and orphan cleanup errors are dropped | `command/runtime.rs:60-102`, isolated manager recovery | Recovery events carry recovered `final.json` / `manager.json` facts; dir retention gated per Phase 09 (Phase 04/09) |
 | cgroup/procfs gauge read failure indistinguishable from "gauge absent on this platform" | `runtime/response.rs:198-270` | `resource_stats` per-source error markers (Phase 04) |
 | CPU throttling, memory events/OOM, PSI pressure, source availability, and sampler duration are not response-visible today | cgroup/procfs samplers | Add to `ResourceStats` so slow/failed ops can distinguish resource pressure from command behavior (Phase 04/08) |
-| Cheap OS gauges are currently emitted as response-only flat timing keys, not paired around the command/plugin work they describe | `runtime/response.rs:198-270` | Before/after `resource_stats` pairs on `command.session.wait` and `plugin.overlay.run`, projected to `trace_resources` (Phase 04) |
+| Cheap OS gauges are currently emitted as response-only flat timing keys, not paired around the command/plugin work they describe | `runtime/response.rs:198-270` | Before/after `resource_stats` pairs on `command.process.wait` and `plugin.overlay.run`, projected to `trace_resources` (Phase 04) |
 | Host RAM-pressure probe falls back silently when `/proc/meminfo` cannot be read | isolated workspace manager | `resource_stats {host_meminfo_error?}` / heartbeat marker (Phase 04/08) |
-| Completed command-session responses are evicted from the in-memory completed buffer after the cap with no durable loss marker | `eos-operation/src/command/registry.rs:129-144` | `completion_buffer_evicted {command_session_id, seq, max_entries}` after the settle trace has been recorded (Phase 04) |
+| Completed command responses are evicted from the in-memory completed buffer after the cap with no durable loss marker | `eos-operation/src/command/registry.rs:129-144` | `completion_buffer_evicted {command_id, seq, max_entries}` after the finalization trace has been recorded (Phase 04) |
 | Unknown, late, or ambiguous PPC replies/callbacks can be dropped or returned as transient callback errors without durable lineage | `eos-operation/src/plugin/transport.rs:314-395` | `ppc_reply_orphaned {message_id, direction, reason}` and refused callback roots linked to `service_instance_id` (Phase 04) |
 
-Confirmed already-covered by rev ≤3 mechanisms (no new spec text): sweeper-
-cancelled session visibility (`CommandSettle` background roots, context rule
+Confirmed already-covered by rev ≤3 mechanisms (no new spec text): background-
+cancelled command visibility (`CommandFinalize` background roots, context rule
 3); the request-side parsed facts that are used for registration/routing but
 not durable or response-visible today - legacy per-request identity (renamed
 `request_id` here), `caller_id`, `background`, `is_tcp`, protocol version, raw args (`RequestStart` +
@@ -631,7 +661,7 @@ Consumer evidence that these dispositions are safe: the host branches only on
 through and hardcodes the empty fields above; the `timings.`/`resource.`
 readers are already scheduled for per-family assertion rewrites (Phase 05); and
 host/e2e code today *polls* for command completion, lease accounting, and
-session cleanup — workarounds the heartbeat snapshot and background settle
+command cleanup — workarounds the heartbeat snapshot and background finalization
 traces make event-driven.
 
 ### Span taxonomy (timed tree; verified anchors)
@@ -646,7 +676,7 @@ traces make event-driven.
 | op | `op.<family>.<verb>` per `builtin.rs` arm | workspace_route (recorded late via `Span::record`), parsed-args summary | `eos-daemon/src/dispatch/builtin.rs` |
 | layerstack | `layer_stack.acquire_snapshot`, `layer_stack.auto_squash`, `occ.commit` (children `validate`, `publish`) | manifest_version, depth before/after, gated/direct path counts | `eos-layerstack/src/commit/worker.rs:328-399,478-522` |
 | overlay | `overlay.capture_upperdir`; ns-runner mount/tool recorded as fields from `RunResult` (separate process — no synthetic spans) | changed_path_count, tree bytes | `eos-workspace/src/shared/capture.rs:27-36` |
-| command session | `command.session.spawn/wait`, `command.settle`; background root `command.settle` for the reaper path | command_session_id, kill_reason, exit_code, origin request_id | `eos-operation/src/command/service.rs:60-90,340,383-396` |
+| command | `command.process.spawn/wait`, `command.finalize`; background root `command.finalize` for the background advancement path | command_id, kill_reason, exit_code, origin request_id | `eos-operation/src/command/service.rs:60-90,340,383-396` |
 | isolated lifecycle | `isolated.enter.{spawn_ns_holder,open_ns_fds,install_veth,mount_overlay,configure_dns,create_cgroup}`; `isolated.exit.{kill_holder,teardown_veth,cgroup_rmdir,rmtree_scratch}` | per-phase durations (replaces `phases_ms`), inspection facts | `eos-workspace/src/isolated_workspace/manager/lifecycle.rs:21-63` |
 | plugin | `plugin.ensure/status`, `plugin.overlay.{acquire,setup,run,capture,publish}`, `plugin.ppc.round_trip` | plugin id, op name, worker_exit_code, message ids; the request audit fields plugins currently parse and drop | `eos-daemon/src/op_adapter/plugin.rs`; `eos-operation/src/plugin/overlay.rs:140-176` |
 
@@ -666,12 +696,12 @@ The architecture is async-accept + synchronous dispatch on `spawn_blocking`
 2. **OCC commit worker** (own thread, `worker.rs:144`): the queued work item
    carries `Span::current()` captured at enqueue; the worker enters it, so
    `occ.commit.*` parents under the requesting op.
-3. **Background reaper/sweeper threads**: no ambient span; their roots become
-   standalone traces (`CommandSettle`/`SessionSweep`/`IsolatedSweep`) that
-   carry `command_session_id` + origin `request_id` + the chain's `trace_id` after
-   Phase 04 extends `ActiveCommand` beyond today's session/workspace state. This
+3. **Background command/eviction tasks**: no ambient span; their roots become
+   standalone traces (`CommandFinalize`/`ActiveCommandAdvance`/`IdleWorkspaceEvict`) that
+   carry `command_id` + origin `request_id` + the chain's `trace_id` after
+   Phase 04 extends `ActiveCommand` beyond today's process/workspace state. This
    covers the path that today produces **no observable record at all**:
-   sweeper-cancelled sessions where `publish_completion = false`
+   background-cancelled commands where `publish_completion = false`
    (`service.rs:392`).
 4. **PPC reader thread**: Phase 04 extends the pending-call entry (today only
    `reply_tx` + callback handler) so `PendingCalls::register` captures
@@ -698,7 +728,7 @@ tests use `with_default` on current-thread paths or a per-test global default.
 
 The sandbox decision engine is not allowed to wait for audit persistence.
 Instrumentation inside daemon dispatch, route selection, OCC validation,
-LayerStack reads, overlay setup/capture, plugin dispatch, command-session state
+LayerStack reads, overlay setup/capture, plugin dispatch, command process state
 transitions, and isolated-workspace lifecycle code follows these rules:
 
 1. `tracing` span/event calls record bounded typed fields into in-process span
@@ -729,7 +759,7 @@ engine and returns bounded trace batches to the host.
 
 | Boundary side | Owns | Must never own |
 | --- | --- | --- |
-| Host side: `eos-sandbox-gateway` + `eos-sandbox-host` | gateway UDS events, catalog routing events, `request_start`, TCP/docker-exec transport events, Docker lifecycle/registry facts, SQLite `audit_entries`, seq assignment, hash chain/seals, sidecar ingest, response digest, sidecar stripping, background export drainer, heartbeat monitor, transcript/archive pulls, operator query/CLI views | daemon dispatch decisions, LayerStack/OCC mutation logic, command/session state transitions inside the sandbox, plugin PPC callback execution |
+| Host side: `eos-sandbox-gateway` + `eos-sandbox-host` | gateway UDS events, catalog routing events, `request_start`, TCP/docker-exec transport events, Docker lifecycle/registry facts, SQLite `audit_entries`, seq assignment, hash chain/seals, sidecar ingest, response digest, sidecar stripping, background export drainer, heartbeat monitor, transcript/archive pulls, operator query/CLI views | daemon dispatch decisions, LayerStack/OCC mutation logic, command process state transitions inside the sandbox, plugin PPC callback execution |
 | Container side: `eosd` + `eos-daemon` + operation crates | daemon inbound transport events, `op_request` root span, dispatch spans, op-adapter spans, subsystem events, `resource_stats`, bounded in-memory request trace assembly, bounded background spool, `_trace_events` sidecar, `sandbox.trace.export` drain payloads | SQLite, fsync, hash sealing, WORM export, host DB migrations, response-sidecar stripping, gateway UDS routing, Docker/container lifecycle management |
 | Cross-boundary contract | `trace_id`, `request_id`, trace context, JSON-line request/response envelope, protobuf `TraceBatch`, `_trace_events` sidecar, `ResponseMeta.trace`, `trace_links` ids | raw auth tokens, unbounded stdout/stderr, raw file contents, host-only store internals in daemon DTOs |
 
@@ -829,7 +859,7 @@ Gateway/caller response after host ingest strips the sidecar:
                   "store":"local_sqlite","event_count":24},
          "workspace_route":{"kind":"ephemeral_workspace"},
          "duration_ms":83.7,
-         "modules_touched":["gateway","host","transport","dispatch","op","command_session"],
+         "modules_touched":["gateway","host","transport","dispatch","op","command"],
          "steps":[{"kind":"gateway.forward","duration_us":94120,"status":"ok"},
                   {"kind":"op.command.exec","duration_us":78100,"status":"ok"}],
          "resource_summary":{"cpu_usage_usec_delta":4312,"io_wbytes_delta":4096},
@@ -962,7 +992,7 @@ Compact container-side daemon trace batch:
   "spans": [
     { "span_id": 1, "kind": "op_request", "subsystem": "wire" },
     { "span_id": 2, "parent_span_id": 1, "kind": "dispatch", "subsystem": "dispatch" },
-    { "span_id": 3, "parent_span_id": 1, "kind": "op.command.exec", "subsystem": "command_session" }
+    { "span_id": 3, "parent_span_id": 1, "kind": "op.command.exec", "subsystem": "command" }
   ],
   "events": [
     {
@@ -973,8 +1003,8 @@ Compact container-side daemon trace batch:
     },
     {
       "span_id": 3,
-      "module": "command_session",
-      "event": "settled",
+      "module": "command",
+      "event": "finalized",
       "details": { "exit_code": 0 }
     }
   ],
@@ -1016,7 +1046,7 @@ Daemon sidecar trace batch:
    {"span_id":2,"parent_span_id":1,"kind":"dispatch",
     "subsystem":"dispatch","duration_us":410},
    {"span_id":3,"parent_span_id":1,"kind":"op.command.exec",
-    "subsystem":"command_session","duration_us":78100}
+    "subsystem":"command","duration_us":78100}
  ],
  "events":[
    {"span_id":1,"module":"daemon.transport","event":"accepted",
@@ -1026,9 +1056,9 @@ Daemon sidecar trace batch:
     "details":{"auth_required":true,"auth_ok":true}},
    {"span_id":2,"module":"daemon.dispatch","event":"op_resolved",
     "details":{"builtin":true}},
-   {"span_id":3,"module":"command_session","event":"spawned",
-    "details":{"command_session_id":"cmd_123"}},
-   {"span_id":3,"module":"command_session","event":"settled",
+   {"span_id":3,"module":"command","event":"spawned",
+    "details":{"command_id":"cmd_123"}},
+   {"span_id":3,"module":"command","event":"finalized",
     "details":{"exit_code":0}}
  ],
  "resources":[
@@ -1038,7 +1068,7 @@ Daemon sidecar trace batch:
     "cgroup":{"cpu":{"usage_usec":5312},"memory":{"current":70254592}}}
  ],
  "links":[
-   {"link_kind":"command_session","target_id":"cmd_123",
+   {"link_kind":"command","target_id":"cmd_123",
     "trace_reuse":"chain"}
  ]}
 ```
@@ -1054,7 +1084,7 @@ Compact daemon-host response with internal sidecar:
     "command": {
       "status": "completed",
       "exit_code": 0,
-      "output_ref": "artifact://sbx_42/sessions/cmd_123/stdout"
+      "output_ref": "artifact://sbx_42/commands/cmd_123/stdout"
     }
   },
   "meta": {
@@ -1078,14 +1108,14 @@ Compact daemon-host response with internal sidecar:
 ```json
 {"status":"ok",
  "result":{"command":{"status":"completed","exit_code":0,
-                     "output_ref":"artifact://sbx_42/sessions/cmd_123/stdout"}},
+                     "output_ref":"artifact://sbx_42/commands/cmd_123/stdout"}},
  "meta":{"protocol_version":2,"op":"sandbox.command.exec",
          "request_id":"req_9f2c…",
          "trace":{"trace_id":"tr_6b1a…","root_span_id":1,
                   "store":"pending_host_ingest","event_count":8},
          "workspace_route":{"kind":"ephemeral_workspace"},
          "duration_ms":82.4,
-         "modules_touched":["wire","dispatch","command_session"],
+         "modules_touched":["wire","dispatch","command"],
          "steps":[{"kind":"dispatch","duration_us":410,"status":"ok"},
                   {"kind":"op.command.exec","duration_us":78100,"status":"ok"}],
          "resource_summary":{"cpu_usage_usec_delta":4312,
@@ -1176,8 +1206,8 @@ Storage layout under the host `state_dir` (0700):
     daemon.log.jsonl             # structured crash log (fmt layer output, pulled at release/crash)
     plugins/<service_instance_id>.stderr.log  # service worker stderr (today Stdio::null), pulled at release/crash
     exports/trace-<trace_id>.jsonl   # derived human-shareable exports, rebuilt from SQLite
-    sessions/<command_session_id>/   # archived command session artifacts
-      transcript.log             # PTY output (teed from progress reads + settlement tail fetch)
+    commands/<command_id>/       # archived command artifacts
+      transcript.log             # PTY output (teed from progress reads + finalization tail fetch)
       stdin.log                  # archived at forward time — host sees stdin first
 ```
 
@@ -1293,7 +1323,7 @@ CREATE TABLE IF NOT EXISTS trace_resources (
 );
 CREATE TABLE IF NOT EXISTS trace_links (
   trace_id  TEXT NOT NULL,
-  link_kind TEXT NOT NULL,                    -- command_session|workspace_handle|plugin_service|manifest_version
+  link_kind TEXT NOT NULL,                    -- command|workspace_handle|plugin_service|manifest_version
   link_id   TEXT NOT NULL,
   request_id TEXT,
   PRIMARY KEY (trace_id, link_kind, link_id, request_id)
@@ -1309,8 +1339,8 @@ CREATE TABLE IF NOT EXISTS sandbox_heartbeats (
   active_leases     INTEGER, storage_bytes INTEGER, layer_dirs INTEGER, staging_dirs INTEGER,
   -- workspace / overlay
   open_isolated     INTEGER, overlay_mounts INTEGER,
-  -- command sessions
-  active_sessions   INTEGER, running_sessions INTEGER, completed_unclaimed INTEGER,
+  -- commands
+  active_commands   INTEGER, running_commands INTEGER, completed_unclaimed_commands INTEGER,
   -- plugin
   plugin_services_ok INTEGER, plugin_services_failed INTEGER,
   -- resources (cumulative gauges; host derives rates from deltas)
@@ -1320,7 +1350,7 @@ CREATE TABLE IF NOT EXISTS sandbox_heartbeats (
   io_rbytes         INTEGER, io_wbytes INTEGER, process_rss_bytes INTEGER,
   -- daemon internals
   inflight_requests INTEGER, spool_pending INTEGER, spool_dropped_total INTEGER,
-  details_json      TEXT,                       -- bounded long tail (per-service health, per-session ids)
+  details_json      TEXT,                       -- bounded long tail (per-service health, per-command ids)
   PRIMARY KEY (sandbox_id, ts_ms)
 );
 CREATE INDEX IF NOT EXISTS idx_hb_time         ON sandbox_heartbeats(ts_ms);
@@ -1352,8 +1382,8 @@ Resource event wrapping:
   `trace_resources` are rebuildable projections over the same fact.
 - Before/after samples pair structurally by `(trace_id, request_id, span_id,
   kind, phase)`, not by timestamp guessing. The canonical timeline query
-  interleaves `resource_stats` rows with `spawned`, `stdin_written`, `reaped`,
-  and settle events in observed order.
+  interleaves `resource_stats` rows with `spawned`, `stdin_written`,
+  `exit_taken`, and `finalized` events in observed order.
 - In-daemon mounts (`isolated.enter`, `commit_to_git` worktree mounts) emit
   `mount_started`/`mount_finished` events on the owning span, with
   `{layer_count, fsconfig_calls, duration_us, upperdir_empty_bytes}`. This makes
@@ -1481,10 +1511,10 @@ WHERE trace_id=:trace_id ORDER BY seq;
 SELECT s.kind, s.subsystem, s.duration_us/1e3 ms, s.fields_json
 FROM trace_spans s WHERE s.request_id=:request_id ORDER BY s.started_us;
 
--- (3) Full long-running command lifecycle across requests (exec → stdin → polls → background settle)
+-- (3) Full long-running command lifecycle across requests (exec → stdin → polls → background finalization)
 SELECT o.request_id, o.op, o.status, o.sent_at_ms FROM trace_requests o
 JOIN trace_links l ON l.trace_id=o.trace_id
-WHERE l.link_kind='command_session' AND l.link_id=:session_id
+WHERE l.link_kind='command' AND l.link_id=:command_id
 ORDER BY o.sent_at_ms;
 
 -- (4) All failed plugin-overlay requests touching isolated workspaces, last 7 days
@@ -1545,7 +1575,7 @@ over collectors that already exist, plus two small additions:
 | layerstack: manifest version/depth, active leases, storage bytes, layer/staging dirs, service-cache gauges (hits/misses/creates/evictions, lock-wait total/max) | `op_adapter/checkpoint.rs:39-49` (`layer_metrics` internals, called directly) + `eos-layerstack/src/service.rs:214` (`cache_snapshot()`) |
 | workspace: open isolated workspaces (ids, age, last_activity) | isolation registry (`isolation.list_open` internals) |
 | overlay: active overlay mount count | **new** — `/proc/self/mountinfo` scan, same source the teardown inspection already reads |
-| command sessions: active/running/completed-unclaimed counts, per-session {id, status, age} | command registry (`command.count` + session table internals) |
+| commands: active/running/completed-unclaimed counts, per-command {id, status, age} | command registry (`command.count` + command registry internals) |
 | plugin: per-service health (probe status, accepted, pid alive), state (`starting\|ready\|refreshing\|stale\|restarting\|stopped\|failed`), restart/refresh counts, last_error, setup failures | plugin registry (`plugin.status` internals + `eos-plugin/src/service_registry.rs:15-40` state fields, summarized) |
 | resources: `ResourceStats` heartbeat subset — cgroup CPU usage/throttling, memory current/peak/OOM events, IO r/w bytes, daemon RSS; PSI pressure and optional swap stats in `details_json` until promoted by a query | the samplers in `runtime/response.rs:198-270` — **consolidated into one shared `eos-trace` sampler**, deleting the duplicate in `settle.rs:254` |
 | daemon internals: uptime, boot_id, in-flight requests, spool pending/dropped totals | dispatcher uptime, in-flight registry, trace spool counters |
@@ -1572,7 +1602,7 @@ Semantics:
   live host-side; the daemon only reports facts.
 - A snapshot reporting `spool_pending > 0` schedules a background-drainer
   pass (see Transport) — heartbeats cover idle sandboxes that receive no
-  forwards, e.g. sweeper-cancelled sessions the host never polls.
+  forwards, e.g. background-finalized commands the host never polls.
 - Heartbeat rows are **not** traces: they are a time series beside the trace
   tables, joinable by `sandbox_id` + time window (e.g. "show heartbeats
   bracketing this slow op"). They are still audit-backed: every successful or
@@ -1606,14 +1636,13 @@ tailing new rows — the human view over the same table.
 
 ### Command transcripts: live plane vs archive plane
 
-Command sessions currently write `metadata.json`, runner request/result files,
-`transcript.log`, and `final.json` in the session dir
+Commands currently write `metadata.json`, runner request/result files,
+`transcript.log`, and `final.json` in the command artifact dir
 (`eos-operation/src/command/prepare.rs:100-119`). Normal finish persists
 `final.json` and removes the transcript; orphan recovery removes the whole dir
-later. `read_command_progress` tail-reads the transcript just-in-time
-(`eos-command-session/src/session.rs:183-184`). The archive contract therefore
-has to capture artifacts and failures at their actual lifecycle points, not just
-at final directory destruction.
+later. `read_command_progress` tail-reads the transcript just-in-time. The
+archive contract therefore has to capture artifacts and failures at their
+actual lifecycle points, not just at final directory destruction.
 Two consumers with **different requirements** — naming them dissolves the
 push-vs-pull dilemma:
 
@@ -1637,20 +1666,20 @@ Instead, **destruction-gated archival** with a free progressive tee:
 
 1. **stdin needs no transfer at all**: the host forwards `write_stdin` and
    archives the payload at forward time — it sees stdin before the sandbox
-   does. Stored as `sandboxes/<sandbox_id>/sessions/<session_id>/stdin.log`
+   does. Stored as `sandboxes/<sandbox_id>/commands/<command_id>/stdin.log`
    with ts + request_id prefixes.
 2. **Tee what already crosses the wire**: every `read_command_progress`
    response carries transcript lines the agent paid for anyway; the host tees
-   them into `sessions/<session_id>/transcript.log`, tracking the archived
-   byte offset. Zero extra round trips during the session.
-3. **Settlement fetch of the un-teed tail**: at settle/collect the host
+   them into `commands/<command_id>/transcript.log`, tracking the archived
+   byte offset. Zero extra round trips while the command is running.
+3. **Finalization fetch of the un-teed tail**: at finalize/collect the host
    fetches the remaining bytes by offset (ranged `sandbox.command.transcript`
    read, `Internal` visibility), bounded by
    `transcript_archive_max_bytes` (config; truncation recorded with a
    `truncated` marker + full-length sha256 so tampering/loss is evident).
-4. **Destruction is gated on the archive ack**: the session dir survives the
-   reap until the host confirms the archive (the completion already waits in
-   the completed buffer for collection — the dir adopts the same holding
+4. **Destruction is gated on the archive ack**: the command artifact dir survives
+   `take_exit` until the host confirms the archive (the completion already waits
+   in the completed buffer for collection — the dir adopts the same holding
    pattern), with a TTL fallback so an absent host cannot fill sandbox disk;
    a TTL-fired deletion writes a `transcript_lost` event into the trace chain
    instead of losing it silently. Isolated-workspace exit orders an archive
@@ -1658,7 +1687,7 @@ Instead, **destruction-gated archival** with a free progressive tee:
    (`runtime.rs:60-102`) retains the dir under the same gate.
 
 The database stores references, never the bulk (bounded-detail rule):
-`trace_links` ties `command_session` → trace; the settle trace appends a
+`trace_links` ties `command` → trace; the finalization trace appends a
 `transcript_ref` audit entry and projection detail
 `{transcript_path, stdin_path, bytes, sha256, truncated}`. JIT progress reads
 keep hitting the daemon; auditors read the archived files; the two planes never
@@ -1668,7 +1697,7 @@ trade their requirements against each other.
 
 | Crate | Version | Where | Role |
 | --- | --- | --- | --- |
-| `tracing` | 0.1 (MIT) | daemon, operation, layerstack, workspace, command-session, plugin, eos-trace | span/event facade |
+| `tracing` | 0.1 (MIT) | daemon, operation, layerstack, workspace, command, plugin, eos-trace | span/event facade |
 | `tracing-subscriber` | 0.3, `registry`,`std`,`fmt`,`json` (MIT) | eos-trace, eos-daemon | Registry + custom Layer; JSON fmt layer for the crash log |
 | `rusqlite` | 0.40 `bundled` (MIT) | eos-sandbox-host only | host store; daemon binary unaffected |
 | `prost` / `prost-build` | workspace-pinned | eos-trace | protobuf DTO generation and canonical audit payload encoding |
@@ -1696,7 +1725,7 @@ One envelope for every op. `status` is the single discriminant; arms carry
 pub enum OperationEnvelope<T: Serialize> {
     Ok       { result: T, meta: ResponseMeta },
     Running  { result: T, meta: ResponseMeta },  // accepted; continues via a linked resource
-    Cancelled{ result: T, meta: ResponseMeta },  // settled facts of the cancelled work
+    Cancelled{ result: T, meta: ResponseMeta },  // finalized facts of the cancelled work
     TimedOut { result: T, meta: ResponseMeta },
     Rejected {                                   // domain refusal: OCC conflict, policy, isolated-gate
         error: OperationFault,
@@ -1750,7 +1779,7 @@ direction, merged from the parallel draft):
 | Family | `result` shape |
 | --- | --- |
 | Files | `{ file: {…} }` for reads; `{ mutation: { status, published, changed_paths, changed_path_kinds, conflict? } }` for writes/edits |
-| Command | `{ command: { status, exit_code, output_ref, command_session_id }, mutation?: {…} }`; `Running` omits `mutation` |
+| Command | `{ command: { status, exit_code, output_ref, command_id }, mutation?: {…} }`; `Running` omits `mutation` |
 | Checkpoint | `{ checkpoint: {…} }` — layer metrics are domain data, not metadata |
 | Isolated workspace | `{ isolated_workspace: { open, workspace_handle_id, workspace_root, lifetime_s?, evicted_upperdir_bytes?, inspection? } }` |
 | Plugin | `{ plugin: {…}, overlay?: {…} }` — worker result stays under `result.plugin`; ensure/status share one typed `PluginServicesView` instead of duplicating the services snapshot |
@@ -1777,10 +1806,10 @@ Status mapping rules (total over today's observable states):
 
 | Today | Envelope status | Where the detail lives |
 | --- | --- | --- |
-| command `running` | `running` | `result.command` + `command_session` link |
+| command `running` | `running` | `result.command` + `command` link |
 | command `ok`, publish committed | `ok` | `result.mutation.status = committed` |
 | command `ok`, publish lost OCC (aborted_version/overlap) | `rejected` **with partial `result`** (output, exit_code, discarded paths) | `error.kind = occ_conflict`; `result.command` keeps the facts |
-| command `cancelled` / `timed_out` | `cancelled` / `timed_out` | `result` carries settled facts (output so far, kill reason) |
+| command `cancelled` / `timed_out` | `cancelled` / `timed_out` | `result` carries finalized facts (output so far, kill reason) |
 | mutation `accepted` (pre-commit OCC ack) | `ok` | `result.mutation.status = accepted` — domain data, not an envelope state |
 | `Refused(OpError)` policy refusals, isolated-gate, lifecycle-in-progress | `rejected` | `error.kind` keeps the op-policy vocabulary |
 | parse/transport/auth/unknown-op/internal | `error` | `error.kind` keeps the protocol vocabulary; `error_id` for internal |
@@ -2016,8 +2045,8 @@ Acceptance checklist:
   per-file conflict detail, and squash skip/fail reasons.
 - [ ] Overlay emits mount/capture/unmount events, mount cost fields, capture
   walk counters, failing paths, and real truncation.
-- [ ] Command session adds `ActiveCommand` origin `trace_id`/`request_id`,
-  background `CommandSettle` roots, stdin wait/backpressure facts, kill
+- [ ] Command adds `ActiveCommand` origin `trace_id`/`request_id`,
+  background `CommandFinalize` roots, stdin wait/backpressure facts, kill
   signals, artifact write/failure events, transcript failure events, and
   completed-buffer eviction loss markers.
 - [ ] Isolated workspace emits enter/status/exit/recovery lifecycle facts,
@@ -2032,18 +2061,18 @@ Acceptance checklist:
   daemon RSS/HWM, tree stats, mount cost, source availability/error markers,
   sampler duration, and `inflight_requests`.
 - [ ] Always-on before/after pairs are limited to cheap kernel gauges around
-  `command.session.wait` and `plugin.overlay.run`; tree walks occur only on
+  `command.process.wait` and `plugin.overlay.run`; tree walks occur only on
   spans that already perform or explicitly request a bounded walk.
 - [ ] Per-crate focused tests for `eos-layerstack`, `eos-workspace`,
-  `eos-command-session`, `eos-plugin`, `eos-operation`, and `eos-daemon`.
+  `eos-command`, `eos-plugin`, `eos-operation`, and `eos-daemon`.
 - [ ] Live e2e trace query: file `fast_path` request produces route, OCC, and
   no-workspace facts.
 - [ ] Live e2e trace query: ephemeral exec produces command, overlay, capture,
   resource before/after, changed-path, and response meta facts.
 - [ ] Live e2e trace query: isolated enter/exec/status/exit produces one chain
   with lifecycle, command, teardown, and heartbeat-adjacent facts.
-- [ ] Live e2e trace query: sweeper-cancelled command session yields a
-  `CommandSettle` background trace linked to the original command session.
+- [ ] Live e2e trace query: background-cancelled command yields a
+  `CommandFinalize` background trace linked to the original command.
 - [ ] Live e2e trace query: plugin callback-driven OCC publish parents under
   the owning plugin op trace.
 - [ ] Resource query returns before/after rows for command/plugin spans, real
@@ -2108,7 +2137,7 @@ E2E retargeting matrix:
 | `eos-layerstack` | `resource.layer_stack.*` timing/resource keys and manual phase sums | layerstack/OCC spans, manifest/lease/squash events, mount cost, cache/resource projections, chain reconstruction from store |
 | `ephemeral_workspace` | exec route timing keys and upperdir/run-dir resource keys | command/overlay/capture spans, before/after `resource_stats`, changed-path events, response `resource_summary`, no fake tree stats |
 | `workspace-publish-gate` | nested `timings.occ.*` route heuristics | OCC route-selected events, conflict/drop/publish facts, per-file conflict detail, no-publish fast-path trace evidence |
-| `workspace-runtime-command-session` | command matrix timing/resource telemetry and structured status inferred from response shape | command-session lifecycle events, stdin/progress/collect/cancel spans, `CommandSettle` background trace, transcript/archive refs, resource pairs |
+| `workspace-runtime-command` | command matrix timing/resource telemetry and structured status inferred from response shape | command lifecycle events, stdin/progress/collect/cancel spans, `CommandFinalize` background trace, transcript/archive refs, resource pairs |
 | `workspace-runtime-isolated` | teardown timings, discarded-byte counters, status metrics | isolated enter/status/exit/recovery events, holder liveness, DNS fallback, manager/mountinfo errors, heartbeat bracketing, chain links by caller/workspace handle |
 | `plugin` | plugin ensure/status duplicated response facts and overlay timing keys | plugin setup/service-state/health events, service stderr ref, PPC parent message id, overlay/callback spans, plugin service trace links |
 | `pressure` | JSON resource report reading flat timing/resource keys | trace-store resource report built from `trace_resources`, leak counters from store/status projections, contention via `inflight_requests`, cgroup/source-error visibility |
@@ -2120,7 +2149,7 @@ Focused live e2e commands for Phase 05 flips:
 - [ ] `cargo test -p eos-e2e-test --features e2e --test eos-layerstack -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-publish-gate -- --nocapture`
-- [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command-session -- --nocapture`
+- [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-command -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test workspace-runtime-isolated -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture`
@@ -2195,7 +2224,7 @@ Acceptance checklist:
 - [ ] `sandbox.status.snapshot` op returns protobuf-backed
   `SandboxStatusSnapshot`.
 - [ ] A shared `eos-trace` resource sampler deletes the duplicate sampler logic
-  currently split across response/settle paths.
+  currently split across response/finalization paths.
 - [ ] Host `HeartbeatMonitor` writes `sandbox_heartbeats` projection rows and
   audit entries keyed by sandbox/time/boot ids.
 - [ ] Heartbeat resource subset includes CPU usage/throttling, memory
@@ -2231,9 +2260,10 @@ Acceptance checklist:
   `transcript_lost` on TTL fallback/loss.
 - [ ] Isolated exit archives before scratch removal; orphan recovery preserves
   enough state to emit retention/loss facts.
-- [ ] `cargo test -p eos-command-session -p eos-operation -p eos-sandbox-host`
+- [ ] `cargo test -p eos-command -p eos-operation -p eos-sandbox-host`
 - [ ] Live e2e: long-running exec with stdin and polls yields a byte-complete
-  archived transcript whose sha matches a direct in-session read before settle.
+  archived transcript whose sha matches a direct command transcript read before
+  finalization.
 - [ ] Live e2e: host-kill-then-TTL case writes `transcript_lost`.
 - [ ] Latency assertion proves JIT progress reads stay within baseline bounds.
 - [ ] Update the progress tracker with Phase 09 evidence and mark Phase 09
@@ -2243,7 +2273,7 @@ Phase gate:
 
 ```text
 Phase 09 is Complete only when transcript/stdin artifacts are archived before
-destruction, loss is explicit, and command-session latency semantics are
+destruction, loss is explicit, and command latency semantics are
 unchanged. Phase 10 remains Blocked until then.
 ```
 

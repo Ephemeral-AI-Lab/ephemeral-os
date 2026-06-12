@@ -1,7 +1,6 @@
 //! Typed schemas for sections of `sandbox/config/prd.yml`.
 
-#[path = "command-session.rs"]
-pub mod command_session;
+pub mod command;
 
 pub mod daemon;
 

@@ -102,8 +102,8 @@ fn isolated_exit_discards_upperdir_and_returns_lease_for_release(
 }
 
 #[test]
-fn ttl_sweep_skips_callers_with_active_command_sessions() -> Result<(), Box<dyn std::error::Error>>
-{
+fn evict_idle_workspaces_skips_callers_with_active_commands(
+) -> Result<(), Box<dyn std::error::Error>> {
     let scratch_root = unique_temp_dir("isolated-ttl");
     let caps = ResourceCaps {
         ttl_s: 0.000_001,
@@ -122,7 +122,7 @@ fn ttl_sweep_skips_callers_with_active_command_sessions() -> Result<(), Box<dyn 
 
     let mut protected = HashSet::new();
     protected.insert("busy".to_owned());
-    let evicted = sessions.ttl_sweep(&protected);
+    let evicted = sessions.evict_idle_workspaces(&protected);
 
     assert_eq!(evicted.len(), 1, "only the idle caller is evicted");
     assert_eq!(evicted[0].caller_id, "idle");

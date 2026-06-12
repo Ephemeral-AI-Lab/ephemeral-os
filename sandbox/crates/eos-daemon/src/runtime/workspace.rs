@@ -1,10 +1,10 @@
-//! Isolated-workspace runtime: lease custody, command lifecycle, TTL sweep
+//! Isolated-workspace runtime: lease custody, command lifecycle, idle workspace eviction
 //! policy, and the caller-keyed workspace-run cancel coordinator.
 //!
 //! The daemon composes this service: it parses wire args, calls one
 //! [`WorkspaceRuntime`] method, and shapes one response. This crate owns the
 //! cross-domain workspace-run policy: when leases are acquired and released,
-//! when sessions are torn down, and in what order — while namespace mechanics
+//! when commands and handles are torn down, and in what order — while namespace mechanics
 //! stay in `eos-workspace` and command internals stay in
 //! `eos_operation::command`. State lives on a [`WorkspaceRuntime`] instance, never in
 //! process globals.
@@ -259,7 +259,7 @@ impl WorkspaceRuntime {
     }
 
     /// Exit every open isolated workspace and reap orphaned resources (the
-    /// whole-sandbox cancel sweep). Returns the number of callers exited.
+    /// whole-sandbox cancel cleanup). Returns the number of callers exited.
     fn exit_all_and_reap(&self, grace_s: Option<f64>) -> usize {
         let mut guard = self.lock_state_cell();
         let Some(state) = guard.as_mut() else {
@@ -275,7 +275,7 @@ impl WorkspaceRuntime {
 
     /// Evict idle isolated workspaces past their TTL, releasing their leases.
     /// Callers that still own a live command are protected.
-    pub fn ttl_sweep(&self) -> usize {
+    pub fn evict_idle_workspaces(&self) -> usize {
         let mut guard = self.lock_state_cell();
         let Some(state) = guard.as_mut() else {
             return 0;
@@ -288,7 +288,7 @@ impl WorkspaceRuntime {
             .into_iter()
             .filter(|caller| eos_operation::command::active_commands_for_caller(caller) > 0)
             .collect::<HashSet<_>>();
-        let evicted = state.manager.ttl_sweep(&active_callers);
+        let evicted = state.manager.evict_idle_workspaces(&active_callers);
         let count = evicted.len();
         for outcome in evicted {
             let _ = state.release_lease(&outcome.lease_id);
@@ -385,13 +385,13 @@ impl WorkspaceRuntime {
     }
 
     fn reset_test_manager_file(&self) {
-        let session_root = &self.config.scratch_root;
-        let _ = std::fs::remove_dir_all(session_root);
-        if std::fs::create_dir_all(session_root).is_err() {
+        let scratch_root = &self.config.scratch_root;
+        let _ = std::fs::remove_dir_all(scratch_root);
+        if std::fs::create_dir_all(scratch_root).is_err() {
             return;
         }
         let _ = std::fs::write(
-            session_root.join("manager.json"),
+            scratch_root.join("manager.json"),
             br#"{"schema_version":1,"handles":[]}"#,
         );
     }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use eos_command::process::{
-    CommandProcess, CommandProcessSpawn, CommandProcessSpec, KillReason, ReapedCommand,
+    CommandProcess, CommandProcessExit, CommandProcessSpawn, CommandProcessSpec, KillReason,
 };
 use eos_command::yield_wait_loop::{wait_for_yield, WaitOutcome};
 use eos_command::{
@@ -17,10 +17,10 @@ use eos_workspace::IsolatedWorkspaceBinding;
 use crate::WorkspaceKind;
 
 use super::contract::{CollectCompletedOutput, CommandCompletion, CommandResponse, CommandStatus};
+use super::finalize::{discarded_response, finalize_ephemeral_command, finalize_isolated_command};
 use super::outcome::FinalizeCommandRequest;
 use super::prepare::{prepare_ephemeral, prepare_isolated, PrepareInputs, PreparedCommand};
 use super::registry::{ActiveCommand, CommandRegistry, EphemeralRun, IsolatedRun};
-use super::settle::{discarded_response, settle_ephemeral, settle_isolated};
 
 pub enum ExecTarget {
     Ephemeral {
@@ -218,7 +218,7 @@ impl CommandOps {
         on_running: impl FnOnce(String) -> CommandResponse,
     ) -> CommandResponse {
         match wait_for_yield(run.process(), &self.config, wait_ms, start_offset) {
-            WaitOutcome::Completed(reaped) => self.finish_reaped(run, reaped, false),
+            WaitOutcome::Completed(process_exit) => self.finalize_command(run, process_exit, false),
             WaitOutcome::Running(stdout) => on_running(stdout),
         }
     }
@@ -268,9 +268,9 @@ impl CommandOps {
                 .map(|result| result.with_last_lines(request.last_n_lines))
                 .ok_or(CommandError::NotFound(request.command_id));
         };
-        if let Some(reaped) = run.process().reap() {
+        if let Some(process_exit) = run.process().take_exit() {
             return Ok(self
-                .finish_reaped(run, reaped, false)
+                .finalize_command(run, process_exit, false)
                 .with_last_lines(request.last_n_lines));
         }
         Ok(CommandResponse::running(
@@ -335,9 +335,9 @@ impl CommandOps {
         let deadline = Instant::now() + Duration::from_secs_f64(wait_s);
         let mut pending = runs.clone();
         loop {
-            pending.retain(|run| match run.process().reap() {
-                Some(reaped) => {
-                    let _ = self.finish_reaped(Arc::clone(run), reaped, false);
+            pending.retain(|run| match run.process().take_exit() {
+                Some(process_exit) => {
+                    let _ = self.finalize_command(Arc::clone(run), process_exit, false);
                     false
                 }
                 None => true,
@@ -348,8 +348,8 @@ impl CommandOps {
             std::thread::sleep(Duration::from_millis(10));
         }
         for run in pending {
-            if let Some(reaped) = run.process().reap() {
-                let _ = self.finish_reaped(run, reaped, false);
+            if let Some(process_exit) = run.process().take_exit() {
+                let _ = self.finalize_command(run, process_exit, false);
             } else {
                 self.force_discard(&run);
             }
@@ -366,7 +366,7 @@ impl CommandOps {
         }
     }
 
-    pub fn sweep_expired(&self, now: Instant) {
+    pub fn advance_active_commands_once(&self, now: Instant) {
         for run in self.registry.live() {
             if run
                 .process()
@@ -374,35 +374,36 @@ impl CommandOps {
             {
                 run.process().time_out_process();
             }
-            if let Some(reaped) = run.process().reap() {
-                let publish_completion = reaped.kill != Some(KillReason::Cancelled);
-                let _ = self.finish_reaped(run, reaped, publish_completion);
+            if let Some(process_exit) = run.process().take_exit() {
+                let publish_completion = process_exit.kill != Some(KillReason::Cancelled);
+                let _ = self.finalize_command(run, process_exit, publish_completion);
             }
         }
     }
 
-    fn finish_reaped(
+    fn finalize_command(
         &self,
         run: Arc<ActiveCommand>,
-        reaped: ReapedCommand,
+        process_exit: CommandProcessExit,
         publish_completion: bool,
     ) -> CommandResponse {
         let request = FinalizeCommandRequest {
-            runner_result: reaped.runner_result,
-            command_elapsed_s: reaped.elapsed_s,
-            status: CommandStatus::from_wire_str(&reaped.status).unwrap_or(CommandStatus::Error),
-            exit_code: Some(reaped.exit_code),
-            stdout: reaped.stdout,
+            runner_result: process_exit.runner_result,
+            command_elapsed_s: process_exit.elapsed_s,
+            status: CommandStatus::from_wire_str(&process_exit.status)
+                .unwrap_or(CommandStatus::Error),
+            exit_code: Some(process_exit.exit_code),
+            stdout: process_exit.stdout,
             stderr: String::new(),
             command_id: Some(run.process().id().to_owned()),
         };
-        let cancelled = reaped.kill.is_some();
+        let cancelled = process_exit.kill.is_some();
         let outcome = match &*run {
             ActiveCommand::Ephemeral(ephemeral) => {
                 let outcome = if cancelled {
                     Ok(discarded_response(WorkspaceKind::Ephemeral, request))
                 } else {
-                    settle_ephemeral(
+                    finalize_ephemeral_command(
                         &ephemeral.root,
                         &ephemeral.snapshot,
                         &ephemeral.workspace,
@@ -416,7 +417,7 @@ impl CommandOps {
                 if cancelled {
                     Ok(discarded_response(WorkspaceKind::Isolated, request))
                 } else {
-                    settle_isolated(&isolated.binding, request)
+                    finalize_isolated_command(&isolated.binding, request)
                 }
             }
         };

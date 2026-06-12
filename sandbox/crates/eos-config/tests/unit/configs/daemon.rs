@@ -26,11 +26,11 @@ fn config_validation_rejects_invalid_daemon_values() {
     assert_invalid(cfg, "daemon.inflight.ttl_s");
 
     let mut cfg = prd_config();
-    cfg.command_sessions.cancel_wait_ms = 0;
+    cfg.commands.cancel_wait_ms = 0;
     assert_invalid(cfg, "daemon.command_sessions.cancel_wait_ms");
 
     let mut cfg = prd_config();
-    cfg.command_sessions.default_timeout_s = 0;
+    cfg.commands.default_timeout_s = 0;
     assert_invalid(cfg, "daemon.command_sessions.default_timeout_s");
 
     let mut cfg = prd_config();

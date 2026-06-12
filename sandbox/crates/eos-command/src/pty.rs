@@ -33,11 +33,11 @@ pub(crate) struct PtyProcess {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct CommandProcessExit {
+pub(crate) struct PtyProcessExitStatus {
     exit_code: Option<i64>,
 }
 
-impl CommandProcessExit {
+impl PtyProcessExitStatus {
     #[must_use]
     pub fn unwaitable() -> Self {
         Self { exit_code: None }
@@ -59,9 +59,9 @@ impl CommandProcessExit {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ProcessReap {
+pub(crate) enum PtyProcessExit {
     Running,
-    Exited(CommandProcessExit),
+    Exited(PtyProcessExitStatus),
 }
 
 /// Why the substrate killed a command process group. The owning run
@@ -72,7 +72,7 @@ pub(crate) enum ProcessReap {
 pub enum KillReason {
     /// A caller asked to cancel (Ctrl-C/Ctrl-D, the cancel op, or run teardown).
     Cancelled,
-    /// The command exceeded its deadline and the reaper killed it as a backstop.
+    /// The command exceeded its deadline and was terminated by the deadline backstop.
     TimedOut,
 }
 
@@ -85,7 +85,7 @@ pub(crate) struct CommandCompletionStatus {
 impl CommandCompletionStatus {
     #[must_use]
     pub fn from_process_and_runner(
-        process_exit: CommandProcessExit,
+        process_exit: PtyProcessExitStatus,
         runner: Option<&CommandRunnerResult>,
         kill: Option<KillReason>,
     ) -> Self {
@@ -230,21 +230,21 @@ impl PtyProcess {
     }
 
     #[must_use]
-    pub(crate) fn try_reap(&self) -> ProcessReap {
+    pub(crate) fn take_exit(&self) -> PtyProcessExit {
         let mut child = lock(&self.child);
         match child.as_mut() {
             Some(handle) => match handle.try_wait() {
                 Ok(Some(status)) => {
                     let _ = child.take();
-                    ProcessReap::Exited(CommandProcessExit::from_status(status))
+                    PtyProcessExit::Exited(PtyProcessExitStatus::from_status(status))
                 }
-                Ok(None) => ProcessReap::Running,
+                Ok(None) => PtyProcessExit::Running,
                 Err(_) => {
                     let _ = child.take();
-                    ProcessReap::Exited(CommandProcessExit::unwaitable())
+                    PtyProcessExit::Exited(PtyProcessExitStatus::unwaitable())
                 }
             },
-            None => ProcessReap::Exited(CommandProcessExit::unwaitable()),
+            None => PtyProcessExit::Exited(PtyProcessExitStatus::unwaitable()),
         }
     }
 

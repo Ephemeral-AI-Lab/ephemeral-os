@@ -11,16 +11,16 @@ use serde_json::Value;
 
 use crate::WorkspaceRuntime;
 
-pub(crate) mod sweepers {
+pub(crate) mod background_tasks {
     use crate::WorkspaceRuntime;
 
     #[must_use]
-    pub(crate) fn sweep_workspace_ttl(workspace: &WorkspaceRuntime) -> usize {
-        workspace.ttl_sweep()
+    pub(crate) fn evict_idle_workspaces_once(workspace: &WorkspaceRuntime) -> usize {
+        workspace.evict_idle_workspaces()
     }
 
-    pub(crate) fn sweep_commands() {
-        eos_operation::command::runtime::command_reaper_sweep();
+    pub(crate) fn advance_active_commands_once() {
+        eos_operation::command::runtime::advance_active_commands_once();
     }
 
     pub(crate) fn recover_orphaned_commands() {

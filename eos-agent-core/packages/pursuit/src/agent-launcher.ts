@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import {
   isPursuitEntityTerminal,
   planIdFrom,
-  workItemIdFrom,
   type AgentRunId,
   type AttemptId,
   type InitialUserMessage,
@@ -14,7 +13,7 @@ import {
   type WorkItemId,
   type PursuitId,
 } from "@eos/contracts";
-import type { PursuitDb, PursuitTransaction } from "@eos/db";
+import type { LaunchQueueRow, PursuitDb, PursuitTransaction } from "@eos/db";
 
 import { workItemReady } from "./work-item/state.js";
 
@@ -86,6 +85,7 @@ export type ClaimedLaunch =
       pursuitId: PursuitId;
       legId: LegId;
       attemptId: AttemptId;
+      workItemKey: string;
       workItemId: WorkItemId;
       agentName: string;
       launchToken: string;
@@ -167,10 +167,24 @@ export async function claimLaunchable(
       continue;
     }
 
+    claims.push(...(await claimReadyWorkItems(trx, pursuitId, [row], now)));
+  }
+  return claims;
+}
+
+export async function claimReadyWorkItems(
+  trx: PursuitTransaction,
+  pursuitId: PursuitId,
+  queuedRows: readonly LaunchQueueRow[],
+  now = new Date().toISOString(),
+): Promise<Extract<ClaimedLaunch, { kind: "work_item" }>[]> {
+  const claims: Extract<ClaimedLaunch, { kind: "work_item" }>[] = [];
+  for (const row of queuedRows) {
+    if (row.kind !== "work_item") continue;
     const item = await trx
       .selectFrom("work_items")
       .selectAll()
-      .where("id", "=", workItemIdFrom(row.entity_id))
+      .where("key", "=", row.entity_id)
       .executeTakeFirst();
     if (item?.status !== "NotStarted") continue;
     const attempt = await trx
@@ -185,7 +199,7 @@ export async function claimLaunchable(
     await trx
       .updateTable("work_items")
       .set({ status: "Running", updated_at: now })
-      .where("id", "=", item.id)
+      .where("key", "=", item.key)
       .execute();
     await trx
       .updateTable("launch_queue")
@@ -197,6 +211,7 @@ export async function claimLaunchable(
       pursuitId,
       legId: item.leg_id,
       attemptId: item.attempt_id,
+      workItemKey: item.key,
       workItemId: item.id,
       agentName: item.agent_name,
       launchToken,
@@ -239,7 +254,7 @@ export async function verifyClaimLaunchable(
   const item = await db
     .selectFrom("work_items")
     .selectAll()
-    .where("id", "=", claim.workItemId)
+    .where("key", "=", claim.workItemKey)
     .executeTakeFirst();
   return item?.status === "Running" && (await directDependenciesSucceeded(db, item));
 }
@@ -288,9 +303,9 @@ export async function stampAgentRunId(
       .execute();
     return;
   }
-  await db
-    .updateTable("work_items")
-    .set({ agent_run_id: runId, updated_at: now })
-    .where("id", "=", claim.workItemId)
-    .execute();
+	  await db
+	    .updateTable("work_items")
+	    .set({ agent_run_id: runId, updated_at: now })
+	    .where("key", "=", claim.workItemKey)
+	    .execute();
 }

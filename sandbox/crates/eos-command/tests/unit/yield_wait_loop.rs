@@ -9,7 +9,7 @@ struct FakeWaitTarget {
 }
 
 impl CommandWaitTarget<&'static str> for FakeWaitTarget {
-    fn try_finalize(&self) -> Option<&'static str> {
+    fn take_exit(&self) -> Option<&'static str> {
         None
     }
 

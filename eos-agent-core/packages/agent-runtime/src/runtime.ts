@@ -68,7 +68,7 @@ import {
 
 /** Process-level dependencies, bound once at `createAgentRuntime` (§2.3). */
 export interface AgentRuntimeDependencies {
-  /** Default: `.eos-agents/profiles`. */
+  /** Default: `.eos-agents/profile`. */
   agentProfilesDir?: string;
   /** Default: `.eos-agents/llm_clients.json`. */
   llmClientsPath?: string;
@@ -124,7 +124,7 @@ export interface AgentRuntime {
  */
 export function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime {
   const agentProfiles = loadAgentProfileRegistry(
-    dependencies.agentProfilesDir ?? ".eos-agents/profiles",
+    dependencies.agentProfilesDir ?? ".eos-agents/profile",
     knownToolNames(dependencies.baseTools ?? [], dependencies.pursuitDb !== undefined),
   );
   const llmClients =

@@ -11,7 +11,7 @@ daemon:
     reaper_interval_s: 30
 
   command_sessions:
-    scratch_root: /eos/scratch/command-sessions
+    scratch_root: /eos/scratch/commands
     default_yield_time_ms: 1000
     default_timeout_s: 600
     quiet_ms: 50

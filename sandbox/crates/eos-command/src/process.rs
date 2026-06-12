@@ -1,4 +1,4 @@
-//! One command process: the child process, PTY transcript, kill/reap state,
+//! One command process: the child process, PTY transcript, kill/exit state,
 //! and final-response persistence.
 
 use std::path::{Path, PathBuf};
@@ -10,8 +10,8 @@ use serde_json::Value;
 pub use crate::pty::KillReason;
 
 use crate::pty::{
-    spawn_current_exe_ns_runner, CommandCompletionStatus, CommandRunnerResult, ProcessReap,
-    PtyProcess,
+    spawn_current_exe_ns_runner, CommandCompletionStatus, CommandRunnerResult, PtyProcess,
+    PtyProcessExit,
 };
 use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
 use crate::yield_wait_loop::CommandWaitTarget;
@@ -50,13 +50,13 @@ pub struct CommandProcessSpawn<'a> {
     pub output_drain_grace_ms: u64,
 }
 
-/// The raw, policy-free result of reaping a finished command process. The
-/// substrate produces this; the owning workspace run turns it into a
+/// The raw, policy-free result of a finished command process. The substrate
+/// produces this; the owning workspace run turns it into a
 /// rendered operation response by publishing (complete) or discarding (cancel).
 /// Keeping the publish/discard decision out of the process is the structural
 /// guarantee that a cancelled command never reaches the OCC merge.
 #[derive(Debug, Clone)]
-pub struct ReapedCommand {
+pub struct CommandProcessExit {
     pub status: String,
     pub exit_code: i64,
     pub runner_result: Option<Value>,
@@ -68,15 +68,7 @@ pub struct ReapedCommand {
     pub kill: Option<KillReason>,
 }
 
-struct RunningCommandProcessParts {
-    process: PtyProcess,
-    output_path: PathBuf,
-    final_path: PathBuf,
-    transcript_path: PathBuf,
-    output_drain_grace_ms: u64,
-}
-
-/// Per-command process state: the child, its paths, and the kill/reap flags.
+/// Per-command process state: the child, its paths, and the kill/exit flags.
 struct CommandProcessRuntime {
     process: PtyProcess,
     output_path: PathBuf,
@@ -87,20 +79,26 @@ struct CommandProcessRuntime {
     /// wins, so a cancelled command is never relabeled as timed-out.
     kill: Mutex<Option<KillReason>>,
     output_drain_grace_ms: u64,
-    /// Reaped-once guard so two pollers can't both finalize the same child.
-    reaped: Mutex<bool>,
+    /// Exit-taken guard so two pollers can't both finalize the same child.
+    exit_taken: Mutex<bool>,
 }
 
 impl CommandProcessRuntime {
-    fn new(parts: RunningCommandProcessParts) -> Self {
+    fn new(
+        process: PtyProcess,
+        output_path: PathBuf,
+        final_path: PathBuf,
+        transcript_path: PathBuf,
+        output_drain_grace_ms: u64,
+    ) -> Self {
         Self {
-            process: parts.process,
-            output_path: parts.output_path,
-            final_path: parts.final_path,
-            transcript_path: parts.transcript_path,
+            process,
+            output_path,
+            final_path,
+            transcript_path,
             kill: Mutex::new(None),
-            output_drain_grace_ms: parts.output_drain_grace_ms,
-            reaped: Mutex::new(false),
+            output_drain_grace_ms,
+            exit_taken: Mutex::new(false),
         }
     }
 
@@ -112,13 +110,13 @@ impl CommandProcessRuntime {
             .write(true)
             .open("/dev/null")
             .expect("open /dev/null for inactive command process");
-        Self::new(RunningCommandProcessParts {
-            process: PtyProcess::inactive(writer),
-            output_path: PathBuf::new(),
-            final_path: PathBuf::new(),
-            transcript_path: PathBuf::new(),
-            output_drain_grace_ms: 0,
-        })
+        Self::new(
+            PtyProcess::inactive(writer),
+            PathBuf::new(),
+            PathBuf::new(),
+            PathBuf::new(),
+            0,
+        )
     }
 }
 
@@ -127,11 +125,6 @@ impl CommandProcess {
     #[must_use]
     pub fn new(spec: CommandProcessSpec) -> Self {
         Self::with_runtime(spec, CommandProcessRuntime::inactive())
-    }
-
-    #[must_use]
-    fn new_running(spec: CommandProcessSpec, parts: RunningCommandProcessParts) -> Self {
-        Self::with_runtime(spec, CommandProcessRuntime::new(parts))
     }
 
     pub fn spawn(
@@ -145,15 +138,15 @@ impl CommandProcess {
             parts.transcript_path.clone(),
             parts.transcript_timestamp_timezone,
         )?;
-        Ok(Self::new_running(
+        Ok(Self::with_runtime(
             spec,
-            RunningCommandProcessParts {
+            CommandProcessRuntime::new(
                 process,
-                output_path: parts.output_path,
-                final_path: parts.final_path,
-                transcript_path: parts.transcript_path,
-                output_drain_grace_ms: parts.output_drain_grace_ms,
-            },
+                parts.output_path,
+                parts.final_path,
+                parts.transcript_path,
+                parts.output_drain_grace_ms,
+            ),
         ))
     }
 
@@ -202,7 +195,7 @@ impl CommandProcess {
         self.runtime.process.terminate();
     }
 
-    /// Kill a command that exceeded its deadline (the reaper backstop). Records
+    /// Kill a command that exceeded its deadline (the deadline backstop). Records
     /// `TimedOut` only if no kill reason is set yet, so a prior user cancel keeps
     /// its `Cancelled` label; either way the process group is killed.
     pub fn time_out_process(&self) {
@@ -238,21 +231,21 @@ impl CommandProcess {
         now.duration_since(self.started_at) >= timeout
     }
 
-    /// Reap the child if it has exited, returning the raw command result. Returns
-    /// `None` while the process is still running or has already been reaped. This
-    /// only reaps the substrate — it does not publish or discard; the owning run
-    /// decides that from `ReapedCommand::kill`.
-    pub fn reap(&self) -> Option<ReapedCommand> {
-        let mut reaped = lock(&self.runtime.reaped);
-        if *reaped {
+    /// Take the child exit if it has completed, returning the raw command
+    /// result. Returns `None` while the process is still running or the exit has
+    /// already been taken. This only takes the process exit; it does not publish
+    /// or discard. The owning run decides that from `CommandProcessExit::kill`.
+    pub fn take_exit(&self) -> Option<CommandProcessExit> {
+        let mut exit_taken = lock(&self.runtime.exit_taken);
+        if *exit_taken {
             return None;
         }
-        let process_exit = match self.runtime.process.try_reap() {
-            ProcessReap::Running => return None,
-            ProcessReap::Exited(exit) => exit,
+        let process_exit = match self.runtime.process.take_exit() {
+            PtyProcessExit::Running => return None,
+            PtyProcessExit::Exited(exit) => exit,
         };
-        *reaped = true;
-        drop(reaped);
+        *exit_taken = true;
+        drop(exit_taken);
         self.runtime.process.terminate();
         self.runtime
             .process
@@ -261,7 +254,7 @@ impl CommandProcess {
         let kill = *lock(&self.runtime.kill);
         let completion =
             CommandCompletionStatus::from_process_and_runner(process_exit, runner.as_ref(), kill);
-        Some(ReapedCommand {
+        Some(CommandProcessExit {
             status: completion.status().to_owned(),
             exit_code: completion.exit_code(),
             runner_result: runner.map(|runner| runner.value().clone()),
@@ -292,9 +285,9 @@ impl CommandProcess {
     }
 }
 
-impl CommandWaitTarget<ReapedCommand> for CommandProcess {
-    fn try_finalize(&self) -> Option<ReapedCommand> {
-        self.reap()
+impl CommandWaitTarget<CommandProcessExit> for CommandProcess {
+    fn take_exit(&self) -> Option<CommandProcessExit> {
+        self.take_exit()
     }
 
     fn transcript_len(&self) -> u64 {

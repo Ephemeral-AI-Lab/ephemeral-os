@@ -14,17 +14,27 @@ function get_initial_messages(vars) {
   if (vars.pursuit_leg_goal_mode === "predefined") {
     messages.push(
       user(
-        "Plan work items for this predefined leg goal. Omit leg_goal and " +
-          "next_leg_goal in submit_planner_outcome.",
+        "The caller predefined this leg_goal. Omit leg_goal and next_leg_goal. " +
+          "Do not refocus this leg or declare future legs. If the predefined " +
+          "leg_goal is too broad or wrong, plan only work that completes the " +
+          "current predefined leg_goal.",
       ),
     );
   } else {
+    if (vars.current_leg_next_leg_goal !== null) {
+      messages.push(user(`# Standing next_leg_goal\n${vars.current_leg_next_leg_goal}`));
+    }
     messages.push(
       user(
-        "Dynamic mode: omit leg_goal to keep the current leg goal, submit " +
-          "leg_goal to refocus, or submit successor-only next_leg_goal for the " +
-          "next leg. Clearing a standing next_leg_goal requires submitting a " +
-          "replacement leg_goal.",
+        "Dynamic mode: A new dynamic leg exists only because the previous leg " +
+          "closed successfully and declared next_leg_goal. Success means the " +
+          "full effective leg_goal is achieved. Omit leg_goal to keep the " +
+          "current leg goal. Include leg_goal only to refocus this leg. " +
+          "Refocus supersedes prior live attempts and resets the standing " +
+          "next_leg_goal. Include next_leg_goal only for work that should become " +
+          "a future leg after this leg succeeds. If you cannot achieve the full " +
+          "leg_goal in this leg, submit a narrowed leg_goal and put the remainder " +
+          "in next_leg_goal. Omitting both preserves any standing next_leg_goal.",
       ),
     );
   }

@@ -12,14 +12,15 @@ use crate::configs::validate::{
     require_usize_at_least, ConfigFieldError,
 };
 
-pub use super::command_session::CommandConfig;
+pub use super::command::CommandConfig;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DaemonConfig {
     pub server: DaemonServerConfig,
     pub inflight: InflightConfig,
-    pub command_sessions: CommandConfig,
+    #[serde(rename = "command_sessions")]
+    pub commands: CommandConfig,
     pub isolated_sweeper: IsolatedSweeperConfig,
     pub plugin: PluginRuntimeConfig,
     pub layer_stack: LayerStackConfig,
@@ -116,41 +117,41 @@ impl DaemonConfig {
             "daemon.inflight.reaper_interval_s",
         )?;
         require_absolute(
-            &self.command_sessions.scratch_root,
+            &self.commands.scratch_root,
             "daemon.command_sessions.scratch_root",
         )?;
         require_u64_at_least(
-            self.command_sessions.default_yield_time_ms,
+            self.commands.default_yield_time_ms,
             1,
             "daemon.command_sessions.default_yield_time_ms",
         )?;
         require_u64_at_least(
-            self.command_sessions.default_timeout_s,
+            self.commands.default_timeout_s,
             1,
             "daemon.command_sessions.default_timeout_s",
         )?;
         require_u64_at_least(
-            self.command_sessions.quiet_ms,
+            self.commands.quiet_ms,
             1,
             "daemon.command_sessions.quiet_ms",
         )?;
         require_u64_at_least(
-            self.command_sessions.cancel_wait_ms,
+            self.commands.cancel_wait_ms,
             1,
             "daemon.command_sessions.cancel_wait_ms",
         )?;
         require_u64_at_least(
-            self.command_sessions.output_drain_grace_ms,
+            self.commands.output_drain_grace_ms,
             1,
             "daemon.command_sessions.output_drain_grace_ms",
         )?;
         require_u64_at_least(
-            self.command_sessions.max_command_s,
+            self.commands.max_command_s,
             1,
             "daemon.command_sessions.max_command_s",
         )?;
         require_timestamp_timezone(
-            &self.command_sessions.transcript_timestamp_timezone,
+            &self.commands.transcript_timestamp_timezone,
             "daemon.command_sessions.transcript_timestamp_timezone",
         )?;
         require_u64_at_least(

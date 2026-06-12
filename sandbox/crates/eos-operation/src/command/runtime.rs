@@ -53,8 +53,8 @@ pub fn cancel_all_commands(grace_s: Option<f64>) -> usize {
     command_ops().cancel_all(grace_s)
 }
 
-pub fn command_reaper_sweep() {
-    command_ops().sweep_expired(Instant::now());
+pub fn advance_active_commands_once() {
+    command_ops().advance_active_commands_once(Instant::now());
 }
 
 pub fn recover_orphaned_commands() {
@@ -86,7 +86,7 @@ pub fn recover_orphaned_commands() {
                         status: CommandStatus::Error,
                         exit_code: Some(1),
                         stdout: String::new(),
-                        stderr: "orphan_reaped: daemon restarted".to_owned(),
+                        stderr: "orphan_recovered: daemon restarted".to_owned(),
                         command_id: Some(CommandId::new(id.to_owned())),
                         settled: None,
                     };

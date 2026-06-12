@@ -18,9 +18,9 @@ fn process_exposes_identity_and_expiry() {
 }
 
 #[test]
-fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::error::Error>> {
+fn take_exit_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::temp_dir().join(format!(
-        "eos-command-reap-{}-{}",
+        "eos-command-take-exit-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
@@ -35,32 +35,32 @@ fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::err
         .read(true)
         .write(true)
         .open("/dev/null")?;
-    let process = CommandProcess::new_running(
+    let process = CommandProcess::with_runtime(
         CommandProcessSpec {
             id: "cmd_1".to_owned(),
             caller_id: "caller".to_owned(),
             command: "echo ok".to_owned(),
             timeout_seconds: None,
         },
-        RunningCommandProcessParts {
-            process: crate::pty::PtyProcess::inactive(writer),
-            output_path: root.join("runner-result.json"),
-            final_path: final_path.clone(),
-            transcript_path: transcript_path.clone(),
-            output_drain_grace_ms: 0,
-        },
+        CommandProcessRuntime::new(
+            crate::pty::PtyProcess::inactive(writer),
+            root.join("runner-result.json"),
+            final_path.clone(),
+            transcript_path.clone(),
+            0,
+        ),
     );
 
-    let reaped = process.reap().expect("inactive process reaps");
-    assert_eq!(reaped.stdout, "captured transcript output");
-    assert!(reaped.kill.is_none());
-    assert!(process.reap().is_none());
+    let exit = process.take_exit().expect("inactive process has an exit");
+    assert_eq!(exit.stdout, "captured transcript output");
+    assert!(exit.kill.is_none());
+    assert!(process.take_exit().is_none());
 
     let response = json!({
         "status": "ok",
         "exit_code": 0,
         "output": {
-            "stdout": reaped.stdout,
+            "stdout": exit.stdout,
             "stderr": "",
         },
         "command_id": "cmd_1",

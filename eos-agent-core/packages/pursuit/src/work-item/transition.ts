@@ -37,9 +37,11 @@ export async function createWorkItem(
   init: WorkItemInit,
 ): Promise<void> {
   const now = new Date().toISOString();
+  const key = workItemStorageKey(scope.legId, init.legGoalVersion, init.id);
   await trx
     .insertInto("work_items")
     .values({
+      key,
       id: init.id,
       pursuit_id: scope.pursuitId,
       leg_id: scope.legId,
@@ -65,6 +67,7 @@ export async function createWorkItem(
         pursuit_id: scope.pursuitId,
         leg_id: scope.legId,
         attempt_id: scope.attemptId,
+        work_item_key: key,
         work_item_id: init.id,
         depends_on_work_item_id: dependency,
         leg_goal_version: init.legGoalVersion,
@@ -72,13 +75,14 @@ export async function createWorkItem(
       })
       .execute();
   }
-  await enqueueLaunch(trx, scope.pursuitId, "work_item", init.id);
+  await enqueueLaunch(trx, scope.pursuitId, "work_item", key);
 }
 
 export interface WorkItemRef {
   pursuitId: PursuitId;
   legId: LegId;
   attemptId: AttemptId;
+  workItemKey: string;
   workItemId: WorkItemId;
 }
 
@@ -97,7 +101,7 @@ export async function applyWorkItemSettlement(
   const item = await trx
     .selectFrom("work_items")
     .select(["status"])
-    .where("id", "=", ref.workItemId)
+    .where("key", "=", ref.workItemKey)
     .executeTakeFirst();
   if (!item || isWorkItemTerminal(item.status)) return;
 
@@ -111,6 +115,7 @@ export async function applyWorkItemSettlement(
       updated_at: now,
     })
     .where("id", "=", ref.workItemId)
+    .where("key", "=", ref.workItemKey)
     .execute();
 
   await propagateDependencyBlocks(trx, ref.attemptId);
@@ -123,17 +128,25 @@ export async function applyWorkItemSettlement(
 
 export async function cancelWorkItem(
   trx: PursuitTransaction,
-  workItemId: WorkItemId,
+  workItemKey: string,
 ): Promise<void> {
   const item = await trx
     .selectFrom("work_items")
     .select("status")
-    .where("id", "=", workItemId)
+    .where("key", "=", workItemKey)
     .executeTakeFirst();
   if (!item || isWorkItemTerminal(item.status)) return;
   await trx
     .updateTable("work_items")
     .set({ status: "Cancelled", updated_at: new Date().toISOString() })
-    .where("id", "=", workItemId)
+    .where("key", "=", workItemKey)
     .execute();
+}
+
+export function workItemStorageKey(
+  legId: LegId,
+  legGoalVersion: number,
+  workItemId: WorkItemId,
+): string {
+  return `${legId}:${String(legGoalVersion)}:${workItemId}`;
 }

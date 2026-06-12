@@ -14,7 +14,7 @@ use super::outcome::{
 use crate::core::changed_path_kind_pairs;
 use crate::{CommandId, MutationCore};
 
-pub(crate) fn settle_ephemeral(
+pub(crate) fn finalize_ephemeral_command(
     root: &Path,
     snapshot: &Snapshot,
     workspace: &EphemeralWorkspace,
@@ -80,7 +80,7 @@ pub(crate) fn settle_ephemeral(
     ))
 }
 
-pub(crate) fn settle_isolated(
+pub(crate) fn finalize_isolated_command(
     binding: &IsolatedWorkspaceBinding,
     request: FinalizeCommandRequest,
 ) -> Result<CommandResponse, WorkspaceApiError> {

@@ -71,10 +71,10 @@ function blockedByText(blockedBy: readonly string[] | undefined): string {
  * the attempt whose plan made the now-superseded declaration carries them.
  */
 export function supersededDeclarationFiles(attempt: AttemptState): EntityFieldFile[] {
-  if (attempt.plan.declaredLegGoal === null) return [];
-  const files: EntityFieldFile[] = [
-    { name: "leg_goal.md", content: attempt.plan.declaredLegGoal },
-  ];
+  const files: EntityFieldFile[] = [];
+  if (attempt.plan.declaredLegGoal !== null) {
+    files.push({ name: "leg_goal.md", content: attempt.plan.declaredLegGoal });
+  }
   if (attempt.plan.declaredNextLegGoal !== null) {
     files.push({ name: "next_leg_goal.md", content: attempt.plan.declaredNextLegGoal });
   }

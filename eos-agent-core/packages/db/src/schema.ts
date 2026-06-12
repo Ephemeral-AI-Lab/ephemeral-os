@@ -69,6 +69,8 @@ export interface PlansTable {
 }
 
 export interface WorkItemsTable {
+  /** Internal storage/launch key scoped by leg goal version. */
+  key: string;
   id: WorkItemId;
   pursuit_id: PursuitId;
   leg_id: LegId;
@@ -93,6 +95,7 @@ export interface WorkItemDependencyEdgesTable {
   pursuit_id: PursuitId;
   leg_id: LegId;
   attempt_id: AttemptId;
+  work_item_key: string;
   work_item_id: WorkItemId;
   depends_on_work_item_id: WorkItemId;
   leg_goal_version: number;

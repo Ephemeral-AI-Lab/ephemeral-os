@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use crate::CommandConfig;
 
 pub trait CommandWaitTarget<T> {
-    fn try_finalize(&self) -> Option<T>;
+    fn take_exit(&self) -> Option<T>;
     fn transcript_len(&self) -> u64;
     fn read_output_since(&self, start_offset: u64) -> String;
 }
@@ -27,7 +27,7 @@ where
     let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
     let (mut last_off, mut last_change) = (start_offset, Instant::now());
     loop {
-        if let Some(result) = command.try_finalize() {
+        if let Some(result) = command.take_exit() {
             return WaitOutcome::Completed(result);
         }
         let off = command.transcript_len();

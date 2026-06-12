@@ -20,8 +20,8 @@ function get_initial_messages(vars) {
   }
   messages.push(
     user(
-      "Complete only this assigned work item. Do not plan, refocus, or change legs. " +
-        "Submit worker outcome for this work item.",
+      "Stay inside the current leg_goal and this work item. Do not plan new legs, " +
+        "change leg_goal, or decide next_leg_goal. Submit worker outcome for this work item.",
     ),
   );
   return messages;

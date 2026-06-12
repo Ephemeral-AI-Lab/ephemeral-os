@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[test]
-    fn conflict_settlement_matches_contract_fixture() {
+    fn conflict_finalization_matches_contract_fixture() {
         let mut changed_path_kinds = crate::ChangedPathKinds::default();
         changed_path_kinds.insert("src/main.rs".to_owned(), ChangedPathKind::Write);
         let mut timings = crate::WorkspaceTimings::default();
@@ -416,9 +416,9 @@ mod tests {
         }
         .to_wire_value();
         let fixture: Value = serde_json::from_str(include_str!(
-            "../../../../contract/fixtures/command_settle_conflict_response.json"
+            "../../../../contract/fixtures/command_finalize_conflict_response.json"
         ))
-        .expect("valid command settle conflict fixture");
+        .expect("valid command finalize conflict fixture");
 
         assert_eq!(response, fixture);
     }
