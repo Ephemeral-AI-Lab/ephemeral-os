@@ -56,9 +56,9 @@ importers:
       '@eos/tool':
         specifier: workspace:*
         version: link:../tool
-      '@eos/workflow':
+      '@eos/pursuit':
         specifier: workspace:*
-        version: link:../workflow
+        version: link:../pursuit
       yaml:
         specifier: ^2.8.1
         version: 2.9.0
@@ -176,7 +176,7 @@ importers:
         specifier: workspace:*
         version: link:../testkit
 
-  packages/workflow:
+  packages/pursuit:
     dependencies:
       '@eos/contracts':
         specifier: workspace:*

@@ -13,7 +13,7 @@ export type WorkerSubmissionBinding = Extract<SubmissionBinding, { kind: "worker
 
 /**
  * The worker's terminal tool with its per-kind payload schema. A
- * workflow-launched run submits through the §2.19 binding (validate +
+ * pursuit-launched run submits through the §2.19 binding (validate +
  * mutate in one DB transaction, error results correctable in-run); an
  * unbound run keeps the service-free behavior and the payload rides the
  * run outcome as `submission`.

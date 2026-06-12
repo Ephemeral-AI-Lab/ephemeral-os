@@ -66,7 +66,7 @@ async function* withIdleGuard<T>(
 /**
  * Run one wire attempt: open the sdk stream (the wire pulls per-attempt
  * headers from its transport), guard it with the idle watchdog, feed events
- * through the decoder, and enforce the iteration contract (exactly one
+ * through the decoder, and enforce the leg contract (exactly one
  * terminal event; a clean end without it is a truncated stream). Caller
  * aborts are rethrown as-is.
  */
@@ -118,7 +118,7 @@ async function* runAttempt(
 /**
  * The one generic streaming client: a wire composed with an access scheme's
  * transport (bound in the factory), wrapped in the visible-output retry gate
- * and the idle guard. Implements the `LlmClient` iteration contract
+ * and the idle guard. Implements the `LlmClient` leg contract
  * unchanged from Phase 02.
  */
 export class LlmStreamClient implements LlmClient {

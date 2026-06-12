@@ -47,6 +47,6 @@ export {
   type WorkerSubmissionBinding,
 } from "./tools/submission/index.js";
 export {
-  WORKFLOW_TOOL_NAMES,
-  workflowTools,
-} from "./tools/workflow/delegate-workflow.js";
+  PURSUIT_TOOL_NAMES,
+  pursuitTools,
+} from "./tools/pursuit/delegate-pursuit.js";

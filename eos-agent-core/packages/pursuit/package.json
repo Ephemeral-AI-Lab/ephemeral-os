@@ -1,0 +1,16 @@
+{
+  "name": "@eos/pursuit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@eos/contracts": "workspace:*",
+    "@eos/db": "workspace:*"
+  }
+}

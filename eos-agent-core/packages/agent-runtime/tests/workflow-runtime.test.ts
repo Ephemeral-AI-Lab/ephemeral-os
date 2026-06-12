@@ -31,18 +31,18 @@ import {
 
 const VARIABLE_REFERENCE_MAP = `
 function create_variable_reference_map(ctx) {
-  const workflow = ctx.workflow_context.workflow;
-  const current_iteration = workflow.iterations.find(
-    (i) => i.id === ctx.current.iteration_id,
+  const pursuit = ctx.pursuit_context.pursuit;
+  const current_leg = pursuit.legs.find(
+    (i) => i.id === ctx.current.leg_id,
   ) ?? null;
-  const all_attempts = current_iteration ? current_iteration.attempts : [];
+  const all_attempts = current_leg ? current_leg.attempts : [];
   const current_attempt = all_attempts.find((a) => a.id === ctx.current.attempt_id) ?? null;
   const previous_attempt =
     all_attempts
       .filter((a) => current_attempt && a.sequence < current_attempt.sequence)
       .at(-1) ?? null;
-  const all_work_items = workflow.iterations.flatMap((iteration) =>
-    iteration.attempts.flatMap((attempt) => attempt.work_items),
+  const all_work_items = pursuit.legs.flatMap((leg) =>
+    leg.attempts.flatMap((attempt) => attempt.work_items),
   );
   const current_work_item =
     "work_item_id" in ctx.current
@@ -59,7 +59,7 @@ function create_variable_reference_map(ctx) {
       : {
           attempt_id: attempt.id,
           status: attempt.status,
-          fail_reason: attempt.fail_reason,
+          failure_reasons: attempt.failure_reasons,
           plan_summary: attempt.plan.summary,
           work_items: attempt.work_items.map((item) => ({
             id: item.id,
@@ -68,18 +68,18 @@ function create_variable_reference_map(ctx) {
             outcome: item.outcome,
           })),
         };
-  const goal_for_iteration = (iteration_id) => {
-    const index = workflow.iterations.findIndex((iteration) => iteration.id === iteration_id);
-    let goal = workflow.goal;
+  const goal_for_leg = (leg_id) => {
+    const index = pursuit.legs.findIndex((leg) => leg.id === leg_id);
+    let goal = pursuit.goal;
     for (let cursor = 1; cursor <= index; cursor += 1) {
-      goal = workflow.iterations[cursor - 1].deferred_goal ?? goal;
+      goal = pursuit.legs[cursor - 1].next_leg_goal ?? goal;
     }
     return goal;
   };
   return {
     kind: ctx.kind,
-    workflow_goal: goal_for_iteration(ctx.current.iteration_id),
-    current_iteration_focus: current_iteration ? current_iteration.focus : null,
+    pursuit_goal: goal_for_leg(ctx.current.leg_id),
+    current_leg_goal: current_leg ? current_leg.focus : null,
     previous_attempt_outcome: attempt_outcome(previous_attempt),
     work_item_description: current_work_item ? current_work_item.description : null,
     work_item_spec: current_work_item ? current_work_item.spec : null,
@@ -101,11 +101,11 @@ const { create_variable_reference_map } = require("./variable_reference_map.cjs"
 
 function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
-  const messages = [user("# Workflow goal\\n" + vars.workflow_goal)];
-  if (vars.current_iteration_focus === null) {
-    messages.push(user("Declare this iteration's focus and work items."));
+  const messages = [user("# Pursuit goal\\n" + vars.pursuit_goal)];
+  if (vars.current_leg_goal === null) {
+    messages.push(user("Declare this leg's focus and work items."));
   } else {
-    messages.push(user("# Iteration focus\\n" + vars.current_iteration_focus));
+    messages.push(user("# Leg focus\\n" + vars.current_leg_goal));
     if (vars.previous_attempt_outcome !== null) {
       messages.push(user("# Previous attempt\\n" + JSON.stringify(vars.previous_attempt_outcome)));
     }
@@ -129,8 +129,8 @@ const { create_variable_reference_map } = require("./variable_reference_map.cjs"
 
 function get_initial_messages(vars) {
   const user = (text) => ({ role: "user", content: [{ type: "text", text }] });
-  const messages = [user("# Workflow goal\\n" + vars.workflow_goal)];
-  messages.push(user("# Iteration focus\\n" + (vars.current_iteration_focus ?? "")));
+  const messages = [user("# Pursuit goal\\n" + vars.pursuit_goal)];
+  messages.push(user("# Leg focus\\n" + (vars.current_leg_goal ?? "")));
   messages.push(user("# Work item description\\n" + (vars.work_item_description ?? "")));
   messages.push(user("# Work item\\n" + (vars.work_item_spec ?? "")));
   if (vars.dependency_outcomes.length > 0) {
@@ -150,12 +150,12 @@ process.stdin.on("end", () => {
 });
 `;
 
-interface WorkflowFixtureOptions {
+interface PursuitFixtureOptions {
   clients: Record<string, LlmClient>;
   plannerScript?: string;
 }
 
-function workflowRuntimeFixture(options: WorkflowFixtureOptions): {
+function pursuitRuntimeFixture(options: PursuitFixtureOptions): {
   runtime: AgentRuntime;
   dataDir: string;
   contextRoot: string;
@@ -175,7 +175,7 @@ function workflowRuntimeFixture(options: WorkflowFixtureOptions): {
     llmClientId: "main_llm",
     allowed: [
       "ask_advisor",
-      "delegate_workflow",
+      "delegate_pursuit",
       "list_background_sessions",
       "cancel_background_session",
     ],
@@ -185,27 +185,27 @@ function workflowRuntimeFixture(options: WorkflowFixtureOptions): {
     kind: "planner",
     llmClientId: "planner_llm",
     allowed: ["ask_advisor"],
-    workflowContextScript: join(scriptsDir, "planner.cjs"),
+    pursuitContextScript: join(scriptsDir, "planner.cjs"),
   });
   writeProfile(profilesDir, {
     name: "worker",
     kind: "worker",
     llmClientId: "worker_llm",
     allowed: ["ask_advisor"],
-    workflowContextScript: join(scriptsDir, "worker.cjs"),
+    pursuitContextScript: join(scriptsDir, "worker.cjs"),
   });
 
   const dataDir = join(root, "data");
-  const contextRoot = join(root, "workflow-context");
+  const contextRoot = join(root, "pursuit-context");
   const runtime = createAgentRuntime({
     agentProfilesDir: profilesDir,
     llmClients: llmRegistry(options.clients),
     hookConfigPath: join(root, "hooks.json"),
     notificationRulesPath: join(root, "notification_rules.json"),
     dataDir,
-    workflowDb: ":memory:",
-    workflowContextRoot: contextRoot,
-    workflowScriptsDir: scriptsDir,
+    pursuitDb: ":memory:",
+    pursuitContextRoot: contextRoot,
+    pursuitScriptsDir: scriptsDir,
   });
   return { runtime, dataDir, contextRoot };
 }
@@ -213,7 +213,7 @@ function workflowRuntimeFixture(options: WorkflowFixtureOptions): {
 function delegateTurn(goal: string): ScriptedTurn {
   return scriptedTurn([
     complete(
-      assistantMessage(toolUseBlock("tu_d", "delegate_workflow", { goal })),
+      assistantMessage(toolUseBlock("tu_d", "delegate_pursuit", { goal })),
       "tool_use",
     ),
   ]);
@@ -232,7 +232,7 @@ function plannerSubmissionTurn(workItems: JsonObject[]): ScriptedTurn {
       assistantMessage(
         toolUseBlock("tu_p", "submit_planner_outcome", {
           summary: "planned both items",
-          iteration_focus: "the whole goal",
+          leg_goal: "the whole goal",
           work_items: workItems,
         }),
       ),
@@ -256,7 +256,7 @@ function workerSubmissionTurn(id: string, summary: string): ScriptedTurn {
   ]);
 }
 
-describe("workflow runtime end-to-end (§16 case 12)", () => {
+describe("pursuit runtime end-to-end (§16 case 12)", () => {
   it("delegates, runs scripted planner and workers through real engine loops, auto-waits, and submits", async () => {
     const mainClient = new MockLlmClient([
       delegateTurn("build the thing"),
@@ -285,7 +285,7 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
       workerSubmissionTurn("a", "first item shipped"),
       workerSubmissionTurn("b", "second item shipped"),
     ]);
-    const { runtime } = workflowRuntimeFixture({
+    const { runtime } = pursuitRuntimeFixture({
       clients: {
         main_llm: mainClient,
         planner_llm: plannerClient,
@@ -304,15 +304,15 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
     // nothing merged around them (§2.12).
     const plannerRequest = must(plannerClient.requests.at(0));
     expect(plannerRequest.messages).toEqual([
-      userMessage("# Workflow goal\nbuild the thing"),
-      userMessage("Declare this iteration's focus and work items."),
+      userMessage("# Pursuit goal\nbuild the thing"),
+      userMessage("Declare this leg's focus and work items."),
     ]);
 
     // Worker A: description + spec from the snapshot, no dependencies.
     const workerARequest = must(workerClient.requests.at(0));
     expect(workerARequest.messages).toEqual([
-      userMessage("# Workflow goal\nbuild the thing"),
-      userMessage("# Iteration focus\nthe whole goal"),
+      userMessage("# Pursuit goal\nbuild the thing"),
+      userMessage("# Leg focus\nthe whole goal"),
       userMessage("# Work item description\nfirst item"),
       userMessage("# Work item\ndo the first item"),
       userMessage("Submit worker outcome for this work item."),
@@ -341,24 +341,24 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
       .map((block) => block.text)
       .find((text) => text.includes("session_settled"));
     expect(settled, "session_settled drained into the caller").toBeDefined();
-    expect(settled).toContain('"workflow"');
+    expect(settled).toContain('"pursuit"');
     expect(settled).toContain('"completed"');
     expect(settled).toContain("planned both items");
   });
 
-  it("cancel_background_session mid-workflow cascades workflow_cancelled into child transcripts", async () => {
+  it("cancel_background_session mid-pursuit cascades pursuit_cancelled into child transcripts", async () => {
     let plannerStarted!: () => void;
     const started = new Promise<void>((resolve) => (plannerStarted = resolve));
     // The second turn gates on the planner having started, then cancels
-    // the workflow session by the id the delegate result returned.
+    // the pursuit session by the id the delegate result returned.
     const gatedCancelTurn: ScriptedTurn = async function* (request) {
       await started;
       const result = lastToolResultJson(request);
       yield complete(
         assistantMessage(
           toolUseBlock("tu_c", "cancel_background_session", {
-            type: "workflow",
-            id: result.workflow_id,
+            type: "pursuit",
+            id: result.pursuit_id,
             reason: "wrong direction",
           }),
         ),
@@ -371,7 +371,7 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
       submitMainTurn,
     ]);
     const plannerClient = new MockLlmClient([hangingTurn(plannerStarted)]);
-    const { runtime, dataDir } = workflowRuntimeFixture({
+    const { runtime, dataDir } = pursuitRuntimeFixture({
       clients: {
         main_llm: mainClient,
         planner_llm: plannerClient,
@@ -395,10 +395,10 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
     );
     expect(finished).toMatchObject({
       outcome_status: "cancelled",
-      interrupt_reason: "workflow_cancelled",
+      interrupt_reason: "pursuit_cancelled",
     });
     const result = readResultLines(join(dirname(transcriptPath), "result.jsonl"));
-    expect(result.at(0)).toMatchObject({ interrupt_reason: "workflow_cancelled" });
+    expect(result.at(0)).toMatchObject({ interrupt_reason: "pursuit_cancelled" });
   });
 
   it("a broken context script drives the case-9 synthesis path live and the session settles failed", async () => {
@@ -407,7 +407,7 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
       scriptedTurn([complete(assistantMessage(textBlock("waiting")))]),
       submitMainTurn,
     ]);
-    const { runtime } = workflowRuntimeFixture({
+    const { runtime } = pursuitRuntimeFixture({
       clients: {
         main_llm: mainClient,
         planner_llm: new MockLlmClient([]),
@@ -435,12 +435,12 @@ describe("workflow runtime end-to-end (§16 case 12)", () => {
   });
 });
 
-describe("workflow runtime startup validation (§16 case 12)", () => {
+describe("pursuit runtime startup validation (§16 case 12)", () => {
   function startupFixture(mutate: {
     plannerScriptPath?: (scriptsDir: string) => string;
     skipPlannerProfile?: boolean;
     secondPlanner?: boolean;
-    workflowDb?: string;
+    pursuitDb?: string;
     allowDelegateWithoutDb?: boolean;
   }): () => void {
     const root = tempDir("eos-wf-startup-");
@@ -458,7 +458,7 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
       name: "orchestrator",
       kind: "main",
       llmClientId: "main_llm",
-      allowed: mutate.allowDelegateWithoutDb ? ["delegate_workflow"] : [],
+      allowed: mutate.allowDelegateWithoutDb ? ["delegate_pursuit"] : [],
     });
     if (!mutate.skipPlannerProfile) {
       writeProfile(profilesDir, {
@@ -466,7 +466,7 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
         kind: "planner",
         llmClientId: "planner_llm",
         allowed: ["ask_advisor"],
-        workflowContextScript:
+        pursuitContextScript:
           mutate.plannerScriptPath?.(scriptsDir) ?? join(scriptsDir, "planner.cjs"),
       });
     }
@@ -476,7 +476,7 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
         kind: "planner",
         llmClientId: "planner_llm",
         allowed: ["ask_advisor"],
-        workflowContextScript: join(scriptsDir, "planner.cjs"),
+        pursuitContextScript: join(scriptsDir, "planner.cjs"),
       });
     }
     return () =>
@@ -489,8 +489,8 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
         hookConfigPath: join(root, "hooks.json"),
         notificationRulesPath: join(root, "notification_rules.json"),
         dataDir: join(root, "data"),
-        workflowScriptsDir: scriptsDir,
-        ...(mutate.workflowDb !== undefined && { workflowDb: mutate.workflowDb }),
+        pursuitScriptsDir: scriptsDir,
+        ...(mutate.pursuitDb !== undefined && { pursuitDb: mutate.pursuitDb }),
       });
   }
 
@@ -498,7 +498,7 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
     expect(
       startupFixture({
         plannerScriptPath: (dir) => join(dir, "absent.cjs"),
-        workflowDb: ":memory:",
+        pursuitDb: ":memory:",
       }),
     ).toThrow(/is not readable/);
   });
@@ -507,7 +507,7 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
     expect(
       startupFixture({
         plannerScriptPath: (dir) => join(dir, "..", "outside.cjs"),
-        workflowDb: ":memory:",
+        pursuitDb: ":memory:",
       }),
     ).toThrow(/escapes the script root/);
   });
@@ -520,26 +520,26 @@ describe("workflow runtime startup validation (§16 case 12)", () => {
           writeFileSync(path, "x");
           return path;
         },
-        workflowDb: ":memory:",
+        pursuitDb: ":memory:",
       }),
     ).toThrow(/must be a \.cjs or \.mjs file/);
   });
 
-  it("requires exactly one planner profile when workflowDb is configured", () => {
+  it("requires exactly one planner profile when pursuitDb is configured", () => {
     expect(
-      startupFixture({ secondPlanner: true, workflowDb: ":memory:" }),
+      startupFixture({ secondPlanner: true, pursuitDb: ":memory:" }),
     ).toThrow(/exactly one planner profile; found 2/);
     expect(
-      startupFixture({ skipPlannerProfile: true, workflowDb: ":memory:" }),
+      startupFixture({ skipPlannerProfile: true, pursuitDb: ":memory:" }),
     ).toThrow(/exactly one planner profile; found 0/);
   });
 
-  it("rejects a profile listing delegate_workflow when no workflowDb is configured", () => {
+  it("rejects a profile listing delegate_pursuit when no pursuitDb is configured", () => {
     expect(startupFixture({ allowDelegateWithoutDb: true })).toThrow(
-      /allows "delegate_workflow", which is not a known non-terminal tool/,
+      /allows "delegate_pursuit", which is not a known non-terminal tool/,
     );
     expect(
-      startupFixture({ allowDelegateWithoutDb: true, workflowDb: ":memory:" }),
+      startupFixture({ allowDelegateWithoutDb: true, pursuitDb: ":memory:" }),
     ).not.toThrow();
   });
 });

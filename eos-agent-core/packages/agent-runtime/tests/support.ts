@@ -202,7 +202,7 @@ export interface ProfileSpec {
   maxTurns?: number;
   body?: string;
   /** Required for planner/worker kinds; fixtures usually inject it. */
-  workflowContextScript?: string;
+  pursuitContextScript?: string;
 }
 
 /** Write `<dir>/<name>.md` in the §4 profile format. */
@@ -219,8 +219,8 @@ export function writeProfile(dir: string, spec: ProfileSpec): string {
     `agent_kind: ${spec.kind}`,
     `allowed_tools:${allowed ? `\n${allowed}` : " []"}`,
     ...(terminal === undefined ? [] : [`terminal_tool: ${terminal}`]),
-    ...(spec.workflowContextScript
-      ? [`workflow_context_script: ${spec.workflowContextScript}`]
+    ...(spec.pursuitContextScript
+      ? [`pursuit_context_script: ${spec.pursuitContextScript}`]
       : []),
     "---",
     "",
@@ -245,7 +245,7 @@ export function writeContextScript(dir: string, name = "context.cjs"): string {
 process.stdin.on("data", (c) => (input += c));
 process.stdin.on("end", () => {
   const ctx = JSON.parse(input);
-  const text = "workflow goal: " + ctx.workflow_context.workflow.goal;
+  const text = "pursuit goal: " + ctx.pursuit_context.pursuit.goal;
   process.stdout.write(
     JSON.stringify({
       initial_messages: [{ role: "user", content: [{ type: "text", text }] }],

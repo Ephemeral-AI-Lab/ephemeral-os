@@ -32,7 +32,7 @@ export const TERMINAL_TOOL_NAMES = [
 /**
  * The full terminal inventory, one definition per name. Not keyed by
  * `AgentKind`: the profile selects exactly one entry by `terminal_tool`.
- * A workflow-launched run passes its §2.19 `SubmissionBinding`, which
+ * A pursuit-launched run passes its §2.19 `SubmissionBinding`, which
  * binds exactly the matching kind's terminal tool; everything else stays
  * service-free.
  */

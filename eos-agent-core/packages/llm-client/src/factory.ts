@@ -9,7 +9,7 @@ import type { WireTransport } from "./wires/wire.js";
  * profile, bind the access scheme to the wire as its transport, and wrap the
  * composition in the generic stream client. Invalid connections and codex
  * JWT-claim failures throw here (`ZodError` / `ProviderError` kind
- * `request`); the returned client honors the Phase 02 `LlmClient` iteration
+ * `request`); the returned client honors the Phase 02 `LlmClient` leg
  * contract unchanged.
  */
 export function createLlmClient(

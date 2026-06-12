@@ -1,10 +1,10 @@
-export const DESCRIPTION = `Submit the final outcome of this planner run: the iteration's focus declaration and the work items for it. Terminal: a successful call ends the run.
+export const DESCRIPTION = `Submit the final outcome of this planner run: the leg's focus declaration and the work items for it. Terminal: a successful call ends the run.
 
 ## How This Tool Works
 - A successful call ends the run; a failed call does not - fix the reported problem and submit again. Shape, structure (unique ids, declared \`needs\`, no cycles), and materialization errors all return as correctable results.
 - Must be called alone: batching it with any other tool call rejects the whole batch undispatched.
-- \`iteration_focus\` and \`deferred_goal\` declare and reset as ONE atomic pair. The iteration's first submission must declare \`iteration_focus\`; later submissions may omit both to keep the standing declaration, or re-declare to refocus - which resets BOTH fields and supersedes the prior attempts.
-- \`deferred_goal\` is only valid beside \`iteration_focus\`: it names the remainder of the current goal, promoted to the next iteration when this one closes successfully.
+- \`leg_goal\` and \`next_leg_goal\` declare and reset as ONE atomic pair. The leg's first submission must declare \`leg_goal\`; later submissions may omit both to keep the standing declaration, or re-declare to refocus - which resets BOTH fields and supersedes the prior attempts.
+- \`next_leg_goal\` is only valid beside \`leg_goal\`: it names the remainder of the current goal, promoted to the next leg when this one closes successfully.
 - Each work item names a worker profile (\`agent_name\`), a one-line \`description\`, a full \`work_item_spec\`, and its \`needs\` (ids of work items in this same submission it depends on).
 
 ## Before Using This Tool

@@ -14,17 +14,50 @@ Inputs:
 - `sandbox/docs/sandbox-event-tracing-response-plan.md` (parallel draft; identity model, seq chain, phase vocabulary, declassification, and fail-closed rule merged here)
 - Verified live scan of dispatch, transport, host forwarding, command session, plugin, workspace, LayerStack/OCC, and e2e helpers (anchors inline)
 
-## Implementability and Progress
+## 0. Progress Tracker
 
-Verdict: **implementable**. The plan fits the current sandbox shape because the
-daemon can emit bounded span facts through the `tracing` facade without a
-subscriber cost in tests/ns-runner code, request traces can ride the existing
-one-request-one-response protocol as an internal sidecar, and durable SQLite
-ingest stays in the host where request forwarding and fail-closed decisions
-already live. The risky parts are migration ordering, not missing primitives:
-the mixed-wire decoder must land before any response family flips, and e2e
-assertions must move to trace/store helpers before legacy `timings` assertions
-are deleted.
+Implementation verdict: **implementable**. The plan fits the current sandbox
+shape because the daemon can emit bounded span facts through the `tracing`
+facade without a subscriber cost in tests/ns-runner code, request traces can
+ride the existing one-request-one-response protocol as an internal sidecar, and
+durable SQLite ingest stays in the host where request forwarding and
+fail-closed decisions already live. The risky parts are migration ordering, not
+missing primitives: the mixed-wire decoder must land before any response family
+flips, and e2e assertions must move to trace/store helpers before legacy
+`timings` assertions are deleted.
+
+Tracker status values:
+
+| Status | Meaning |
+| --- | --- |
+| `Blocked` | Previous phase is not complete; do not start implementation. |
+| `Pending` | Previous phase is complete, but this phase has not started. |
+| `In progress` | This is the only active implementation phase. |
+| `Complete` | Every checklist item is checked and phase verification passed. |
+
+Gate rule:
+
+```text
+Only one phase may be In progress at a time.
+Do not begin Phase N+1 until Phase N is Complete.
+When a phase completes, update this tracker in the same change that records the
+phase verification evidence.
+```
+
+Current phase status:
+
+| Phase | Status | Completion evidence |
+| --- | --- | --- |
+| Phase 01 - Contracts first | Pending | |
+| Phase 02 - Host store | Blocked | |
+| Phase 03 - Gateway, host, and daemon propagation | Blocked | |
+| Phase 04 - Subsystem events and resource stats | Blocked | |
+| Phase 05 - Response and e2e migration | Blocked | |
+| Phase 06 - Debt deletion | Blocked | |
+| Phase 07 - TypeScript mirror | Blocked | |
+| Phase 08 - Heartbeat monitoring | Blocked | |
+| Phase 09 - Transcript archival | Blocked | |
+| Phase 10 - Operator lineage views | Blocked | |
 
 Implementation constraints:
 
@@ -40,22 +73,6 @@ Implementation constraints:
 - The e2e suite is part of the migration, not a post-migration cleanup. Each
   family flip must replace that family's response/timing assertions with
   trace/store assertions in the same change.
-
-Progress tracker:
-
-| Phase | Scope | Status | Exit proof |
-| --- | --- | --- | --- |
-| 0 — spec and retarget map | Implementability verdict, progress tracker, phase checklists, and e2e retargeting contract | Complete | `git diff --check -- docs/plans/sandbox-event-tracing-and-response-contract_SPEC.md`; no stale legacy identity/event names |
-| A — contracts first | `eos-trace`, protobuf, bounded detail, typed response envelope skeletons | Not started | Contract/golden tests pass before host/daemon work depends on them |
-| B — host store | SQLite audit store, hash chain, projections, fail-closed request-start ingest | Not started | Store unit tests and acceptance query plan checks pass |
-| C — daemon propagation | request trace propagation, root/dispatch/op spans, sidecar/export/drainer | Not started | daemon tests prove wire failures/cancel paths produce trace records |
-| D — subsystem events/resource stats | layerstack/OCC/overlay/command/isolated/plugin/checkpoint/resource events | Not started | focused crate tests plus live trace queries for every required subsystem fact |
-| E — response + e2e migration | mixed decoder, family flips, e2e helpers and suite retargeting | Not started | each flipped suite asserts envelope/meta/store facts instead of flat timings |
-| F — debt deletion | remove legacy response/timing helpers and compatibility adapter | Not started | grep gates prove no legacy branches remain |
-| G — TS mirror | TypeScript contract/schema mirror | Not started | `eos-agent-core` typecheck/lint/test |
-| H — heartbeat monitoring | status snapshots, heartbeat projection, CLI watch | Not started | heartbeat e2e proves bracketing and daemon-unreachable rows |
-| I — transcript archival | stdin/progress/final transcript archival and loss events | Not started | transcript byte/digest e2e and TTL-loss test |
-| J — operator lineage views | `trace show`, `trace verify`, heartbeat lineage views | Not started | CLI/e2e reconstruct traces from store data only |
 
 ## Posture: Destructive, Clean-Slate
 
@@ -95,7 +112,7 @@ contract.
 | --- | --- | --- |
 | Instrumentation backbone | `tracing` 0.1 facade + `tracing-subscriber` 0.3 custom Layer; new crate `eos-trace` | Third-party-preferred; macros are no-ops without a subscriber (ns-runner process, library tests); spans land at the existing phase boundaries and **replace** the timing-map plumbing |
 | Timing source of truth | The span tree. Response `meta` (duration, step summary, modules touched, resource summary) is rendered **from the trace record**, never hand-inserted | One measurement, one vocabulary; drift between response and trace becomes impossible by construction |
-| Identity | `trace_id` (host-minted, propagated in the request envelope) ≠ `request_id` (replaces legacy `invocation_id`, one request/response) ≠ `span_id`; plus a per-trace monotonic `seq` event chain and cross-request link rows | A long-lived chain (exec → stdin → poll → settle) is one `trace_id` across many `request_id`s; replay is `WHERE trace_id=? ORDER BY seq`; concurrency lives in the span tree, not the chain |
+| Identity | `trace_id` (host-minted, propagated in the request envelope) != `request_id` (one request/response) != `span_id`; plus a per-trace monotonic `seq` event chain and cross-request link rows | A long-lived chain (exec -> stdin -> poll -> settle) is one `trace_id` across many `request_id`s; replay is `WHERE trace_id=? ORDER BY seq`; concurrency lives in the span tree, not the chain |
 | Event delivery | Hybrid: request-scoped events ride the response as an internal `_trace_events` sidecar (host-ingested, gateway-stripped); background traces (reaper settles, sweeps) buffer in a bounded spool drained via `sandbox.trace.export` | Sidecar = zero loss window and zero extra round trips for request traces; drain op covers work that has no response to ride. The one-request-one-response protocol (`server.rs:262-287`) permits exactly this combination |
 | Hot-path ingestion | Daemon spans/events are bounded in-memory facts only: no SQLite, fsync, host RPC, blocking serialization, unbounded JSON allocation, or cross-sandbox lock waits in rule/dispatch/subsystem decision paths | Core sandbox decisions stay decoupled from audit persistence; overflow is explicit (`dropped_traces`, `dropped_children`, `truncated`) instead of silently slowing the decision engine |
 | Canonical serialization | Protobuf `TraceBatch` / `SandboxStatusSnapshot` schemas generated by `prost`; JSON is allowed only for human exports and bounded projection fields | Schema-evolvable, low-overhead payloads for sidecars, export drains, and immutable storage; avoids `serde_json::Value` becoming the audit contract |
@@ -123,7 +140,7 @@ These are implementation gates, not aspirations:
 | Identity | Source | Meaning |
 | --- | --- | --- |
 | `trace_id` | Host-minted (uuid4) when starting a user-visible call; propagated to the daemon in the request envelope; reused across every op of a long-lived chain | One user-visible sandbox interaction or one long-lived session chain |
-| `request_id` | New top-level request identity; replaces today's `invocation_id` (`protocol.rs:118-135`) | One daemon request/response |
+| `request_id` | Top-level request identity (`protocol.rs:118-135`) | One daemon request/response |
 | `span_id` | Daemon `AtomicU64` (never reuse `tracing::span::Id` — the Registry recycles them) | One timed unit, parented into a per-request tree |
 | `seq` | Host-assigned at ingest, monotonic per `trace_id` | Durable observation order; gap-free even when daemon batches arrive late |
 | `daemon_boot_id` | uuid4 per daemon process | Exposes respawn gaps in audit |
@@ -171,7 +188,7 @@ follow-on op routing is still by `caller_id`):
   `trace_requests` (chain `trace_id` beside actual route). Divergence is
   observable, never silent.
 
-Both maps are rebuildable from `trace_links` after a host restart. Phase D adds
+Both maps are rebuildable from `trace_links` after a host restart. Phase 04 adds
 the missing daemon-side origin fields to `ActiveCommand` (today it stores
 session/workspace state, not `request_id`/`trace_id`), so background settle traces
 carry the chain id even when the host never polls.
@@ -304,6 +321,123 @@ Crate ownership boundaries (merged from the parallel draft):
 | `eos-sandbox-host` | SQLite store, request-start fail-closed rule, sidecar ingest + seq assignment, degraded/uncertain records, export drains |
 | `eos-sandbox-gateway` | Declassification: strip `_trace_events` from client-facing responses; operator/debug trace lookup only |
 | `@eos/db` / `@eos/contracts` | TS mirror of schema + Zod envelope schemas when the TS host lands |
+
+### Resulting file/folder structure
+
+The migration leaves persistence and trace protocol ownership in a small number
+of explicit modules. Mechanism crates mostly emit events in their existing
+ownership files; they do not grow store, SQL, or generic helper directories.
+
+```text
+sandbox/
+|-- Cargo.toml
+|   |-- adds workspace member crates/eos-trace
+|   `-- pins tracing, tracing-subscriber, prost, prost-build, rusqlite,
+|       ed25519-dalek/signer provider, and eos-trace workspace dependency
+|-- crates/
+|   |-- eos-trace/                         # new storage-neutral trace contract crate
+|   |   |-- Cargo.toml
+|   |   |-- build.rs                       # prost codegen for proto/eos/trace/v1
+|   |   |-- proto/
+|   |   |   `-- eos/trace/v1/
+|   |   |       `-- trace.proto             # TraceBatch, RequestStart, AuditEntry, etc.
+|   |   |-- src/
+|   |   |   |-- lib.rs                      # public facade only
+|   |   |   |-- ids.rs                      # TraceId, RequestId, SpanUid, boot ids
+|   |   |   |-- record.rs                   # TraceRecord, SpanRecord, EventRecord, links
+|   |   |   |-- codec.rs                    # DTO <-> protobuf encode/decode
+|   |   |   |-- budget.rs                   # bounded-detail/truncation helpers
+|   |   |   |-- resource_stats.rs           # cgroup/proc/tree/mount-cost DTOs + samplers
+|   |   |   |-- spool.rs                    # bounded background trace spool
+|   |   |   |-- layer.rs                    # tracing-subscriber Layer
+|   |   |   `-- subscriber.rs               # subscriber/fmt-layer construction
+|   |   `-- tests/
+|   |       |-- codec_golden.rs
+|   |       |-- layer_tree.rs
+|   |       `-- resource_stats.rs
+|   |-- eos-operation/
+|   |   |-- src/core/
+|   |   |   |-- envelope.rs                 # OperationEnvelope, ResponseMeta, TraceRef
+|   |   |   |-- fault.rs                    # OperationFault + structured details
+|   |   |   |-- response.rs                 # deleted or reduced to compatibility facade during Phase 05
+|   |   |   `-- lib.rs
+|   |   `-- src/*/contract.rs              # per-family result DTOs updated in-place
+|   |-- eos-sandbox-host/
+|   |   |-- src/
+|   |   |   |-- trace_recorder.rs           # host/gateway event collector, trace id mint/adopt
+|   |   |   |-- trace_store.rs              # store facade and fail-closed append API
+|   |   |   |-- trace_store/
+|   |   |   |   |-- ddl.rs                   # schema and forward-only migrations
+|   |   |   |   |-- writer.rs                # audit_entries append, hash chain, WAL pragmas
+|   |   |   |   |-- ingest.rs                # sidecar/export/heartbeat ingest
+|   |   |   |   |-- query.rs                 # trace replay/operator projections
+|   |   |   |   `-- seal.rs                 # segment seal/signature/prune proofs
+|   |   |   |-- host.rs                     # forward path records request_start + transport events
+|   |   |   |-- protocol.rs                 # shape-aware decoder + TCP read/write telemetry
+|   |   |   |-- runtime.rs                  # daemon lifecycle facts + heartbeat wiring
+|   |   |   `-- lib.rs
+|   |   `-- tests/
+|   |       |-- trace_store.rs
+|   |       |-- trace_recorder.rs
+|   |       `-- transport_trace.rs
+|   |-- eos-sandbox-gateway/
+|   |   |-- src/
+|   |   |   |-- gateway.rs                  # UDS read/parse/route/write events, sidecar stripping
+|   |   |   |-- trace.rs                    # gateway event construction, no persistence
+|   |   |   |-- serve.rs
+|   |   |   `-- main.rs
+|   |   `-- tests/contract/                # updated envelope + sidecar-strip assertions
+|   |-- eos-daemon/
+|   |   |-- src/
+|   |   |   |-- trace.rs                    # subscriber install, root finalization, sidecar assembly
+|   |   |   |-- transport/server.rs         # daemon.transport events + request trace context
+|   |   |   |-- dispatch/dispatcher.rs      # dispatch span + meta from trace record
+|   |   |   |-- op_adapter/*.rs             # route/op-family spans
+|   |   |   `-- runtime/response.rs        # deleted/reduced as flat timing/resource map dies
+|   |   `-- tests/                         # wire/tree/sidecar tests
+|   |-- eos-command-session/
+|   |   `-- src/                           # existing files emit command_session events
+|   |-- eos-layerstack/
+|   |   `-- src/                           # existing commit/worker/service files emit events
+|   |-- eos-workspace/
+|   |   `-- src/                           # existing capture/isolated lifecycle files emit events
+|   |-- eos-plugin/
+|   |   `-- src/                           # existing PPC/service files emit events
+|   `-- eos-e2e-test/
+|       |-- src/pool.rs                    # shape-aware client helpers during migration
+|       `-- tests/support/
+|           |-- mod.rs
+|           `-- trace.rs                   # shared trace/store assertion helpers
+`-- dist/
+    `-- eosd-linux-amd64                  # rebuilt when daemon trace wiring changes
+```
+
+Host runtime state after implementation:
+
+```text
+<state_dir>/
+|-- sandbox-traces.sqlite                  # 0600, WAL, canonical audit_entries + projections
+`-- sandboxes/<sandbox_id>/
+    |-- daemon.log.jsonl                   # daemon crash/early-boot structured logs
+    |-- plugins/<service_instance_id>.stderr.log
+    |-- exports/trace-<trace_id>.jsonl     # derived, rebuildable export
+    `-- sessions/<command_session_id>/
+        |-- transcript.log
+        `-- stdin.log
+```
+
+Phase 07 TypeScript mirror, when it lands:
+
+```text
+eos-agent-core/
+`-- packages/
+    |-- contracts/src/sandbox/
+    |   |-- operation-envelope.ts          # Zod envelope/result/fault schemas
+    |   `-- trace.ts                       # trace refs/projection schemas
+    `-- db/src/sandbox-trace/
+        |-- schema.ts                      # read/query mirror only
+        `-- queries.ts
+```
 
 ### Workspace route taxonomy (4-valued, trace-only)
 
@@ -454,45 +588,45 @@ the capture lands):
 
 | Lost today | Anchor | Captured as |
 | --- | --- | --- |
-| Auto-squash read/can-plan/squash failures swallowed: read errors become "no plan", `can_squash` errors become false, and `stack.squash(max_depth).ok().flatten()` hides failures | `eos-layerstack/src/commit/worker.rs:478-522` | `auto_squash_finished {error}` and `auto_squash_skipped {reason, error?}` (D) |
-| Squash-skip reason (too shallow, min-reduction unmet, lease-blocked, planner returned none, live-prefix race, post-commit release failure) unobservable | squash planner / stack apply path | `auto_squash_skipped {reason}` and `lease_release_failed` (D) |
-| OCC conflict reports aggregate outcome only; per-file reason is flattened and observed version is present only on some CAS/manifest conflicts | `commit/worker.rs` validate path | `conflict_detected {path, reason, observed_version?, observed_state?}` + the same detail in `OperationFault.details` (D/E) |
-| Command settle emits a response-visible wrong stat: `resource.layer_stack.manifest_path_count` is sourced from manifest depth | `eos-operation/src/command/settle.rs:230-233` | Typed resource summary derives path/layer counts from one shared sampler with a golden test (D/E/H) |
-| DNS fallback decision discarded: `let _dns_fallback_applied` | `isolated_workspace/manager/lifecycle.rs:51` | `network_configured {dns_fallback_applied}` (D) |
-| Holder liveness at teardown unknown (crashed earlier vs killed now) | lifecycle teardown | `isolated.exit.kill_holder` fields `{holder_was_alive, exit_status}` (D) |
-| Capture-walk abort loses the failing path; only an error string survives | `eos-workspace/src/shared/capture.rs` | `capture_finished` error detail `{failing_path}` (D) |
-| Capture-settle does a second tree walk after `capture_upperdir` already enumerated changes | `eos-operation/src/command/settle.rs:41-49` | Capture bytes/file/dir/entry counts during the existing capture walk; no duplicate pass (D) |
-| `mountinfo_reference_count_after` silently `None` on scan failure — indistinguishable from a clean zero | teardown inspection assembly | explicit `{mountinfo_scan_error}` marker on `exited` (D) |
-| Service-cache gauges (hits/misses/creates/evictions, `lock_wait_s_total/max`) visible only when an operator happens to call `layer_metrics` | `eos-layerstack/src/service.rs:22-36,214-240` | Heartbeat layerstack section samples `cache_snapshot()` continuously (H) |
-| Plugin service state machine (`starting\|ready\|refreshing\|stale\|restarting\|stopped\|failed`), `restart_count`, `refresh_count`, `last_error` are serialized in `services[]` but missing from `service_health`, heartbeat, and lifecycle trace events | `eos-plugin/src/service_registry.rs:15-40`, `op_adapter/plugin.rs:149-170` | Preserve the typed `services[]` result, add `service_health_checked` fields + heartbeat `details_json` (D/H) |
-| Plugin service worker stdout/stderr → `Stdio::null` — a crashing service is forensically silent | `eos-operation/src/plugin/process.rs:64-66` | Per-service stderr file in-sandbox, path recorded on `service_started`, archived at release beside `daemon.log.jsonl` (D/I) |
-| Kill signal number lost or normalized into exit codes; service worker status also keeps only `status.code()` | session/worker wait sites, plugin service status | `{signal}` on `reaped`, settle facts, and worker/service exits (D) |
-| Plugin setup success output is dropped; nonzero exit output is flattened into one error string; spawn failures have command/cwd/error but no exit/output fields | `eos-operation/src/plugin/package.rs` | `setup_finished {exit_code?, output_tail?, spawn_error?}` (budgeted) (D) |
-| `commit_to_git` git-step semantics stringified into error messages; exit codes unmapped | `op_adapter/checkpoint.rs` | `checkpoint` events `git_command_finished {argv_summary, exit_code, stderr_tail}` (D) |
-| Transport facts dropped: gateway UDS read/parse/write, catalog route decision, host TCP connect latency/retry/fallback, docker-exec thin-client fallback, endpoint refresh, request write/read duration, daemon accept id, TCP peer address, request/response byte counts, response write/shutdown failures | `eos-sandbox-gateway/src/gateway.rs`, `eos-sandbox-host/src/protocol.rs`, `eos-sandbox-host/src/host.rs`, `transport/server.rs` | Gateway `gateway.*` events + host `host.transport.*` events + daemon `daemon.transport.*` events; daemon root span gains `{connection_id, listener_kind, peer_addr?, request_bytes}`; host `response_persisted` payload gains `response_len` beside `response_digest` (C) |
-| Pre-listen daemon init failures have no channel (`--log-file` receives raw stdout/stderr only) | `eosd/src/daemon.rs` | Crash-log fmt layer installs before the listener binds; boot events `config_loaded`, `listen_bound` (C) |
-| stdin path knows byte length and performs bounded progress waits, but no wait/backpressure duration is computed or surfaced | session stdin path | `stdin_written {bytes, wait_ms, waited_for_output}` (D) |
-| `metadata.json`, runner request/result files, `final.json`, transcript open/write/remove, reader-drain timeout, and lease-release failures are best-effort or silent | command prepare/session/process/runtime | `session_artifact_written/failed`, `final_persist_failed`, `transcript_failed`, `lease_release_failed` events (D/I) |
-| Orphan recovery synthesizes a generic error; isolated `manager.json` read/parse/schema failures and orphan cleanup errors are dropped | `command/runtime.rs:60-102`, isolated manager recovery | Recovery events carry recovered `final.json` / `manager.json` facts; dir retention gated per phase I (D/I) |
-| cgroup/procfs gauge read failure indistinguishable from "gauge absent on this platform" | `runtime/response.rs:198-270` | `resource_stats` per-source error markers (D) |
-| CPU throttling, memory events/OOM, PSI pressure, source availability, and sampler duration are not response-visible today | cgroup/procfs samplers | Add to `ResourceStats` so slow/failed ops can distinguish resource pressure from command behavior (D/H) |
-| Cheap OS gauges are currently emitted as response-only flat timing keys, not paired around the command/plugin work they describe | `runtime/response.rs:198-270` | Before/after `resource_stats` pairs on `command.session.wait` and `plugin.overlay.run`, projected to `trace_resources` (D) |
-| Host RAM-pressure probe falls back silently when `/proc/meminfo` cannot be read | isolated workspace manager | `resource_stats {host_meminfo_error?}` / heartbeat marker (D/H) |
-| ns-runner `tool_result` is projected into response shell fields, but trace lacks parse status, size, and digest | plugin overlay path | Bounded `{tool_result_present, parsed, len, sha256}` span field (D) |
+| Auto-squash read/can-plan/squash failures swallowed: read errors become "no plan", `can_squash` errors become false, and `stack.squash(max_depth).ok().flatten()` hides failures | `eos-layerstack/src/commit/worker.rs:478-522` | `auto_squash_finished {error}` and `auto_squash_skipped {reason, error?}` (Phase 04) |
+| Squash-skip reason (too shallow, min-reduction unmet, lease-blocked, planner returned none, live-prefix race, post-commit release failure) unobservable | squash planner / stack apply path | `auto_squash_skipped {reason}` and `lease_release_failed` (Phase 04) |
+| OCC conflict reports aggregate outcome only; per-file reason is flattened and observed version is present only on some CAS/manifest conflicts | `commit/worker.rs` validate path | `conflict_detected {path, reason, observed_version?, observed_state?}` + the same detail in `OperationFault.details` (Phase 04/05) |
+| Command settle emits a response-visible wrong stat: `resource.layer_stack.manifest_path_count` is sourced from manifest depth | `eos-operation/src/command/settle.rs:230-233` | Typed resource summary derives path/layer counts from one shared sampler with a golden test (Phase 04/05/08) |
+| DNS fallback decision discarded: `let _dns_fallback_applied` | `isolated_workspace/manager/lifecycle.rs:51` | `network_configured {dns_fallback_applied}` (Phase 04) |
+| Holder liveness at teardown unknown (crashed earlier vs killed now) | lifecycle teardown | `isolated.exit.kill_holder` fields `{holder_was_alive, exit_status}` (Phase 04) |
+| Capture-walk abort loses the failing path; only an error string survives | `eos-workspace/src/shared/capture.rs` | `capture_finished` error detail `{failing_path}` (Phase 04) |
+| Capture-settle does a second tree walk after `capture_upperdir` already enumerated changes | `eos-operation/src/command/settle.rs:41-49` | Capture bytes/file/dir/entry counts during the existing capture walk; no duplicate pass (Phase 04) |
+| `mountinfo_reference_count_after` silently `None` on scan failure - indistinguishable from a clean zero | teardown inspection assembly | explicit `{mountinfo_scan_error}` marker on `exited` (Phase 04) |
+| Service-cache gauges (hits/misses/creates/evictions, `lock_wait_s_total/max`) visible only when an operator happens to call `layer_metrics` | `eos-layerstack/src/service.rs:22-36,214-240` | Heartbeat layerstack section samples `cache_snapshot()` continuously (Phase 08) |
+| Plugin service state machine (`starting\|ready\|refreshing\|stale\|restarting\|stopped\|failed`), `restart_count`, `refresh_count`, `last_error` are serialized in `services[]` but missing from `service_health`, heartbeat, and lifecycle trace events | `eos-plugin/src/service_registry.rs:15-40`, `op_adapter/plugin.rs:149-170` | Preserve the typed `services[]` result, add `service_health_checked` fields + heartbeat `details_json` (Phase 04/08) |
+| Plugin service worker stdout/stderr -> `Stdio::null` - a crashing service is forensically silent | `eos-operation/src/plugin/process.rs:64-66` | Per-service stderr file in-sandbox, path recorded on `service_started`, archived at release beside `daemon.log.jsonl` (Phase 04/09) |
+| Kill signal number lost or normalized into exit codes; service worker status also keeps only `status.code()` | session/worker wait sites, plugin service status | `{signal}` on `reaped`, settle facts, and worker/service exits (Phase 04) |
+| Plugin setup success output is dropped; nonzero exit output is flattened into one error string; spawn failures have command/cwd/error but no exit/output fields | `eos-operation/src/plugin/package.rs` | `setup_finished {exit_code?, output_tail?, spawn_error?}` (budgeted) (Phase 04) |
+| `commit_to_git` git-step semantics stringified into error messages; exit codes unmapped | `op_adapter/checkpoint.rs` | `checkpoint` events `git_command_finished {argv_summary, exit_code, stderr_tail}` (Phase 04) |
+| Transport facts dropped: gateway UDS read/parse/write, catalog route decision, host TCP connect latency/retry/fallback, docker-exec thin-client fallback, endpoint refresh, request write/read duration, daemon accept id, TCP peer address, request/response byte counts, response write/shutdown failures | `eos-sandbox-gateway/src/gateway.rs`, `eos-sandbox-host/src/protocol.rs`, `eos-sandbox-host/src/host.rs`, `transport/server.rs` | Gateway `gateway.*` events + host `host.transport.*` events + daemon `daemon.transport.*` events; daemon root span gains `{connection_id, listener_kind, peer_addr?, request_bytes}`; host `response_persisted` payload gains `response_len` beside `response_digest` (Phase 03) |
+| Pre-listen daemon init failures have no channel (`--log-file` receives raw stdout/stderr only) | `eosd/src/daemon.rs` | Crash-log fmt layer installs before the listener binds; boot events `config_loaded`, `listen_bound` (Phase 03) |
+| stdin path knows byte length and performs bounded progress waits, but no wait/backpressure duration is computed or surfaced | session stdin path | `stdin_written {bytes, wait_ms, waited_for_output}` (Phase 04) |
+| `metadata.json`, runner request/result files, `final.json`, transcript open/write/remove, reader-drain timeout, and lease-release failures are best-effort or silent | command prepare/session/process/runtime | `session_artifact_written/failed`, `final_persist_failed`, `transcript_failed`, `lease_release_failed` events (Phase 04/09) |
+| Orphan recovery synthesizes a generic error; isolated `manager.json` read/parse/schema failures and orphan cleanup errors are dropped | `command/runtime.rs:60-102`, isolated manager recovery | Recovery events carry recovered `final.json` / `manager.json` facts; dir retention gated per Phase 09 (Phase 04/09) |
+| cgroup/procfs gauge read failure indistinguishable from "gauge absent on this platform" | `runtime/response.rs:198-270` | `resource_stats` per-source error markers (Phase 04) |
+| CPU throttling, memory events/OOM, PSI pressure, source availability, and sampler duration are not response-visible today | cgroup/procfs samplers | Add to `ResourceStats` so slow/failed ops can distinguish resource pressure from command behavior (Phase 04/08) |
+| Cheap OS gauges are currently emitted as response-only flat timing keys, not paired around the command/plugin work they describe | `runtime/response.rs:198-270` | Before/after `resource_stats` pairs on `command.session.wait` and `plugin.overlay.run`, projected to `trace_resources` (Phase 04) |
+| Host RAM-pressure probe falls back silently when `/proc/meminfo` cannot be read | isolated workspace manager | `resource_stats {host_meminfo_error?}` / heartbeat marker (Phase 04/08) |
+| ns-runner `tool_result` is projected into response shell fields, but trace lacks parse status, size, and digest | plugin overlay path | Bounded `{tool_result_present, parsed, len, sha256}` span field (Phase 04) |
 
 Confirmed already-covered by rev ≤3 mechanisms (no new spec text): sweeper-
 cancelled session visibility (`CommandSettle` background roots, context rule
 3); the request-side parsed facts that are used for registration/routing but
-not durable or response-visible today — legacy `invocation_id` (renamed
+not durable or response-visible today - legacy per-request identity (renamed
 `request_id` here), `caller_id`, `background`, `is_tcp`, protocol version, raw args (`RequestStart` +
-`args_digest` + root-span fields, phases B/C); plugin audit-field
+`args_digest` + root-span fields, Phase 02/03); plugin audit-field
 parse-and-drop (`op.plugin` span captures them); response-write delivery facts
 (host-observed by design).
 
 Consumer evidence that these dispositions are safe: the host branches only on
 `success`/`error.kind` (`e2e_support`); the gateway passes daemon responses
 through and hardcodes the empty fields above; the `timings.`/`resource.`
-readers are already scheduled for per-family assertion rewrites (phase E); and
+readers are already scheduled for per-family assertion rewrites (Phase 05); and
 host/e2e code today *polls* for command completion, lease accounting, and
 session cleanup — workarounds the heartbeat snapshot and background settle
 traces make event-driven.
@@ -532,11 +666,11 @@ The architecture is async-accept + synchronous dispatch on `spawn_blocking`
 3. **Background reaper/sweeper threads**: no ambient span; their roots become
    standalone traces (`CommandSettle`/`SessionSweep`/`IsolatedSweep`) that
    carry `command_session_id` + origin `request_id` + the chain's `trace_id` after
-   phase D extends `ActiveCommand` beyond today's session/workspace state. This
+   Phase 04 extends `ActiveCommand` beyond today's session/workspace state. This
    covers the path that today produces **no observable record at all**:
    sweeper-cancelled sessions where `publish_completion = false`
    (`service.rs:392`).
-4. **PPC reader thread**: phase D extends the pending-call entry (today only
+4. **PPC reader thread**: Phase 04 extends the pending-call entry (today only
    `reply_tx` + callback handler) so `PendingCalls::register` captures
    `Span::current()` (the owning op's span — `round_trip_with_callbacks` runs
    on the op's `spawn_blocking` thread); `callback_handler_for_message` returns
@@ -550,7 +684,7 @@ The architecture is async-accept + synchronous dispatch on `spawn_blocking`
    `service_instance_id` and the claimed parent id. To support this,
    `parent_message_id` is promoted from an opaque body convention
    (`ppc.rs:15-17`) to a typed `Option<String>` field on `PpcMessage` in
-   phase D, deleting the body re-parse in callback routing.
+   Phase 04, deleting the body re-parse in callback routing.
 
 `eosd ns-runner` is a separate process and is not instrumented; its mount/tool
 timings arrive via `RunResult` as span fields. Test-determinism rule: thread-
@@ -642,7 +776,7 @@ Implementation shape:
 6. The gateway/caller response never exposes `_trace_events`. Direct daemon
    e2e clients see the sidecar until they migrate to host/store helpers.
 
-Request carries `request_id` instead of legacy `invocation_id` and gains an
+Request carries `request_id` and gains an
 optional `trace` envelope field (top level — a deliberate wire change under the
 destructive posture):
 
@@ -699,6 +833,266 @@ Gateway/caller response after host ingest strips the sidecar:
          "warnings":[]}}
 ```
 
+Host-side message shapes (JSON shown for readability; audit payloads are
+protobuf in storage):
+
+Compact host-side audit/debug projection:
+
+```json
+{
+  "schema": "eos.trace.v1.RequestStart",
+  "trace_id": "tr_6b1a",
+  "request_id": "req_9f2c",
+  "sandbox_id": "sbx_42",
+  "op": "sandbox.command.exec",
+  "family": "command",
+  "mutates_state": true,
+  "caller_id": "run_1",
+  "args_summary": {
+    "cmd": "make test",
+    "caller_id": "run_1"
+  },
+  "args_digest": "sha256:abc123",
+  "host_boot_id": "host_boot_1"
+}
+```
+
+Compact host-side trace events:
+
+```json
+{
+  "schema": "eos.trace.v1.TraceBatch",
+  "producer_side": "host",
+  "trace_id": "tr_6b1a",
+  "request_id": "req_9f2c",
+  "events": [
+    {
+      "module": "gateway.transport",
+      "event": "request_read",
+      "details": { "request_bytes": 184, "read_duration_us": 221 }
+    },
+    {
+      "module": "gateway.route",
+      "event": "route_selected",
+      "details": { "op": "sandbox.command.exec", "route": "daemon" }
+    },
+    {
+      "module": "host.transport",
+      "event": "connect_finished",
+      "details": { "endpoint": "127.0.0.1:37657", "connect_duration_us": 820 }
+    }
+  ]
+}
+```
+
+Caller to gateway, over UDS:
+
+```json
+{"op":"sandbox.command.exec","sandbox_id":"sbx_42",
+ "request_id":"req_9f2c…",
+ "args":{"cmd":"make test","caller_id":"run_1",
+         "layer_stack_root":"/eos/layer-stack"}}
+```
+
+Host `request_start` audit payload, written before daemon forwarding:
+
+```json
+{"schema":"eos.trace.v1.RequestStart","trace_id":"tr_6b1a…",
+ "request_id":"req_9f2c…","sandbox_id":"sbx_42",
+ "op":"sandbox.command.exec","family":"command","mutates_state":true,
+ "caller_id":"run_1","gateway_surface":"client",
+ "args_summary":{"cmd":"make test","caller_id":"run_1",
+                 "layer_stack_root":"/eos/layer-stack"},
+ "args_digest":"sha256:…","sent_at_ms":1760000000000,
+ "host_boot_id":"host_boot_…"}
+```
+
+Host/gateway trace batch payload:
+
+```json
+{"schema":"eos.trace.v1.TraceBatch","producer_side":"host",
+ "trace_id":"tr_6b1a…","request_id":"req_9f2c…",
+ "host_boot_id":"host_boot_…",
+ "events":[
+   {"module":"gateway.transport","event":"accepted",
+    "details":{"gateway_connection_id":"gwc_17","surface":"client",
+               "socket_path":"/…/client.sock"}},
+   {"module":"gateway.transport","event":"request_read",
+    "details":{"request_bytes":184,"read_duration_us":221}},
+   {"module":"gateway.route","event":"route_selected",
+    "details":{"op":"sandbox.command.exec","route":"daemon",
+               "visibility":"public","mutates_state":true}},
+   {"module":"host.transport","event":"connect_finished",
+    "details":{"endpoint":"127.0.0.1:37657","attempt_index":0,
+               "connect_duration_us":820}},
+   {"module":"host.transport","event":"request_written",
+    "details":{"request_bytes":312,"protocol_version":2,
+               "auth_token_present":true}},
+   {"module":"host.transport","event":"response_read",
+    "details":{"response_bytes":4096,"read_duration_us":83840,
+               "response_digest":"sha256:…"}}
+ ]}
+```
+
+Host `response_persisted` audit payload:
+
+```json
+{"schema":"eos.trace.v1.ResponsePersisted","trace_id":"tr_6b1a…",
+ "request_id":"req_9f2c…","sandbox_id":"sbx_42",
+ "status":"ok","error_kind":null,
+ "response_digest":"sha256:…","response_len":4096,
+ "sidecar_ingested":true,"received_at_ms":1760000000088,
+ "host_rtt_ms":88}
+```
+
+Container-side message shapes:
+
+Compact container-side daemon trace batch:
+
+```json
+{
+  "schema": "eos.trace.v1.TraceBatch",
+  "producer_side": "container",
+  "trace_id": "tr_6b1a",
+  "request_id": "req_9f2c",
+  "daemon_boot_id": "daemon_boot_1",
+  "spans": [
+    { "span_id": 1, "kind": "op_request", "subsystem": "wire" },
+    { "span_id": 2, "parent_span_id": 1, "kind": "dispatch", "subsystem": "dispatch" },
+    { "span_id": 3, "parent_span_id": 1, "kind": "op.command.exec", "subsystem": "command_session" }
+  ],
+  "events": [
+    {
+      "span_id": 1,
+      "module": "daemon.transport",
+      "event": "auth_checked",
+      "details": { "auth_required": true, "auth_ok": true }
+    },
+    {
+      "span_id": 3,
+      "module": "command_session",
+      "event": "settled",
+      "details": { "exit_code": 0 }
+    }
+  ],
+  "resources": [
+    {
+      "span_id": 3,
+      "stats_kind": "cgroup_process",
+      "phase": "after",
+      "cgroup": {
+        "cpu": { "usage_usec": 5312 },
+        "memory": { "current": 70254592 }
+      }
+    }
+  ]
+}
+```
+
+Daemon-decoded request context (TCP path, after auth token is stripped):
+
+```json
+{"op":"sandbox.command.exec","request_id":"req_9f2c…",
+ "trace":{"trace_id":"tr_6b1a…","parent_span_id":null,
+          "capture_budget_version":1},
+ "args":{"cmd":"make test","caller_id":"run_1",
+         "layer_stack_root":"/eos/layer-stack"}}
+```
+
+Daemon sidecar trace batch:
+
+```json
+{"schema":"eos.trace.v1.TraceBatch","producer_side":"container",
+ "trace_id":"tr_6b1a…","request_id":"req_9f2c…",
+ "daemon_boot_id":"daemon_boot_…",
+ "spans":[
+   {"span_id":1,"parent_span_id":null,"kind":"op_request",
+    "subsystem":"wire","duration_us":82400,
+    "fields":{"op":"sandbox.command.exec","connection_id":"conn_88",
+              "listener_kind":"tcp","is_tcp":true}},
+   {"span_id":2,"parent_span_id":1,"kind":"dispatch",
+    "subsystem":"dispatch","duration_us":410},
+   {"span_id":3,"parent_span_id":1,"kind":"op.command.exec",
+    "subsystem":"command_session","duration_us":78100}
+ ],
+ "events":[
+   {"span_id":1,"module":"daemon.transport","event":"accepted",
+    "details":{"connection_id":"conn_88","listener_kind":"tcp",
+               "peer_addr":"172.17.0.1:54000"}},
+   {"span_id":1,"module":"daemon.transport","event":"auth_checked",
+    "details":{"auth_required":true,"auth_ok":true}},
+   {"span_id":2,"module":"daemon.dispatch","event":"op_resolved",
+    "details":{"builtin":true}},
+   {"span_id":3,"module":"command_session","event":"spawned",
+    "details":{"command_session_id":"cmd_123"}},
+   {"span_id":3,"module":"command_session","event":"settled",
+    "details":{"exit_code":0}}
+ ],
+ "resources":[
+   {"span_id":3,"stats_kind":"cgroup_process","phase":"before",
+    "cgroup":{"cpu":{"usage_usec":1000},"memory":{"current":67108864}}},
+   {"span_id":3,"stats_kind":"cgroup_process","phase":"after",
+    "cgroup":{"cpu":{"usage_usec":5312},"memory":{"current":70254592}}}
+ ],
+ "links":[
+   {"link_kind":"command_session","target_id":"cmd_123",
+    "trace_reuse":"chain"}
+ ]}
+```
+
+Daemon response on the daemon-host wire, before gateway stripping:
+
+Compact daemon-host response with internal sidecar:
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "command": {
+      "status": "completed",
+      "exit_code": 0,
+      "output_ref": "artifact://sbx_42/sessions/cmd_123/stdout"
+    }
+  },
+  "meta": {
+    "protocol_version": 2,
+    "op": "sandbox.command.exec",
+    "request_id": "req_9f2c",
+    "trace": {
+      "trace_id": "tr_6b1a",
+      "root_span_id": 1,
+      "store": "pending_host_ingest"
+    }
+  },
+  "_trace_events": {
+    "schema": "eos.trace.v1.TraceBatch",
+    "encoding": "protobuf+base64",
+    "batch_b64": "..."
+  }
+}
+```
+
+```json
+{"status":"ok",
+ "result":{"command":{"status":"completed","exit_code":0,
+                     "output_ref":"artifact://sbx_42/sessions/cmd_123/stdout"}},
+ "meta":{"protocol_version":2,"op":"sandbox.command.exec",
+         "request_id":"req_9f2c…",
+         "trace":{"trace_id":"tr_6b1a…","root_span_id":1,
+                  "store":"pending_host_ingest","event_count":8},
+         "workspace_route":{"kind":"ephemeral_workspace"},
+         "duration_ms":82.4,
+         "modules_touched":["wire","dispatch","command_session"],
+         "steps":[{"kind":"dispatch","duration_us":410,"status":"ok"},
+                  {"kind":"op.command.exec","duration_us":78100,"status":"ok"}],
+         "resource_summary":{"cpu_usage_usec_delta":4312,
+                             "memory_current_bytes_after":70254592},
+         "warnings":[]},
+ "_trace_events":{"schema":"eos.trace.v1.TraceBatch",
+                  "encoding":"protobuf+base64","batch_b64":"…",
+                  "spool_pending":0}}
+```
+
 Observed trace timeline for one successful forwarded op:
 
 | Order | Stored as | Producer | Observable fact |
@@ -739,7 +1133,7 @@ projection tables from the decoded DTOs. If the daemon transport later becomes a
 framed binary protocol, the same `TraceBatch` bytes ride without base64 and the
 store schema does not change.
 
-`spool_pending > 0` in a sidecar — or in a heartbeat snapshot once phase H
+`spool_pending > 0` in a sidecar - or in a heartbeat snapshot once Phase 08
 lands, covering idle sandboxes that receive no forwards — **schedules** a
 drain; the host never issues `sandbox.trace.export` on the forwarding caller's
 thread, because a drain is a whole extra daemon round trip that must not be
@@ -1070,7 +1464,7 @@ Write sequencing and strictness:
    reproduces `status = 'uncertain'`.
 
 Acceptance queries (phase gates assert these run, return correct shapes, and
-execute via an index: a phase B test runs `EXPLAIN QUERY PLAN` on each and
+execute via an index: a Phase 02 test runs `EXPLAIN QUERY PLAN` on each and
 fails if any trace-table access is a SCAN rather than a SEARCH — bundled
 rusqlite pins the SQLite version, so the plan-shape assertion is
 deterministic in-repo):
@@ -1453,7 +1847,7 @@ and mechanical; everything else is a design change (see Non-goals).
 3. **Closed sets stay closed.** Envelope `status` (6 arms), `WorkspaceRoute`
    (4 values), `Subsystem`, `SpanKind`, `TraceKind` extend only by enum
    variant in `eos-trace` with exhaustive mapping — compile-checked, which is
-   the drift guard phase F relies on.
+   the drift guard Phase 06 relies on.
 4. **Budgets are named.** A new field fits an existing budget row or adds a
    named one to the capture-budget table; overflow always records
    `{truncated, sha256, original_len}`.
@@ -1469,49 +1863,20 @@ Each of these requires revisiting this spec, not a local patch:
 | Non-goal | Why closed | The path if it ever becomes real |
 | --- | --- | --- |
 | Second storage backend / store trait seam | One single-writer SQLite is load-bearing for seq + fail-closed | Re-ingest history from `audit_entries` canonical bytes; no seam needed in advance |
-| Second writer / multi-host store | `seq` assignment and chain maps assume one host process | Partition by store; revisit trace-minting ownership (Open Question 2) |
+| Second writer / multi-host store | `seq` assignment and chain maps assume one host process | Partition by store; revisit trace-minting ownership in a future spec |
 | Plugin-minted span kinds or event names | Closed vocabulary is the audit guarantee | Plugin detail rides bounded `details` under the `plugin` module rows |
 | New envelope `status` arm | Six arms are total over observable outcomes | New outcomes map to existing arms + `error.kind`/result detail |
 | Daemon-side persistence of any trace data | Audit rule A (hot-path decoupling) | None — this is permanent |
 
 ## Phased Plan
 
-Every phase must update the progress tracker above when it lands. A phase is
-not complete until its acceptance criteria and verification checklist pass in
-the live checkout.
+Every phase must update `## 0. Progress Tracker` when it lands. A phase is not
+complete until every checklist item is checked and the phase gate is satisfied
+in the live checkout.
 
-### Phase 0 — spec and e2e retarget map
+### Phase 01 - Contracts First
 
-Scope: make this artifact implementation-ready before code changes start.
-
-Acceptance criteria:
-
-- [x] The head section states whether the plan is implementable and names the
-  highest-risk migration constraints.
-- [x] The progress tracker exists before design details so future implementers
-  can mark phase status without rereading the whole spec.
-- [x] Each implementation phase below has acceptance criteria and verification
-  commands, not only prose.
-- [x] The e2e migration is targeted at the live suite directories:
-  `core`, `daemon`, `eos-layerstack`, `ephemeral_workspace`,
-  `workspace-publish-gate`, `workspace-runtime-command-session`,
-  `workspace-runtime-isolated`, `plugin`, `pressure`, plus shared `support`;
-  `assets` and `unit` remain fixtures/unit checks, not migration suites.
-- [x] Names are consistent: `request_id`, `trace_requests`, and
-  `resource_stats`; legacy names appear only as current-code migration notes.
-
-Verification:
-
-- [x] `git diff --check -- docs/plans/sandbox-event-tracing-and-response-contract_SPEC.md`
-- [x] `rg -n "resource_sampl(e|ed)|\\bop_i[d]\\b|trace_op[s]" docs/plans/sandbox-event-tracing-and-response-contract_SPEC.md` returns no normative uses.
-- [x] `find sandbox/crates/eos-e2e-test/tests -maxdepth 1 -mindepth 1 -type d -print | sort` matches the retarget map above.
-
-### Phase A — contracts first
-
-Scope: create the typed audit/response contracts before implementation code
-depends on them.
-
-Acceptance criteria:
+Acceptance checklist:
 
 - [ ] `sandbox/crates/eos-trace` owns `TraceId`, `RequestId`, `SpanUid`,
   `TraceRecord`, `SpanRecord`, `EventRecord`, `TraceResource`, `TraceLink`,
@@ -1527,21 +1892,26 @@ Acceptance criteria:
 - [ ] Bounded-detail budgets are enforced in shared constructors; truncation
   records `{truncated, original_len, sha256}`.
 - [ ] A short-lived v1 flattening adapter exists only inside this migration
-  phase ladder and is marked for deletion in phase F.
-
-Verification:
-
+  phase ladder and is marked for deletion in Phase 06.
 - [ ] `cargo test -p eos-trace -p eos-operation`
 - [ ] Protobuf golden compatibility fixtures decode successfully after schema
   regeneration.
 - [ ] Envelope/adapter golden tests cover `ok`, `running`, `rejected`,
   `cancelled`, `timed_out`, and `error`.
+- [ ] Update the progress tracker with Phase 01 evidence and mark Phase 01
+  `Complete`.
 
-### Phase B — host store
+Phase gate:
 
-Scope: make the host the durable, single-writer audit authority.
+```text
+Phase 01 is Complete only when typed trace/protobuf/envelope contracts exist,
+goldens pass, and no host/daemon implementation depends on ad-hoc response
+shapes. Phase 02 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 02 - Host Store
+
+Acceptance checklist:
 
 - [ ] `eos-sandbox-host` owns `trace_store.rs` and DDL for append-only
   `audit_entries`, hash chain fields, segment seals, trace/span/event/resource/
@@ -1557,9 +1927,6 @@ Acceptance criteria:
   `uncertain`, and refuses to open newer `user_version` databases.
 - [ ] Pruning writes tombstone/range proof entries and never removes unsealed
   canonical data.
-
-Verification:
-
 - [ ] `cargo test -p eos-sandbox-host`
 - [ ] Store tests cover fail-closed mutating forwarding, read-only degraded
   forwarding, tamper detection, segment-signature verification, projection
@@ -1569,13 +1936,21 @@ Verification:
 - [ ] `EXPLAIN QUERY PLAN` tests cover all acceptance queries in this spec.
 - [ ] Seal -> prune -> verify reports the pruned range and still validates the
   retained chain.
+- [ ] Update the progress tracker with Phase 02 evidence and mark Phase 02
+  `Complete`.
 
-### Phase C — daemon propagation
+Phase gate:
 
-Scope: move trace identity and span capture through the daemon without durable
-daemon-side persistence.
+```text
+Phase 02 is Complete only when the host store is the durable single writer,
+mutating operations fail closed before daemon forwarding when request-start
+append fails, projections rebuild from canonical audit entries, and store tests
+pass. Phase 03 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 03 - Gateway, Host, and Daemon Propagation
+
+Acceptance checklist:
 
 - [ ] `Request` carries a trace field encoded by host/gateway with
   `trace_id`, `request_id`, parent/link hints, and capture budget version.
@@ -1598,9 +1973,6 @@ Acceptance criteria:
   on the request-forwarding caller's thread.
 - [ ] Crash-log formatting is installed before the listener binds and records
   `config_loaded` and `listen_bound`.
-
-Verification:
-
 - [ ] `cargo test -p eos-daemon`
 - [ ] Gateway tests cover UDS malformed JSON, unknown op, forbidden surface,
   catalog daemon route, host route, plugin fallback route, response-write
@@ -1621,13 +1993,21 @@ Verification:
   host-store modules.
 - [ ] A hot-path unit/bench test asserts representative dispatch/route
   decisions stay bounded with tracing enabled and a slow host store.
+- [ ] Update the progress tracker with Phase 03 evidence and mark Phase 03
+  `Complete`.
 
-### Phase D — subsystem events and resource stats
+Phase gate:
 
-Scope: replace response-only metrics/logging with typed subsystem facts and
-queryable `resource_stats`.
+```text
+Phase 03 is Complete only when one forwarded op can be replayed from gateway
+UDS through host transport, daemon transport, dispatch, op adapter, subsystem
+work, and response persistence, and host-only transport failures close traces
+without daemon sidecars. Phase 04 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 04 - Subsystem Events and Resource Stats
+
+Acceptance checklist:
 
 - [ ] LayerStack/OCC emit worker-handoff spans, manifest/lease/squash events,
   per-file conflict detail, and squash skip/fail reasons.
@@ -1650,9 +2030,6 @@ Acceptance criteria:
 - [ ] Always-on before/after pairs are limited to cheap kernel gauges around
   `command.session.wait` and `plugin.overlay.run`; tree walks occur only on
   spans that already perform or explicitly request a bounded walk.
-
-Verification:
-
 - [ ] Per-crate focused tests for `eos-layerstack`, `eos-workspace`,
   `eos-command-session`, `eos-plugin`, `eos-operation`, and `eos-daemon`.
 - [ ] Live e2e trace query: file `fast_path` request produces route, OCC, and
@@ -1668,13 +2045,21 @@ Verification:
 - [ ] Resource query returns before/after rows for command/plugin spans, real
   tree-walk truncation when the budget is exceeded, and mount cost
   `layer_count`/`fsconfig_calls`/`duration_us`.
+- [ ] Update the progress tracker with Phase 04 evidence and mark Phase 04
+  `Complete`.
 
-### Phase E — response and e2e migration
+Phase gate:
 
-Scope: destructively migrate responses while keeping mixed-wire decode safe
-inside the migration window.
+```text
+Phase 04 is Complete only when every required subsystem fact is emitted as a
+typed event/resource record, resource stats are source-honest and bounded, and
+focused crate plus live trace-query tests pass. Phase 05 remains Blocked until
+then.
+```
 
-Acceptance criteria:
+### Phase 05 - Response and E2E Migration
+
+Acceptance checklist:
 
 - [ ] Step 0 lands a shape-aware host/gateway decoder:
   `status` present -> new envelope path; otherwise legacy path. Legacy
@@ -1696,9 +2081,6 @@ Acceptance criteria:
   `meta.resource_summary`.
 - [ ] Generated e2e inventory docs under `sandbox/crates/eos-e2e-test/tests`
   are regenerated only after the migrated tests reflect the new contracts.
-
-Verification:
-
 - [ ] Mixed-wire decoder unit test covers legacy success, legacy error, new
   `ok`, new `running`, and new `error` where legacy `is_success` would have
   misclassified the response.
@@ -1708,7 +2090,9 @@ Verification:
 - [ ] Final migration gate:
   `EOS_LIVE_E2E_IMAGE=<image> cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture`
 - [ ] `rg -n "timings\\.|\\bis_success\\(|\\berror_kind\\(" sandbox/crates/eos-e2e-test sandbox/crates/eos-sandbox-host sandbox/crates/eos-sandbox-gateway`
-  returns only legacy-adapter code until phase F, and nothing after phase F.
+  returns only legacy-adapter code until Phase 06, and nothing after Phase 06.
+- [ ] Update the progress tracker with Phase 05 evidence and mark Phase 05
+  `Complete`.
 
 E2E retargeting matrix:
 
@@ -1725,7 +2109,7 @@ E2E retargeting matrix:
 | `plugin` | plugin ensure/status duplicated response facts and overlay timing keys | plugin setup/service-state/health events, service stderr ref, PPC parent message id, overlay/callback spans, plugin service trace links |
 | `pressure` | JSON resource report reading flat timing/resource keys | trace-store resource report built from `trace_resources`, leak counters from store/status projections, contention via `inflight_requests`, cgroup/source-error visibility |
 
-Focused live e2e commands for Phase E flips:
+Focused live e2e commands for Phase 05 flips:
 
 - [ ] `cargo test -p eos-e2e-test --features e2e --test core -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture`
@@ -1737,12 +2121,18 @@ Focused live e2e commands for Phase E flips:
 - [ ] `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture`
 - [ ] `cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture`
 
-### Phase F — debt deletion
+Phase gate:
 
-Scope: remove migration-only compatibility once all in-repo consumers use the
-new contracts.
+```text
+Phase 05 is Complete only when all in-repo response consumers and e2e suites
+use the new envelope/meta/store assertions, mixed-wire decoding is safe during
+the transition, and the full live e2e gate passes. Phase 06 remains Blocked
+until then.
+```
 
-Acceptance criteria:
+### Phase 06 - Debt Deletion
+
+Acceptance checklist:
 
 - [ ] Delete the v1 flattening adapter, `is_success`, `error_kind`,
   `OpResponse`, `merge_runner_timings`, flat timing/resource helpers, quirk
@@ -1752,20 +2142,24 @@ Acceptance criteria:
 - [ ] JSON trace payload helpers remain only for human exports/projections, not
   daemon-host audit payloads.
 - [ ] Generated inventories/readmes no longer describe timing-key contracts.
-
-Verification:
-
 - [ ] `cargo test --workspace`
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings`
 - [ ] `rg -n "timings\\.|merge_runner_timings|\\bis_success\\(|\\berror_kind\\(|OpResponse|success\\s*:" sandbox/crates` returns no legacy contract uses.
 - [ ] `rg -n "serde_json::Value" sandbox/crates/eos-daemon sandbox/crates/eos-sandbox-host sandbox/crates/eos-sandbox-gateway sandbox/crates/eos-operation` shows only bounded detail/export/projection code.
+- [ ] Update the progress tracker with Phase 06 evidence and mark Phase 06
+  `Complete`.
 
-### Phase G — TypeScript mirror
+Phase gate:
 
-Scope: make the TypeScript workspace consume the new contract as its day-one
-sandbox contract.
+```text
+Phase 06 is Complete only when migration-only adapters and flat timing/resource
+surfaces are gone, grep gates prove no legacy contract use remains, and
+workspace test/clippy gates pass. Phase 07 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 07 - TypeScript Mirror
+
+Acceptance checklist:
 
 - [ ] `@eos/contracts` exposes Zod schemas for `OperationEnvelope`,
   `ResponseMeta`, `OperationFault`, `ResponseTraceRef`, and trace/resource
@@ -1775,19 +2169,24 @@ Acceptance criteria:
 - [ ] Existing run-audit JSONL remains separate; it records agent-run lifecycle,
   not sandbox op audit payloads.
 - [ ] No SDK/provider response shape leaks into shared sandbox contracts.
-
-Verification:
-
 - [ ] From `eos-agent-core/`: `pnpm run typecheck`
 - [ ] From `eos-agent-core/`: `pnpm run lint`
 - [ ] From `eos-agent-core/`: `pnpm run test`
+- [ ] Update the progress tracker with Phase 07 evidence and mark Phase 07
+  `Complete`.
 
-### Phase H — heartbeat monitoring
+Phase gate:
 
-Scope: add continuous audit-backed status snapshots independent of request
-traces.
+```text
+Phase 07 is Complete only when the TypeScript workspace exposes the new
+sandbox envelope and trace projection schemas without depending on legacy Rust
+response shapes, and typecheck/lint/test pass. Phase 08 remains Blocked until
+then.
+```
 
-Acceptance criteria:
+### Phase 08 - Heartbeat Monitoring
+
+Acceptance checklist:
 
 - [ ] `sandbox.status.snapshot` op returns protobuf-backed
   `SandboxStatusSnapshot`.
@@ -1799,22 +2198,26 @@ Acceptance criteria:
   current/peak/OOM, IO bytes, daemon RSS, optional PSI/swap, layerstack
   service-cache gauges, plugin service state/restart/refresh/last_error.
 - [ ] `sandbox status --watch` reads projections, not live-only daemon state.
-
-Verification:
-
 - [ ] `cargo test -p eos-daemon -p eos-sandbox-host`
 - [ ] Tests cover unreachable rows, boot-id changes, monotone gauges,
   source-error markers, and projection rebuild.
 - [ ] Live e2e: heartbeats bracket an exec plus isolated enter/exit.
 - [ ] Live e2e: killing the daemon records `reachable=0`; restarting records a
   new `daemon_boot_id` and keeps the chain verifiable.
+- [ ] Update the progress tracker with Phase 08 evidence and mark Phase 08
+  `Complete`.
 
-### Phase I — transcript archival
+Phase gate:
 
-Scope: make command transcripts durable audit artifacts without putting raw
-stdout/stderr in trace payloads.
+```text
+Phase 08 is Complete only when heartbeat snapshots are audit-backed,
+queryable, rebuildable, and live e2e proves bracketing plus daemon-unreachable
+rows. Phase 09 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 09 - Transcript Archival
+
+Acceptance checklist:
 
 - [ ] stdin archive occurs at forward time with byte offsets and digest refs.
 - [ ] Progress reads tee byte ranges into the archive without changing JIT read
@@ -1824,20 +2227,25 @@ Acceptance criteria:
   `transcript_lost` on TTL fallback/loss.
 - [ ] Isolated exit archives before scratch removal; orphan recovery preserves
   enough state to emit retention/loss facts.
-
-Verification:
-
 - [ ] `cargo test -p eos-command-session -p eos-operation -p eos-sandbox-host`
 - [ ] Live e2e: long-running exec with stdin and polls yields a byte-complete
   archived transcript whose sha matches a direct in-session read before settle.
 - [ ] Live e2e: host-kill-then-TTL case writes `transcript_lost`.
 - [ ] Latency assertion proves JIT progress reads stay within baseline bounds.
+- [ ] Update the progress tracker with Phase 09 evidence and mark Phase 09
+  `Complete`.
 
-### Phase J — operator lineage views
+Phase gate:
 
-Scope: expose the audit data in operator tools after the store is trustworthy.
+```text
+Phase 09 is Complete only when transcript/stdin artifacts are archived before
+destruction, loss is explicit, and command-session latency semantics are
+unchanged. Phase 10 remains Blocked until then.
+```
 
-Acceptance criteria:
+### Phase 10 - Operator Lineage Views
+
+Acceptance checklist:
 
 - [ ] `trace show <trace_id>` renders seq timeline, causal tree, status,
   resource summary, response refs, links, and immutable-chain proof.
@@ -1846,82 +2254,71 @@ Acceptance criteria:
 - [ ] `trace heartbeats <trace_id>` shows heartbeat rows bracketing the
   request/chain.
 - [ ] Operator output is derived from store data only, not current daemon state.
-
-Verification:
-
 - [ ] CLI/e2e reconstruct one file op, one command chain, one isolated
   lifecycle, and one plugin overlay from store data only.
 - [ ] Tampered DB fixture fails verification with a precise broken seq/hash
   report.
 - [ ] Pruned sealed segment fixture verifies retained chain plus tombstone
   range proof.
+- [ ] Update the progress tracker with Phase 10 evidence and mark Phase 10
+  `Complete`.
 
-Phases are small and independently landable to merge around concurrent agent
-work on `dispatcher.rs`/`op_adapter`.
+Phase gate:
+
+```text
+Phase 10 is Complete only when operator views reconstruct traces from store
+data only, verification detects tampering/pruning proofs correctly, and the
+progress tracker records final evidence.
+```
 
 ## Risks
 
 | Risk | Mitigation |
 | --- | --- |
 | Destructive wire change breaks an unnoticed consumer | Consumer inventory verified (gateway, host, e2e only; no Rust agent-core usage; no TS daemon client yet); each family flip rewrites its consumers in the same change |
-| `TraceSpoolLayer` is bespoke (Registry extensions, `Visit`, parent push, `take_op_tree`) | Isolated small module, landed alone in phase A with focused tree tests |
+| `TraceSpoolLayer` is bespoke (Registry extensions, `Visit`, parent push, `take_op_tree`) | Isolated small module, landed alone in Phase 01 with focused tree tests |
 | Sidecar bloats responses | Protobuf sidecar, per-span field budgets + `truncated` flags; bounded-detail rule (sizes/hashes/refs); sidecar carries records, not raw payloads; base64 wrapper is temporary transport glue only |
 | Fail-closed rule turns trace-store outages into op outages | Scoped to mutating ops only (deliberate audit-critical trade); read-only ops degrade with markers; store is local single-writer SQLite — the failure mode is disk-full, which should halt mutations anyway |
-| Meta derived from spans at render time (request span must close before envelope) | `take_op_tree` API + a phase C unit test asserting meta.duration equals the request span duration; wire-write event lands host-side by design |
-| Cross-thread context loss (OCC worker, future async) | Explicit `Span` handoff + phase D test asserting `occ.commit` parents under the op; pattern documented in eos-trace |
+| Meta derived from spans at render time (request span must close before envelope) | `take_op_tree` API + a Phase 03 unit test asserting meta.duration equals the request span duration; wire-write event lands host-side by design |
+| Cross-thread context loss (OCC worker, future async) | Explicit `Span` handoff + Phase 04 test asserting `occ.commit` parents under the op; pattern documented in eos-trace |
 | Daemon crash loses un-exported background traces | Bounded spool + crash-log JSON lines + `daemon_boot_id` gap surfacing; request traces are sidecar-delivered so the loss window is background-only |
-| Query projections drift from immutable audit entries | Projection rebuild from `audit_entries` is a phase B test and a host startup repair path; projection-only facts are forbidden |
+| Query projections drift from immutable audit entries | Projection rebuild from `audit_entries` is a Phase 02 test and a host startup repair path; projection-only facts are forbidden |
 | Local hash chain can be rewritten by an attacker with full disk control | Segment seals include signer key id + signature and are exported/anchored via `export_ref`; compliance mode requires external/WORM anchoring before retention pruning |
-| Host DB growth | `prune_before` exists; JSONL export for archiving; policy open |
-| Mixed old/new wire shapes misclassify failures | Phase E starts with a shape-aware decoder because today's daemon wire decoder still treats `success:false` + `error` as `ErrorResponse`, and host `is_success` treats new-shape errors as success unless confined to the legacy branch |
+| Host DB growth | `prune_before` exists; JSONL export for archiving; default policy is no automatic pruning until an explicit operator retention policy is configured |
+| Mixed old/new wire shapes misclassify failures | Phase 05 starts with a shape-aware decoder because today's daemon wire decoder still treats `success:false` + `error` as `ErrorResponse`, and host `is_success` treats new-shape errors as success unless confined to the legacy branch |
 | e2e assertion rewrite volume across suites | Per-family flips keep each rewrite reviewable; replay/chain queries become shared support helpers |
 | Host TCP failure has no daemon sidecar | Host outbound transport events are canonical for connect/write/read/decode failures; daemon spans are expected only after inbound accept, so missing daemon sidecar is queryable rather than silent |
 
-## Open Questions
+## Resolved Questions
 
-1. Retention policy for `sandbox-traces.sqlite` and sealed audit segments
-   (never prune vs age/size cap; WORM export required before pruning).
-2. Should `trace_id` minting move into the gateway for multi-client setups, or
-   stay in `eos-sandbox-host`? (Recommendation: host owns it; gateway forwards.)
-3. Audit segment signer source: host-local 0600 key in dev, OS keychain, or
-   external signing service/HSM in compliance deployments. The schema supports
-   all via `key_id`; the default needs an implementation choice.
-4. Whether all e2e suites run with sidecar assertion helpers or only the trace
-   suites — proposal: all, since the envelope migration touches them anyway.
-5. Heartbeat retention: raw rows at 10 s intervals are ~8 640/day/sandbox —
-   keep raw forever, or downsample to 1-minute aggregates after N days?
-   (`prune_before` applies; downsampling needs a decision.)
-6. Heartbeat-driven alerting (host process reacting to `degraded`/
-   `unreachable`, e.g. notifying the agent runtime) — out of scope here;
-   the table is the seam a future watcher consumes.
+No implementation-blocking unresolved item remains in this spec. The formerly
+unresolved items are closed as follows:
 
-Resolved since rev 2: PPC callback correlation (formerly open) is now
-specified — context-propagation rule 4 plus the typed `parent_message_id`
-field on `PpcMessage`, landing in phase D.
-
-## Alternatives Considered
-
-Three designs were drafted independently and adversarially judged (integration
-cost / audit value / contract fit). The original winner (`tracing-native`,
-8/8/8) was built around preserve-first v1 byte-stability; the owner directive
-for a destructive, no-debt plan removed that constraint, which reinstates two
-ideas the judges had rejected *only* for compat reasons: the response sidecar
-(`owned-contract`'s strongest audit property — the chain rides every delivered
-response) and the immediate deletion of the quirk serializers. The losing
-designs' remaining grafts are incorporated: closed `SpanKind`/`Subsystem`
-enums, host-stamped clocks + request-start audit append-before-send, protobuf
-sidecars, hash-chained immutable entries, per-span budgets with `truncated`
-flags, e2e pool drain wiring, plugin audit-field capture, and the
-sweeper-cancelled-session e2e assertion. The OTel Rust SDK stays rejected
-(pre-1.0 churn in the static daemon binary, no in-repo consumer); its id and
-schema **format compatibility** is kept for the TS-side join.
-
-The parallel draft `sandbox/docs/sandbox-event-tracing-response-plan.md`
-contributed the three-level identity model, the seq-ordered chain + causal-tree
-dual view, the cross-op link rows, the per-module phase vocabulary, the
-fail-closed persistence rule, gateway declassification, and the six-status
-envelope vocabulary — all merged above. Where the two drafts conflicted, this
-document resolves: 4-valued `workspace_route` (`fast_path` and `none` split
-per owner decision, replacing 3-valued `skip`), spans as the single timing
-source (the parallel draft kept response stamping alongside), and hybrid
-sidecar+drain delivery (the parallel draft deferred the drain op).
+1. **Retention:** default is no automatic pruning or downsampling. Raw
+   `audit_entries`, projections, and heartbeat rows are retained until an
+   explicit operator retention policy is configured. `prune_before(ms)` may
+   prune only sealed ranges with an `export_ref`/WORM anchor; unsealed entries
+   are never pruned.
+2. **Trace id minting:** the host side owns trace identity. Gateway ingress uses
+   the host-owned trace recorder to mint/adopt `trace_id` and `request_id` as
+   soon as a UDS request is accepted or parse failure must be recorded. The
+   gateway may create the first host-side events, but it does not own durable
+   persistence; `eos-sandbox-host` remains the single SQLite writer. The daemon
+   never mints request trace ids.
+3. **Audit segment signer:** dev/local default is a host-local Ed25519 key
+   stored under `state_dir` with 0600 file permissions in a 0700 directory.
+   Production/compliance deployments may configure OS keychain or external
+   signer/HSM providers. Every seal records `key_id`, so signer rotation is an
+   implementation requirement, not a schema change.
+4. **E2E trace helpers:** all relevant e2e suites use the shared trace/store
+   assertion helpers during Phase 05. The suite-by-suite retargeting matrix in
+   Phase 05 is normative; this is no longer optional.
+5. **Heartbeat retention:** raw heartbeat rows follow the same default as trace
+   audit rows: no automatic downsample in the first implementation. Aggregates
+   may be derived for operator views, but they do not replace raw rows unless a
+   future explicit retention policy prunes sealed/exported ranges.
+6. **Heartbeat-driven alerting:** out of scope for this spec. The
+   `sandbox_heartbeats` projection is the stable seam a future host/agent
+   watcher consumes; this implementation records status, it does not notify.
+7. **PPC callback correlation:** closed since rev 2. Context-propagation rule 4
+   plus typed `parent_message_id` on `PpcMessage` lands in Phase 04.

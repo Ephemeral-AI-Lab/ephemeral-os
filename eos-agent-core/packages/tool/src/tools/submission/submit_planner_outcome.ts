@@ -15,7 +15,7 @@ export type PlannerSubmissionBinding = Extract<SubmissionBinding, { kind: "plann
 /**
  * The planner's terminal tool with its per-kind payload schema. Validation
  * is in-run, end to end (§2.15): shape rides the pipeline's Zod parse,
- * structure is checked here, and - when the run is workflow-launched - the
+ * structure is checked here, and - when the run is pursuit-launched - the
  * §2.19 binding validates materialization rules and mutates in one DB
  * transaction, returning an error result the agent corrects before
  * terminating. Unbound runs keep the service-free behavior: the payload
@@ -92,11 +92,11 @@ function plannerContent(payload: PlannerOutcomePayload): JsonObject {
       needs: [...item.needs],
     })),
   };
-  if (payload.iteration_focus !== undefined) {
-    content.iteration_focus = payload.iteration_focus;
+  if (payload.leg_goal !== undefined) {
+    content.leg_goal = payload.leg_goal;
   }
-  if (payload.deferred_goal !== undefined) {
-    content.deferred_goal = payload.deferred_goal;
+  if (payload.next_leg_goal !== undefined) {
+    content.next_leg_goal = payload.next_leg_goal;
   }
   return content;
 }

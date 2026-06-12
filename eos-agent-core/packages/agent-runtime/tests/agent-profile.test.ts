@@ -31,7 +31,7 @@ allowed_tools:
   - cancel_background_session
   - ask_advisor
 terminal_tool: submit_worker_outcome
-workflow_context_script: .eos-agents/workflow/scripts/worker.cjs
+pursuit_context_script: .eos-agents/pursuit/scripts/worker.cjs
 ---
 
 You are the worker for one assigned work item.
@@ -88,7 +88,7 @@ describe("agent profile loader and registry", () => {
       max_turns: 100,
       agent_kind: "worker",
       terminal_tool: "submit_worker_outcome",
-      workflow_context_script: ".eos-agents/workflow/scripts/worker.cjs",
+      pursuit_context_script: ".eos-agents/pursuit/scripts/worker.cjs",
       source_path: join(dir, "worker.md"),
     });
     expect(profile.allowed_tools).toEqual([
@@ -138,7 +138,7 @@ describe("agent profile loader and registry", () => {
     ${"non-terminal terminal_tool"}         | ${(raw: string) => raw.replace("terminal_tool: submit_worker_outcome", "terminal_tool: run_subagent")} | ${/selects "run_subagent", which is not a known terminal tool/}
     ${"terminal_tool inside allowed_tools"} | ${(raw: string) => raw.replace("  - ask_advisor\n", "  - ask_advisor\n  - submit_worker_outcome\n")} | ${/lists its terminal_tool "submit_worker_outcome" under allowed_tools/}
     ${"no frontmatter block"}               | ${() => "just prose, no frontmatter\n"}                         | ${/must open with a --- YAML frontmatter block/}
-    ${"worker without workflow_context_script"} | ${(raw: string) => raw.replace(/^workflow_context_script:.*\n/m, "")} | ${/requires workflow_context_script/}
+    ${"worker without pursuit_context_script"} | ${(raw: string) => raw.replace(/^pursuit_context_script:.*\n/m, "")} | ${/requires pursuit_context_script/}
   `(
     "fails at startup on $breakage (§13.1)",
     ({ mutate, expected }: { mutate: (raw: string) => string; expected: RegExp }) => {
@@ -149,7 +149,7 @@ describe("agent profile loader and registry", () => {
     },
   );
 
-  it("rejects workflow_context_script on non-workflow agent kinds", () => {
+  it("rejects pursuit_context_script on non-pursuit agent kinds", () => {
     const dir = join(tempDir("eos-profiles-"), "profiles");
     mkdirSync(dir, { recursive: true });
     writeFileSync(
@@ -160,7 +160,7 @@ describe("agent profile loader and registry", () => {
       ),
     );
     expect(() => loadAgentProfileRegistry(dir, KNOWN)).toThrow(
-      /must omit workflow_context_script/,
+      /must omit pursuit_context_script/,
     );
   });
 
@@ -208,7 +208,7 @@ describe("agent profile loader and registry", () => {
       llmClientId: "any_llm",
       allowed: [],
       terminal: null,
-      workflowContextScript: ".eos-agents/workflow/scripts/x.cjs",
+      pursuitContextScript: ".eos-agents/pursuit/scripts/x.cjs",
     });
     expect(() => loadAgentProfile(path)).toThrow(
       `agent profile ${path} (agent_kind ${kind}) requires terminal_tool`,

@@ -1,60 +1,68 @@
 import type {
   AgentRunId,
   AttemptId,
-  IterationId,
+  LegGoalMode,
+  LegId,
   PlanId,
+  PursuitEntityRunStatus,
+  PursuitId,
   WorkItemId,
-  WorkflowEntityRunStatus,
-  WorkflowId,
+  WorkItemRunStatus,
 } from "@eos/contracts";
 import type { Generated, Selectable } from "kysely";
 
-/**
- * Row shapes only - workflow semantics (derived goals, focus views,
- * archives) live in `@eos/workflow`. Timestamps are ISO-8601 strings.
- */
-export interface WorkflowsTable {
-  id: WorkflowId;
+export interface PursuitsTable {
+  id: PursuitId;
   parent_run_id: AgentRunId;
-  goal: string;
-  status: WorkflowEntityRunStatus;
+  pursuit_goal: string;
+  leg_goal_mode: LegGoalMode;
+  /** JSON-encoded string array; null for dynamic mode. */
+  leg_goals: string | null;
+  status: PursuitEntityRunStatus;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
 }
 
-export interface IterationsTable {
-  id: IterationId;
-  workflow_id: WorkflowId;
+export interface LegsTable {
+  id: LegId;
+  pursuit_id: PursuitId;
   sequence: number;
-  origin: "initial" | "deferred_goal";
+  origin: "initial" | "next_leg_goal" | "predefined";
+  leg_goal: string;
+  leg_goal_version: number;
+  leg_goal_provenance: string;
+  is_leg_goal_mutatable: number;
+  next_leg_goal: string | null;
   max_attempts: number;
-  status: WorkflowEntityRunStatus;
+  status: PursuitEntityRunStatus;
   created_at: string;
   updated_at: string;
 }
 
 export interface AttemptsTable {
   id: AttemptId;
-  workflow_id: WorkflowId;
-  iteration_id: IterationId;
+  pursuit_id: PursuitId;
+  leg_id: LegId;
   sequence: number;
-  status: WorkflowEntityRunStatus;
-  fail_reason: string | null;
+  leg_goal_version: number;
+  status: PursuitEntityRunStatus;
+  /** JSON-encoded string array. */
+  failure_reasons: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface PlansTable {
   id: PlanId;
-  workflow_id: WorkflowId;
-  iteration_id: IterationId;
+  pursuit_id: PursuitId;
+  leg_id: LegId;
   attempt_id: AttemptId;
   agent_run_id: AgentRunId | null;
-  status: WorkflowEntityRunStatus;
-  /** Null = kept the standing declaration; the pair records atomically. */
-  declared_focus: string | null;
-  declared_deferred_goal: string | null;
+  status: PursuitEntityRunStatus;
+  declared_leg_goal: string | null;
+  declared_next_leg_goal: string | null;
+  leg_goal_version: number;
   planner_summary: string | null;
   created_at: string;
   updated_at: string;
@@ -62,46 +70,59 @@ export interface PlansTable {
 
 export interface WorkItemsTable {
   id: WorkItemId;
-  workflow_id: WorkflowId;
-  iteration_id: IterationId;
+  pursuit_id: PursuitId;
+  leg_id: LegId;
   attempt_id: AttemptId;
   plan_id: PlanId;
   agent_name: string;
   agent_run_id: AgentRunId | null;
-  status: WorkflowEntityRunStatus;
-  description: string;
-  work_item_spec: string;
-  /** JSON-encoded WorkItemId array; encoding owned by `@eos/workflow`. */
-  needs: string;
+  status: WorkItemRunStatus;
+  title: string;
+  spec: string;
+  /** JSON-encoded WorkItemId array. */
+  depends_on: string;
+  leg_goal_version: number;
   worker_summary: string | null;
   worker_outcome: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface WorkItemDependencyEdgesTable {
+  id: Generated<number>;
+  pursuit_id: PursuitId;
+  leg_id: LegId;
+  attempt_id: AttemptId;
+  work_item_id: WorkItemId;
+  depends_on_work_item_id: WorkItemId;
+  leg_goal_version: number;
+  created_at: string;
+}
+
 export interface LaunchQueueTable {
   id: Generated<number>;
-  workflow_id: WorkflowId;
+  pursuit_id: PursuitId;
   kind: "plan" | "work_item";
   entity_id: string;
   state: "queued" | "claimed";
-  /** Stamped at claim; the post-commit launcher's staleness guard. */
   launch_token: string | null;
   created_at: string;
 }
 
-export interface WorkflowDatabase {
-  workflows: WorkflowsTable;
-  iterations: IterationsTable;
+export interface PursuitDatabase {
+  pursuits: PursuitsTable;
+  legs: LegsTable;
   attempts: AttemptsTable;
   plans: PlansTable;
   work_items: WorkItemsTable;
+  work_item_dependency_edges: WorkItemDependencyEdgesTable;
   launch_queue: LaunchQueueTable;
 }
 
-export type WorkflowRow = Selectable<WorkflowsTable>;
-export type IterationRow = Selectable<IterationsTable>;
+export type PursuitRow = Selectable<PursuitsTable>;
+export type LegRow = Selectable<LegsTable>;
 export type AttemptRow = Selectable<AttemptsTable>;
 export type PlanRow = Selectable<PlansTable>;
 export type WorkItemRow = Selectable<WorkItemsTable>;
+export type WorkItemDependencyEdgeRow = Selectable<WorkItemDependencyEdgesTable>;
 export type LaunchQueueRow = Selectable<LaunchQueueTable>;

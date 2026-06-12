@@ -85,13 +85,13 @@ function runtimeFixture(options: FixtureOptions): {
   const root = tempDir("eos-runtime-");
   const dir = join(root, "profiles");
   mkdirSync(dir, { recursive: true });
-  const workflowScriptsDir = join(root, "workflow-scripts");
-  const contextScript = writeContextScript(workflowScriptsDir);
+  const pursuitScriptsDir = join(root, "pursuit-scripts");
+  const contextScript = writeContextScript(pursuitScriptsDir);
   for (const spec of options.profiles) {
     const needsScript = spec.kind === "planner" || spec.kind === "worker";
     writeProfile(
       dir,
-      needsScript ? { workflowContextScript: contextScript, ...spec } : spec,
+      needsScript ? { pursuitContextScript: contextScript, ...spec } : spec,
     );
   }
   const hookConfigPath = join(root, "hooks.json");
@@ -110,7 +110,7 @@ function runtimeFixture(options: FixtureOptions): {
     hookConfigPath,
     notificationRulesPath,
     dataDir,
-    workflowScriptsDir,
+    pursuitScriptsDir,
   });
   return { runtime, dataDir };
 }

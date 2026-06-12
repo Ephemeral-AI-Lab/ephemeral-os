@@ -6,18 +6,18 @@ import {
   type Message,
   type SubmissionBinding,
 } from "@eos/contracts";
-import { createWorkflowDatabase, type WorkflowDb } from "@eos/db";
+import { createPursuitDatabase, type PursuitDb } from "@eos/db";
 import {
   startAgentRun,
   type AgentRunHandle,
   type AgentRunOutcome,
 } from "@eos/engine";
 import {
-  WorkflowService,
+  PursuitService,
   type AgentLaunchPort,
   type ComposeLaunchContext,
   type LaunchSettlement,
-} from "@eos/workflow";
+} from "@eos/pursuit";
 import { BackgroundSessionSupervisor } from "@eos/background";
 import {
   NotificationInbox,
@@ -31,13 +31,13 @@ import {
   AGENT_TOOL_NAMES,
   HookEngine,
   TERMINAL_TOOL_NAMES,
-  WORKFLOW_TOOL_NAMES,
+  PURSUIT_TOOL_NAMES,
   agentTools,
   backgroundTools,
   buildToolExecutor,
   snapshotRunState,
   terminalToolDefinitions,
-  workflowTools,
+  pursuitTools,
   type AgentRunState,
   type ToolDefinition,
 } from "@eos/tool";
@@ -54,10 +54,10 @@ import {
   type LlmClientRegistry,
 } from "./llm-client-registry.js";
 import {
-  DEFAULT_WORKFLOW_SCRIPTS_DIR,
-  resolveWorkflowContextScripts,
-  workflowContextScriptComposer,
-} from "./workflow-context-scripts.js";
+  DEFAULT_PURSUIT_SCRIPTS_DIR,
+  resolvePursuitContextScripts,
+  pursuitContextScriptComposer,
+} from "./pursuit-context-scripts.js";
 import { loadNotificationRules } from "./notification-rules-config.js";
 import { RunRegistry, type RunSummary } from "./run-registry.js";
 import {
@@ -82,12 +82,12 @@ export interface AgentRuntimeDependencies {
   notificationRulesPath?: string;
   /** Transcript root. */
   dataDir: string;
-  /** Workflow store; presence enables the workflow family (Phase 05 §10). */
-  workflowDb?: string | WorkflowDb;
-  /** §2.17 mirror root. Default: `.eos-agents/workflow/context`. */
-  workflowContextRoot?: string;
-  /** Context-script root. Default: `.eos-agents/workflow/scripts`. */
-  workflowScriptsDir?: string;
+  /** Pursuit store; presence enables the pursuit family (Phase 05 §10). */
+  pursuitDb?: string | PursuitDb;
+  /** §2.17 mirror root. Default: `.eos-agents/pursuit/context`. */
+  pursuitContextRoot?: string;
+  /** Context-script root. Default: `.eos-agents/pursuit/scripts`. */
+  pursuitScriptsDir?: string;
 }
 
 export type UserMessage = Message & { role: "user" };
@@ -125,7 +125,7 @@ export interface AgentRuntime {
 export function createAgentRuntime(dependencies: AgentRuntimeDependencies): AgentRuntime {
   const agentProfiles = loadAgentProfileRegistry(
     dependencies.agentProfilesDir ?? ".eos-agents/profiles",
-    knownToolNames(dependencies.baseTools ?? [], dependencies.workflowDb !== undefined),
+    knownToolNames(dependencies.baseTools ?? [], dependencies.pursuitDb !== undefined),
   );
   const llmClients =
     dependencies.llmClients ??
@@ -142,12 +142,12 @@ export function createAgentRuntime(dependencies: AgentRuntimeDependencies): Agen
     llmClients,
     hookEngine: new HookEngine(loadHookConfig(dependencies.hookConfigPath)),
     triggerRules: loadNotificationRules(dependencies.notificationRulesPath),
-    workflow: workflowWiring(dependencies, agentProfiles),
+    pursuit: pursuitWiring(dependencies, agentProfiles),
   });
 }
 
-interface WorkflowWiring {
-  db: WorkflowDb;
+interface PursuitWiring {
+  db: PursuitDb;
   contextRoot: string;
   compose: ComposeLaunchContext;
   plannerAgentName: string;
@@ -156,34 +156,34 @@ interface WorkflowWiring {
 
 /**
  * Profile-script validation runs whenever planner/worker profiles load -
- * a broken `workflow_context_script` fails startup, never a launch. The
- * service itself exists only when `workflowDb` is configured.
+ * a broken `pursuit_context_script` fails startup, never a launch. The
+ * service itself exists only when `pursuitDb` is configured.
  */
-function workflowWiring(
+function pursuitWiring(
   dependencies: AgentRuntimeDependencies,
   agentProfiles: AgentProfileRegistry,
-): WorkflowWiring | undefined {
-  const scripts = resolveWorkflowContextScripts(
+): PursuitWiring | undefined {
+  const scripts = resolvePursuitContextScripts(
     agentProfiles.list(),
-    dependencies.workflowScriptsDir ?? DEFAULT_WORKFLOW_SCRIPTS_DIR,
-    dependencies.workflowScriptsDir !== undefined,
+    dependencies.pursuitScriptsDir ?? DEFAULT_PURSUIT_SCRIPTS_DIR,
+    dependencies.pursuitScriptsDir !== undefined,
   );
-  if (dependencies.workflowDb === undefined) return undefined;
+  if (dependencies.pursuitDb === undefined) return undefined;
   const planners = agentProfiles
     .list()
     .filter((profile) => profile.agent_kind === "planner");
   if (planners.length !== 1) {
     throw new Error(
-      `workflowDb requires exactly one planner profile; found ${String(planners.length)}`,
+      `pursuitDb requires exactly one planner profile; found ${String(planners.length)}`,
     );
   }
   return {
     db:
-      typeof dependencies.workflowDb === "string"
-        ? createWorkflowDatabase(dependencies.workflowDb)
-        : dependencies.workflowDb,
-    contextRoot: dependencies.workflowContextRoot ?? ".eos-agents/workflow/context",
-    compose: workflowContextScriptComposer(scripts),
+      typeof dependencies.pursuitDb === "string"
+        ? createPursuitDatabase(dependencies.pursuitDb)
+        : dependencies.pursuitDb,
+    contextRoot: dependencies.pursuitContextRoot ?? ".eos-agents/pursuit/context",
+    compose: pursuitContextScriptComposer(scripts),
     plannerAgentName: planners[0].name,
     isRegisteredWorkerAgent: (agentName) =>
       agentProfiles
@@ -203,12 +203,12 @@ function workflowWiring(
  */
 function knownToolNames(
   baseTools: readonly ToolDefinition[],
-  workflowEnabled: boolean,
+  pursuitEnabled: boolean,
 ): KnownToolNames {
   const ordinary = new Set<string>([
     ...AGENT_TOOL_NAMES,
     ...BACKGROUND_TOOL_NAMES,
-    ...(workflowEnabled ? WORKFLOW_TOOL_NAMES : []),
+    ...(pursuitEnabled ? PURSUIT_TOOL_NAMES : []),
   ]);
   const terminal = new Set<string>(TERMINAL_TOOL_NAMES);
   for (const definition of baseTools) {
@@ -232,13 +232,13 @@ interface RuntimeContext {
   hookEngine: HookEngine;
   /** Shared rule list; the trigger engine itself is per run (04.9 §7). */
   triggerRules: readonly TriggerRuleEntry[];
-  workflow?: WorkflowWiring;
+  pursuit?: PursuitWiring;
 }
 
 interface StartRunContext {
   /** Internal only, never public input. */
   parent?: AgentRunId;
-  /** The §2.19 entity-bound seam for a workflow-launched child's terminal tool. */
+  /** The §2.19 entity-bound seam for a pursuit-launched child's terminal tool. */
   submission?: SubmissionBinding;
 }
 
@@ -257,10 +257,10 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
   };
 
   // The launch-port adapter over the runtime's own startRun (Phase 05
-  // §10, amended by §2.19/§2.21): the workflow signal becomes the child
+  // §10, amended by §2.19/§2.21): the pursuit signal becomes the child
   // run's caller scope, its abort reason becomes the recorded interrupt
   // label, and the submission binding threads into per-run tool assembly.
-  const workflowLaunchPort: AgentLaunchPort = {
+  const pursuitLaunchPort: AgentLaunchPort = {
     launch: (agentName, initialMessages, options) => {
       // The composer contract guarantees min(1); the service enforces it.
       const [head, ...rest] = initialMessages;
@@ -279,7 +279,7 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
         const signal = options.signal;
         const interruptWithReason = (): void => {
           started.handle.interrupt(
-            typeof signal.reason === "string" ? signal.reason : "workflow_cancelled",
+            typeof signal.reason === "string" ? signal.reason : "pursuit_cancelled",
           );
         };
         if (signal.aborted) interruptWithReason();
@@ -294,14 +294,14 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
       };
     },
   };
-  const workflowService = ctx.workflow
-    ? new WorkflowService({
-        db: ctx.workflow.db,
-        port: workflowLaunchPort,
-        compose: ctx.workflow.compose,
-        contextRoot: ctx.workflow.contextRoot,
-        plannerAgentName: ctx.workflow.plannerAgentName,
-        isRegisteredWorkerAgent: ctx.workflow.isRegisteredWorkerAgent,
+  const pursuitService = ctx.pursuit
+    ? new PursuitService({
+        db: ctx.pursuit.db,
+        port: pursuitLaunchPort,
+        compose: ctx.pursuit.compose,
+        contextRoot: ctx.pursuit.contextRoot,
+        plannerAgentName: ctx.pursuit.plannerAgentName,
+        isRegisteredWorkerAgent: ctx.pursuit.isRegisteredWorkerAgent,
       })
     : undefined;
 
@@ -356,9 +356,9 @@ function createRuntime(ctx: RuntimeContext): AgentRuntime {
         },
         supervisor,
       ),
-      ...(workflowService
-        ? workflowTools(
-            (input, parent) => workflowService.delegate(input, parent),
+      ...(pursuitService
+        ? pursuitTools(
+            (input, parent) => pursuitService.delegate(input, parent),
             supervisor,
           )
         : []),

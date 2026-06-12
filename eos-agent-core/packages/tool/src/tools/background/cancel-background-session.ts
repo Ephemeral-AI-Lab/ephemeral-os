@@ -6,11 +6,11 @@ import { defineTool } from "../../define.js";
 import { DESCRIPTION } from "../description_prompts/cancel_background_session_prompt.js";
 
 // The session-kind union, narrowed as the spawning families land:
-// `command` (sandbox family), `subagent` (agent family), `workflow`
-// (workflow family). Cancelling a workflow session IS cancelling the
-// workflow - the handle's cancel runs the full cascade before resolving.
+// `command` (sandbox family), `subagent` (agent family), `pursuit`
+// (pursuit family). Cancelling a pursuit session IS cancelling the
+// pursuit - the handle's cancel runs the full cascade before resolving.
 const CancelInputSchema = z.object({
-  type: z.enum(["command", "subagent", "workflow"]),
+  type: z.enum(["command", "subagent", "pursuit"]),
   id: z.string().min(1),
   reason: z.string().optional(),
 });

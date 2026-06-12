@@ -60,7 +60,7 @@ export type AgentEvent =
  * - single consumer: a second `[Symbol.asyncIterator]()` call throws,
  * - pushes never block the loop; the buffer is unbounded (the consumer is
  *   in-process; backpressure belongs to the server phase),
- * - `close()` completes iteration once the buffer drains,
+ * - `close()` completes leg once the buffer drains,
  * - an early `break`/`return()` detaches: later pushes are discarded while
  *   the run continues; a stream nobody iterates retains every event.
  */

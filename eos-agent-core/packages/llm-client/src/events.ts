@@ -17,7 +17,7 @@ export type StopReason =
  * A single normalized event from a streaming model invocation.
  *
  * The three delta variants are "visible output" for the retry gate;
- * `assistant_message_complete` is the success terminus and iteration ends
+ * `assistant_message_complete` is the success terminus and leg ends
  * after it.
  */
 export type LlmStreamEvent =

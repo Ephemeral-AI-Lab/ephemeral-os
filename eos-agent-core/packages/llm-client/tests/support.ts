@@ -16,7 +16,7 @@ export async function collect(
   return events;
 }
 
-/** Collect events until iteration throws; the error is returned alongside. */
+/** Collect events until leg throws; the error is returned alongside. */
 export async function collectUntilError(
   stream: AsyncIterable<LlmStreamEvent>,
 ): Promise<{ events: LlmStreamEvent[]; error: unknown }> {

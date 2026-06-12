@@ -25,11 +25,11 @@ export interface AgentProfile {
    */
   terminal_tool?: ToolName;
   /**
-   * Workflow context composer, required for `planner`/`worker` kinds: a
-   * repo-root-relative `.cjs`/`.mjs` path under the workflow scripts root.
+   * Pursuit context composer, required for `planner`/`worker` kinds: a
+   * repo-root-relative `.cjs`/`.mjs` path under the pursuit scripts root.
    * Other kinds must omit it.
    */
-  workflow_context_script?: string;
+  pursuit_context_script?: string;
   /** Markdown body after the frontmatter. */
   system_prompt: string;
   /** Diagnostics only, never API input. */
@@ -44,7 +44,7 @@ const FrontmatterSchema = z.object({
   agent_kind: AgentKindSchema,
   allowed_tools: z.array(ToolNameSchema),
   terminal_tool: ToolNameSchema.optional(),
-  workflow_context_script: z.string().min(1).optional(),
+  pursuit_context_script: z.string().min(1).optional(),
 });
 
 /** `---\n<yaml>\n---\n<body>`; the first `---` line must open the file. */
@@ -76,23 +76,23 @@ export function loadAgentProfile(path: string): AgentProfile {
   if (!parsed.success) {
     throw new Error(`agent profile ${path} is invalid: ${zodIssueSummary(parsed.error)}`);
   }
-  const isWorkflowKind =
+  const isPursuitKind =
     parsed.data.agent_kind === "planner" || parsed.data.agent_kind === "worker";
-  if (isWorkflowKind && parsed.data.terminal_tool === undefined) {
-    // Workflow transitions consume structured, schema-validated submissions;
+  if (isPursuitKind && parsed.data.terminal_tool === undefined) {
+    // Pursuit transitions consume structured, schema-validated submissions;
     // a free-text planner/worker outcome would synthesize failures.
     throw new Error(
       `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires terminal_tool`,
     );
   }
-  if (isWorkflowKind && parsed.data.workflow_context_script === undefined) {
+  if (isPursuitKind && parsed.data.pursuit_context_script === undefined) {
     throw new Error(
-      `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires workflow_context_script`,
+      `agent profile ${path} (agent_kind ${parsed.data.agent_kind}) requires pursuit_context_script`,
     );
   }
-  if (!isWorkflowKind && parsed.data.workflow_context_script !== undefined) {
+  if (!isPursuitKind && parsed.data.pursuit_context_script !== undefined) {
     throw new Error(
-      `agent profile ${path} must omit workflow_context_script for agent_kind ${parsed.data.agent_kind}`,
+      `agent profile ${path} must omit pursuit_context_script for agent_kind ${parsed.data.agent_kind}`,
     );
   }
   return { ...parsed.data, system_prompt: match[2].trim(), source_path: path };

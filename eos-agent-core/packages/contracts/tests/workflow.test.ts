@@ -6,10 +6,10 @@ import {
   PlannerOutcomePayloadSchema,
   WorkerContextInputSchema,
   WorkerOutcomePayloadSchema,
-  WorkflowEntityRunStatusSchema,
-  isWorkflowEntityTerminal,
-  mintWorkflowId,
-  workflowIdFrom,
+  PursuitEntityRunStatusSchema,
+  isPursuitEntityTerminal,
+  mintPursuitId,
+  pursuitIdFrom,
 } from "../src/index.js";
 
 const WORK_ITEM = {
@@ -21,25 +21,25 @@ const WORK_ITEM = {
 
 function snapshot() {
   return {
-    workflow: {
+    pursuit: {
       id: "wf-1",
       goal: "ship it",
       status: "Running",
-      context_path: "workflow_wf-1",
-      iterations: [],
+      context_path: "pursuit_wf-1",
+      legs: [],
     },
   };
 }
 
-function legacyWorkflowGoalKey(kind: "original" | "current"): string {
+function legacyPursuitGoalKey(kind: "original" | "current"): string {
   return `${kind}_goal`;
 }
 
-describe("workflow ids and status", () => {
-  it("mints and adopts branded workflow ids", () => {
-    expect(mintWorkflowId()).toMatch(/[0-9a-f-]{36}/);
-    expect(workflowIdFrom("wf-1")).toBe("wf-1");
-    expect(() => workflowIdFrom("")).toThrow();
+describe("pursuit ids and status", () => {
+  it("mints and adopts branded pursuit ids", () => {
+    expect(mintPursuitId()).toMatch(/[0-9a-f-]{36}/);
+    expect(pursuitIdFrom("wf-1")).toBe("wf-1");
+    expect(() => pursuitIdFrom("")).toThrow();
   });
 
   it.each`
@@ -50,8 +50,8 @@ describe("workflow ids and status", () => {
     ${"Failed"}     | ${true}
     ${"Cancelled"}  | ${true}
   `("classifies $status terminal=$terminal", ({ status, terminal }) => {
-    const parsed = WorkflowEntityRunStatusSchema.parse(status);
-    expect(isWorkflowEntityTerminal(parsed)).toBe(terminal);
+    const parsed = PursuitEntityRunStatusSchema.parse(status);
+    expect(isPursuitEntityTerminal(parsed)).toBe(terminal);
   });
 });
 
@@ -59,8 +59,8 @@ describe("planner outcome payload", () => {
   it("accepts a declaring payload with work items and defaults needs", () => {
     const parsed = PlannerOutcomePayloadSchema.parse({
       summary: "planned",
-      iteration_focus: "the parser slice",
-      deferred_goal: "the printer slice",
+      leg_goal: "the parser slice",
+      next_leg_goal: "the printer slice",
       work_items: [WORK_ITEM],
     });
     expect(parsed.work_items[0].needs).toEqual([]);
@@ -71,19 +71,19 @@ describe("planner outcome payload", () => {
       summary: "re-planned",
       work_items: [{ ...WORK_ITEM, needs: ["wi-0"] }],
     });
-    expect(parsed.iteration_focus).toBeUndefined();
-    expect(parsed.deferred_goal).toBeUndefined();
+    expect(parsed.leg_goal).toBeUndefined();
+    expect(parsed.next_leg_goal).toBeUndefined();
   });
 
-  it("rejects deferred_goal without iteration_focus", () => {
+  it("rejects next_leg_goal without leg_goal", () => {
     const result = PlannerOutcomePayloadSchema.safeParse({
       summary: "planned",
-      deferred_goal: "the printer slice",
+      next_leg_goal: "the printer slice",
       work_items: [WORK_ITEM],
     });
     expect(result.success).toBe(false);
     expect(JSON.stringify(result.error?.issues)).toContain(
-      "deferred_goal requires iteration_focus",
+      "next_leg_goal requires leg_goal",
     );
   });
 
@@ -91,11 +91,11 @@ describe("planner outcome payload", () => {
     ["empty work_items", { work_items: [] }],
     ["missing description", { work_items: [{ ...WORK_ITEM, description: undefined }] }],
     ["empty summary", { summary: "" }],
-    ["empty iteration_focus", { iteration_focus: "" }],
+    ["empty leg_goal", { leg_goal: "" }],
   ] as const)("rejects %s", (_name, override) => {
     const base = {
       summary: "planned",
-      iteration_focus: "slice",
+      leg_goal: "slice",
       work_items: [WORK_ITEM],
     };
     expect(
@@ -123,13 +123,13 @@ describe("worker outcome payload", () => {
 });
 
 describe("context-script inputs", () => {
-  it("carries only workflow_context plus current for the planner", () => {
+  it("carries only pursuit_context plus current for the planner", () => {
     const input = {
       kind: "planner",
-      workflow_context: snapshot(),
+      pursuit_context: snapshot(),
       current: {
-        workflow_id: "wf-1",
-        iteration_id: "it-1",
+        pursuit_id: "wf-1",
+        leg_id: "it-1",
         attempt_id: "at-1",
         plan_id: "pl-1",
       },
@@ -142,26 +142,26 @@ describe("context-script inputs", () => {
     expect(
       PlannerContextInputSchema.safeParse({
         ...input,
-        workflow_context: {
-          workflow: {
-            ...input.workflow_context.workflow,
-            [legacyWorkflowGoalKey("original")]: "ship it",
+        pursuit_context: {
+          pursuit: {
+            ...input.pursuit_context.pursuit,
+            [legacyPursuitGoalKey("original")]: "ship it",
           },
         },
       }).success,
-      "legacy workflow goal field rejected",
+      "legacy pursuit goal field rejected",
     ).toBe(false);
     expect(
       PlannerContextInputSchema.safeParse({
         ...input,
-        workflow_context: {
-          workflow: {
-            ...input.workflow_context.workflow,
-            [legacyWorkflowGoalKey("current")]: "ship it",
+        pursuit_context: {
+          pursuit: {
+            ...input.pursuit_context.pursuit,
+            [legacyPursuitGoalKey("current")]: "ship it",
           },
         },
       }).success,
-      "derived workflow goal field rejected",
+      "derived pursuit goal field rejected",
     ).toBe(false);
   });
 
@@ -169,8 +169,8 @@ describe("context-script inputs", () => {
     const plan = {
       id: "pl-1",
       status: "Success",
-      declared_focus: "the parser slice",
-      declared_deferred_goal: null,
+      declared_leg_goal: "the parser slice",
+      declared_next_leg_goal: null,
       summary: "planned",
       agent_run_id: "run-1",
     };
@@ -178,31 +178,31 @@ describe("context-script inputs", () => {
       id: "at-1",
       sequence: 1,
       status: "Running",
-      fail_reason: null,
-      is_consistent_with_iteration_focus: true,
-      context_path: "workflow_wf-1/iteration_it-1/attempt_at-1",
+      failure_reasons: null,
+      is_consistent_with_leg_goal: true,
+      context_path: "pursuit_wf-1/leg_it-1/attempt_at-1",
       plan,
       work_items: [],
     };
-    const iteration = {
+    const leg = {
       id: "it-1",
       sequence: 1,
       origin: "initial",
       status: "Running",
       focus: "the parser slice",
-      deferred_goal: null,
+      next_leg_goal: null,
       max_attempts: 2,
-      context_path: "workflow_wf-1/iteration_it-1",
+      context_path: "pursuit_wf-1/leg_it-1",
       attempts: [attempt],
     };
     const input = {
       kind: "planner",
-      workflow_context: {
-        workflow: { ...snapshot().workflow, iterations: [iteration] },
+      pursuit_context: {
+        pursuit: { ...snapshot().pursuit, legs: [leg] },
       },
       current: {
-        workflow_id: "wf-1",
-        iteration_id: "it-1",
+        pursuit_id: "wf-1",
+        leg_id: "it-1",
         attempt_id: "at-1",
         plan_id: "pl-1",
       },
@@ -211,12 +211,12 @@ describe("context-script inputs", () => {
     expect(
       PlannerContextInputSchema.safeParse({
         ...input,
-        workflow_context: {
-          workflow: {
-            ...input.workflow_context.workflow,
-            iterations: [
+        pursuit_context: {
+          pursuit: {
+            ...input.pursuit_context.pursuit,
+            legs: [
               {
-                ...iteration,
+                ...leg,
                 attempts: [
                   {
                     ...attempt,
@@ -232,13 +232,13 @@ describe("context-script inputs", () => {
     ).toBe(false);
   });
 
-  it("carries only workflow_context plus current for the worker", () => {
+  it("carries only pursuit_context plus current for the worker", () => {
     const input = {
       kind: "worker",
-      workflow_context: snapshot(),
+      pursuit_context: snapshot(),
       current: {
-        workflow_id: "wf-1",
-        iteration_id: "it-1",
+        pursuit_id: "wf-1",
+        leg_id: "it-1",
         attempt_id: "at-1",
         work_item_id: "wi-1",
       },
@@ -258,7 +258,7 @@ describe("context-script output", () => {
   it("accepts ordered user messages with real content blocks", () => {
     const parsed = ContextScriptOutputSchema.parse({
       initial_messages: [
-        { role: "user", content: [{ type: "text", text: "# Workflow goal\nship" }] },
+        { role: "user", content: [{ type: "text", text: "# Pursuit goal\nship" }] },
       ],
     });
     expect(parsed.initial_messages).toHaveLength(1);

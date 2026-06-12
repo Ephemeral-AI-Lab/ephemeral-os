@@ -19,7 +19,7 @@ export interface Scenario {
 }
 
 /**
- * One binding of the `LlmClient` iteration contract (Phase 02 §4.5): the
+ * One binding of the `LlmClient` leg contract (Phase 02 §4.5): the
  * scenarios decide how each behavior is induced (fixture-fetch client vs
  * live profile + eliciting prompt); the assertions are shared. Strictness is
  * data: deterministic bindings add the `exact` golden block, live bindings
@@ -98,7 +98,7 @@ export function describeLlmClientContract(
       expect(completion.stop_reason).toBe("end_turn");
       expect(
         await collect(stream),
-        "single pass: re-iteration yields nothing",
+        "single pass: re-leg yields nothing",
       ).toEqual([]);
       if (exact?.text !== undefined) {
         expect(textDeltas.join(""), "delta concatenation").toBe(exact.text);

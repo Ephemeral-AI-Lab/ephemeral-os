@@ -1,22 +1,24 @@
-export { createWorkflowDatabase, type WorkflowDb } from "./database.js";
+export { createPursuitDatabase, type PursuitDb } from "./database.js";
 export {
-  loadWorkflowRows,
-  type WorkflowDbReader,
-  type WorkflowRows,
-  type WorkflowTransaction,
-} from "./workflow-rows.js";
+  loadPursuitRows,
+  type PursuitDbReader,
+  type PursuitRows,
+  type PursuitTransaction,
+} from "./pursuit-rows.js";
 export type {
   AttemptRow,
   AttemptsTable,
-  IterationRow,
-  IterationsTable,
+  LegRow,
+  LegsTable,
   LaunchQueueRow,
   LaunchQueueTable,
   PlanRow,
   PlansTable,
   WorkItemRow,
+  WorkItemDependencyEdgeRow,
+  WorkItemDependencyEdgesTable,
   WorkItemsTable,
-  WorkflowDatabase,
-  WorkflowRow,
-  WorkflowsTable,
+  PursuitDatabase,
+  PursuitRow,
+  PursuitsTable,
 } from "./schema.js";

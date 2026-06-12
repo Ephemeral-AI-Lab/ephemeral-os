@@ -148,7 +148,7 @@ describe("submission tool family", () => {
     const outcome = await submit.execute(
       {
         summary: "plan ready",
-        iteration_focus: "the slice",
+        leg_goal: "the slice",
         work_items: [
           {
             id: "w1",
@@ -164,7 +164,7 @@ describe("submission tool family", () => {
     expect(outcome.isError ?? false).toBe(false);
     expect(outcome.content).toEqual({
       summary: "plan ready",
-      iteration_focus: "the slice",
+      leg_goal: "the slice",
       work_items: [
         {
           id: "w1",
