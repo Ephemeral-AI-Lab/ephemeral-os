@@ -10,6 +10,7 @@
     }
   },
   "dependencies": {
+    "@eos/contracts": "workspace:*",
     "@eos/notification": "workspace:*"
   }
 }

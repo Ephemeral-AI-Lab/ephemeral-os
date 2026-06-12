@@ -1,23 +1,17 @@
 import {
   zodIssueSummary,
-  type AgentRunSnapshot,
-  type BackgroundSessionSnapshot,
+  type AgentRunId,
   type JsonObject,
   type ToolCallResult,
+  type ToolSpec,
 } from "@eos/contracts";
-import type { ToolUseBlock } from "@eos/engine";
+import type { BackgroundTaskSupervisor } from "@eos/background";
+import type { ToolBatchContext, ToolUseBlock } from "@eos/engine";
+import type { Notifier } from "@eos/notification";
+import { z } from "zod";
 
-import type {
-  ToolCallMeta,
-  ToolDefinition,
-  ToolOutcome,
-} from "./contract.js";
-import type {
-  HookAdvisoryRequirement,
-  HookEvent,
-  HookPayload,
-} from "./hooks/protocol.js";
-import type { HookEngine, HookRunSummary } from "./hooks/hook-runner.js";
+import type { ToolCallContext, ToolDefinition, ToolResult } from "./contract.js";
+import type { HookEngine, ToolCallFacts } from "./hooks.js";
 
 /**
  * Everything the pipeline owns about one settled call. The batch executor
@@ -25,177 +19,133 @@ import type { HookEngine, HookRunSummary } from "./hooks/hook-runner.js";
  */
 export type PipelineResult = Omit<ToolCallResult, "tool_use_id">;
 
-/** Run-level dependencies closed over at executor build. */
-export interface BindToolDeps {
+/** Run-scoped dependencies closed over when an executor is built. */
+export interface RunScope {
+  runId: AgentRunId;
+  backgroundTaskSupervisor: BackgroundTaskSupervisor;
+  notifier: Notifier;
   hooks: HookEngine;
-  advisoryRequirement: HookAdvisoryRequirement;
-  hookPayloadFacts?: () => HookPayloadFacts;
-}
-
-export interface HookPayloadFacts {
-  background_sessions?: readonly BackgroundSessionSnapshot[];
 }
 
 /** One definition bound through the pipeline; dispatched by the executor. */
 export interface BoundTool {
-  definition: ToolDefinition;
-  run(
-    call: ToolUseBlock,
-    run: AgentRunSnapshot,
-    signal: AbortSignal,
-  ): Promise<PipelineResult>;
+  name: string;
+  spec: ToolSpec;
+  run(call: ToolUseBlock, batch: ToolBatchContext): Promise<PipelineResult>;
+}
+
+/** Derive the wire declaration from the Zod input contract. */
+export function toolSpec(definition: ToolDefinition): ToolSpec {
+  return {
+    name: definition.name,
+    description: definition.description,
+    // JSON Schema output is JSON by construction.
+    input_schema: z.toJSONSchema(definition.input) as JsonObject,
+  };
+}
+
+/** Frozen per-call facts shared by pre and post hooks. */
+export function callFacts(
+  runId: AgentRunId,
+  call: ToolUseBlock,
+  toolName: string,
+): ToolCallFacts {
+  return Object.freeze({
+    runId,
+    toolUseId: call.tool_use_id,
+    toolName,
+    input: call.input,
+  });
+}
+
+/** A settled rejection with both clocks at the rejection instant. */
+export function rejectedResult(content: string): PipelineResult {
+  const at = Date.now();
+  return {
+    content,
+    is_error: true,
+    is_terminal: false,
+    tool_start_time: at,
+    tool_end_time: at,
+  };
 }
 
 /**
- * Bind one definition to the per-call pipeline: abort check -> isolated
- * guard -> parse -> PreToolUse -> execute -> PostToolUse(/Failure) ->
- * stamping. Never throws; every path returns a result the executor can
- * record. Timing brackets `execute()` only - pre-execution rejections
- * stamp both times with the rejection instant, and slow hooks never
- * masquerade as slow tools.
+ * Bind one definition to the per-call pipeline: abort check -> parse ->
+ * preToolUse -> execute -> postToolUse -> stamping. Never throws; every
+ * path returns a result the executor can record. Timing brackets
+ * `execute()` only - pre-execution rejections stamp both times with the
+ * rejection instant, and slow hooks never masquerade as slow tools.
  */
-export function bindTool(definition: ToolDefinition, deps: BindToolDeps): BoundTool {
+export function bindTool(definition: ToolDefinition, scope: RunScope): BoundTool {
   const run = async (
     call: ToolUseBlock,
-    runSnapshot: AgentRunSnapshot,
-    signal: AbortSignal,
+    batch: ToolBatchContext,
   ): Promise<PipelineResult> => {
-    const meta: ToolCallMeta = Object.freeze({
-      tool_use_id: call.tool_use_id,
-      tool_name: definition.name,
-      run: runSnapshot,
-    });
-    const warnings: string[] = [];
-    // Decision 04.5/11: hook context rides the result under
-    // `metadata.hook_contexts`; the engine loop is its only publisher.
-    const contexts: string[] = [];
-    const absorb = (summary: HookRunSummary): void => {
-      warnings.push(...summary.warnings);
-      contexts.push(...summary.additionalContexts);
-    };
-    const rejected = (content: string): PipelineResult => {
-      const at = Date.now();
-      return stamp(definition, { content, isError: true }, at, at, warnings, contexts);
-    };
-
     // Defense in depth: the executor already stops dispatching on abort.
-    if (signal.aborted) return rejected("interrupted");
-
-    if (runSnapshot.workspace.is_isolated && !definition.availableInIsolatedWorkspace) {
-      return rejected(
-        `tool ${definition.name} is not available while the workspace is isolated`,
-      );
-    }
+    if (batch.signal.aborted) return rejectedResult("interrupted");
 
     const parsed = definition.input.safeParse(call.input);
     if (!parsed.success) {
-      return rejected(
+      return rejectedResult(
         `invalid input for ${definition.name}: ${zodIssueSummary(parsed.error)}`,
       );
     }
-    let input: unknown = parsed.data;
-    let wireInput: JsonObject = call.input;
-    // Reads the CURRENT wireInput, so post hooks see an applied update.
-    const hookPayload = (
-      event: HookEvent,
-      extra: Partial<Pick<HookPayload, "tool_response" | "error">> = {},
-    ): HookPayload => ({
-      event,
-      tool_name: definition.name,
-      tool_input: wireInput,
-      tool_use_id: meta.tool_use_id,
-      run: meta.run,
-      advisory_requirement: deps.advisoryRequirement,
-      ...deps.hookPayloadFacts?.(),
-      ...extra,
-    });
 
-    const pre = await deps.hooks.run(hookPayload("PreToolUse"), signal);
-    absorb(pre);
-    if (pre.decision === "deny") {
-      return rejected(pre.reason ?? `PreToolUse hook denied ${definition.name}`);
-    }
-    if (pre.updatedInput) {
-      // A hook can rewrite input but cannot smuggle an invalid shape past
-      // the tool's own schema.
-      const reparsed = definition.input.safeParse(pre.updatedInput);
-      if (!reparsed.success) {
-        return rejected(
-          `hook updatedInput rejected by ${definition.name} schema: ${zodIssueSummary(reparsed.error)}`,
-        );
-      }
-      input = reparsed.data;
-      wireInput = pre.updatedInput;
-    }
+    const facts = callFacts(scope.runId, call, definition.name);
+    const pre = await scope.hooks.preToolUse(facts);
+    if (pre.decision === "deny") return rejectedResult(pre.reason);
 
+    const ctx: ToolCallContext = {
+      runId: scope.runId,
+      toolUseId: call.tool_use_id,
+      signal: batch.signal,
+      llmMessages: batch.llmMessages,
+      backgroundTaskSupervisor: scope.backgroundTaskSupervisor,
+      notifier: scope.notifier,
+    };
     const startedAt = Date.now();
-    let outcome: ToolOutcome;
+    let result: ToolResult;
     try {
-      outcome = await definition.execute(input, { meta, signal });
+      result = await definition.execute(parsed.data, ctx);
     } catch (error) {
-      const endedAt = Date.now();
-      const message = error instanceof Error ? error.message : String(error);
-      absorb(
-        await deps.hooks.run(hookPayload("PostToolUseFailure", { error: message }), signal),
-      );
-      return stamp(
-        definition,
-        { content: message, isError: true },
-        startedAt,
-        endedAt,
-        warnings,
-        contexts,
-      );
+      result = { error: error instanceof Error ? error.message : String(error) };
     }
     const endedAt = Date.now();
 
-    absorb(
-      await deps.hooks.run(
-        hookPayload("PostToolUse", { tool_response: projectContent(outcome.content) }),
-        signal,
-      ),
-    );
+    const post = await scope.hooks.postToolUse(facts, result);
+    if (post.decision === "deny") result = { error: post.reason };
 
-    return stamp(definition, outcome, startedAt, endedAt, warnings, contexts);
+    return stamp(result, startedAt, endedAt);
   };
-  return { definition, run };
-}
-
-/** String projection for events and hook payloads (results stay structured). */
-export function projectContent(content: ToolOutcome["content"]): string {
-  return typeof content === "string" ? content : JSON.stringify(content);
+  return { name: definition.name, spec: toolSpec(definition), run };
 }
 
 /**
- * The pipeline's stamping: `is_terminal = definition.isTerminal && !isError`
- * (a failed submission can never terminate a run) plus the execute-only
- * clock and the accumulated hook warnings and contexts (the engine loop
- * publishes each `hook_contexts` entry as a `hook_context` notification).
+ * The pipeline's stamping for ordinary tools: errors are facts mapped by
+ * the pipeline, never tool claims, and `is_terminal` is always false —
+ * only the terminal binding stamps true.
  */
 function stamp(
-  definition: ToolDefinition,
-  outcome: ToolOutcome,
+  result: ToolResult,
   startedAt: number,
   endedAt: number,
-  warnings: string[],
-  contexts: string[],
 ): PipelineResult {
-  const isError = outcome.isError ?? false;
-  const hookFacts: JsonObject = {
-    ...(warnings.length > 0 && { hook_warnings: warnings }),
-    ...(contexts.length > 0 && { hook_contexts: contexts }),
-  };
-  const metadata =
-    Object.keys(hookFacts).length > 0
-      ? { ...outcome.metadata, ...hookFacts }
-      : outcome.metadata;
-  const result: PipelineResult = {
-    content: outcome.content,
-    is_error: isError,
-    is_terminal: definition.isTerminal && !isError,
+  if ("error" in result) {
+    return {
+      content: result.error,
+      is_error: true,
+      is_terminal: false,
+      tool_start_time: startedAt,
+      tool_end_time: endedAt,
+    };
+  }
+  return {
+    content: result.output,
+    is_error: false,
+    is_terminal: false,
     tool_start_time: startedAt,
     tool_end_time: endedAt,
+    ...(result.metadata !== undefined && { metadata: result.metadata }),
   };
-  if (metadata !== undefined) result.metadata = metadata;
-  return result;
 }

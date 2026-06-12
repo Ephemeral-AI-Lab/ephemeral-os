@@ -1,5 +1,5 @@
 {
-  "name": "@eos/agent-runtime",
+  "name": "@eos/runtime",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,17 +12,13 @@
   "dependencies": {
     "@eos/background": "workspace:*",
     "@eos/contracts": "workspace:*",
-    "@eos/db": "workspace:*",
     "@eos/engine": "workspace:*",
     "@eos/llm-client": "workspace:*",
     "@eos/notification": "workspace:*",
-    "@eos/scripts": "workspace:*",
-    "@eos/tool": "workspace:*",
-    "@eos/pursuit": "workspace:*",
-    "yaml": "^2.8.1",
-    "zod": "^4.4.3"
+    "@eos/tool": "workspace:*"
   },
   "devDependencies": {
-    "@eos/testkit": "workspace:*"
+    "@eos/testkit": "workspace:*",
+    "zod": "^4.4.3"
   }
 }

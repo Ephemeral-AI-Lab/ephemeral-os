@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@eos/contracts": "workspace:*",
+    "@eos/llm-client": "workspace:*",
     "@eos/tool": "workspace:*"
   }
 }

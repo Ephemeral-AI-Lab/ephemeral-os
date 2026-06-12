@@ -1,71 +1,69 @@
-import type { ContentBlock, Message } from "@eos/contracts";
-import type {
-  DisplayedMessage,
-  PartialReason,
-} from "./agent-runtime-handle.js";
+import type { ContentBlock, Message, UserMessage } from "@eos/contracts";
 
 /** A `tool_result` content block, the unit `appendToolResults` wraps. */
 export type ToolResultBlock = Extract<ContentBlock, { type: "tool_result" }>;
 
+/** Why a salvaged partial assistant message never completed. */
+export type PartialReason = "interrupted" | "provider_error";
+
+/** Where one appended user message came from. */
+export type UserMessageOrigin = "initial" | "steer" | "notification";
+
 /**
- * The dual transcript: `displayed_messages` for users, `llm_messages` for
- * the provider. Every append writes both lists in one call (single-writer
- * rule); the lists diverge only by declared policy — partial assistant
- * output is displayed-only, and a future compaction phase rewrites
- * `llm_messages` while `displayed_messages` stays append-only.
- * `llmMessages()` is the only history source for a provider request.
+ * One line of the `messages.jsonl` conversation artifact, fed to the
+ * records sink as it is appended. `assistant_partial` is salvage only —
+ * it never reaches `llmMessages()`.
+ */
+export type ConversationRecord =
+  | { kind: "user"; origin: UserMessageOrigin; message: Message }
+  | { kind: "assistant"; message: Message }
+  | { kind: "assistant_partial"; reason: PartialReason; message: Message }
+  | { kind: "tool_results"; message: Message };
+
+/**
+ * The single provider-history list plus the records sink. Every append
+ * writes both in one call (single-writer rule); `llmMessages()` is the
+ * only history source for a provider request, and the read-only snapshot
+ * handed to every tool batch.
  */
 export class Conversation {
-  #displayed: DisplayedMessage[] = [];
   #llm: Message[] = [];
-  #seq = 0;
+  readonly #record: ((entry: ConversationRecord) => void) | undefined;
 
-  constructor(initial: readonly Message[]) {
-    for (const message of initial) this.#appendBoth(message);
+  constructor(
+    initial: readonly UserMessage[],
+    record?: (entry: ConversationRecord) => void,
+  ) {
+    this.#record = record;
+    for (const message of initial) this.appendUser(message, "initial");
   }
 
-  /** Initial and steered user input. */
-  appendUser(message: Message): void {
-    this.#appendBoth(message);
+  /** Seed, steered, and drained-notification user input. */
+  appendUser(message: UserMessage, origin: UserMessageOrigin): void {
+    this.#llm.push(message);
+    this.#record?.({ kind: "user", origin, message });
   }
 
   /** A completed assistant turn. */
   appendAssistant(message: Message): void {
-    this.#appendBoth(message);
+    this.#llm.push(message);
+    this.#record?.({ kind: "assistant", message });
   }
 
   /** One batch's results as a single user message, in `tool_use` order. */
   appendToolResults(blocks: ToolResultBlock[]): void {
-    this.#appendBoth({ role: "user", content: blocks });
+    const message: Message = { role: "user", content: blocks };
+    this.#llm.push(message);
+    this.#record?.({ kind: "tool_results", message });
   }
 
-  /** Salvaged partial assistant output; never reaches `llm_messages`. */
+  /** Salvaged partial assistant output; records-only, never provider history. */
   appendPartialAssistant(partial: Message, reason: PartialReason): void {
-    this.#displayed.push(this.#displayedEntry(partial, reason));
+    this.#record?.({ kind: "assistant_partial", reason, message: partial });
   }
 
   /** The ONLY history source for an `LlmRequest`. */
   llmMessages(): readonly Message[] {
     return this.#llm;
-  }
-
-  displayedMessages(): readonly DisplayedMessage[] {
-    return this.#displayed;
-  }
-
-  #appendBoth(message: Message): void {
-    this.#displayed.push(this.#displayedEntry(message));
-    this.#llm.push(message);
-  }
-
-  #displayedEntry(message: Message, partial?: PartialReason): DisplayedMessage {
-    const entry: DisplayedMessage = {
-      seq: this.#seq,
-      created_at: new Date().toISOString(),
-      message,
-    };
-    this.#seq += 1;
-    if (partial) entry.partial = partial;
-    return entry;
   }
 }

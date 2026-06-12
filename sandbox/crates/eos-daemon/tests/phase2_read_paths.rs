@@ -112,7 +112,11 @@ fn dispatches_layerstack_read_file() -> TestResult {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
+    assert_eq!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
     let result = &response["result"];
     assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
     assert_eq!(result["content"], Value::String("# README\n".to_owned()));
@@ -132,14 +136,15 @@ fn dispatches_runtime_ready_probe() -> TestResult {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["ready"], Value::Bool(true));
+    let result = ok_result(&response);
+    assert_eq!(result["success"], Value::Bool(true));
+    assert_eq!(result["ready"], Value::Bool(true));
     assert_eq!(
-        response["probes"][0]["name"],
+        result["probes"][0]["name"],
         Value::String("control_plane".to_owned())
     );
     assert_eq!(
-        response["probes"][0]["status"],
+        result["probes"][0]["status"],
         Value::String("ok".to_owned())
     );
     Ok(())
@@ -150,7 +155,7 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
     let (root, workspace, outside_target) = seed_workspace_base_fixture()?;
     let daemon = TestDaemon::new();
 
-    let ensure = dispatch_request(
+    let ensure_response = dispatch_request(
         &daemon,
         "sandbox.checkpoint.ensure_base",
         "ensure",
@@ -159,15 +164,17 @@ fn dispatches_workspace_base_control_ops_for_fresh_stack() -> TestResult {
             "workspace_root": &workspace,
         }),
     );
+    let ensure = ok_result(&ensure_response);
     assert_workspace_base_created(&ensure, &root, &workspace);
     assert_workspace_base_symlinks(&root, &outside_target)?;
 
-    let binding = dispatch_request(
+    let binding_response = dispatch_request(
         &daemon,
         "sandbox.checkpoint.binding",
         "binding",
         json!({"layer_stack_root": &root}),
     );
+    let binding = ok_result(&binding_response);
     assert_eq!(
         binding["binding"]["base_root_hash"],
         ensure["binding"]["base_root_hash"]
@@ -195,13 +202,10 @@ fn unknown_op_uses_structured_contract() {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["success"], Value::Bool(false));
+    let error = error_fault(&response, "error");
+    assert_eq!(error["kind"], Value::String("unknown_op".to_owned()));
     assert_eq!(
-        response["error"]["kind"],
-        Value::String("unknown_op".to_owned())
-    );
-    assert_eq!(
-        response["error"]["details"]["op"],
+        error["details"]["fields"]["op"],
         Value::String("sandbox.does_not_exist".to_owned())
     );
 }
@@ -228,9 +232,9 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
             "layer_stack_root": "/tmp/layer-stack",
         }),
     });
-    assert_eq!(enter["success"], Value::Bool(false));
+    let enter_error = error_fault(&enter, "rejected");
     assert_eq!(
-        enter["error"]["kind"],
+        enter_error["kind"],
         Value::String("feature_disabled".to_owned())
     );
 
@@ -239,9 +243,9 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         invocation_id: "iws-status".to_owned(),
         args: json!({"caller_id": "caller-a"}),
     });
-    assert_eq!(status["success"], Value::Bool(false));
+    let status_error = error_fault(&status, "rejected");
     assert_eq!(
-        status["error"]["kind"],
+        status_error["kind"],
         Value::String("feature_disabled".to_owned())
     );
 
@@ -250,7 +254,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         invocation_id: "iws-list".to_owned(),
         args: json!({}),
     });
-    assert_eq!(open["success"], Value::Bool(true));
+    let open = ok_result(&open);
     assert_eq!(open["open_caller_ids"], json!([]));
     Ok(())
 }
@@ -264,7 +268,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
     let daemon = TestDaemon::with_isolated_workspace(&env.scratch);
     assert_isolated_test_reset(&daemon, "iws-reset");
 
-    let enter = dispatch_request(
+    let enter_response = dispatch_request(
         &daemon,
         "sandbox.isolation.enter",
         "iws-enter",
@@ -273,6 +277,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
             "layer_stack_root": &env.root,
         }),
     );
+    let enter = ok_result(&enter_response);
     assert_eq!(enter["success"], Value::Bool(true));
     assert_eq!(enter["manifest_version"], json!(1));
     assert_eq!(enter["manifest_root_hash"].as_str().map(str::len), Some(64));
@@ -312,13 +317,10 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
         args: json!({"layer_stack_root": "/tmp/layer-stack"}),
     });
 
-    assert_eq!(response["success"], Value::Bool(false));
+    let error = error_fault(&response, "rejected");
+    assert_eq!(error["kind"], Value::String("invalid_argument".to_owned()));
     assert_eq!(
-        response["error"]["kind"],
-        Value::String("invalid_argument".to_owned())
-    );
-    assert_eq!(
-        response["error"]["details"]["key"],
+        error["details"]["fields"]["key"],
         Value::String("caller_id".to_owned())
     );
     Ok(())
@@ -339,6 +341,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         },
         context.clone(),
     );
+    let count = ok_result(&count);
     assert_eq!(count["success"], Value::Bool(true));
     assert_eq!(count["count"], json!(1));
 
@@ -350,6 +353,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         },
         context.clone(),
     );
+    let command_count = ok_result(&command_count);
     assert_eq!(command_count["success"], Value::Bool(true));
     assert_eq!(command_count["count"], json!(0));
 
@@ -361,6 +365,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         },
         context.clone(),
     );
+    let heartbeat = ok_result(&heartbeat);
     assert_eq!(heartbeat["success"], Value::Bool(true));
     assert_eq!(heartbeat["touched"], json!(1));
 
@@ -372,6 +377,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         },
         context.clone(),
     );
+    let cancel = ok_result(&cancel);
     assert_eq!(cancel["success"], Value::Bool(true));
     assert_eq!(cancel["cancelled"], Value::Bool(true));
     match task.await {
@@ -389,6 +395,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         },
         context,
     );
+    let count = ok_result(&count);
     assert_eq!(count["count"], json!(0));
     Ok(())
 }
@@ -435,8 +442,9 @@ async fn unix_server_dispatches_framed_ready_request() -> TestResult {
         WireMessage::Response(value) => value,
         other => return Err(format!("expected response, got {other:?}").into()),
     };
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["ready"], Value::Bool(true));
+    let result = ok_result(&response);
+    assert_eq!(result["success"], Value::Bool(true));
+    assert_eq!(result["ready"], Value::Bool(true));
     Ok(())
 }
 
@@ -491,8 +499,9 @@ async fn tcp_server_dispatches_authenticated_ready_request() -> TestResult {
         WireMessage::Response(value) => value,
         other => return Err(format!("expected response, got {other:?}").into()),
     };
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["ready"], Value::Bool(true));
+    let result = ok_result(&response);
+    assert_eq!(result["success"], Value::Bool(true));
+    assert_eq!(result["ready"], Value::Bool(true));
     Ok(())
 }
 
@@ -665,7 +674,11 @@ async fn tcp_server_sidecar_records_file_fast_path_route() -> TestResult {
     shutdown.cancel();
     let _ = timeout(Duration::from_secs(2), task).await??;
 
-    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
+    assert_eq!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
     let sidecar = response["_trace_events"]
         .as_str()
         .ok_or("response carries sidecar")?;
@@ -761,7 +774,11 @@ async fn tcp_server_sidecar_records_file_mutation_events() -> TestResult {
     shutdown.cancel();
     let _ = timeout(Duration::from_secs(2), task).await??;
 
-    assert_eq!(response["status"], Value::String("ok".to_owned()), "{response}");
+    assert_eq!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
     let sidecar = response["_trace_events"]
         .as_str()
         .ok_or("response carries sidecar")?;
@@ -865,6 +882,20 @@ fn dispatch_request(daemon: &TestDaemon, op: &str, invocation_id: &str, args: Va
     })
 }
 
+fn ok_result(response: &Value) -> &Value {
+    assert_eq!(response["status"], json!("ok"), "{response}");
+    response
+        .get("result")
+        .unwrap_or_else(|| panic!("ok envelope missing result: {response}"))
+}
+
+fn error_fault<'a>(response: &'a Value, status: &str) -> &'a Value {
+    assert_eq!(response["status"], json!(status), "{response}");
+    response
+        .get("error")
+        .unwrap_or_else(|| panic!("{status} envelope missing error: {response}"))
+}
+
 async fn send_tcp_line(port: u16, line: &[u8]) -> TestResult<Value> {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).await?;
     stream.write_all(line).await?;
@@ -880,8 +911,8 @@ fn assert_error_sidecar_event(
     module: &str,
     event: &str,
 ) -> TestResult {
-    assert_eq!(response["success"], Value::Bool(false), "{response}");
-    assert_eq!(response["error"]["kind"], json!(kind), "{response}");
+    let error = error_fault(response, "error");
+    assert_eq!(error["kind"], json!(kind), "{response}");
     let sidecar = response["_trace_events"]
         .as_str()
         .ok_or("error response carries sidecar")?;
@@ -966,10 +997,7 @@ fn assert_read_content(daemon: &TestDaemon, root: &Path, path: &Value, content: 
         }),
     );
     assert_eq!(read["status"], Value::String("ok".to_owned()), "{read}");
-    assert_eq!(
-        read["result"]["content"],
-        Value::String(content.to_owned())
-    );
+    assert_eq!(read["result"]["content"], Value::String(content.to_owned()));
 }
 
 fn assert_workspace_base_idempotent(daemon: &TestDaemon, root: &Path, workspace: &Path) {
@@ -982,6 +1010,7 @@ fn assert_workspace_base_idempotent(daemon: &TestDaemon, root: &Path, workspace:
             "workspace_root": workspace,
         }),
     );
+    let ensure_again = ok_result(&ensure_again);
     assert_eq!(ensure_again["success"], Value::Bool(true));
     assert_eq!(ensure_again["created"], Value::Bool(false));
 }
@@ -1003,6 +1032,7 @@ fn rebuild_workspace_base(
             "reset": true,
         }),
     );
+    let rebuilt = ok_result(&rebuilt);
     assert_eq!(rebuilt["success"], Value::Bool(true));
     assert_eq!(rebuilt["created"], Value::Bool(true));
     assert_ne!(
@@ -1043,6 +1073,7 @@ fn assert_isolated_test_reset(daemon: &TestDaemon, invocation_id: &str) {
         invocation_id,
         json!({}),
     );
+    let reset = ok_result(&reset);
     assert_eq!(reset["success"], Value::Bool(true));
 }
 
@@ -1053,6 +1084,7 @@ fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
         "iws-status",
         json!({"caller_id": "caller-enabled"}),
     );
+    let status = ok_result(&status);
     assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(true));
     assert_eq!(status["manifest_version"], json!(1));
@@ -1066,15 +1098,17 @@ fn assert_isolated_open_state(daemon: &TestDaemon, root: &Path) {
             "layer_stack_root": root,
         }),
     );
-    assert_eq!(duplicate["success"], Value::Bool(false));
-    assert_eq!(duplicate["error"]["kind"], "already_open");
+    let duplicate = error_fault(&duplicate, "rejected");
+    assert_eq!(duplicate["kind"], "already_open");
 
     let open = dispatch_request(daemon, "sandbox.isolation.list_open", "iws-list", json!({}));
+    let open = ok_result(&open);
     assert_eq!(open["success"], Value::Bool(true));
     assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }
 
 fn assert_isolated_exit(exit: &Value, handle_scratch: &Path) -> TestResult {
+    let exit = ok_result(exit);
     assert_eq!(exit["success"], Value::Bool(true));
     assert!(exit["evicted_upperdir_bytes"].as_u64().unwrap_or(0) > 0);
     assert_eq!(exit["inspection"]["handle_registered_after"], json!(false));
@@ -1098,6 +1132,7 @@ fn assert_isolated_status_closed(daemon: &TestDaemon) {
         "iws-status-closed",
         json!({"caller_id": "caller-enabled"}),
     );
+    let status = ok_result(&status);
     assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(false));
 }

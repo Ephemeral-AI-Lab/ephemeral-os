@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use eos_operation::core::catalog::BuiltinOp;
-use eos_operation::{OpResponse, OpResponseError, OpResponseErrorKind, OpRequest, RequestError};
+use eos_operation::{OpRequest, OpResponse, OpResponseError, OpResponseErrorKind, RequestError};
 use serde_json::{json, Value};
 
 use crate::wire::{ErrorKind, Request};
@@ -160,22 +160,42 @@ fn attach_envelope_runtime_meta(
         return;
     };
     if !op.is_empty() {
-        meta.entry("op".to_owned())
-            .or_insert_with(|| Value::String(op.to_owned()));
+        fill_empty_string(meta, "op", op);
     }
     if !invocation_id.is_empty() {
-        meta.entry("request_id".to_owned())
-            .or_insert_with(|| Value::String(invocation_id.to_owned()));
+        fill_empty_string(meta, "request_id", invocation_id);
     }
-    meta.entry("duration_ms".to_owned())
-        .or_insert_with(|| json!(dispatch_s * 1000.0));
-    meta.entry("steps".to_owned()).or_insert_with(|| {
-        json!([{
-            "kind": "runtime.dispatch",
-            "duration_us": seconds_to_us(dispatch_s),
-            "status": "ok",
-        }])
-    });
+    if meta
+        .get("duration_ms")
+        .and_then(Value::as_f64)
+        .is_none_or(|duration_ms| duration_ms <= 0.0)
+    {
+        meta.insert("duration_ms".to_owned(), json!(dispatch_s * 1000.0));
+    }
+    if meta
+        .get("steps")
+        .and_then(Value::as_array)
+        .is_none_or(Vec::is_empty)
+    {
+        meta.insert(
+            "steps".to_owned(),
+            json!([{
+                "kind": "runtime.dispatch",
+                "duration_us": seconds_to_us(dispatch_s),
+                "status": "ok",
+            }]),
+        );
+    }
+}
+
+fn fill_empty_string(meta: &mut serde_json::Map<String, Value>, key: &str, value: &str) {
+    if meta
+        .get(key)
+        .and_then(Value::as_str)
+        .is_none_or(str::is_empty)
+    {
+        meta.insert(key.to_owned(), Value::String(value.to_owned()));
+    }
 }
 
 fn seconds_to_us(seconds: f64) -> u64 {

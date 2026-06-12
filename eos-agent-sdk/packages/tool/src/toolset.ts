@@ -2,63 +2,51 @@ import type { ToolExecutor } from "@eos/engine";
 
 import type { ToolDefinition } from "./contract.js";
 import { toolBatchExecutor } from "./executor.js";
-import type { HookAdvisoryRequirement } from "./hooks/protocol.js";
-import { HookEngine } from "./hooks/hook-runner.js";
-import { bindTool, type HookPayloadFacts } from "./pipeline.js";
-import type { AgentRunState } from "./run-state.js";
+import { unwrapAgentOutcomeFn, type AgentOutcomeFn } from "./outcome.js";
+import { bindTool, type RunScope } from "./pipeline.js";
+import { bindTerminalTool, type TerminalGate } from "./terminal.js";
 
-/**
- * Registration never sees a port: the composition root calls the family
- * factories (each injected with exactly its own services), selects the
- * profile's definitions, and hands this function finished definitions only.
- */
-export interface BuildToolExecutorInput {
-  runState: AgentRunState;
-  /** Already profile-selected; the profile is the ONLY selection source. */
-  definitions: ToolDefinition[];
-  /** Operator hooks; absent means no hooks, not built-in ones. */
-  hookEngine?: HookEngine;
-  /** Per-call hook payload snapshots supplied by the runtime. */
-  hookPayloadFacts?: () => HookPayloadFacts;
+export interface BuildToolExecutorInput<T> {
+  scope: RunScope;
+  /** ALL tools arrive here — the SDK ships none. */
+  tools: readonly ToolDefinition[];
+  /** Present in terminal-tool mode; absent in text mode. */
+  outcome?: { fn: AgentOutcomeFn<T>; gate: TerminalGate };
+}
+
+export interface BuiltToolExecutor<T> {
+  executor: ToolExecutor;
+  /** Defined when an outcome fn is bound (terminal-tool mode). */
+  takeAccepted?: () => { value: T } | undefined;
 }
 
 /**
- * Bind exactly the supplied definitions through the pipeline and return the
- * engine's `ToolExecutor` over a deterministically sorted registry
- * (prompt-cache stability). Hook `additionalContext` rides each result's
- * `metadata.hook_contexts`; the engine loop is its only publisher, so no
- * inbox is wired here.
+ * Bind the supplied definitions (plus the minted terminal tool, when the
+ * run has one) through the pipeline and return the engine's executor over
+ * a deterministically name-sorted registry (prompt-cache stability).
+ * Name-collision validation happens earlier, at `createAgent`.
  */
-export function buildToolExecutor(input: BuildToolExecutorInput): ToolExecutor {
-  const hooks = input.hookEngine ?? new HookEngine([]);
-  const advisoryByTool = advisoryRequirements(input.definitions);
-  const tools = input.definitions
-    .slice()
-    .sort((a, b) => (a.name < b.name ? -1 : 1))
-    .map((definition) =>
-      bindTool(definition, {
-        hooks,
-        advisoryRequirement: advisoryByTool.get(definition.name) ?? { required: false },
-        hookPayloadFacts: input.hookPayloadFacts,
-      }),
-    );
-  return toolBatchExecutor({ runState: input.runState, tools });
-}
-
-function advisoryRequirements(
-  definitions: readonly ToolDefinition[],
-): ReadonlyMap<string, HookAdvisoryRequirement> {
-  const requirements = new Map<string, HookAdvisoryRequirement>();
-  for (const definition of definitions) {
-    if (!definition.isAdvisoryRequired) {
-      requirements.set(definition.name, { required: false });
-      continue;
-    }
-    const requirement: HookAdvisoryRequirement = { required: true };
-    if (definition.advisorPrompt !== undefined) {
-      requirement.advisor_prompt = definition.advisorPrompt;
-    }
-    requirements.set(definition.name, requirement);
+export function buildToolExecutor<T>(
+  input: BuildToolExecutorInput<T>,
+): BuiltToolExecutor<T> {
+  const bound = input.tools.map((definition) => bindTool(definition, input.scope));
+  if (input.outcome === undefined) {
+    return { executor: toolBatchExecutor({ tools: sortByName(bound) }) };
   }
-  return requirements;
+  const terminal = bindTerminalTool(
+    unwrapAgentOutcomeFn(input.outcome.fn),
+    input.scope,
+    input.outcome.gate,
+  );
+  return {
+    executor: toolBatchExecutor({
+      tools: sortByName([...bound, terminal.bound]),
+      terminalName: terminal.bound.name,
+    }),
+    takeAccepted: terminal.takeAccepted,
+  };
+}
+
+function sortByName<T extends { name: string }>(tools: T[]): T[] {
+  return tools.slice().sort((a, b) => (a.name < b.name ? -1 : 1));
 }

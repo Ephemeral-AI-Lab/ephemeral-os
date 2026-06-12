@@ -30,16 +30,21 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
     };
     let response = eos_daemon::dispatch(&write);
 
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["workspace"], Value::String("ephemeral".to_owned()));
-    assert_eq!(response["changed_paths"], json!(["new.txt"]));
-    assert_eq!(response["changed_path_kinds"], json!({"new.txt": "write"}));
     assert_eq!(
-        response["mutation_source"],
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
+    let result = &response["result"];
+    assert_eq!(result["workspace"], Value::String("ephemeral".to_owned()));
+    assert_eq!(result["changed_paths"], json!(["new.txt"]));
+    assert_eq!(result["changed_path_kinds"], json!({"new.txt": "write"}));
+    assert_eq!(
+        result["mutation_source"],
         Value::String("api_write".to_owned())
     );
-    assert_eq!(response["status"], Value::String("committed".to_owned()));
-    assert!(response["timings"]["api.write.occ_apply_s"]
+    assert_eq!(result["status"], Value::String("committed".to_owned()));
+    assert!(result["timings"]["api.write.occ_apply_s"]
         .as_f64()
         .is_some());
 
@@ -52,9 +57,16 @@ fn dispatches_layerstack_write_file_and_reads_published_bytes() -> TestResult {
         }),
     };
     let response = eos_daemon::dispatch(&read);
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["content"], Value::String("hello\n".to_owned()));
-    assert_eq!(response["exists"], Value::Bool(true));
+    assert_eq!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
+    assert_eq!(
+        response["result"]["content"],
+        Value::String("hello\n".to_owned())
+    );
+    assert_eq!(response["result"]["exists"], Value::Bool(true));
     Ok(())
 }
 
@@ -72,10 +84,15 @@ fn write_file_missing_content_is_invalid_request() -> TestResult {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["success"], Value::Bool(false));
+    assert_ne!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
     assert_eq!(
         response["error"]["kind"],
-        Value::String("invalid_request".to_owned())
+        Value::String("invalid_request".to_owned()),
+        "{response}"
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -99,11 +116,12 @@ fn write_file_create_only_existing_returns_guarded_conflict() -> TestResult {
 
     let response = eos_daemon::dispatch(&request);
 
-    assert_eq!(response["success"], Value::Bool(false));
-    assert_eq!(response["changed_paths"], json!([]));
-    assert_eq!(response["status"], Value::String("rejected".to_owned()));
+    let result = &response["result"];
+    assert_eq!(result["success"], Value::Bool(false), "{response}");
+    assert_eq!(result["changed_paths"], json!([]));
+    assert_eq!(result["status"], Value::String("rejected".to_owned()));
     assert_eq!(
-        response["conflict"],
+        result["conflict"],
         json!({
             "reason": "create_only_existing",
             "conflict_file": "README.md",
@@ -128,11 +146,16 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
 
     let response = eos_daemon::dispatch(&write);
 
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["status"], Value::String("committed".to_owned()));
-    assert_eq!(response["changed_paths"], json!([]));
     assert_eq!(
-        response["timings"]["resource.command_exec.changed_path_count"],
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
+    let result = &response["result"];
+    assert_eq!(result["status"], Value::String("committed".to_owned()));
+    assert_eq!(result["changed_paths"], json!([]));
+    assert_eq!(
+        result["timings"]["resource.command_exec.changed_path_count"],
         json!(0.0)
     );
 
@@ -145,8 +168,12 @@ fn write_file_git_path_is_dropped_by_occ_routing() -> TestResult {
         }),
     };
     let response = eos_daemon::dispatch(&read);
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["exists"], Value::Bool(false));
+    assert_eq!(
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
+    assert_eq!(response["result"]["exists"], Value::Bool(false));
     Ok(())
 }
 
@@ -164,13 +191,18 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
     };
     let response = eos_daemon::dispatch(&edit);
 
-    assert_eq!(response["success"], Value::Bool(true));
-    assert_eq!(response["changed_paths"], json!(["README.md"]));
     assert_eq!(
-        response["mutation_source"],
+        response["status"],
+        Value::String("ok".to_owned()),
+        "{response}"
+    );
+    let result = &response["result"];
+    assert_eq!(result["changed_paths"], json!(["README.md"]));
+    assert_eq!(
+        result["mutation_source"],
         Value::String("api_edit".to_owned())
     );
-    assert_eq!(response["applied_edits"], json!(1));
+    assert_eq!(result["applied_edits"], json!(1));
 
     let read = Request {
         op: "sandbox.file.read".to_owned(),
@@ -181,7 +213,11 @@ fn dispatches_layerstack_edit_file_and_reads_published_bytes() -> TestResult {
         }),
     };
     let response = eos_daemon::dispatch(&read);
-    assert_eq!(response["content"], Value::String("# NOTES\n".to_owned()));
+    assert_eq!(
+        response["result"]["content"],
+        Value::String("# NOTES\n".to_owned()),
+        "{response}"
+    );
     Ok(())
 }
 
@@ -198,8 +234,14 @@ fn identical_head_write_is_idempotent() -> TestResult {
         }),
     };
 
-    assert_eq!(eos_daemon::dispatch(&request)["success"], Value::Bool(true));
-    assert_eq!(eos_daemon::dispatch(&request)["success"], Value::Bool(true));
+    assert_eq!(
+        eos_daemon::dispatch(&request)["status"],
+        Value::String("ok".to_owned())
+    );
+    assert_eq!(
+        eos_daemon::dispatch(&request)["status"],
+        Value::String("ok".to_owned())
+    );
 
     let metrics = Request {
         op: "sandbox.checkpoint.layer_metrics".to_owned(),
@@ -207,7 +249,7 @@ fn identical_head_write_is_idempotent() -> TestResult {
         args: request.args,
     };
     let response = eos_daemon::dispatch(&metrics);
-    assert_eq!(response["manifest_depth"], json!(2));
+    assert_eq!(response["result"]["manifest_depth"], json!(2), "{response}");
     Ok(())
 }
 

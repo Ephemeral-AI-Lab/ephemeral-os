@@ -1,17 +1,32 @@
 {
-  "name": "eos-agent-core",
+  "name": "eos-agent-sdk",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.23.0",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "scripts": {
     "code-inventory": "tsx scripts/code-inventory/src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "test:e2e:cache": "vitest run --config vitest.e2e.cache.config.ts",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test"
+  },
+  "dependencies": {
+    "@eos/background": "workspace:*",
+    "@eos/contracts": "workspace:*",
+    "@eos/engine": "workspace:*",
+    "@eos/llm-client": "workspace:*",
+    "@eos/notification": "workspace:*",
+    "@eos/runtime": "workspace:*",
+    "@eos/tool": "workspace:*",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -21,11 +36,5 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.8"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "esbuild"
-    ]
   }
 }

@@ -64,6 +64,16 @@ Current phase status:
 | Phase 09 - Transcript archival | Blocked | |
 | Phase 10 - Operator lineage views | Blocked | |
 
+Phase 05 continuation evidence, 2026-06-13: control/checkpoint and dispatcher
+response paths now assert `OperationEnvelope` status/result/error/meta instead
+of top-level success/timing fields at the dispatch and e2e contract edges.
+The `core::response::tests` operation slice, focused dispatcher envelope-meta
+and response-channel tests, focused `phase2_read_paths` runtime/checkpoint/wire
+error tests, focused no-feature `eos-e2e-test` core/daemon control tests, and
+`git diff --check` passed for this slice. The daemon e2e `--list` gate and a
+broad package `cargo check` were stopped after hanging outside the focused test
+assertions.
+
 Implementation constraints:
 
 - No daemon hot-path persistence, host RPC, SQLite, fsync, or unbounded JSON

@@ -1,52 +1,33 @@
-// The package surface is the authoring contract, the hook protocol, and
-// the assembly entry. Pipeline and batch-executor internals (bindTool,
-// toolBatchExecutor, the precedence kernel) stay package-private behind
-// buildToolExecutor.
-export {
-  ToolNameSchema,
-  type ToolCallContext,
-  type ToolCallMeta,
-  type ToolDefinition,
-  type ToolName,
-  type ToolOutcome,
+// The package surface: the authoring contract (defineTool), the terminal
+// contract factory (createAgentOutcomeFn), the callback hook engine, and
+// the executor assembly. Pipeline and batch-executor internals stay
+// package-private behind buildToolExecutor. The package ships ZERO tool
+// implementations — every tool is host-authored.
+export type {
+  ToolCallContext,
+  ToolDefinition,
+  ToolResult,
 } from "./contract.js";
 export { defineTool, type ToolDefinitionInit } from "./define.js";
 export {
-  HookConfigEntrySchema,
-  HookEventSchema,
-  HookOutputSchema,
-  type HookAdvisoryRequirement,
-  type HookCommand,
-  type HookConfigEntry,
-  type HookEvent,
-  type HookOutput,
-  type HookPayload,
-} from "./hooks/protocol.js";
-export { HookEngine } from "./hooks/hook-runner.js";
-export { snapshotRunState, type AgentRunState } from "./run-state.js";
-export { buildToolExecutor, type BuildToolExecutorInput } from "./toolset.js";
+  HookEngine,
+  type HookDecision,
+  type HookEntry,
+  type HookMatcher,
+  type ToolCallFacts,
+} from "./hooks.js";
 export {
-  ADVISOR_AGENT_NAME,
-  AGENT_TOOL_NAMES,
-  agentTools,
-  type AgentRunCalls,
-  type AgentToolTranscriptRead,
-  type AgentToolUserMessage,
-  type StartAgentToolRunParams,
-  type StartedAgentToolRun,
-} from "./tools/agent/index.js";
+  createAgentOutcomeFn,
+  unwrapAgentOutcomeFn,
+  type AgentOutcomeBinding,
+  type AgentOutcomeFn,
+  type SubmitCtx,
+  type SubmitVerdict,
+} from "./outcome.js";
+export type { RunScope } from "./pipeline.js";
+export type { TerminalGate } from "./terminal.js";
 export {
-  BACKGROUND_TOOL_NAMES,
-  backgroundTools,
-} from "./tools/background/index.js";
-export {
-  TERMINAL_TOOL_NAMES,
-  plannerStructureError,
-  terminalToolDefinitions,
-  type PlannerPursuitAgentSubmissionBinding,
-  type WorkerPursuitAgentSubmissionBinding,
-} from "./tools/submission/index.js";
-export {
-  PURSUIT_TOOL_NAMES,
-  pursuitTools,
-} from "./tools/pursuit/delegate-pursuit.js";
+  buildToolExecutor,
+  type BuildToolExecutorInput,
+  type BuiltToolExecutor,
+} from "./toolset.js";

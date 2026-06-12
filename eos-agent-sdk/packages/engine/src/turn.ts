@@ -7,21 +7,18 @@ import {
   type StopReason,
   type UsageSnapshot,
 } from "@eos/llm-client";
-import type {
-  AgentEvent,
-  PartialReason,
-} from "./agent-runtime-handle.js";
 
-import type { Conversation } from "./conversation.js";
+import type { Conversation, PartialReason } from "./conversation.js";
+import type { AgentEventBody } from "./run-handle.js";
 
-/** Per-run provider-call configuration, fixed at `startAgentRun`. */
+/** Per-run provider-call configuration, fixed at run start. */
 export interface TurnConfig {
   client: LlmClient;
   model: string;
   systemPrompt?: string;
   maxTokens: number;
   reasoningEffort?: ReasoningEffort;
-  /** Evaluated per turn: the executor filters specs by workspace mode. */
+  /** Evaluated per turn. */
   toolSpecs: () => ToolSpec[];
 }
 
@@ -52,18 +49,18 @@ export function addUsage(
 }
 
 /**
- * Stream one provider turn: forward each `LlmStreamEvent` as an
- * `AgentEvent` and return the completed message. When the turn dies instead
- * (abort mid-stream, `ProviderError`), accumulated text/reasoning is
- * salvaged to `displayed_messages` only — incomplete `tool_use` blocks are
- * discarded entirely — and the error is rethrown for the loop's catch-all
- * to classify by `signal.aborted`, never by error type.
+ * Stream one provider turn: forward each `LlmStreamEvent` as an event body
+ * and return the completed message. When the turn dies instead (abort
+ * mid-stream, `ProviderError`), accumulated text/reasoning is salvaged to
+ * the records sink only — incomplete `tool_use` blocks are discarded
+ * entirely — and the error is rethrown for the loop's catch-all to
+ * classify by `signal.aborted`, never by error type.
  */
 export async function runAssistantTurn(
   cfg: TurnConfig,
   conversation: Conversation,
   signal: AbortSignal,
-  emit: (event: AgentEvent) => void,
+  emit: (event: AgentEventBody) => void,
 ): Promise<CompletedTurn> {
   const request: LlmRequest = {
     model: cfg.model,

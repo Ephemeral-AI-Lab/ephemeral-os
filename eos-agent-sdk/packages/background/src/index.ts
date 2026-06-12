@@ -1,8 +1,12 @@
 export type {
-  BackgroundSessionHandle,
-  BackgroundSessionOutcome,
-  BackgroundSessionRef,
-  BackgroundSessionRow,
-  BackgroundSessionStatus,
-} from "./background-session.js";
-export { BackgroundSessionSupervisor } from "./background-session-supervisor.js";
+  BackgroundTask,
+  BackgroundTaskCompletionContext,
+  BackgroundTaskLifecycleEvent,
+  BackgroundTaskOutcome,
+  BackgroundTaskRow,
+  BackgroundTaskSupervisor,
+} from "./background-task.js";
+export {
+  RunBackgroundTaskSupervisor,
+  type RunBackgroundTaskSupervisorDeps,
+} from "./background-task-supervisor.js";

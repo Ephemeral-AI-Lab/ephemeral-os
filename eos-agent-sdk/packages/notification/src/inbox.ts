@@ -43,6 +43,11 @@ export class NotificationInbox {
     return this.#entries.length === 0;
   }
 
+  /** Pending-entry count; the submission gate enumerates it in denials. */
+  count(): number {
+    return this.#entries.length;
+  }
+
   /**
    * Level-triggered wait backing the loop's park: resolves immediately
    * if entries are pending, on the next publish, or on abort.

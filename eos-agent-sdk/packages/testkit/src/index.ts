@@ -1,9 +1,16 @@
-export { REPO_ROOT, eosAgentsPath } from "./eos-agents.js";
 export {
-  scriptedRunState,
-  scriptedBackgroundSessionHandle,
-  scriptedTool,
-  type ScriptedBackgroundSessionHandle,
-  type ScriptedBackgroundSessionOutcome,
-} from "./scripted-tools.js";
+  ScriptedLlmClient,
+  assistantMessage,
+  complete,
+  dynamicTurn,
+  gatedTurn,
+  hangingTurn,
+  lastToolResult,
+  scriptedTurn,
+  textBlock,
+  toolUseBlock,
+  userMessage,
+  type ScriptedTurn,
+} from "./scripted-llm.js";
+export { scriptedTool } from "./scripted-tools.js";
 export { writeTranscriptFixture } from "./transcript-fixture.js";

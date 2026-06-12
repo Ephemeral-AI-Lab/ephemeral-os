@@ -64,6 +64,7 @@ fn builtin_table_routes_commit_to_workspace() {
         args: json!({}),
     });
 
+    assert_eq!(response["status"], json!("error"));
     assert_ne!(response["error"]["kind"], json!("unknown_op"));
     assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert!(response["error"]["message"]
@@ -80,6 +81,7 @@ fn builtin_table_routes_commit_to_git() {
         args: json!({}),
     });
 
+    assert_eq!(response["status"], json!("error"));
     assert_ne!(response["error"]["kind"], json!("unknown_op"));
     assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert!(response["error"]["message"]
@@ -96,12 +98,13 @@ fn builtin_parse_gate_preserves_error_response_channel() {
         args: json!({}),
     });
 
+    assert_eq!(response["status"], json!("error"));
     assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert_eq!(
         response["error"]["message"],
         json!("invalid request: edits must be a list")
     );
-    assert_eq!(response["warnings"], json!([]));
+    assert_eq!(response["meta"]["warnings"], json!([]));
 }
 
 #[test]
@@ -151,11 +154,14 @@ fn builtin_parse_gate_preserves_refused_channel() {
         args: json!({}),
     });
 
-    assert_eq!(response["success"], json!(false));
+    assert_eq!(response["status"], json!("rejected"));
     assert_eq!(response["error"]["kind"], json!("invalid_argument"));
     assert_eq!(response["error"]["message"], json!("caller_id is required"));
-    assert_eq!(response["error"]["details"], json!({"key": "caller_id"}));
-    assert!(response.get("warnings").is_none());
+    assert_eq!(
+        response["error"]["details"]["fields"],
+        json!({"key": "caller_id"})
+    );
+    assert_eq!(response["meta"]["warnings"], json!([]));
 }
 
 #[test]
@@ -166,6 +172,7 @@ fn command_poll_parse_gate_preserves_id_first_error() {
         args: json!({"last_n_lines": u64::MAX}),
     });
 
+    assert_eq!(response["status"], json!("error"));
     assert_eq!(response["error"]["kind"], json!("invalid_request"));
     assert_eq!(
         response["error"]["message"],
@@ -174,7 +181,7 @@ fn command_poll_parse_gate_preserves_id_first_error() {
 }
 
 #[test]
-fn dispatch_attaches_real_runtime_timings() {
+fn dispatch_attaches_runtime_envelope_meta() {
     let response = dispatch_with_context(
         &Request {
             op: "sandbox.call.heartbeat".to_owned(),
@@ -184,20 +191,16 @@ fn dispatch_attaches_real_runtime_timings() {
         DispatchContext::with_read_request_s(0.125),
     );
 
-    assert_eq!(response["success"], json!(true));
-    assert!(
-        response["timings"]["runtime.boot_to_dispatch_s"]
-            .as_f64()
-            .unwrap_or_default()
-            >= 0.0
+    assert_eq!(response["status"], json!("ok"));
+    assert_eq!(response["result"]["success"], json!(true));
+    assert_eq!(response["meta"]["op"], json!("sandbox.call.heartbeat"));
+    assert_eq!(response["meta"]["request_id"], json!("timings-test"));
+    assert!(response["meta"]["duration_ms"].as_f64().unwrap_or_default() >= 0.0);
+    assert_eq!(
+        response["meta"]["steps"][0]["kind"],
+        json!("runtime.dispatch")
     );
-    assert!(
-        response["timings"]["runtime.dispatch_s"]
-            .as_f64()
-            .unwrap_or_default()
-            >= 0.0
-    );
-    assert_eq!(response["timings"]["runtime.read_request_s"], json!(0.125));
+    assert!(response.get("timings").is_none(), "{response}");
 }
 
 #[test]
@@ -234,7 +237,7 @@ fn traced_dispatch_hot_path_stays_sub_millisecond_without_host_store() {
         let response = dispatch_with_context(&request, DispatchContext::with_read_request_s(0.0));
         let response =
             crate::trace::attach_request_sidecar(response, Some(&trace), &request.op, &facts);
-        assert_eq!(response["success"], json!(true));
+        assert_eq!(response["status"], json!("ok"));
         assert!(response["_trace_events"].is_string());
     }
     let average_us = started.elapsed().as_micros() / iterations;
@@ -267,9 +270,10 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
     cleanup_thread
         .join()
         .map_err(|_| "cleanup helper panicked")?;
-    assert_eq!(response["cancelled"], json!(true));
-    assert_eq!(response["already_done"], json!(false));
-    assert_eq!(response["cleanup_done"], json!(true));
+    assert_eq!(response["status"], json!("ok"));
+    assert_eq!(response["result"]["cancelled"], json!(true));
+    assert_eq!(response["result"]["already_done"], json!(false));
+    assert_eq!(response["result"]["cleanup_done"], json!(true));
     match task.await {
         Ok(()) => Err("expected cancelled task".into()),
         Err(error) if error.is_cancelled() => Ok(()),
@@ -285,13 +289,14 @@ fn internal_error_response_adds_error_id() {
         json!({"op": "api.test.failure"}),
     );
 
+    assert_eq!(response["status"], json!("error"));
     assert_eq!(response["error"]["kind"], json!("internal_error"));
     assert_eq!(
-        response["error"]["details"]["op"],
+        response["error"]["details"]["fields"]["op"],
         json!("api.test.failure")
     );
-    let Some(error_id) = response["error"]["details"]["error_id"].as_str() else {
-        panic!("internal errors carry details.error_id");
+    let Some(error_id) = response["error"]["error_id"].as_str() else {
+        panic!("internal errors carry error.error_id");
     };
     assert_eq!(error_id.len(), 32);
     assert!(error_id.bytes().all(|byte| byte.is_ascii_hexdigit()));

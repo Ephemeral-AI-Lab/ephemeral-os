@@ -60,7 +60,11 @@ pub enum OpResponseErrorKind {
 
 fn refused_response(error: OpError) -> Value {
     envelope_value(OperationEnvelope::<Value>::rejected(
-        op_fault(error.kind, error.message, error.details.unwrap_or_else(|| json!({}))),
+        op_fault(
+            error.kind,
+            error.message,
+            error.details.unwrap_or_else(|| json!({})),
+        ),
         ResponseMeta::default(),
     ))
 }
@@ -71,11 +75,10 @@ fn error_response(error: OpResponseError) -> Value {
         .ok()
         .and_then(|value| value.as_str().map(str::to_owned))
         .unwrap_or_else(|| "internal_error".to_owned());
-    let details = error_details(is_internal_error, error.details);
     let fault = if is_internal_error {
-        OperationFault::internal(error.message, fault_details(details))
+        OperationFault::internal(error.message, fault_details(error.details))
     } else {
-        op_fault(kind, error.message, details)
+        op_fault(kind, error.message, error.details)
     };
     envelope_value(OperationEnvelope::<Value>::error(
         fault,
@@ -111,32 +114,71 @@ fn op_fault(kind: impl Into<String>, message: impl Into<String>, details: Value)
 }
 
 fn fault_details(details: Value) -> FaultDetails {
-    if details.is_null() {
-        FaultDetails::default()
-    } else {
-        FaultDetails::default().with_field("details", details)
+    match details {
+        Value::Null => FaultDetails::default(),
+        Value::Object(fields) if fields.is_empty() => FaultDetails::default(),
+        Value::Object(fields) => fields
+            .into_iter()
+            .fold(FaultDetails::default(), |details, (key, value)| {
+                details.with_field(key, value)
+            }),
+        value => FaultDetails::default().with_field("value", value),
     }
 }
 
-fn error_details(is_internal_error: bool, details: Value) -> Value {
-    if !is_internal_error {
-        return if details.is_null() {
-            json!({})
-        } else {
-            details
-        };
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::{OpResponse, OpResponseError, OpResponseErrorKind};
+    use crate::OpError;
+
+    #[test]
+    fn success_response_renders_ok_envelope_without_flattening_payload_status() {
+        let response =
+            OpResponse::Success(json!({"success": true, "status": "committed"})).into_wire();
+
+        assert_eq!(response["status"], json!("ok"));
+        assert_eq!(response["result"]["success"], json!(true));
+        assert_eq!(response["result"]["status"], json!("committed"));
+        assert!(response["meta"].is_object());
     }
-    let mut details = match details {
-        Value::Null => serde_json::Map::new(),
-        Value::Object(details) => details,
-        other => {
-            let mut object = serde_json::Map::new();
-            object.insert("value".to_owned(), other);
-            object
-        }
-    };
-    details
-        .entry("error_id")
-        .or_insert_with(|| Value::String(uuid::Uuid::new_v4().simple().to_string()));
-    Value::Object(details)
+
+    #[test]
+    fn refused_response_preserves_structured_detail_fields() {
+        let response = OpResponse::Refused(OpError {
+            kind: "invalid_argument",
+            message: "caller_id is required".to_owned(),
+            details: Some(json!({"key": "caller_id"})),
+        })
+        .into_wire();
+
+        assert_eq!(response["status"], json!("rejected"));
+        assert_eq!(response["error"]["kind"], json!("invalid_argument"));
+        assert_eq!(
+            response["error"]["details"]["fields"],
+            json!({"key": "caller_id"})
+        );
+    }
+
+    #[test]
+    fn internal_error_response_uses_explicit_error_id_and_detail_fields() {
+        let response = OpResponse::Error(OpResponseError::new(
+            OpResponseErrorKind::InternalError,
+            "daemon invocation failed",
+            json!({"op": "api.test.failure"}),
+        ))
+        .into_wire();
+
+        assert_eq!(response["status"], json!("error"));
+        assert_eq!(response["error"]["kind"], json!("internal_error"));
+        assert_eq!(
+            response["error"]["details"]["fields"]["op"],
+            json!("api.test.failure")
+        );
+        assert_eq!(
+            response["error"]["error_id"].as_str().map(str::len),
+            Some(32)
+        );
+    }
 }
