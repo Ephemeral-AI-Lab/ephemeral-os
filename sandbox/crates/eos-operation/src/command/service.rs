@@ -1025,6 +1025,7 @@ fn command_process_wait_tree_resource_stats_events(
                 json!({
                     "meta": {
                         "stats_kind": "tree",
+                        "phase": "after",
                         "source": format!("resource.{source}"),
                         "source_available": true,
                         "sampler_duration_us": sampler_duration_us,

@@ -17,7 +17,7 @@ use thiserror::Error;
 use crate::error::DaemonError;
 use crate::{DispatchContext, WorkspaceRuntime};
 
-use super::to_wire_value;
+use super::{ok_envelope, to_wire_value};
 
 #[derive(Debug, Clone)]
 enum FileRoute {
@@ -74,7 +74,7 @@ pub(crate) fn op_read_file(
         record_resource_stats_from_timings(&context, "after", &outcome.timings);
     }
     record_read_finished(&context, &outcome);
-    Ok(read_response(outcome))
+    Ok(ok_envelope(read_response(outcome)))
 }
 
 /// `sandbox.file.write` — shared public write op, routed by active workspace mode.
@@ -120,7 +120,7 @@ pub(crate) fn op_write_file(
     }
     record_occ_trace_events(&context, &outcome.trace_events);
     record_mutation_finished(&context, "write_applied", &outcome);
-    Ok(to_wire_value(outcome))
+    Ok(ok_envelope(outcome))
 }
 
 /// `sandbox.file.edit` — shared public edit op, routed by active workspace mode.
@@ -159,7 +159,7 @@ pub(crate) fn op_edit_file(
     }
     record_occ_trace_events(&context, &mutation.trace_events);
     record_mutation_finished(&context, "edit_applied", &mutation);
-    Ok(to_wire_value(mutation))
+    Ok(ok_envelope(mutation))
 }
 
 fn file_context<'a, 'ctx: 'a>(

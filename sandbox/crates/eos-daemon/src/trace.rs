@@ -3,10 +3,14 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
+use eos_operation::core::{
+    ResourceSummary, ResponseMeta, StepSummary, TraceRef, WorkspaceRouteRef,
+};
 use eos_trace::{
     decode_trace_batch, encode_trace_batch, BootId, BoundedJson, DetailBudget, EventRecord,
-    RequestId, ResourceStats, ResourceStatsKind, ResourceStatsMeta, SpanKind, SpanRecord, SpanUid,
-    TraceBatch, TraceId, TraceRecord, TraceSpool,
+    RequestId, ResourceStats, ResourceStatsKind, ResourceStatsMeta, SpanKind, SpanRecord,
+    SpanStatus, SpanSubsystem, SpanUid, TraceBatch, TraceId, TraceRecord, TraceSpool,
+    WorkspaceRoute,
 };
 use serde_json::{json, Value};
 
@@ -301,6 +305,7 @@ pub(crate) fn attach_request_sidecar_with_events(
         .collect();
     record.events = events;
     enforce_sidecar_record_budget(&mut record);
+    stamp_pending_envelope_meta(object, &record, op, duration_us);
 
     let mut batch = TraceBatch::single(record);
     batch.daemon_boot_id = Some(daemon_boot_id().to_string());
@@ -310,6 +315,101 @@ pub(crate) fn attach_request_sidecar_with_events(
         Value::String(base64::engine::general_purpose::STANDARD.encode(encoded)),
     );
     response
+}
+
+fn stamp_pending_envelope_meta(
+    object: &mut serde_json::Map<String, Value>,
+    record: &TraceRecord,
+    op: &str,
+    duration_us: u64,
+) {
+    if object.get("status").and_then(Value::as_str).is_none() {
+        return;
+    }
+    let request_id = record
+        .request_id
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_default();
+    let trace_ref = TraceRef {
+        trace_id: record.trace_id.to_string(),
+        request_id: (!request_id.is_empty()).then_some(request_id.clone()),
+        root_span_id: Some(record.root_span_id.get()),
+        store: "pending_host_ingest".to_owned(),
+        event_count: u64::try_from(record.events.len()).unwrap_or(u64::MAX),
+        degraded: record.truncated,
+    };
+    let meta = ResponseMeta {
+        protocol_version: 2,
+        op: op.to_owned(),
+        request_id,
+        trace: trace_ref,
+        caller_id: None,
+        workspace_route: workspace_route_ref(record),
+        duration_ms: duration_us as f64 / 1000.0,
+        modules_touched: modules_touched(record),
+        steps: step_summaries(record),
+        resource_summary: ResourceSummary::default(),
+        warnings: Vec::new(),
+    };
+    object.insert(
+        "meta".to_owned(),
+        serde_json::to_value(meta).expect("response meta serializes"),
+    );
+}
+
+fn workspace_route_ref(record: &TraceRecord) -> WorkspaceRouteRef {
+    record
+        .events
+        .iter()
+        .find(|event| event.module == "workspace.route" && event.name == "route_selected")
+        .map_or_else(WorkspaceRouteRef::default, |event| {
+            let details = &event.details.value;
+            WorkspaceRouteRef {
+                kind: details
+                    .get("kind")
+                    .and_then(Value::as_str)
+                    .and_then(parse_workspace_route)
+                    .unwrap_or(WorkspaceRoute::None),
+                reason: details
+                    .get("reason")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            }
+        })
+}
+
+fn parse_workspace_route(label: &str) -> Option<WorkspaceRoute> {
+    Some(match label {
+        "ephemeral_workspace" => WorkspaceRoute::EphemeralWorkspace,
+        "isolated_workspace" => WorkspaceRoute::IsolatedWorkspace,
+        "fast_path" => WorkspaceRoute::FastPath,
+        "none" => WorkspaceRoute::None,
+        _ => return None,
+    })
+}
+
+fn modules_touched(record: &TraceRecord) -> Vec<SpanSubsystem> {
+    let mut modules = Vec::new();
+    for span in &record.spans {
+        if !modules.contains(&span.subsystem) {
+            modules.push(span.subsystem);
+        }
+    }
+    modules
+}
+
+fn step_summaries(record: &TraceRecord) -> Vec<StepSummary> {
+    record
+        .spans
+        .iter()
+        .filter(|span| span.parent_span_id == Some(record.root_span_id))
+        .map(|span| StepSummary {
+            kind: span.name.clone(),
+            duration_us: span.duration_us,
+            status: span.status.unwrap_or(SpanStatus::Ok),
+        })
+        .collect()
 }
 
 /// Request records cannot spool, so an oversize record drops subsystem
@@ -684,6 +784,60 @@ mod tests {
             .collect();
         assert_eq!(route_events.len(), 1, "real route suppresses fallback");
         assert_eq!(route_events[0].details.value["kind"], "fast_path");
+    }
+
+    #[test]
+    fn request_sidecar_stamps_envelope_meta_from_trace_record() {
+        let trace = RequestTraceContext {
+            trace_id: "trace-envelope-meta".to_owned(),
+            request_id: "request-envelope-meta".to_owned(),
+            parent_span_id: None,
+            link_hints: Vec::new(),
+            capture_budget_version: 1,
+        };
+        let facts = RequestTraceFacts {
+            connection_id: "daemon-conn-envelope-meta".to_owned(),
+            accepted_at_unix_ms: now_ms(),
+            listener_kind: "tcp",
+            peer_addr: Some("127.0.0.1:51000".to_owned()),
+            local_addr: Some("127.0.0.1:50000".to_owned()),
+            is_tcp: true,
+            request_bytes: 128,
+            read_duration_us: 9,
+            auth_required: true,
+            auth_ok: true,
+            protocol_version: Some(1),
+        };
+        let response = attach_request_sidecar_with_events(
+            json!({"status": "ok", "result": {"published": true}, "meta": {}}),
+            Some(&trace),
+            "sandbox.file.write",
+            &facts,
+            &[RequestTraceEvent::operation(
+                "workspace.route",
+                "route_selected",
+                json!({"kind": "fast_path", "reason": "unit"}),
+            )],
+        );
+
+        assert_eq!(response["status"], "ok");
+        assert_eq!(response["meta"]["op"], "sandbox.file.write");
+        assert_eq!(response["meta"]["request_id"], "request-envelope-meta");
+        assert_eq!(response["meta"]["trace"]["trace_id"], "trace-envelope-meta");
+        assert_eq!(
+            response["meta"]["trace"]["request_id"],
+            "request-envelope-meta"
+        );
+        assert_eq!(response["meta"]["trace"]["store"], "pending_host_ingest");
+        assert!(
+            response["meta"]["trace"]["event_count"]
+                .as_u64()
+                .is_some_and(|count| count > 0),
+            "{response}"
+        );
+        assert_eq!(response["meta"]["workspace_route"]["kind"], "fast_path");
+        assert_eq!(response["meta"]["workspace_route"]["reason"], "unit");
+        assert!(response[TRACE_SIDECAR_FIELD].as_str().is_some());
     }
 
     #[test]

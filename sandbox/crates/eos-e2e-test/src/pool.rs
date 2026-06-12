@@ -291,7 +291,7 @@ impl<'p> NodeLease<'p> {
     pub fn call_ok(&self, op: &str, args: Value) -> Result<Value> {
         let resp = self.call(op, args)?;
         if is_success(&resp) {
-            Ok(resp)
+            Ok(success_payload(resp))
         } else {
             bail!(
                 "{op} returned error{}: {resp}",
@@ -311,6 +311,13 @@ impl<'p> NodeLease<'p> {
         let daemon = container::daemon_spec(&self.pool.config, &self.pool.config_yaml)?;
         self.node().container.restart_daemon(&daemon)
     }
+}
+
+fn success_payload(response: Value) -> Value {
+    if response.get("status").and_then(Value::as_str).is_some() {
+        return response.get("result").cloned().unwrap_or(response);
+    }
+    response
 }
 
 impl Drop for NodeLease<'_> {

@@ -1018,10 +1018,13 @@ fn ingest_and_strip_sidecar(attempt: &ForwardAttempt<'_>, response: &mut Value) 
         .trace_store
         .ingest_trace_batch(&attempt.record.sandbox_id, &batch)
     {
-        Ok(()) => SidecarIngest {
-            present: true,
-            ingested: true,
-        },
+        Ok(()) => {
+            mark_response_trace_ingested(attempt, response);
+            SidecarIngest {
+                present: true,
+                ingested: true,
+            }
+        }
         Err(err) => {
             record_event(
                 attempt,
@@ -1035,6 +1038,39 @@ fn ingest_and_strip_sidecar(attempt: &ForwardAttempt<'_>, response: &mut Value) 
             }
         }
     }
+}
+
+fn mark_response_trace_ingested(attempt: &ForwardAttempt<'_>, response: &mut Value) {
+    let Some(object) = response.as_object_mut() else {
+        return;
+    };
+    if object.get("status").and_then(Value::as_str).is_none() {
+        return;
+    }
+    let Some(meta) = object.get_mut("meta").and_then(Value::as_object_mut) else {
+        return;
+    };
+    meta.insert(
+        "request_id".to_owned(),
+        Value::String(attempt.request_id.to_string()),
+    );
+    let trace = meta
+        .entry("trace".to_owned())
+        .or_insert_with(|| json!({}))
+        .as_object_mut();
+    let Some(trace) = trace else {
+        return;
+    };
+    trace.insert(
+        "trace_id".to_owned(),
+        Value::String(attempt.trace_id.to_string()),
+    );
+    trace.insert(
+        "request_id".to_owned(),
+        Value::String(attempt.request_id.to_string()),
+    );
+    trace.insert("store".to_owned(), Value::String("local_sqlite".to_owned()));
+    trace.insert("degraded".to_owned(), Value::Bool(false));
 }
 
 fn respawn_and_gate_traced(attempt: &ForwardAttempt<'_>) -> anyhow::Result<()> {

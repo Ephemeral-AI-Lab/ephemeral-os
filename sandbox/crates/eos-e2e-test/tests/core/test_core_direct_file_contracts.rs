@@ -10,8 +10,9 @@ use eos_operation::core::catalog;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_message, finalize_foreground_command, has_trace_event,
-    live_pool_or_skip, trace_record, wait_for_active_leases,
+    array, as_bool, as_i64, as_str, conflict_message, envelope_meta, envelope_result,
+    finalize_foreground_command, has_trace_event, live_pool_or_skip, trace_record,
+    wait_for_active_leases,
 };
 
 /// Read a nested `timings.<key>` number from a response.
@@ -277,10 +278,17 @@ fn live_trace_file_fast_path_records_route_occ_and_no_workspace_facts() -> Resul
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let write = lease.call_ok(
+    let write = lease.call(
         catalog::SANDBOX_FILE_WRITE,
         json!({"path": "fastpath/trace.txt", "content": "trace\n", "overwrite": true}),
     )?;
+    assert_eq!(as_str(&write, "status")?, "ok", "{write}");
+    let meta = envelope_meta(&write)?;
+    assert_eq!(meta.op, catalog::SANDBOX_FILE_WRITE);
+    assert_eq!(
+        meta.workspace_route.kind,
+        eos_trace::WorkspaceRoute::FastPath
+    );
     let record = trace_record(&write)?;
 
     assert!(
@@ -370,13 +378,15 @@ fn direct_file_ops_concurrency_ladder() -> Result<()> {
 
         for handle in handles {
             let response = handle.join().expect("direct write thread panicked")?;
-            assert!(
-                as_bool(&response, "success")?,
+            assert_eq!(
+                as_str(&response, "status")?,
+                "ok",
                 "direct write ladder level {level} should commit: {response}"
             );
-            assert_eq!(as_str(&response, "status")?, "committed");
+            let result = envelope_result(&response)?;
+            assert_eq!(as_str(result, "status")?, "committed");
             assert!(
-                timing_f64(&response, "api.write.occ_apply_s").is_some(),
+                timing_f64(result, "api.write.occ_apply_s").is_some(),
                 "direct write ladder should surface OCC timing: {response}"
             );
         }

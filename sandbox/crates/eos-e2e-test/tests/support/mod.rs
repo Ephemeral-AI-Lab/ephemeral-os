@@ -13,9 +13,9 @@ mod trace;
 
 #[allow(unused_imports)]
 pub(crate) use trace::{
-    assert_no_trace_sidecar, assert_response_trace_ref_in_store, envelope_meta, has_trace_event,
-    operation_envelope, response_trace_ids, trace_export_records, trace_record, ResponseTraceIds,
-    StoredTraceSummary,
+    assert_no_trace_sidecar, assert_response_trace_ref_in_store, envelope_meta, envelope_result,
+    has_trace_event, operation_envelope, response_trace_ids, trace_export_records, trace_record,
+    ResponseTraceIds, StoredTraceSummary,
 };
 
 pub(crate) fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {

@@ -1,8 +1,9 @@
-# eos-agent-core — Agent SDK Specification
+# eos-agent-sdk — Agent SDK Specification
 
 - **Status:** Draft for review
 - **Date:** 2026-06-13
-- **Scope:** Re-shape `eos-agent-core` from "runtime + pursuit + profiles" into a
+- **Scope:** Re-shape `eos-agent-core` — renamed **`eos-agent-sdk`** (workspace directory,
+  root package, this spec's filename) — from "runtime + pursuit + profiles" into a
   mechanism-only **agent SDK**. Pursuit, profiles, all tools, and all host policy move to
   `eos-coding-agent` (see `eos-coding-agent_SPEC.md`, which depends on this document).
 - **Related:** `docs/plans/agent-core-rust-to-typescript-migration/note/pursuit-loop-engineering/`
@@ -11,11 +12,12 @@
 
 ## 1. Summary
 
-`eos-agent-core` becomes an SDK with **one construction function, one method, two
-run-scoped capabilities, one background-task contract, one hook engine, and zero tools**.
-It knows exactly six nouns: **agent, run, tool, background task, notification, hook**. It
-does not know that advisors, subagents, planners, workers, workflows, pursuits, or
-sandboxes exist — those are all host (`eos-coding-agent`) vocabulary.
+`eos-agent-core` becomes `eos-agent-sdk`: an SDK with **one construction function, one
+method, two run-scoped capabilities, one background-task contract, one hook engine, and
+zero tools**. It knows exactly seven nouns: **agent, run, outcome, tool, background task,
+notification, hook**. It does not know that advisors, subagents, planners, workers,
+workflows, pursuits, or sandboxes exist — those are all host (`eos-coding-agent`)
+vocabulary.
 
 Two rules produced this surface, and keep it stable:
 
@@ -46,9 +48,9 @@ Two rules produced this surface, and keep it stable:
   the tool-call boundary is the seam that would carry it).
 - Subprocess execution. The SDK never spawns a process; hosts wrap commands into callback
   hooks.
-- Workflow hub, provider registry, MCP-style anything (host-side; see coding-agent spec).
+- Workflow hub and its `WorkflowProvider` registry, MCP-style anything (host-side; see
+  coding-agent spec).
 - Sandbox integration, profile/config file formats, persistence beyond run records.
-- Renaming the workspace. The SDK keeps the name **eos-agent-core**.
 
 ## 3. Public contract (complete)
 
@@ -66,30 +68,32 @@ interface AgentSdkConfig {
 }
 
 interface AgentSdk {
-  createAgent(spec: AgentSpec): Agent;          // the only method
+  createAgent<T = string>(spec: AgentSpec<T>): Agent<T>;   // the only method
 }
 
 // ── agents & runs ───────────────────────────────────────────────
-interface AgentSpec {
+// T is the run's outcome payload type: the terminal tool's accepted submission,
+// or the final text (string) in text mode.
+interface AgentSpec<T = string> {
   name: string;
   llm: LlmRef;                        // resolves against AgentSdkConfig.llmClients
   systemPrompt: string;
   tools: ToolDefinition[];            // ALL tools arrive here — the SDK ships none
-  agentOutcomeFn?: AgentOutcomeFn;    // absent → text termination mode
+  agentOutcomeFn?: AgentOutcomeFn<T>; // absent → text termination mode (T stays string)
   maxTurns?: number;                  // default 32
   hooks?: HookEntry[];                // per-agent extension of the globals
 }
 
-interface Agent {
+interface Agent<T = string> {
   /** Reusable template: any number of calls, concurrent runs allowed. */
-  start(input: { messages: UserMessage[] }): AgentRunHandle;
+  start(input: { messages: UserMessage[] }): AgentRunHandle<T>;
 }
 
-interface AgentRunHandle {
+interface AgentRunHandle<T = string> {
   runId: AgentRunId;
   steer(message: UserMessage): boolean;     // false once finishing has begun
   interrupt(): void;
-  outcome(): Promise<AgentOutcome>;   // totality: always resolves, never rejects;
+  outcome(): Promise<AgentOutcome<T>>;// totality: always resolves, never rejects;
                                       // memoized — callable any number of times,
                                       // before or after the run finishes
   events(): AsyncIterable<AgentEvent>;      // live-only, single consumer; seq on every event
@@ -97,11 +101,11 @@ interface AgentRunHandle {
   notifier: Notifier;                                     // per-run, created at start
 }
 
-type AgentOutcome = {
+type AgentOutcome<T = string> = {
   usage: UsageSnapshot;               // summed across completed turns
   turns: number;
 } & (
-  | { status: "completed"; outcome: unknown }   // terminal-tool payload, or final text in text mode
+  | { status: "completed"; outcome: T }         // terminal-tool payload, or final text in text mode
   | { status: "failed"; error: { kind: "max_turns" | "provider_error" | "internal"; message: string } }
   | { status: "cancelled" }
 );
@@ -109,8 +113,8 @@ type AgentOutcome = {
 // ── run-scoped capabilities (same instances on handle and tool ctx) ──
 interface BackgroundTaskSupervisor {
   register(task: BackgroundTask): { taskId: BackgroundTaskId };
-  list(): BackgroundTaskRow[];        // live tasks only — completed tasks are removed (§4.4)
-  count(): number;                    // registry size = running + settling (§4.4)
+  list(): BackgroundTaskRow[];        // registry contents: running + settling tasks;
+                                      // completed tasks are removed (§4.4)
   cancel(taskId: BackgroundTaskId): Promise<boolean>;
 }
 
@@ -125,27 +129,31 @@ interface ToolCallContext {
   toolUseId: ToolUseId;                          // event/record correlation; idempotency keying
   signal: AbortSignal;                           // aborts on interrupt()
   llmMessages: readonly Message[];               // read-only snapshot of the conversation so far
-  displayMessages: readonly DisplayedMessage[];  // read-only snapshot of the display projection
   backgroundTaskSupervisor: BackgroundTaskSupervisor;
   notifier: Notifier;
 }
 
 // ── the background-task contract (SDK-owned) ────────────────────
-interface BackgroundTask {
+// Every task declares how its completion is handled — the type forces the
+// choice; there is no implicit default (§4.4).
+type BackgroundTask = {
   toolName: string;                   // provenance, e.g. "exec_command", "run_subagent", "workflow:pursuit"
   title: string;                      // list row / human description
   cancel(): void | Promise<void>;     // idempotent; no-op after completion
   done: Promise<BackgroundTaskOutcome>;
-  onCompletion?: (
-    outcome: BackgroundTaskOutcome,
-    ctx: { notifier: Notifier; runId: AgentRunId; taskId: BackgroundTaskId },
-  ) => void | Promise<void>;
-}
+} & (
+  | { onCompletion: (
+        outcome: BackgroundTaskOutcome,
+        ctx: { notifier: Notifier; runId: AgentRunId; taskId: BackgroundTaskId },
+      ) => void | Promise<void> }
+  | { silent: true }                  // fire-and-forget: removed on completion, no trace
+);
 
 type BackgroundTaskOutcome = { status: "success" | "failed" | "cancelled"; outcome: string };
 type BackgroundTaskRow = {
   taskId: BackgroundTaskId; toolName: string; title: string;
-  startedAt: number;                  // epoch ms — no status field: a listed task IS running
+  startedAt: number;                  // epoch ms — no status field: a listed task is
+                                      // running (or briefly settling, §4.4)
 };
 
 // ── hooks (the one extension engine) ────────────────────────────
@@ -183,16 +191,19 @@ export function createAgentOutcomeFn<T>(spec: {
   description?: string;               // the submit tool's docstring; absent → derived from schema
   schema: ZodSchema<T>;
   onSubmit?: (payload: T, ctx: SubmitCtx) => Promise<{ accept: T } | { reject: string }>;
-}): AgentOutcomeFn;                   // default onSubmit: accept(payload) — the trivial validator
+}): AgentOutcomeFn<T>;                // default onSubmit: accept(payload) — the trivial validator
 
 interface SubmitCtx { runId: AgentRunId; submissionId: string /* stable = toolUseId */ }
 
 // ── exported types (no values, no schemas) ──────────────────────
-// AgentEvent (carries seq; kinds incl. turn_started, tool_execution_started/completed,
-//   task_registered, task_settled, run_finished) · AgentOutcome · UsageSnapshot ·
-// AgentOutcomeFn (opaque; minted only by createAgentOutcomeFn) · ToolDefinition ·
+// AgentEvent — every event carries seq; closed lifecycle union:
+//   run_started · turn_started · tool_execution_started · tool_execution_completed ·
+//   task_registered · task_settled · run_finished — plus today's LlmStreamEvent
+//   members carried unchanged (token/message stream; granularity revisited per §9) ·
+// AgentOutcome<T> · UsageSnapshot ·
+// AgentOutcomeFn<T> (opaque; minted only by createAgentOutcomeFn) · ToolDefinition ·
 // ToolDefinitionInit · ToolResult · ToolCallContext · ToolCallFacts · TurnFacts ·
-// SubmitCtx · UserMessage · Message · DisplayedMessage · AgentRunId · ToolUseId ·
+// SubmitCtx · UserMessage · Message · AgentRunId · ToolUseId ·
 // BackgroundTaskId · BackgroundTaskRow · BackgroundTaskOutcome ·
 // HookEntry · HookMatcher · HookDecision
 ```
@@ -230,18 +241,24 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
 2. **Text mode** (`agentOutcomeFn` absent, Phase 04.10): a bare-text assistant turn finishes
    the run when the gate is open, with `outcome = assistantText(final_message)`.
 3. **The gate** (one predicate, both exits):
-   `calls == 0 ∧ no pending steers ∧ backgroundTaskSupervisor.count() == 0 ∧ inbox drained`.
-   A terminal submission attempted while the gate is closed is denied in-run. The gate is
-   SDK-internal mechanism, not a configurable hook — hosts tune nothing here. The
-   `inbox drained` conjunct is load-bearing: without it, a message published during
-   settlement could be stranded by a text exit or accepted submission at the same boundary.
-4. **Park:** `calls == 0 ∧ no pending steers ∧ inbox drained ∧ count() > 0` → the run
-   parks (auto-wait). Wake sources: any inbox publish, any task removal (completion wakes
-   the loop even if the host publishes nothing), any steer, and interrupt.
-5. **Empty wake:** a wake whose drain yields nothing (a silent task removal) re-evaluates
-   the gate. In text mode the run then completes with the existing final text; in
-   terminal-tool mode the loop re-prompts the model. The §4.4 convention — awaited tasks
-   MUST publish — exists precisely so awaited work never takes this path.
+   `calls == 0 ∧ no pending steers ∧ task registry empty ∧ inbox drained`.
+   A terminal submission attempted while the gate is closed is denied in-run; the denial
+   reason enumerates the blockers (e.g. "2 background tasks running; 1 undrained
+   notification") so the model can act on it. Within a multi-call batch, the terminal
+   call executes after every sibling call has resolved; the gate is evaluated at that
+   point. The gate is SDK-internal mechanism, not a configurable hook — hosts tune
+   nothing here. The `inbox drained` conjunct is load-bearing: without it, a message
+   published during settlement could be stranded by a text exit or accepted submission
+   at the same boundary.
+4. **Park:** `calls == 0 ∧ no pending steers ∧ inbox drained ∧ registry non-empty` → the
+   run parks (auto-wait). Wake sources: any inbox publish, any task removal (completion
+   wakes the loop even if the host publishes nothing), any steer, and interrupt.
+5. **Empty wake:** a wake whose drain yields nothing — a silent task removal, reachable
+   only via `silent: true` tasks, an explicit host opt-in. The loop re-evaluates the
+   gate. In text mode the run then completes with the existing final text; in
+   terminal-tool mode the loop re-prompts the model. The §4.4 contract — every task is
+   either silent or owns a completion handler, and awaited work publishes — exists
+   precisely so awaited work never takes this path.
 6. **Backstops:** `maxTurns` → `failed {kind: "max_turns"}`; `interrupt()` → `cancelled`;
    provider/internal errors → `failed`.
 7. **Totality:** `outcome()` always resolves. A crashed agent yields a synthesized
@@ -280,18 +297,24 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
     resolve the final output; if still running, register and resolve partial output + taskId.
   The unifying rule: **a tool call resolves exactly one turn-result and may leave behind at
   most one registered background task.** `executeBatch` is untouched by any of this.
-- `llmMessages` / `displayMessages` on `ToolCallContext` are **read-only snapshots** taken
-  at batch start. They grant every tool read access to the full conversation — a deliberate
-  capability (compaction, transcript-aware tools); hosts that run third-party tools should
-  treat it as part of their trust decision.
-- **Hooks are callbacks on three events, matched by tool name.** Channel discipline
-  ("one channel per signal"):
+- `llmMessages` on `ToolCallContext` is a **read-only snapshot** taken at batch start. It
+  grants every tool read access to the full conversation — a deliberate capability
+  (transcript-aware tools); hosts that run third-party tools should treat it as part of
+  their trust decision.
+- **Hooks are callbacks on three events, matched by tool name.** Pre/post interception
+  lives at engine level for two reasons: it applies uniformly to the terminal tool —
+  which is minted by `createAgentOutcomeFn` and cannot be wrapped by the host — and it is
+  the target that host-compiled policy lowers to. (For ordinary tools a host may equally
+  wrap `execute`.) Channel discipline ("one channel per signal"):
   - `preToolUse` deny → the call never executes; the model receives the deny `reason` as
     that call's tool-result error, in-run.
   - `postToolUse` deny → the executed result is replaced by an error carrying `reason`.
   - `turnBoundary` → runs at the inbox-drain boundary, observes turn facts, and may
     `publish` through the provided notifier; it returns nothing. This event is where host
     notification rules live — the host compiles its rule files into these callbacks.
+  Pre/post hooks receive `ToolCallFacts` only — no conversation access. A
+  submission-vetting hook therefore judges the payload alone; terminal payload schemas
+  must be self-contained enough to vet. This is a designed constraint, not an omission.
   Pre/post hooks do not receive the notifier; the decision is their only output. A
   throwing pre/post hook resolves as `deny` with the thrown message (fail-closed; a host
   wanting fail-open catches inside its callback); a throwing `turnBoundary` hook is
@@ -303,46 +326,47 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
   **same instances** appear on the handle (host side) and on every `ToolCallContext`
   (tool side). Handles are per-run scoped: a tool can only see and cancel its own run's
   tasks.
-- Public supervisor surface is exactly `register / list / count / cancel`. The park/exit
-  gates read the same registry internally and are **not** on the interface — no host code
-  can put the loop in a state the gates can't see.
+- Public supervisor surface is exactly `register / list / cancel`. The park/exit gates
+  read the same registry internally and are **not** on the interface — no host code can
+  put the loop in a state the gates can't see.
 - **Registry lifecycle — the registry IS the open set:**
 
   ```
-  register → running → (done resolves) → settling → removed
-                                          │
-                                          └─ onCompletion invoked once, awaited,
-                                             bounded by taskCompletionTimeoutMs
+  register → running → (done resolves) ─┬─ onCompletion invoked once, awaited,
+                                        │  bounded by taskCompletionTimeoutMs
+                                        │           → settling → removed
+                                        └─ silent: true → removed immediately
   ```
 
-  A task is **removed from the registry the moment its `onCompletion` finishes** (returns,
-  throws, or times out). Removal wakes the loop. `count()` is the registry size
-  (running + settling); `list()` shows live tasks only. There is no status field and no
-  settled rows — **history lives in the event stream** (`task_registered`,
-  `task_settled`), not the registry.
+  A task is **removed from the registry the moment its completion handling finishes**
+  (handler returns, throws, or times out; immediately for `silent` tasks). Removal wakes
+  the loop. `list()` returns the registry contents — running and settling tasks; there
+  is no status field and no settled rows — **history lives in the event stream**
+  (`task_registered`, `task_settled`), not the registry.
 - **Settlement → completion handler, never → notifier.** On `done` resolving, the
   supervisor does exactly one thing: invoke `onCompletion(outcome, {notifier, runId, taskId})`
-  once, awaited. The supervisor itself **never publishes**. No `onCompletion` → the task is
+  once, awaited. The supervisor itself **never publishes**. `silent: true` → the task is
   removed immediately and silently.
 - **Silent completions leave no model-visible trace.** A removed task is absent from
-  `list()` and produced no notification — the model cannot discover it at all. The
-  convention is therefore hard: **any task the model is expected to await MUST publish in
-  its `onCompletion`; silence is strictly for fire-and-forget work** (see §4.1 "empty
-  wake" for what happens when a silent removal opens the gate).
+  `list()` and produced no notification — the model cannot discover it at all. The task
+  type forces every author to choose handler-or-silent; no implicit default exists. The
+  one rule that remains inside a handler: **any task the model is expected to await must
+  publish in its `onCompletion`** (the model has no other way to observe completion);
+  `silent: true` is strictly for fire-and-forget work (see §4.1 "empty wake" for what
+  happens when a silent removal opens the gate).
 - A throwing or timed-out `onCompletion` must not wedge the run: the SDK removes the task,
   writes the error to the events stream and records, and does nothing else (no fallback
-  notification — silence is the configured default). The bound is
-  `taskCompletionTimeoutMs` (default 30s).
+  notification). The bound is `taskCompletionTimeoutMs` (default 30s).
 - `cancel(taskId)`: returns `true` iff it transitioned a running task to cancelling;
   returns `false` when the task is not found (already completed and removed) or already
   settling. Cancellation loses the race to completion by design. Cancelled tasks flow
-  through the same `onCompletion` with `status: "cancelled"` — one completion path, no
-  special cases.
+  through the same completion handling with `status: "cancelled"` — one completion path,
+  no special cases.
 - **Run-end disposal:** a clean exit already guarantees an empty registry (the exit gate),
   but `interrupt()` and `failed` runs can terminate with live tasks. On any terminal run
-  outcome the supervisor cancels still-running tasks, invokes their `onCompletion` with
-  `status: "cancelled"` (for side-effect cleanup — publishes after run end are no-ops), and
-  removes them. No task survives its run.
+  outcome the supervisor cancels still-running tasks, invokes their completion handlers
+  with `status: "cancelled"` (for side-effect cleanup — publishes after run end are
+  no-ops; silent tasks are simply removed), and removes them. No task survives its run.
 
 ### 4.5 Notifications
 
@@ -361,10 +385,21 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
   `messages.jsonl` itself — lossless from the first line (wired at construction, not at
   subscription). `recordsDir` is the only filesystem path in the public surface, and it is
   received, never discovered.
+- **File contents:** `messages.jsonl` is the conversation artifact — one line per
+  completed conversation message (user, assistant, tool result; today's
+  `transcript.jsonl`, renamed). `events.jsonl` records every lifecycle event from the §3
+  closed union; token-level stream deltas are not recorded (today's behavior, kept).
+- **Durability semantics:** the writer is append-only and line-buffered. A process crash
+  can truncate at most the final line — consumers must tolerate a torn tail. One writer
+  per `<recordsDir>/<runId>`: hosts must not point two processes at the same run
+  directory. There is no fsync guarantee; "lossless" means every lifecycle event is
+  appended in order, not power-failure durability.
 - `handle.events()` is the live-observation channel: single-consumer, no replay. Every
   event carries `seq`; **resume and replay are served from records** (a reconnecting
   consumer reads the gap from `events.jsonl`, then attaches live). The channels have
-  different consumers; neither substitutes for the other.
+  different consumers; neither substitutes for the other. Single-consumer is deliberate —
+  the SDK ships no fan-out or backpressure policy; a host with multiple observers writes
+  its own tee (§8).
 - Background-task lifecycle is part of both channels: `task_registered` and `task_settled`
   (with the outcome) are events. With the registry ephemeral (§4.4), this is the only
   durable task history.
@@ -377,8 +412,10 @@ The loop is the existing `agent-loop.ts` eleven-step structure, unchanged in spi
 
 ## 5. Internal architecture
 
-Current `eos-agent-core/packages/*` disposition. "Internal" packages keep their boundaries
-for the SDK's own hygiene but are not published; only the root package is public.
+Current `eos-agent-core/packages/*` disposition; the workspace directory and root package
+are renamed **`eos-agent-sdk`** during extraction (coding-agent spec §10, step 3).
+"Internal" packages keep their boundaries for the SDK's own hygiene but are not published;
+only the root package is public.
 
 | Package | Disposition |
 |---|---|
@@ -386,7 +423,7 @@ for the SDK's own hygiene but are not published; only the root package is public
 | `llm-client` | internal, unchanged (access/, wires/, retry, stream-client) |
 | `scripts` | **moves to `eos-coding-agent`** (`executeJsonCommand` powers the host's subprocess→callback hook wrapping) |
 | `notification` | internal (inbox, loop-observer) · **trigger engine deleted** — rule evaluation compiles host-side into `turnBoundary` hook callbacks; loop-observer's turn-fact extraction feeds `turnBoundary` dispatch |
-| `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — `count(): number` (registry size), rows `{taskId, toolName, title, startedAt}`, no status enum, no source-specific session typing |
+| `background` | internal · rename `BackgroundSessionSupervisor` → `BackgroundTaskSupervisor`; **remove-on-completion registry** — public surface `register/list/cancel`, rows `{taskId, toolName, title, startedAt}`, no status enum, explicit-silence task contract (`onCompletion` \| `silent: true`), no source-specific session typing |
 | `engine` | internal (agent-loop, conversation, turn, tool-executor port, run handle) · gains the internal terminal-submission gate aligned with the text-exit gate (incl. the `inbox drained` conjunct) · emits `task_registered`/`task_settled` events |
 | `tool` | internal: `contract / define / executor / pipeline / toolset / run-state` stay; `hooks/*` reduced to callback dispatch (the subprocess protocol moves to the host); **new** `outcome.ts` (`createAgentOutcomeFn`); **deleted:** `tools/*` (all families — agent, background, pursuit, submission), `advisory_prompts/*`, `description_prompts/*` (host-side now, or replaced by the factory) |
 | `agent-runtime` | **split**: assembly (`runtime.ts` minus pursuit wiring), `run-registry.ts`, `transcript.ts`, `llm-client-registry.ts` stay internal under a `runtime` package · config loaders (`config-root/config-file/hook-config/notification-rules-config`), profile loaders/registry, `pursuit-context-scripts.ts`, and `pursuitWiring()` move to `eos-coding-agent` |
@@ -398,9 +435,11 @@ Deleted concepts (not moved): `PursuitAgentSubmissionBinding` (replaced by `onSu
 the profile-kind strictness table (planner/worker terminal-tool enforcement moves into
 pursuit's own startup validation), per-name submission tools (identity now comes from
 `createAgentOutcomeFn`), `behavior` metadata, `RunRecorder` public port (now `recordsDir`),
-`getRun`, run-end callback on the handle, task status enum / settled rows, the trigger
-engine and `TriggerRuleEntry`, subprocess hook commands and exported config schemas,
-`toSSE` and `events({afterSeq})` replay.
+`getRun`, run-end callback on the handle, task status enum / settled rows, supervisor
+`count()` (redundant with `list().length`), `displayMessages` on `ToolCallContext` and
+public `DisplayedMessage` (presentation concern — hosts derive rendering from
+records/events), the trigger engine and `TriggerRuleEntry`, subprocess hook commands and
+exported config schemas, `toSSE` and `events({afterSeq})` replay.
 
 ## 6. Invariants (regression tests to write first)
 
@@ -411,23 +450,26 @@ engine and `TriggerRuleEntry`, subprocess hook commands and exported config sche
 3. **Idempotent submission** — replaying `onSubmit` with the same `submissionId` is a no-op.
 4. **Free rejection** — `{reject}` reaches the live model and consumes no host budget.
 5. **Gate parity** — text-exit gate and terminal-submission gate evaluate the same
-   predicate: `count() == 0 ∧ inbox drained` (plus no calls, no pending steers).
+   predicate: `task registry empty ∧ inbox drained` (plus no calls, no pending steers).
 6. **Owed completion** — a run cannot finish while the registry is non-empty; `onCompletion`
    is bounded by `taskCompletionTimeoutMs`; a throw or timeout removes the task and records
    the error — it never wedges the run.
-7. **Silent default** — with no `onCompletion`, completion removes the task immediately and
-   publishes nothing; with one, the SDK invokes it exactly once.
+7. **Explicit silence** — every task declares `onCompletion` or `silent: true`; a silent
+   task is removed on completion with no publication and no handler; a task with
+   `onCompletion` has it invoked exactly once. There is no third case.
 8. **Completion wake** — a parked run wakes on task removal even with an empty inbox; the
    empty-wake continuation is the defined §4.1 behavior, never a hang.
 9. **Cancel race** — `cancel` returns `true` only for a running task; after completion the
    task is not found, `cancel` returns `false` and changes nothing.
-10. **Lossless records** — `events.jsonl`/`messages.jsonl` contain every line from seq 0,
-    including `task_registered`/`task_settled`, regardless of when (or whether) anyone
-    consumed `events()`.
+10. **Lossless records** — `events.jsonl`/`messages.jsonl` contain every lifecycle event
+    from seq 0 (stream deltas excepted, §4.6), including `task_registered`/`task_settled`,
+    regardless of when (or whether) anyone consumed `events()`; a crash may truncate at
+    most the final line.
 11. **Exhaustive inbox** — no inbox message originates inside the SDK; every message is a
     host publish (tools, `onCompletion`, `turnBoundary` hooks, or the handle).
 12. **Run-end disposal** — a terminating run (any outcome) cancels its running tasks, runs
-    their `onCompletion` with `status:"cancelled"`, and leaves an empty registry.
+    their completion handlers with `status:"cancelled"` (silent tasks are simply removed),
+    and leaves an empty registry.
 13. **One channel** — hook decisions never appear in the inbox; notifier content never
     alters a tool result.
 
@@ -450,23 +492,25 @@ engine and `TriggerRuleEntry`, subprocess hook commands and exported config sche
 
 | Decision | Resolution (supersedes earlier drafts) |
 |---|---|
-| SDK name | Keep **eos-agent-core** (no rename to eos-agent-sdk) |
+| SDK name | **Renamed `eos-agent-sdk`** — workspace directory, root package, and spec filename (supersedes the earlier keep-`eos-agent-core` decision) |
 | Built-in tools | **None.** Earlier carve-outs (subagent/advisor tools, background-task tools, workflow toolset) all reversed; capabilities on `ToolCallContext` instead |
 | Workflow hub | Host-side (`eos-coding-agent`); `WorkflowProvider` is a host contract |
 | Advisor / subagent | Host patterns (registry + tools + advisor-gate hook); SDK has no such concepts; outcome tool identity is `name` + `description` |
 | `behavior` metadata | Removed; runtime patterns only |
-| Settlement notifications | Supervisor **never** publishes; `BackgroundTask.onCompletion` (host) owns publication, receives `notifier` as an argument; exit gate = "owed completion handler" |
+| Settlement notifications | Supervisor **never** publishes; `BackgroundTask.onCompletion` (host) owns publication, receives `notifier` as an argument; exit gate = "owed completion handler"; silence is opt-in (`silent: true`) — the task type forces handler-or-silent, no implicit default |
 | `onSettled` | Renamed `onCompletion`; the SDK is the listener (it gates task removal on the callback finishing) |
-| Task registry | **Remove-on-completion:** registry = the open set; `count(): number`; rows `{taskId, toolName, title, startedAt}` with no status enum; history via `task_registered`/`task_settled` events; run-end disposal cancels survivors |
+| Task registry | **Remove-on-completion:** registry = the open set; public surface `register/list/cancel` (`count()` cut — redundant with `list().length`; the gates read the registry internally); rows `{taskId, toolName, title, startedAt}` with no status enum; history via `task_registered`/`task_settled` events; run-end disposal cancels survivors |
 | Run-end channel | `outcome(): Promise<AgentOutcome>` on the handle; run-end callback dropped (`onSubmit` name reserved for the terminal handler) |
 | Outcome payload | `AgentOutcome` carries `usage` and `turns` on every status (hosts must not parse records for hot-path accounting) |
+| Outcome typing | `T` threaded through `createAgentOutcomeFn<T>` → `AgentSpec<T>` → `Agent<T>` → `AgentRunHandle<T>` → `AgentOutcome<T>`; text mode `T = string`; no casts at the `outcome()` site |
 | Notification rules | Deleted as an SDK concept; the trigger engine folds into the `turnBoundary` hook event; hosts compile their rule files into callbacks |
 | Hook transport | Callbacks only; subprocess JSON-on-stdin moves to the host (with `scripts`); no exported config schemas |
 | Hook channels | pre/post speak only through `HookDecision` (deny → that call's tool-result error); `turnBoundary` speaks only through the notifier |
-| Records | `recordsDir: string` config; `RunRecorder` port internal-only |
-| Events | Live-only single-consumer `events()` with `seq`; no `afterSeq` replay, no `toSSE` — records serve resume |
+| Hook inputs | pre/post receive `ToolCallFacts` only — no conversation access; submission vetting judges the payload alone, so terminal schemas must be self-contained. Engine-level pre/post exist because the terminal tool is opaque (hosts can wrap ordinary tools' `execute`, never the minted terminal tool) |
+| Records | `recordsDir: string` config; `RunRecorder` port internal-only; durability defined (§4.6): append-only line-buffered, torn final line tolerated, one writer per run dir, no fsync guarantee |
+| Events | Live-only single-consumer `events()` with `seq`; no `afterSeq` replay, no `toSSE` — records serve resume. Single-consumer is deliberate (no SDK fan-out/backpressure policy); hosts needing multiple observers write a tee |
 | Facade | `AgentSdk = { createAgent }` only; `getRun`/sdk-level accessors removed (handle owns them) |
-| Tool context | `signal` restored (interrupt must reach in-flight `execute`); `toolUseId` added; `llmMessages`/`displayMessages` read-only snapshots kept as a deliberate capability |
+| Tool context | `signal` restored (interrupt must reach in-flight `execute`); `toolUseId` added; `llmMessages` read-only snapshot kept as a deliberate capability; **`displayMessages` cut** (presentation concern — hosts derive rendering from records/events) |
 | `steer` | Takes `UserMessage`, returns `boolean` (false once finishing has begun) |
 | Tool results | `ToolResult` is `{output, metadata?}` or `{error}`; the engine stringifies once |
 | Pursuit launch seam | Pursuit consumes the SDK directly; `AgentLaunchPort`/`LaunchSettlement` deleted (trade acknowledged: pursuit tests use SDK testkit instead of a fake port) |
@@ -480,7 +524,8 @@ engine and `TriggerRuleEntry`, subprocess hook commands and exported config sche
 - `TurnFacts` shape for `turnBoundary` hooks — fix when folding the trigger engine's
   turn-fact extraction into hook dispatch; it must cover today's notification-rule needs
   (`notification-triggers.e2e.ts` is the behavioral reference).
-- Stream deltas (token-level events) in `AgentEvent` — out of scope for the split; revisit
+- Stream deltas (token-level events) in `AgentEvent` — the union keeps today's
+  `LlmStreamEvent` members; refining granularity is out of scope for the split; revisit
   for UI needs.
 - `AgentOutcome.outcome` / `BackgroundTaskOutcome.outcome` read as `o.outcome` at call
   sites — acceptable, or rename to `result`? (current spec keeps `outcome`).

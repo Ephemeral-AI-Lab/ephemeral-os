@@ -147,8 +147,27 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         let sidecar = base64::engine::general_purpose::STANDARD
             .encode(encode_trace_batch(&TraceBatch::single(record)));
         let response = json!({
-            "success": true,
-            "ready": true,
+            "status": "ok",
+            "result": {"ready": true},
+            "meta": {
+                "protocol_version": 2,
+                "op": "sandbox.runtime.ready",
+                "request_id": "pending",
+                "trace": {
+                    "trace_id": "pending",
+                    "request_id": "pending",
+                    "root_span_id": 1,
+                    "store": "pending_host_ingest",
+                    "event_count": 9,
+                    "degraded": false
+                },
+                "workspace_route": {"kind": "none"},
+                "duration_ms": 0.0,
+                "modules_touched": [],
+                "steps": [],
+                "resource_summary": {"fields": {}},
+                "warnings": []
+            },
             "_trace_events": sidecar,
         });
         writeln!(stream, "{}", serde_json::to_string(&response)?)?;
@@ -209,7 +228,13 @@ fn forward_request_persists_transport_events_and_strips_sidecar() -> Result<()> 
         &json!({"caller_id": "caller-1"}),
     )?;
     assert_eq!(response["_trace_events"], serde_json::Value::Null);
-    assert_eq!(response["ready"], json!(true));
+    assert_eq!(response["result"]["ready"], json!(true));
+    assert_eq!(response["meta"]["request_id"], json!("request-forward"));
+    assert_eq!(
+        response["meta"]["trace"]["request_id"],
+        json!("request-forward")
+    );
+    assert_eq!(response["meta"]["trace"]["store"], json!("local_sqlite"));
 
     let request = store
         .request_by_id("request-forward")?

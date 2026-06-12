@@ -5,8 +5,7 @@ use eos_trace::{
 };
 use serde_json::json;
 
-#[test]
-fn round_trips_trace_batch_through_protobuf() {
+fn canonical_batch() -> TraceBatch {
     let trace_id = TraceId::parse("trace-codec").expect("trace id");
     let mut record = TraceRecord::new(trace_id, SpanUid::ROOT);
     record.request_id = Some(RequestId::parse("request-codec").expect("request id"));
@@ -38,14 +37,37 @@ fn round_trips_trace_batch_through_protobuf() {
         )
         .with_span_id(SpanUid::ROOT),
     );
-
-    let mut batch = TraceBatch::single(record.clone());
+    let mut batch = TraceBatch::single(record);
     batch.daemon_boot_id = Some("boot-codec".to_owned());
+    batch
+}
+
+#[test]
+fn round_trips_trace_batch_through_protobuf() {
+    let batch = canonical_batch();
     let encoded = encode_trace_batch(&batch);
     let decoded = decode_trace_batch(&encoded).expect("decode encoded trace batch");
 
-    assert_eq!(decoded.records, vec![record]);
+    assert_eq!(decoded.records, batch.records);
     assert_eq!(decoded.daemon_boot_id.as_deref(), Some("boot-codec"));
+}
+
+/// Schema-evolution gate: the committed populated fixture must keep decoding
+/// to the same DTOs after any proto regeneration. Read at runtime so the
+/// fixture can be regenerated without a compile dependency on its presence.
+#[test]
+fn decodes_committed_populated_fixture() {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/trace_batch_v1_populated.hex"
+    );
+    let hex = std::fs::read_to_string(path).expect("read committed populated fixture");
+    let bytes = hex_to_bytes(hex.trim());
+    let decoded = decode_trace_batch(&bytes).expect("decode populated fixture");
+    let expected = canonical_batch();
+    assert_eq!(decoded.records, expected.records);
+    assert_eq!(decoded.daemon_boot_id, expected.daemon_boot_id);
+    assert_eq!(decoded.dropped_traces, expected.dropped_traces);
 }
 
 #[test]

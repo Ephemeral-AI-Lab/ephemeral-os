@@ -39,6 +39,12 @@ pub(crate) fn envelope_meta(response: &Value) -> Result<ResponseMeta> {
     .with_context(|| format!("decode ResponseMeta from response: {response}"))
 }
 
+pub(crate) fn envelope_result(response: &Value) -> Result<&Value> {
+    response
+        .get("result")
+        .with_context(|| format!("response missing envelope result: {response}"))
+}
+
 pub(crate) fn response_trace_ids(response: &Value) -> Result<ResponseTraceIds> {
     let meta = envelope_meta(response)?;
     assert_consistent_trace_ref(&meta.trace, &meta.request_id)?;

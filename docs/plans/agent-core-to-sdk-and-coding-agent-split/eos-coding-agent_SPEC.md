@@ -2,7 +2,7 @@
 
 - **Status:** Draft for review
 - **Date:** 2026-06-13
-- **Depends on:** `eos-agent-core_SPEC.md` (the SDK). This project imports **only** the
+- **Depends on:** `eos-agent-sdk_SPEC.md` (the SDK). This project imports **only** the
   SDK's root package — never its internal packages.
 - **Scope:** The product/host that composes the SDK into a coding agent: profiles, every
   tool, the workflow hub, pursuit as the first workflow provider, advisor/subagent
@@ -11,14 +11,14 @@
 ## 1. Summary
 
 `eos-coding-agent` owns everything the SDK deliberately does not: **vocabulary and
-policy**. The SDK knows agent/run/tool/background-task/notification; this project knows
-operator, planner, worker, advisor, subagent, workflow, pursuit — and implements all of
-them as ordinary code over the SDK's public surface.
+policy**. The SDK knows agent/run/outcome/tool/background-task/notification/hook; this
+project knows operator, planner, worker, advisor, subagent, workflow, pursuit — and
+implements all of them as ordinary code over the SDK's public surface.
 
 Dependency rule (load-bearing):
 
 ```
-eos-coding-agent ──imports──▶ eos-agent-core (root package only)
+eos-coding-agent ──imports──▶ eos-agent-sdk (root package only)
         │
         └─ owns: .eos-agents/ profiles · all tools · WorkflowHub + providers ·
                  pursuit (+db +contracts) · hooks/rules content · config loading ·
@@ -71,8 +71,8 @@ eos-coding-agent/
 const cfg = loadConfig(".eos-agents");                       // host-owned file discovery
 const sdk = createAgentSdk({
   llmClients: cfg.llmClients,
-  hooks: cfg.globalHooks,                                    // parsed with SDK schemas
-  notificationRules: cfg.triggerRules,
+  hooks: [...cfg.globalHooks,                                // host-validated callbacks
+          ...compileNotificationRules(cfg.triggerRules)],    // rule files → turnBoundary entries
   recordsDir: cfg.recordsDir,
 });
 
@@ -94,7 +94,8 @@ const operator = sdk.createAgent({
     readAgentRunTranscript(cfg.recordsDir),
   ],
   hooks: [advisorGate({ tool: "submit_main_outcome", advisor: agents.advisor, instruction: SUBMIT_GUIDANCE })],
-  agentOutcomeFn: createAgentOutcomeFn({ schema: MainOutcome }),  // trivial validator: no onSubmit
+  agentOutcomeFn: createAgentOutcomeFn({ name: "submit_main_outcome", schema: MainOutcome }),
+  //                                       trivial validator: no onSubmit
 });
 ```
 
@@ -127,11 +128,11 @@ All tools are `defineTool` over the SDK's `ToolCallContext` capabilities. There 
 
 ```ts
 export const listBackgroundTask = defineTool({
-  name: "list_background_task", schema: z.object({}),
+  name: "list_background_task", input: z.object({}),
   execute: async (_i, ctx) => ({ output: renderRows(ctx.backgroundTaskSupervisor.list()) }),
 });
 export const cancelBackgroundTask = defineTool({
-  name: "cancel_background_task", schema: z.object({ task_id: z.string() }),
+  name: "cancel_background_task", input: z.object({ task_id: z.string() }),
   execute: async (i, ctx) =>
     ({ output: (await ctx.backgroundTaskSupervisor.cancel(i.task_id)) ? "cancelled" : "not found (already completed?)" }),
 });
@@ -144,19 +145,19 @@ message is fully host-authored in `onCompletion`:
 export const runSubagent = (agents: AgentRegistry) => defineTool({
   name: "run_subagent",
   description: `Launch a subagent. Available: ${agents.names().join(", ")}`,
-  schema: z.object({ agent: z.string(), prompt: z.string(), wait: z.boolean().default(true) }),
+  input: z.object({ agent: z.string(), prompt: z.string(), wait: z.boolean().default(true) }),
   execute: async (input, ctx) => {
     const agent = agents.get(input.agent);
     if (!agent) return { error: `unknown agent: ${input.agent}` };
-    const run = agent.start_agent_run({ messages: [{ role: "user", content: input.prompt }] });
+    const run = agent.start({ messages: [{ role: "user", content: input.prompt }] });
 
-    if (input.wait) return { output: renderOutcome(await run.wait_for_agent_outcome()) };   // foreground
+    if (input.wait) return { output: renderOutcome(await run.outcome()) };   // foreground
 
     const { taskId } = ctx.backgroundTaskSupervisor.register({              // background
       toolName: "run_subagent",
       title: `${input.agent}: ${input.prompt.slice(0, 60)}`,
       cancel: () => run.interrupt(),
-      done: run.wait_for_agent_outcome().then(toTaskOutcome),
+      done: run.outcome().then(toTaskOutcome),
       onCompletion: async (out, { notifier }) => {
         await indexTranscript(run.runId);                                   // side effects welcome
         notifier.publish(out.status === "success"
@@ -175,9 +176,9 @@ consultation mandatory at submission boundaries (§7).
 
 ```ts
 export const askAdvisor = (advisor: Agent) => defineTool({
-  name: "ask_advisor", schema: z.object({ question: z.string(), context: z.string().optional() }),
+  name: "ask_advisor", input: z.object({ question: z.string(), context: z.string().optional() }),
   execute: async (input) =>
-    ({ output: renderOutcome(await advisor.start_agent_run({ messages: [asAdvisorAsk(input)] }).wait_for_agent_outcome()) }),
+    ({ output: renderOutcome(await advisor.start({ messages: [asAdvisorAsk(input)] }).outcome()) }),
 });
 ```
 
@@ -190,10 +191,11 @@ return partial output + taskId. The engine knows nothing about any of this.
 
 - A tool that registers a task must not also publish its completion separately —
   `onCompletion` is the single completion publisher; anything else is a double-publish bug.
-- Any task the model is expected to *await* MUST publish in `onCompletion`; silent
-  completion is strictly for fire-and-forget work. Completed tasks are removed from the
-  registry the moment `onCompletion` finishes, so a silent task leaves **no trace the model
-  can see** — not even in `list_background_task`.
+- Every task declares `onCompletion` or `silent: true` — the SDK's task type forces the
+  choice. Any task the model is expected to *await* MUST publish in `onCompletion`;
+  `silent: true` is strictly for fire-and-forget work. Completed tasks are removed from
+  the registry the moment completion handling finishes, so a silent task leaves **no
+  trace the model can see** — not even in `list_background_task`.
 
 ## 6. WorkflowHub and the provider contract (host-owned)
 
@@ -219,14 +221,16 @@ the task's `cancel`:
 const delegateTool = (p: WorkflowProvider) => {
   const m = p.describe();
   return defineTool({
-    name: `delegate_${m.name}`, description: m.description, schema: m.payloadSchema,
+    name: `delegate_${m.name}`, description: m.description, input: m.payloadSchema,
     execute: async (input, ctx) => {
       const id = await p.delegate(input);
       const { taskId } = ctx.backgroundTaskSupervisor.register({
         toolName: `workflow:${m.name}`, title: m.titleOf(input),
         cancel: () => p.cancel(id),
         done: p.settle(id).then(toTaskOutcome),
-        onCompletion: m.onCompletion?.(id),        // provider authors its settlement message
+        ...(m.onCompletion                       // provider authors its settlement message,
+          ? { onCompletion: m.onCompletion(id) } //   or declares the delegation silent —
+          : { silent: true }),                   //   the SDK task type forces the choice
       });
       return { output: `delegated ${m.name} · task ${taskId}` };
     },
@@ -235,8 +239,8 @@ const delegateTool = (p: WorkflowProvider) => {
 ```
 
 Policies like "one open pursuit per supervisor" generalize to host hooks over
-`ctx.backgroundTaskSupervisor.count()/list()` — e.g. a pre-tool hook on `delegate_*`
-denying when an open `workflow:*` task exists.
+`ctx.backgroundTaskSupervisor.list()` — e.g. a pre-tool hook on `delegate_*` denying when
+an open `workflow:*` task exists.
 
 If a workflow is ever written in another language, it enters as another
 `WorkflowProvider` implementation that proxies over a wire; the hub, the projections, and
@@ -249,21 +253,25 @@ hook. Ordering does the work: **pre-tool hook → advisor verdict → only then 
 so a rejection mutates nothing and burns no budget; the model corrects in-run.
 
 ```ts
-export function advisorGate(opts: { tool: string; advisor: Agent; instruction: string }): HookConfigEntry {
+export function advisorGate(opts: { tool: string; advisor: Agent; instruction: string }): HookEntry {
   return {
-    event: "pre_tool_use",
-    matcher: { tool_name: opts.tool },
-    command: { type: "callback", run: async (payload) => {
+    event: "preToolUse",
+    matcher: { toolName: opts.tool },
+    run: async (call) => {
       const verdict = await opts.advisor
-        .start_agent_run({ messages: [asReview(opts.instruction, payload.input)] })
-        .wait_for_agent_outcome();
+        .start({ messages: [asReview(opts.instruction, call.input)] })
+        .outcome();
       return approves(verdict)
         ? { decision: "passthrough" }
         : { decision: "deny", reason: reasonOf(verdict) };     // fed back to the model in-run
-    }},
+    },
   };
 }
 ```
+
+The gate sees `ToolCallFacts` only — the submission payload, never the conversation (SDK
+spec §4.3). Submission schemas must therefore be self-contained enough to vet on their
+own: the advisor judges *what* the model submits, not how it got there.
 
 Failure policy is explicit host policy: if the advisor run itself dies, choose fail-open
 (`passthrough` + warning in the reason channel) or fail-closed (`deny`) **in this
@@ -281,8 +289,8 @@ and reconcile logic are unchanged. The changes are confined to the launch/settle
 | Submission entry | runtime routes `submit_planner_outcome` payloads into service claim methods | the **same claim/transition methods**, invoked from `onSubmit` closures in `outcome-fns.ts` — transactional, keyed by `ctx.submissionId`; invalid transitions (e.g. refocus in predefined mode) return `{reject}` → in-run correction, budget intact |
 | `PursuitAgentSubmissionBinding` | threaded through contracts/engine | deleted (replaced by `onSubmit`) |
 | Planner/worker advisory prompts | `@eos/tool/advisory_prompts/` | move here; ride `createAgentOutcomeFn({description})` |
-| Death / cancel | runtime-synthesized `LaunchSettlement` | `run.wait_for_agent_outcome().then(...)` → `out.status !== "completed"` → pursuit synthesizes the Failed work item; `cancel()` additionally calls `handle.interrupt()` on live runs |
-| Settlement notification | SDK-rendered session message | `provider.ts` authors it in pursuit vocabulary inside the task's `onCompletion` (e.g. "pursuit settled: Failed — leg_2 budget exhausted · outcome.md: <path>"), publishing via the provided `notifier` — or staying silent for internal sub-steps |
+| Death / cancel | runtime-synthesized `LaunchSettlement` | `run.outcome().then(...)` → `out.status !== "completed"` → pursuit synthesizes the Failed work item; `cancel()` additionally calls `handle.interrupt()` on live runs |
+| Settlement notification | SDK-rendered session message | `provider.ts` authors it in pursuit vocabulary inside the task's `onCompletion` (e.g. "pursuit settled: Failed — leg_2 budget exhausted · outcome.md: <path>"), publishing via the provided `notifier` — or declaring `silent: true` for internal sub-steps |
 
 One attempt, after the change:
 
@@ -292,10 +300,10 @@ const planner = deps.sdk.createAgent({
   llm: deps.profiles.planner.llm,
   systemPrompt: deps.profiles.planner.systemPrompt,
   tools: deps.profiles.plannerTools,                       // injected by app/
-  agentOutcomeFn: plannerOutcomeFn(this),                  // outcome-fns.ts: schema + description +
+  agentOutcomeFn: plannerOutcomeFn(this),                  // outcome-fns.ts: name + schema + description +
 });                                                        //   onSubmit → applyPlanSubmission(trx)
-const run = planner.start_agent_run({ messages: composeLaunchContext(tree) });  // context-engine, unchanged
-run.wait_for_agent_outcome().then((out) => this.reconcileAfterRun(attemptId, out));  // death synthesis
+const run = planner.start({ messages: composeLaunchContext(tree) });  // context-engine, unchanged
+run.outcome().then((out) => this.reconcileAfterRun(attemptId, out));  // death synthesis
 // success already mutated state inside onSubmit — reconcile only reads back
 ```
 
@@ -308,9 +316,10 @@ drift the original design exists to prevent.
 All file I/O for configuration lives in `app/config/` (files moved verbatim from
 `agent-runtime`): discovery (`config-root`), parsing (`config-file`), hooks
 (`hook-config`), trigger rules (`notification-rules-config`), profiles. Parsed objects are
-validated with the SDK-exported schemas and passed into `createAgentSdk` / `AgentSpec`.
-`recordsDir` is chosen here. Reload/watch semantics, layering (user vs project), and
-defaults are host policy.
+validated by host-owned schemas (the SDK exports none) and passed into `createAgentSdk` /
+`AgentSpec`. Trigger rules compile into `turnBoundary` hook entries
+(`compileNotificationRules`, §3). `recordsDir` is chosen here. Reload/watch semantics,
+layering (user vs project), and defaults are host policy.
 
 ## 10. Migration sequencing
 
@@ -320,12 +329,15 @@ defaults are host policy.
    *Verify:* invariants 2–4 of the SDK spec.
 2. **Capability handles** — per-run `BackgroundTaskSupervisor` + `Notifier` on handle and
    `ToolCallContext`; `backgroundSession` → `backgroundTask` renames; settlement →
-   `onCompletion` (supervisor stops publishing); remove-on-completion registry with single
-   `count()`; run-end disposal; `task_registered`/`task_settled` events.
+   `onCompletion` (supervisor stops publishing); remove-on-completion registry
+   (`register/list/cancel`, explicit-silence task contract); run-end disposal;
+   `task_registered`/`task_settled` events.
    *Verify:* invariants 5–9 and 12.
 3. **Extract eos-coding-agent** — move pursuit (+db +contracts), tool families, advisory
    prompts, config loaders, profile loading, context scripts; create
-   `agents/ tools/ workflows/ app/`; pursuit consumes the SDK directly (port deleted).
+   `agents/ tools/ workflows/ app/`; pursuit consumes the SDK directly (port deleted);
+   rename the SDK workspace **`eos-agent-core` → `eos-agent-sdk`** (directory, root
+   package name, imports).
    *Verify:* leak checks (SDK spec §7); the e2e suite moves with the host
    (`notification-triggers.e2e.ts` is in flight in the current worktree — coordinate).
 4. **Hub + providers** — `WorkflowHub` host-side, pursuit registered as the first provider;
@@ -335,7 +347,8 @@ defaults are host policy.
 
 ## 11. Acceptance criteria
 
-- This repo imports only the SDK root package (no `@eos/engine`, `@eos/tool`, … internals).
+- This repo imports only the SDK root package `eos-agent-sdk` (no `@eos/engine`,
+  `@eos/tool`, … internals).
 - Deleting `packages/workflows/pursuit` still compiles `app/` (hub registers nothing).
 - Every tool the operator sees is defined in `packages/tools/` or projected by
   `packages/workflows/hub` — `grep` the SDK for tool definitions → none.

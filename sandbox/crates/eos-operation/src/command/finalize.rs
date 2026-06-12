@@ -284,11 +284,32 @@ fn insert_cgroup_resource_timings(timings: &mut WorkspaceTimings) {
             "/sys/fs/cgroup/memory.peak",
             "resource.cgroup.memory_peak_bytes",
         ),
+        (
+            "/sys/fs/cgroup/memory.swap.current",
+            "resource.cgroup.memory_swap_current_bytes",
+        ),
+        (
+            "/sys/fs/cgroup/memory.swap.peak",
+            "resource.cgroup.memory_swap_peak_bytes",
+        ),
     ] {
         if let Ok(raw) = std::fs::read_to_string(path) {
             if let Ok(value) = raw.trim().parse::<f64>() {
                 timings.insert(key.to_owned(), json!(value));
             }
+        }
+    }
+
+    if let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/memory.events") {
+        for line in raw.lines() {
+            let mut parts = line.split_whitespace();
+            let Some(name) = parts.next() else {
+                continue;
+            };
+            let Some(value) = parts.next().and_then(|raw| raw.parse::<f64>().ok()) else {
+                continue;
+            };
+            timings.insert(format!("resource.cgroup.memory_events_{name}"), json!(value));
         }
     }
 
