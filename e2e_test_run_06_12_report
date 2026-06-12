@@ -69,3 +69,10 @@
 - Issue: None.
 - Finding: Reaped 4 stale `eos-e2e` containers, then the current checkout passed the full Docker-backed live suite end to end: crate unit test, `core` 31, `daemon` 12, `eos-layerstack` 20, `ephemeral_workspace` 11, `plugin` 14, `pressure` 23, `workspace-publish-gate` 14, `workspace-runtime-command-session` 66, `workspace-runtime-isolated` 20, and doc tests all passed.
 - Fix for next iteration: No further fixes are needed for `sandbox/crates/eos-e2e-test/tests` in this verified state.
+
+## Run 10
+- Command: `cargo run -p eos-e2e-test --bin e2e-reap`, then `EOS_LIVE_E2E_IMAGE=xingyaoww/sweb.eval.x86_64.dask_s_dask-10042:latest EOS_E2E_PLATFORM=linux/amd64 cargo test -p eos-e2e-test --features e2e -- --test-threads=1 --nocapture`
+- Result: PASS
+- Issue: None.
+- Finding: Reaped 4 stale `eos-e2e` containers, then the fresh full Docker-backed live suite passed end to end: crate unit test, `core` 31, `daemon` 12, `eos-layerstack` 20, `ephemeral_workspace` 11, `plugin` 14, `pressure` 23, `workspace-publish-gate` 14, `workspace-runtime-command-session` 66, `workspace-runtime-isolated` 20, and doc tests all passed.
+- Fix for next iteration: No code or test fixes needed; `sandbox/crates/eos-e2e-test/tests` is green in the current checkout.
